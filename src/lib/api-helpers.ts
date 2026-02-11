@@ -1,0 +1,77 @@
+import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { z } from 'zod'
+
+export interface ApiResponse<T = any> {
+  success: boolean
+  data?: T
+  meta?: {
+    page: number
+    pageSize: number
+    totalCount: number
+    totalPages: number
+  }
+  error?: {
+    code: string
+    message: string
+    details?: any
+  }
+}
+
+export function successResponse<T>(data: T, meta?: ApiResponse['meta']) {
+  return NextResponse.json({ success: true, data, meta })
+}
+
+export function errorResponse(
+  message: string,
+  code: string = 'ERROR',
+  status: number = 400,
+  details?: any
+) {
+  return NextResponse.json(
+    { success: false, error: { code, message, details } },
+    { status }
+  )
+}
+
+export function handleApiError(error: unknown) {
+  if (error instanceof z.ZodError) {
+    return errorResponse(
+      '입력값이 올바르지 않습니다.',
+      'VALIDATION_ERROR',
+      400,
+      error.issues
+    )
+  }
+
+  console.error('API Error:', error)
+  return errorResponse(
+    '서버 오류가 발생했습니다.',
+    'INTERNAL_ERROR',
+    500
+  )
+}
+
+export async function getSession() {
+  const session = await auth()
+  if (!session?.user) {
+    return null
+  }
+  return session
+}
+
+export function getPaginationParams(searchParams: URLSearchParams) {
+  const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+  const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '20')))
+  const skip = (page - 1) * pageSize
+  return { page, pageSize, skip }
+}
+
+export function buildMeta(page: number, pageSize: number, totalCount: number) {
+  return {
+    page,
+    pageSize,
+    totalCount,
+    totalPages: Math.ceil(totalCount / pageSize),
+  }
+}

@@ -1,0 +1,140 @@
+'use client'
+
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
+import { PageHeader } from '@/components/common/page-header'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { formatCurrency } from '@/lib/format'
+
+const ACCOUNT_TYPE_MAP: Record<string, string> = {
+  ASSET: '자산', LIABILITY: '부채', EQUITY: '자본', REVENUE: '수익', EXPENSE: '비용',
+}
+
+interface AccountRow {
+  id: string; code: string; nameKo: string; accountType: string
+  totalDebit: number; totalCredit: number
+}
+
+export default function FinancialStatementsPage() {
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  const qp = new URLSearchParams()
+  if (startDate) qp.set('startDate', startDate)
+  if (endDate) qp.set('endDate', endDate)
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['accounting-ledger-fs', startDate, endDate],
+    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`) as Promise<any>,
+  })
+
+  const accounts: AccountRow[] = data?.data || []
+
+  const getByType = (type: string) => accounts.filter((a) => a.accountType === type)
+  const getBalance = (row: AccountRow) => {
+    if (['ASSET', 'EXPENSE'].includes(row.accountType)) return Number(row.totalDebit) - Number(row.totalCredit)
+    return Number(row.totalCredit) - Number(row.totalDebit)
+  }
+  const sumBalance = (type: string) => getByType(type).reduce((s, r) => s + getBalance(r), 0)
+
+  const totalAssets = sumBalance('ASSET')
+  const totalLiabilities = sumBalance('LIABILITY')
+  const totalEquity = sumBalance('EQUITY')
+  const totalRevenue = sumBalance('REVENUE')
+  const totalExpense = sumBalance('EXPENSE')
+  const netIncome = totalRevenue - totalExpense
+
+  const renderSection = (type: string, label: string) => {
+    const items = getByType(type)
+    const total = items.reduce((s, r) => s + getBalance(r), 0)
+    return (
+      <div className="space-y-2">
+        <h3 className="font-semibold text-lg border-b pb-1">{label}</h3>
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">해당 데이터가 없습니다.</p>
+        ) : items.map((row) => (
+          <div key={row.id} className="flex justify-between text-sm py-1">
+            <span>{row.code} {row.nameKo}</span>
+            <span className="font-mono">{formatCurrency(getBalance(row))}</span>
+          </div>
+        ))}
+        <div className="flex justify-between font-medium border-t pt-1">
+          <span>{label} 합계</span>
+          <span className="font-mono">{formatCurrency(total)}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="재무제표" description="재무상태표, 손익계산서 등을 조회합니다" />
+      <div className="flex items-center gap-4">
+        <Label className="whitespace-nowrap">기간</Label>
+        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
+        <span>~</span>
+        <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
+      </div>
+
+      {!isLoading && (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총자산</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalAssets)}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총부채</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalLiabilities)}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총수익</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p></CardContent></Card>
+          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">당기순이익</CardTitle></CardHeader><CardContent><p className={`text-xl font-bold ${netIncome < 0 ? 'text-destructive' : ''}`}>{formatCurrency(netIncome)}</p></CardContent></Card>
+        </div>
+      )}
+
+      <Tabs defaultValue="bs" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="bs">재무상태표</TabsTrigger>
+          <TabsTrigger value="is">손익계산서</TabsTrigger>
+        </TabsList>
+        <TabsContent value="bs">
+          {isLoading ? (
+            <p className="text-center text-muted-foreground py-8">로딩 중...</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader><CardTitle>자산</CardTitle></CardHeader>
+                <CardContent>{renderSection('ASSET', '자산')}</CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle>부채 및 자본</CardTitle></CardHeader>
+                <CardContent className="space-y-6">
+                  {renderSection('LIABILITY', '부채')}
+                  {renderSection('EQUITY', '자본')}
+                  <div className="flex justify-between font-bold border-t-2 pt-2">
+                    <span>부채 및 자본 합계</span>
+                    <span className="font-mono">{formatCurrency(totalLiabilities + totalEquity)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="is">
+          {isLoading ? (
+            <p className="text-center text-muted-foreground py-8">로딩 중...</p>
+          ) : (
+            <Card>
+              <CardHeader><CardTitle>손익계산서</CardTitle></CardHeader>
+              <CardContent className="space-y-6">
+                {renderSection('REVENUE', '수익')}
+                {renderSection('EXPENSE', '비용')}
+                <div className={`flex justify-between font-bold border-t-2 pt-2 text-lg ${netIncome < 0 ? 'text-destructive' : ''}`}>
+                  <span>당기순이익</span>
+                  <span className="font-mono">{formatCurrency(netIncome)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
