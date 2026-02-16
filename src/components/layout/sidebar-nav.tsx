@@ -14,6 +14,8 @@ import {
   MessageSquare,
   Settings,
   ChevronDown,
+  Truck,
+  FolderKanban,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -91,6 +93,24 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    title: '구매',
+    href: '/procurement',
+    icon: Truck,
+    module: 'procurement',
+    children: [
+      { title: '구매요청', href: '/procurement/requests' },
+      { title: '구매발주', href: '/procurement/purchase-orders' },
+      { title: '입고관리', href: '/procurement/receiving' },
+      { title: '구매대금', href: '/procurement/payments' },
+    ],
+  },
+  {
+    title: '프로젝트',
+    href: '/projects',
+    icon: FolderKanban,
+    module: 'projects',
+  },
+  {
     title: '전자결재',
     href: '/approval',
     icon: FileCheck,
@@ -133,11 +153,13 @@ export function SidebarNav() {
 
   const userPermissions = (session?.user as any)?.permissions || []
   const userRoles = (session?.user as any)?.roles || []
-  const isAdmin = userRoles.includes('SYSTEM_ADMIN')
+  const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 
   const filteredNavItems = navItems.filter((item) => {
     if (!item.module) return true
     if (isAdmin) return true
+    // 부서장도 모든 메뉴 접근 가능
+    if (userRoles.includes('부서장')) return true
     return userPermissions.some(
       (p: any) => p.module === item.module && p.action === 'read'
     )
