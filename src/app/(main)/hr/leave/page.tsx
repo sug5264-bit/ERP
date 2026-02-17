@@ -11,22 +11,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle, CheckCheck } from 'lucide-react'
 
 interface LeaveRow {
   id: string
@@ -46,12 +38,7 @@ interface LeaveRow {
 }
 
 const LEAVE_TYPE_MAP: Record<string, string> = {
-  ANNUAL: '연차',
-  SICK: '병가',
-  FAMILY: '경조사',
-  MATERNITY: '출산',
-  PARENTAL: '육아',
-  OFFICIAL: '공가',
+  ANNUAL: '연차', SICK: '병가', FAMILY: '경조사', MATERNITY: '출산', PARENTAL: '육아', OFFICIAL: '공가',
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -64,6 +51,7 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 export default function LeavePage() {
   const [open, setOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [selectedRows, setSelectedRows] = useState<LeaveRow[]>([])
   const queryClient = useQueryClient()
 
   const queryParams = new URLSearchParams({ pageSize: '50' })
@@ -99,6 +87,17 @@ export default function LeavePage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const batchMutation = useMutation({
+    mutationFn: (body: any) => api.post('/hr/leave/batch', body) as Promise<any>,
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
+      const d = res?.data || res
+      toast.success(`${d.successCount}건 처리 완료${d.failCount > 0 ? `, ${d.failCount}건 실패` : ''}`)
+      setSelectedRows([])
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const leaves: LeaveRow[] = data?.data || []
   const employees = empData?.data || []
 
@@ -109,13 +108,10 @@ export default function LeavePage() {
     const endDate = form.get('endDate') as string
     const diffTime = new Date(endDate).getTime() - new Date(startDate).getTime()
     const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1)
-
     createMutation.mutate({
       employeeId: form.get('employeeId'),
       leaveType: form.get('leaveType'),
-      startDate,
-      endDate,
-      days,
+      startDate, endDate, days,
       reason: form.get('reason') || undefined,
     })
   }
@@ -127,82 +123,42 @@ export default function LeavePage() {
     }
   }
 
+  const handleBatchAction = (action: string) => {
+    const pendingRows = selectedRows.filter((r) => r.status === 'REQUESTED')
+    if (pendingRows.length === 0) {
+      toast.error('승인대기 상태의 휴가만 일괄 처리할 수 있습니다.')
+      return
+    }
+    const ids = pendingRows.map((r) => r.id)
+    const label = action === 'approve' ? '승인' : '반려'
+    if (confirm(`선택한 ${ids.length}건을 일괄 ${label}하시겠습니까?`)) {
+      batchMutation.mutate({ ids, action })
+    }
+  }
+
   const columns: ColumnDef<LeaveRow>[] = [
+    { header: '사번', cell: ({ row }) => <span className="font-mono text-xs">{row.original.employee.employeeNo}</span> },
+    { header: '이름', cell: ({ row }) => row.original.employee.nameKo },
+    { header: '부서', cell: ({ row }) => row.original.employee.department?.name || '-' },
+    { header: '직급', cell: ({ row }) => row.original.employee.position?.name || '-' },
+    { header: '휴가유형', cell: ({ row }) => <Badge variant="outline">{LEAVE_TYPE_MAP[row.original.leaveType] || row.original.leaveType}</Badge> },
+    { header: '기간', cell: ({ row }) => `${formatDate(row.original.startDate)} ~ ${formatDate(row.original.endDate)}` },
+    { accessorKey: 'days', header: '일수', cell: ({ row }) => `${row.original.days}일` },
+    { header: '사유', cell: ({ row }) => <span className="max-w-[150px] truncate block" title={row.original.reason || '-'}>{row.original.reason || '-'}</span> },
+    { header: '상태', cell: ({ row }) => { const s = STATUS_MAP[row.original.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status } },
     {
-      header: '사번',
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">{row.original.employee.employeeNo}</span>
-      ),
-    },
-    {
-      header: '이름',
-      cell: ({ row }) => row.original.employee.nameKo,
-    },
-    {
-      header: '부서',
-      cell: ({ row }) => row.original.employee.department?.name || '-',
-    },
-    {
-      header: '직급',
-      cell: ({ row }) => row.original.employee.position?.name || '-',
-    },
-    {
-      header: '휴가유형',
-      cell: ({ row }) => (
-        <Badge variant="outline">
-          {LEAVE_TYPE_MAP[row.original.leaveType] || row.original.leaveType}
-        </Badge>
-      ),
-    },
-    {
-      header: '기간',
-      cell: ({ row }) =>
-        `${formatDate(row.original.startDate)} ~ ${formatDate(row.original.endDate)}`,
-    },
-    {
-      accessorKey: 'days',
-      header: '일수',
-      cell: ({ row }) => `${row.original.days}일`,
-    },
-    {
-      header: '사유',
-      cell: ({ row }) => (
-        <span className="max-w-[150px] truncate block" title={row.original.reason || '-'}>
-          {row.original.reason || '-'}
-        </span>
-      ),
-    },
-    {
-      header: '상태',
-      cell: ({ row }) => {
-        const s = STATUS_MAP[row.original.status]
-        return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
-      },
-    },
-    {
-      id: 'actions',
-      header: '승인처리',
+      id: 'actions', header: '승인처리',
       cell: ({ row }) => {
         const { status, id, employee } = row.original
         if (status !== 'REQUESTED') return null
         return (
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={(e) => { e.stopPropagation(); handleAction(id, 'approve', employee.nameKo) }}
-              disabled={actionMutation.isPending}
-            >
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={(e) => { e.stopPropagation(); handleAction(id, 'approve', employee.nameKo) }} disabled={actionMutation.isPending}>
               <CheckCircle className="mr-1 h-3 w-3" /> 승인
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={(e) => { e.stopPropagation(); handleAction(id, 'reject', employee.nameKo) }}
-              disabled={actionMutation.isPending}
-            >
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={(e) => { e.stopPropagation(); handleAction(id, 'reject', employee.nameKo) }} disabled={actionMutation.isPending}>
               <XCircle className="mr-1 h-3 w-3" /> 반려
             </Button>
           </div>
@@ -213,15 +169,10 @@ export default function LeavePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="휴가관리"
-        description="휴가 신청 및 승인을 관리합니다"
-      />
+      <PageHeader title="휴가관리" description="휴가 신청 및 승인을 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue placeholder="전체 상태" />
-          </SelectTrigger>
+          <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             <SelectItem value="REQUESTED">승인대기</SelectItem>
@@ -231,68 +182,57 @@ export default function LeavePage() {
           </SelectContent>
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>휴가 신청</Button>
-          </DialogTrigger>
+          <DialogTrigger asChild><Button>휴가 신청</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>휴가 신청</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>휴가 신청</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
                 <Label>사원 *</Label>
                 <Select name="employeeId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="사원 선택" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger>
                   <SelectContent>
-                    {employees.map((e: any) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.employeeNo} - {e.nameKo}
-                      </SelectItem>
-                    ))}
+                    {employees.map((e: any) => (<SelectItem key={e.id} value={e.id}>{e.employeeNo} - {e.nameKo}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>휴가유형 *</Label>
                 <Select name="leaveType" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(LEAVE_TYPE_MAP).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v}</SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectContent>{Object.entries(LEAVE_TYPE_MAP).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}</SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>시작일 *</Label>
-                  <Input name="startDate" type="date" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>종료일 *</Label>
-                  <Input name="endDate" type="date" required />
-                </div>
+                <div className="space-y-2"><Label>시작일 *</Label><Input name="startDate" type="date" required /></div>
+                <div className="space-y-2"><Label>종료일 *</Label><Input name="endDate" type="date" required /></div>
               </div>
-              <div className="space-y-2">
-                <Label>사유</Label>
-                <Input name="reason" placeholder="휴가 사유를 입력하세요" />
-              </div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '신청 중...' : '신청'}
-              </Button>
+              <div className="space-y-2"><Label>사유</Label><Input name="reason" placeholder="휴가 사유를 입력하세요" /></div>
+              <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '신청 중...' : '신청'}</Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 일괄 처리 */}
+      {selectedRows.length > 0 && (
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+          <span className="text-sm font-medium">{selectedRows.length}건 선택됨</span>
+          <Button size="sm" onClick={() => handleBatchAction('approve')} disabled={batchMutation.isPending}>
+            <CheckCheck className="mr-1 h-4 w-4" /> 일괄 승인
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => handleBatchAction('reject')} disabled={batchMutation.isPending}>
+            <XCircle className="mr-1 h-4 w-4" /> 일괄 반려
+          </Button>
+        </div>
+      )}
+
       <DataTable
         columns={columns}
         data={leaves}
         isLoading={isLoading}
         pageSize={50}
+        selectable
+        onSelectionChange={(rows) => setSelectedRows(rows as LeaveRow[])}
       />
     </div>
   )

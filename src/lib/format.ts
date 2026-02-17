@@ -1,4 +1,4 @@
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, formatDistanceToNow as fDistanceToNow } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
 export function formatCurrency(amount: number | string | null | undefined): string {
@@ -52,6 +52,12 @@ export function formatBizNo(bizNo: string | null | undefined): string {
     return cleaned.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3')
   }
   return bizNo
+}
+
+export function formatDistanceToNow(date: string | Date | null | undefined): string {
+  if (!date) return ''
+  const d = typeof date === 'string' ? parseISO(date) : date
+  return fDistanceToNow(d, { addSuffix: true, locale: ko })
 }
 
 export function validateBizNo(bizNo: string): boolean {

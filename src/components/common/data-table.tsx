@@ -33,7 +33,7 @@ import {
   FileText,
   Trash2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -46,6 +46,7 @@ interface DataTableProps<TData, TValue> {
   onRowClick?: (row: TData) => void
   selectable?: boolean
   onBulkDelete?: (selectedRows: TData[]) => void
+  onSelectionChange?: (selectedRows: TData[]) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -59,6 +60,7 @@ export function DataTable<TData, TValue>({
   onRowClick,
   selectable,
   onBulkDelete,
+  onSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -116,6 +118,14 @@ export function DataTable<TData, TValue>({
       pagination: { pageSize },
     },
   })
+
+  // 선택 변경 콜백
+  useEffect(() => {
+    if (onSelectionChange) {
+      const selected = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
+      onSelectionChange(selected)
+    }
+  }, [rowSelection])
 
   return (
     <div className="space-y-4">

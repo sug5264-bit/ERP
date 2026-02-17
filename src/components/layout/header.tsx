@@ -1,10 +1,11 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Bell, LogOut, Menu, User, Moon, Sun, Star, StarOff } from 'lucide-react'
+import { LogOut, Menu, User, Moon, Sun, Star, StarOff, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +18,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useSidebarStore } from '@/stores/sidebar-store'
 import { useThemeStore } from '@/stores/theme-store'
 import { useFavoritesStore } from '@/stores/favorites-store'
+import { NotificationBell } from '@/components/layout/notification-bell'
 import { APP_NAME } from '@/lib/constants'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { cn } from '@/lib/utils'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
@@ -53,14 +57,21 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/roles': '권한관리',
   '/admin/codes': '코드관리',
   '/admin/logs': '감사로그',
+  '/mypage': '마이페이지',
 }
+
+const SEARCHABLE_PAGES = Object.entries(PAGE_TITLES).map(([href, title]) => ({ href, title }))
 
 export function Header() {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const router = useRouter()
   const toggle = useSidebarStore((s) => s.toggle)
   const { theme, toggle: toggleTheme } = useThemeStore()
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const user = session?.user
   const initials = user?.name
@@ -75,6 +86,36 @@ export function Header() {
   const pageTitle = PAGE_TITLES[pathname]
   const canFavorite = !!pageTitle && pathname !== '/dashboard'
   const isCurrentFav = isFavorite(pathname)
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return []
+    const q = searchQuery.toLowerCase()
+    return SEARCHABLE_PAGES.filter(
+      (p) => p.title.toLowerCase().includes(q) || p.href.toLowerCase().includes(q)
+    ).slice(0, 8)
+  }, [searchQuery])
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus()
+  }, [searchOpen])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen((prev) => !prev)
+      }
+      if (e.key === 'Escape') setSearchOpen(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
+  const handleSearchNavigate = (href: string) => {
+    router.push(href)
+    setSearchOpen(false)
+    setSearchQuery('')
+  }
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4">
@@ -103,6 +144,62 @@ export function Header() {
       )}
 
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        {/* 통합 검색 */}
+        <div className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSearchOpen(!searchOpen)}
+            title="통합 검색 (Ctrl+K)"
+            className="lg:hidden"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
+          <div className={cn('hidden lg:flex items-center', searchOpen && 'flex')}>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchRef}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="메뉴 검색... (Ctrl+K)"
+                className="w-48 lg:w-56 pl-8 pr-8 h-8 text-sm"
+                onFocus={() => setSearchOpen(true)}
+              />
+              {searchQuery && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-8 w-8"
+                  onClick={() => { setSearchQuery(''); searchRef.current?.focus() }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+              {searchOpen && searchQuery && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-50 overflow-hidden">
+                  {searchResults.map((r) => (
+                    <button
+                      key={r.href}
+                      onClick={() => handleSearchNavigate(r.href)}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2"
+                    >
+                      <Search className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="font-medium">{r.title}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{r.href}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchOpen && searchQuery && searchResults.length === 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-50 p-3 text-sm text-muted-foreground text-center">
+                  검색 결과 없음
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Favorite toggle */}
         {canFavorite && (
           <Button
@@ -127,9 +224,8 @@ export function Header() {
           {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-        </Button>
+        {/* 알림 */}
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -150,9 +246,9 @@ export function Header() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push('/mypage')}>
               <User className="mr-2 h-4 w-4" />
-              내 정보
+              마이페이지
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>

@@ -13,12 +13,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle, CheckCheck } from 'lucide-react'
 
 const columns: ColumnDef<any>[] = [
   { accessorKey: 'documentNo', header: '문서번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.documentNo}</span> },
   { header: '제목', accessorKey: 'title' },
   { id: 'drafter', header: '기안자', cell: ({ row }) => row.original.drafter?.nameKo || '-' },
+  { id: 'department', header: '부서', cell: ({ row }) => row.original.drafter?.department?.name || '-' },
   { id: 'draftDate', header: '기안일', cell: ({ row }) => formatDate(row.original.draftDate) },
   { id: 'urgency', header: '긴급도', cell: ({ row }) => row.original.urgency === 'URGENT' ? <Badge variant="destructive">긴급</Badge> : row.original.urgency === 'EMERGENCY' ? <Badge variant="destructive">초긴급</Badge> : <Badge variant="outline">일반</Badge> },
   { id: 'progress', header: '진행', cell: ({ row }) => <span className="text-sm">{row.original.currentStep}/{row.original.totalSteps}</span> },
@@ -28,6 +29,7 @@ export default function ApprovalPendingPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
   const [comment, setComment] = useState('')
+  const [selectedRows, setSelectedRows] = useState<any[]>([])
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['approval-pending'], queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=50') as Promise<any> })
@@ -35,6 +37,17 @@ export default function ApprovalPendingPage() {
   const actionMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: any }) => api.put(`/approval/documents/${id}`, body),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['approval-pending'] }); setDetailOpen(false); setComment(''); toast.success('처리되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const batchMutation = useMutation({
+    mutationFn: (body: any) => api.post('/approval/batch', body) as Promise<any>,
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
+      const d = res?.data || res
+      toast.success(`${d.successCount}건 처리 완료${d.failCount > 0 ? `, ${d.failCount}건 실패` : ''}`)
+      setSelectedRows([])
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -46,10 +59,42 @@ export default function ApprovalPendingPage() {
     } catch { toast.error('문서를 불러올 수 없습니다.') }
   }
 
+  const handleBatchAction = (action: string) => {
+    const ids = selectedRows.map((r) => r.id)
+    const label = action === 'approve' ? '승인' : '반려'
+    if (confirm(`선택한 ${ids.length}건을 일괄 ${label}하시겠습니까?`)) {
+      batchMutation.mutate({ ids, action, comment: '' })
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="결재 대기" description="결재가 필요한 문서 목록입니다" />
-      <DataTable columns={columns} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
+
+      {/* 일괄 처리 버튼 */}
+      {selectedRows.length > 0 && (
+        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+          <span className="text-sm font-medium">{selectedRows.length}건 선택됨</span>
+          <Button size="sm" onClick={() => handleBatchAction('approve')} disabled={batchMutation.isPending}>
+            <CheckCheck className="mr-1 h-4 w-4" /> 일괄 승인
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => handleBatchAction('reject')} disabled={batchMutation.isPending}>
+            <XCircle className="mr-1 h-4 w-4" /> 일괄 반려
+          </Button>
+        </div>
+      )}
+
+      <DataTable
+        columns={columns}
+        data={data?.data || []}
+        searchColumn="title"
+        searchPlaceholder="제목으로 검색..."
+        isLoading={isLoading}
+        pageSize={50}
+        onRowClick={handleRowClick}
+        selectable
+        onBulkDelete={(rows: any[]) => setSelectedRows(rows)}
+      />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-2xl">
@@ -68,7 +113,7 @@ export default function ApprovalPendingPage() {
                 {(selectedDoc.steps || []).map((step: any, idx: number) => (
                   <div key={step.id} className="flex items-center gap-2 text-sm">
                     <span className="w-6">{idx + 1}.</span>
-                    <span className="flex-1">{step.approver?.nameKo || '-'}</span>
+                    <span className="flex-1">{step.approver?.nameKo || '-'} <span className="text-muted-foreground">({step.approver?.position?.name || '-'})</span></span>
                     <Badge variant={step.status === 'APPROVED' ? 'default' : step.status === 'REJECTED' ? 'destructive' : 'outline'}>
                       {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
                     </Badge>
