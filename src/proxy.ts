@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 const publicPaths = ['/login', '/api/auth']
 
-// ─── In-memory Rate Limiter (미들웨어용 경량 버전) ───
+// ─── In-memory Rate Limiter (프록시용 경량 버전) ───
 interface RLEntry { count: number; resetAt: number }
 const rlStore = new Map<string, RLEntry>()
 let lastClean = Date.now()
@@ -34,7 +34,7 @@ function getIp(req: NextRequest): string {
     || 'unknown'
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 정적 파일 허용
@@ -53,7 +53,7 @@ export function middleware(request: NextRequest) {
 
     // 로그인 API: 15분에 10회
     if (pathname.startsWith('/api/auth') && method === 'POST') {
-      const { ok, remaining, resetAt } = rateLimitCheck(`login:${ip}`, 15 * 60 * 1000, 10)
+      const { ok, resetAt } = rateLimitCheck(`login:${ip}`, 15 * 60 * 1000, 10)
       if (!ok) {
         return NextResponse.json(
           { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 로그인 시도입니다. 15분 후 다시 시도해주세요.' } },
@@ -70,7 +70,7 @@ export function middleware(request: NextRequest) {
 
     // API 쓰기(POST/PUT/DELETE): 1분에 30회
     if (!pathname.startsWith('/api/auth') && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      const { ok, remaining, resetAt } = rateLimitCheck(`mut:${ip}`, 60_000, 30)
+      const { ok, resetAt } = rateLimitCheck(`mut:${ip}`, 60_000, 30)
       if (!ok) {
         return NextResponse.json(
           { success: false, error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } },
@@ -87,7 +87,7 @@ export function middleware(request: NextRequest) {
 
     // API 읽기(GET): 1분에 60회
     if (!pathname.startsWith('/api/auth') && method === 'GET') {
-      const { ok, remaining, resetAt } = rateLimitCheck(`read:${ip}`, 60_000, 60)
+      const { ok, resetAt } = rateLimitCheck(`read:${ip}`, 60_000, 60)
       if (!ok) {
         return NextResponse.json(
           { success: false, error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } },
