@@ -18,7 +18,7 @@ export async function GET() {
       orderBy: { sortOrder: 'asc' },
     })
 
-    return successResponse(positions)
+    return successResponse(positions, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

@@ -12,7 +12,7 @@ export async function GET() {
       include: { _count: { select: { items: true, children: true } } },
       orderBy: [{ level: 'asc' }, { code: 'asc' }],
     })
-    return successResponse(categories)
+    return successResponse(categories, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

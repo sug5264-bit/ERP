@@ -22,7 +22,7 @@ export async function GET() {
       orderBy: [{ level: 'asc' }, { sortOrder: 'asc' }],
     })
 
-    return successResponse(departments)
+    return successResponse(departments, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

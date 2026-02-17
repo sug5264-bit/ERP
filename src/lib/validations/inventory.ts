@@ -2,24 +2,24 @@ import { z } from 'zod'
 
 // ─── 품목분류 ──────────────────────────────
 export const createItemCategorySchema = z.object({
-  code: z.string().min(1, '분류코드를 입력하세요'),
-  name: z.string().min(1, '분류명을 입력하세요'),
-  parentId: z.string().optional().nullable(),
-  level: z.number().int().default(1),
+  code: z.string().min(1, '분류코드를 입력하세요').max(20).regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
+  name: z.string().min(1, '분류명을 입력하세요').max(100),
+  parentId: z.string().max(50).optional().nullable(),
+  level: z.number().int().min(1).max(10).default(1),
 })
 
 // ─── 품목 ──────────────────────────────────
 export const createItemSchema = z.object({
-  itemCode: z.string().min(1, '품목코드를 입력하세요'),
-  itemName: z.string().min(1, '품목명을 입력하세요'),
-  specification: z.string().optional().nullable(),
-  categoryId: z.string().optional().nullable(),
-  unit: z.string().default('EA'),
-  standardPrice: z.number().min(0).default(0),
-  safetyStock: z.number().int().min(0).default(0),
+  itemCode: z.string().min(1, '품목코드를 입력하세요').max(30).regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
+  itemName: z.string().min(1, '품목명을 입력하세요').max(200),
+  specification: z.string().max(500).optional().nullable(),
+  categoryId: z.string().max(50).optional().nullable(),
+  unit: z.string().max(10).default('EA'),
+  standardPrice: z.number().min(0).max(999_999_999_999).default(0),
+  safetyStock: z.number().int().min(0).max(999_999_999).default(0),
   itemType: z.enum(['RAW_MATERIAL', 'PRODUCT', 'GOODS', 'SUBSIDIARY']).default('GOODS'),
   taxType: z.enum(['TAXABLE', 'TAX_FREE', 'ZERO_RATE']).default('TAXABLE'),
-  barcode: z.string().optional().nullable(),
+  barcode: z.string().max(50).optional().nullable(),
   isActive: z.boolean().default(true),
 })
 
@@ -27,10 +27,10 @@ export const updateItemSchema = createItemSchema.partial()
 
 // ─── 창고 ──────────────────────────────────
 export const createWarehouseSchema = z.object({
-  code: z.string().min(1, '창고코드를 입력하세요'),
-  name: z.string().min(1, '창고명을 입력하세요'),
-  location: z.string().optional().nullable(),
-  managerId: z.string().optional().nullable(),
+  code: z.string().min(1, '창고코드를 입력하세요').max(20).regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
+  name: z.string().min(1, '창고명을 입력하세요').max(100),
+  location: z.string().max(500).optional().nullable(),
+  managerId: z.string().max(50).optional().nullable(),
   isActive: z.boolean().default(true),
 })
 
@@ -59,20 +59,20 @@ export const createStockMovementSchema = z.object({
 
 // ─── 거래처 ────────────────────────────────
 export const createPartnerSchema = z.object({
-  partnerCode: z.string().min(1, '거래처코드를 입력하세요'),
-  partnerName: z.string().min(1, '거래처명을 입력하세요'),
+  partnerCode: z.string().min(1, '거래처코드를 입력하세요').max(30).regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
+  partnerName: z.string().min(1, '거래처명을 입력하세요').max(200),
   partnerType: z.enum(['SALES', 'PURCHASE', 'BOTH']).default('BOTH'),
-  bizNo: z.string().optional().nullable(),
-  ceoName: z.string().optional().nullable(),
-  bizType: z.string().optional().nullable(),
-  bizCategory: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  fax: z.string().optional().nullable(),
-  email: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  contactPerson: z.string().optional().nullable(),
-  creditLimit: z.number().optional().nullable(),
-  paymentTerms: z.string().optional().nullable(),
+  bizNo: z.string().max(20).regex(/^(\d{3}-\d{2}-\d{5}|\d{10})?$/, '올바른 사업자번호 형식이 아닙니다 (000-00-00000)').optional().nullable().or(z.literal('')),
+  ceoName: z.string().max(50).optional().nullable(),
+  bizType: z.string().max(100).optional().nullable(),
+  bizCategory: z.string().max(100).optional().nullable(),
+  phone: z.string().max(20).optional().nullable(),
+  fax: z.string().max(20).optional().nullable(),
+  email: z.string().email('유효한 이메일을 입력하세요').max(200).optional().nullable().or(z.literal('')),
+  address: z.string().max(500).optional().nullable(),
+  contactPerson: z.string().max(50).optional().nullable(),
+  creditLimit: z.number().min(0).max(999_999_999_999).optional().nullable(),
+  paymentTerms: z.string().max(100).optional().nullable(),
   salesChannel: z.enum(['ONLINE', 'OFFLINE']).default('OFFLINE'),
   isActive: z.boolean().default(true),
 })

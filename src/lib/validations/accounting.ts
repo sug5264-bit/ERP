@@ -23,22 +23,22 @@ export const updateVoucherSchema = createVoucherSchema.partial()
 
 // 세금계산서
 export const createTaxInvoiceSchema = z.object({
-  issueDate: z.string().min(1, '발행일을 입력하세요'),
+  issueDate: z.string().min(1, '발행일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   invoiceType: z.enum(['SALES', 'PURCHASE']),
-  supplierBizNo: z.string().min(1, '공급자 사업자번호를 입력하세요'),
-  supplierName: z.string().min(1, '공급자명을 입력하세요'),
-  supplierCeo: z.string().optional(),
-  supplierAddress: z.string().optional(),
-  supplierBizType: z.string().optional(),
-  supplierBizCategory: z.string().optional(),
-  buyerBizNo: z.string().min(1, '공급받는자 사업자번호를 입력하세요'),
-  buyerName: z.string().min(1, '공급받는자명을 입력하세요'),
-  buyerCeo: z.string().optional(),
-  buyerAddress: z.string().optional(),
-  buyerBizType: z.string().optional(),
-  buyerBizCategory: z.string().optional(),
-  partnerId: z.string().optional(),
-  voucherId: z.string().optional(),
+  supplierBizNo: z.string().min(1, '공급자 사업자번호를 입력하세요').max(20),
+  supplierName: z.string().min(1, '공급자명을 입력하세요').max(200),
+  supplierCeo: z.string().max(50).optional(),
+  supplierAddress: z.string().max(500).optional(),
+  supplierBizType: z.string().max(100).optional(),
+  supplierBizCategory: z.string().max(100).optional(),
+  buyerBizNo: z.string().min(1, '공급받는자 사업자번호를 입력하세요').max(20),
+  buyerName: z.string().min(1, '공급받는자명을 입력하세요').max(200),
+  buyerCeo: z.string().max(50).optional(),
+  buyerAddress: z.string().max(500).optional(),
+  buyerBizType: z.string().max(100).optional(),
+  buyerBizCategory: z.string().max(100).optional(),
+  partnerId: z.string().max(50).optional(),
+  voucherId: z.string().max(50).optional(),
   items: z
     .array(
       z.object({
@@ -56,12 +56,12 @@ export const createTaxInvoiceSchema = z.object({
 
 // 계정과목
 export const createAccountSubjectSchema = z.object({
-  code: z.string().min(1, '계정코드를 입력하세요'),
-  nameKo: z.string().min(1, '계정명을 입력하세요'),
-  nameEn: z.string().optional(),
+  code: z.string().min(1, '계정코드를 입력하세요').max(20).regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
+  nameKo: z.string().min(1, '계정명을 입력하세요').max(100),
+  nameEn: z.string().max(200).optional(),
   accountType: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']),
-  level: z.number().min(1).default(1),
-  parentId: z.string().nullable().optional(),
+  level: z.number().int().min(1).max(10).default(1),
+  parentId: z.string().max(50).nullable().optional(),
   taxRelated: z.boolean().default(false),
 })
 

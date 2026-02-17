@@ -18,8 +18,12 @@ export interface ApiResponse<T = any> {
   }
 }
 
-export function successResponse<T>(data: T, meta?: ApiResponse['meta']) {
-  return NextResponse.json({ success: true, data, meta })
+export function successResponse<T>(data: T, meta?: ApiResponse['meta'], options?: { cache?: string }) {
+  const headers: Record<string, string> = {}
+  if (options?.cache) {
+    headers['Cache-Control'] = options.cache
+  }
+  return NextResponse.json({ success: true, data, meta }, { headers })
 }
 
 export function errorResponse(
