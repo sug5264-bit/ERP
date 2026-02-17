@@ -1,4 +1,3 @@
-import ExcelJS from 'exceljs'
 import type { ExportConfig } from './types'
 
 function getValue(row: any, accessor: string | ((row: any) => any)): any {
@@ -7,6 +6,8 @@ function getValue(row: any, accessor: string | ((row: any) => any)): any {
 }
 
 export async function exportToExcel(config: ExportConfig) {
+  const { default: ExcelJS } = await import('exceljs')
+
   const { fileName, sheetName = 'Sheet1', title, columns, data } = config
 
   const workbook = new ExcelJS.Workbook()

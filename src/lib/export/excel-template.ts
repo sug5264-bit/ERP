@@ -1,7 +1,8 @@
-import ExcelJS from 'exceljs'
 import type { TemplateConfig } from './types'
 
 export async function downloadImportTemplate(config: TemplateConfig) {
+  const { default: ExcelJS } = await import('exceljs')
+
   const { fileName, sheetName = '데이터', columns } = config
 
   const workbook = new ExcelJS.Workbook()

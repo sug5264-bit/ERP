@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-
 // ---------------------------------------------------------------------------
 // Interfaces
 // ---------------------------------------------------------------------------
@@ -91,15 +88,18 @@ const PAGE_MARGIN = 14
 const HEADER_FILL: [number, number, number] = [68, 114, 196]
 const HEADER_TEXT: [number, number, number] = [255, 255, 255]
 const LIGHT_GRAY: [number, number, number] = [240, 240, 240]
-const BORDER_COLOR: [number, number, number] = [180, 180, 180]
 
 // ---------------------------------------------------------------------------
 // 1. 견적서 (Quotation)
 // ---------------------------------------------------------------------------
 
-export function generateQuotationPDF(data: QuotationPDFData) {
+export async function generateQuotationPDF(data: QuotationPDFData) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  // NOTE: For production, embed a Korean font (e.g. NanumGothic) for full Korean rendering.
   const pageWidth = doc.internal.pageSize.getWidth()
 
   let y = 15
@@ -235,9 +235,13 @@ export function generateQuotationPDF(data: QuotationPDFData) {
 // 2. 세금계산서 (Tax Invoice)
 // ---------------------------------------------------------------------------
 
-export function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
+export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  // NOTE: For production, embed a Korean font (e.g. NanumGothic) for full Korean rendering.
   const pageWidth = doc.internal.pageSize.getWidth()
 
   let y = 15
@@ -379,9 +383,13 @@ export function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
 // 3. 거래명세표 (Transaction Statement)
 // ---------------------------------------------------------------------------
 
-export function generateTransactionStatementPDF(data: TransactionStatementPDFData) {
+export async function generateTransactionStatementPDF(data: TransactionStatementPDFData) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  // NOTE: For production, embed a Korean font (e.g. NanumGothic) for full Korean rendering.
   const pageWidth = doc.internal.pageSize.getWidth()
 
   let y = 15
@@ -503,7 +511,7 @@ export function generateTransactionStatementPDF(data: TransactionStatementPDFDat
 // Shared: page numbers
 // ---------------------------------------------------------------------------
 
-function addPageNumbers(doc: jsPDF) {
+function addPageNumbers(doc: InstanceType<typeof import('jspdf').default>) {
   const pageCount = doc.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)

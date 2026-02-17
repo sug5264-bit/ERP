@@ -44,31 +44,28 @@ export async function POST(request: NextRequest) {
         data: { payPeriod: data.payPeriod, payDate: new Date(data.payDate) },
       })
 
-      for (const emp of employees) {
+      const detailsData = employees.map(emp => {
         const base = salaryByLevel[emp.position?.level || 9] || 3000000
         const mealAllowance = 200000
         const transportAllowance = 200000
         const totalEarnings = base + mealAllowance + transportAllowance
-        // 4대보험 계산 (근로자 부담분)
         const nationalPension = Math.round(base * 0.045)
         const healthInsurance = Math.round(base * 0.03545)
         const longTermCare = Math.round(healthInsurance * 0.1281)
         const employmentInsurance = Math.round(base * 0.009)
-        // 소득세 간이세율 (약 3%)
         const incomeTax = Math.round(base * 0.03)
         const localIncomeTax = Math.round(incomeTax * 0.1)
         const totalDeductions = nationalPension + healthInsurance + longTermCare + employmentInsurance + incomeTax + localIncomeTax
         const netPay = totalEarnings - totalDeductions
+        return {
+          payrollHeaderId: h.id, employeeId: emp.id,
+          baseSalary: base, mealAllowance, transportAllowance,
+          nationalPension, healthInsurance, longTermCare, employmentInsurance,
+          incomeTax, localIncomeTax, totalEarnings, totalDeductions, netPay,
+        }
+      })
 
-        await tx.payrollDetail.create({
-          data: {
-            payrollHeaderId: h.id, employeeId: emp.id,
-            baseSalary: base, mealAllowance, transportAllowance,
-            nationalPension, healthInsurance, longTermCare, employmentInsurance,
-            incomeTax, localIncomeTax, totalEarnings, totalDeductions, netPay,
-          },
-        })
-      }
+      await tx.payrollDetail.createMany({ data: detailsData })
       return h
     })
 

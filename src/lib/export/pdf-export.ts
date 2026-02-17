@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import type { ExportConfig } from './types'
 
 function getValue(row: any, accessor: string | ((row: any) => any)): string {
@@ -9,7 +7,12 @@ function getValue(row: any, accessor: string | ((row: any) => any)): string {
   return val != null ? String(val) : ''
 }
 
-export function exportToPDF(config: ExportConfig) {
+export async function exportToPDF(config: ExportConfig) {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+
   const { fileName, title, columns, data } = config
 
   const doc = new jsPDF({ orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait' })
