@@ -19,8 +19,6 @@ export const createVoucherSchema = z.object({
     .min(1, '분개 항목을 하나 이상 입력하세요'),
 })
 
-export const updateVoucherSchema = createVoucherSchema.partial()
-
 // 세금계산서
 export const createTaxInvoiceSchema = z.object({
   issueDate: z.string().min(1, '발행일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
@@ -87,8 +85,3 @@ export const createBudgetSchema = z.object({
     })
   ),
 })
-
-export type CreateVoucherInput = z.infer<typeof createVoucherSchema>
-export type CreateTaxInvoiceInput = z.infer<typeof createTaxInvoiceSchema>
-export type CreateAccountSubjectInput = z.infer<typeof createAccountSubjectSchema>
-export type CreateBudgetInput = z.infer<typeof createBudgetSchema>

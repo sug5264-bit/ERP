@@ -13,8 +13,3 @@ export const createApprovalDocumentSchema = z.object({
     approvalType: z.enum(['APPROVE', 'REVIEW', 'NOTIFY']).default('APPROVE'),
   })).min(1, '최소 1명의 결재자가 필요합니다').max(20),
 })
-
-export const approvalActionSchema = z.object({
-  action: z.enum(['submit', 'approve', 'reject', 'cancel']),
-  comment: z.string().max(2000).optional(),
-})

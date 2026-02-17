@@ -128,6 +128,7 @@ const navItems: NavItem[] = [
     module: 'admin',
     children: [
       { title: '사용자관리', href: '/admin/users' },
+      { title: '권한관리', href: '/admin/roles' },
       { title: '코드관리', href: '/admin/codes' },
       { title: '감사로그', href: '/admin/logs' },
     ],

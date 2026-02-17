@@ -54,10 +54,3 @@ export const createLeaveSchema = z.object({
   days: z.number().min(0.5),
   reason: z.string().optional(),
 })
-
-export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>
-export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>
-export type CreateDepartmentInput = z.infer<typeof createDepartmentSchema>
-export type CreatePositionInput = z.infer<typeof createPositionSchema>
-export type CreateAttendanceInput = z.infer<typeof createAttendanceSchema>
-export type CreateLeaveInput = z.infer<typeof createLeaveSchema>

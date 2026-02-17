@@ -20,6 +20,3 @@ export const updateUserSchema = z.object({
   departmentId: z.string().max(50).optional(),
   positionId: z.string().max(50).optional(),
 })
-
-export type CreateUserInput = z.infer<typeof createUserSchema>
-export type UpdateUserInput = z.infer<typeof updateUserSchema>

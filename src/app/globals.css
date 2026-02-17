@@ -125,57 +125,14 @@
   }
 }
 
-/* Mobile-specific improvements */
-@layer utilities {
-  /* Better touch targets */
-  .touch-target {
-    min-height: 44px;
-    min-width: 44px;
-  }
-
-  /* Smooth scrolling for iOS */
-  .scroll-smooth-touch {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
-
-  /* Hide scrollbar but keep scrollable */
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Prevent text selection on touch */
-  .select-none-touch {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-
-  /* Safe area insets for notched phones */
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-  .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-}
-
-/* Mobile table horizontal scroll indicator */
+/* Mobile improvements */
 @media (max-width: 640px) {
+  /* iOS touch scroll */
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Smoother transitions */
-  .transition-transform {
-    will-change: transform;
-  }
-
-  /* Fix input zoom on iOS (font-size < 16px causes zoom) */
+  /* Prevent input zoom on iOS (font-size < 16px triggers zoom) */
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -186,10 +143,8 @@
   textarea {
     font-size: 16px !important;
   }
-}
 
-/* Dialog/Sheet mobile improvements */
-@media (max-width: 640px) {
+  /* Dialog scroll on mobile */
   [role="dialog"] {
     max-height: 90dvh !important;
     overflow-y: auto !important;

@@ -7,8 +7,6 @@ export const createPostSchema = z.object({
   isPinned: z.boolean().default(false),
 })
 
-export const updatePostSchema = createPostSchema.partial()
-
 export const createCommentSchema = z.object({
   postId: z.string().min(1).max(50),
   content: z.string().min(1, '댓글 내용을 입력하세요').max(5000),
