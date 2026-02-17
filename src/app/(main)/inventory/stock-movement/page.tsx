@@ -83,6 +83,20 @@ export default function StockMovementPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/inventory/stock-movement/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock-movement'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-balances'] })
+      toast.success('입출고 내역이 삭제되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (id: string, no: string) => {
+    if (window.confirm(`입출고 [${no}]를 삭제하시겠습니까? 재고가 원복됩니다.`)) deleteMutation.mutate(id)
+  }
+
   const movements: MovementRow[] = data?.data || []
   const allItems = itemsData?.data || []
   const warehouses = warehousesData?.data || []
@@ -213,7 +227,7 @@ export default function StockMovementPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={movements} searchColumn="movementNo" searchPlaceholder="이동번호로 검색..." isLoading={isLoading} pageSize={50} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.movementNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={movements} searchColumn="movementNo" searchPlaceholder="이동번호로 검색..." isLoading={isLoading} pageSize={50} />
     </div>
   )
 }

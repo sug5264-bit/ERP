@@ -70,6 +70,16 @@ export default function OrdersPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/sales/orders/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('발주가 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (id: string, no: string) => {
+    if (window.confirm(`발주 [${no}]를 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
+
   const columns: ColumnDef<any>[] = [
     { accessorKey: 'orderNo', header: '발주번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span> },
     { id: 'orderDate', header: '발주일', cell: ({ row }) => formatDate(row.original.orderDate) },
@@ -109,6 +119,10 @@ export default function OrdersPage() {
                   취소 처리
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(row.original.id, row.original.orderNo)} disabled={deleteMutation.isPending}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                삭제
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )

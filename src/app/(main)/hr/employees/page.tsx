@@ -29,7 +29,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Upload } from 'lucide-react'
+import { Upload, Trash2 } from 'lucide-react'
 
 interface EmployeeRow {
   id: string
@@ -147,6 +147,16 @@ export default function EmployeesPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/hr/employees/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr-employees'] }); toast.success('사원이 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`사원 [${name}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
 
   const employees: EmployeeRow[] = data?.data || []
   const departments = deptData?.data || []
@@ -327,7 +337,7 @@ export default function EmployeesPage() {
         </Dialog>
       </div>
       <DataTable
-        columns={columns}
+        columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.nameKo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]}
         data={employees}
         searchColumn="nameKo"
         searchPlaceholder="이름으로 검색..."

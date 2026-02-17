@@ -65,6 +65,7 @@ const columns: ColumnDef<VoucherRow>[] = [
   { id: 'createdBy', header: '작성자', cell: ({ row }) => row.original.createdBy.nameKo },
 ]
 
+
 interface DetailLine { accountSubjectId: string; debitAmount: number; creditAmount: number; description: string }
 
 export default function VouchersPage() {
@@ -103,6 +104,16 @@ export default function VouchersPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/accounting/vouchers/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] }); toast.success('전표가 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (id: string, voucherNo: string) => {
+    if (window.confirm(`전표 [${voucherNo}]를 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
 
   const vouchers: VoucherRow[] = data?.data || []
   const accounts = accountsData?.data || []
@@ -220,7 +231,7 @@ export default function VouchersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
     </div>
   )
 }

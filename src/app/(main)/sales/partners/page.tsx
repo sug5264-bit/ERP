@@ -21,7 +21,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Upload } from 'lucide-react'
+import { Upload, Trash2 } from 'lucide-react'
 
 const PARTNER_TYPE_MAP: Record<string, string> = {
   SALES: '매출', PURCHASE: '매입', BOTH: '매출/매입',
@@ -75,6 +75,16 @@ export default function PartnersPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/partners/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['partners'] }); toast.success('거래처가 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (id: string, name: string) => {
+    if (window.confirm(`거래처 [${name}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
 
   const partners: PartnerRow[] = data?.data || []
 
@@ -220,7 +230,7 @@ export default function PartnersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={partners} searchColumn="partnerName" searchPlaceholder="거래처명으로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.partnerName)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={partners} searchColumn="partnerName" searchPlaceholder="거래처명으로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
       <ExcelImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}

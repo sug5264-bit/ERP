@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { Eye } from 'lucide-react'
+import { Eye, Trash2 } from 'lucide-react'
 
 const columns: ColumnDef<any>[] = [
   { id: 'pinned', header: '', cell: ({ row }) => row.original.isPinned ? <Badge variant="destructive" className="text-xs">필독</Badge> : null, size: 50 },
@@ -42,6 +42,17 @@ export default function NoticesPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-notices'] }); setOpen(false); setIsPinned(false); toast.success('공지사항이 등록되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/board/posts/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-notices'] }); toast.success('공지사항이 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (e: React.MouseEvent, id: string, title: string) => {
+    e.stopPropagation()
+    if (window.confirm(`공지 [${title}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -78,7 +89,7 @@ export default function NoticesPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { Eye, MessageCircle } from 'lucide-react'
+import { Eye, MessageCircle, Trash2 } from 'lucide-react'
 
 const columns: ColumnDef<any>[] = [
   { header: '제목', accessorKey: 'title', cell: ({ row }) => <span className="font-medium">{row.original.title}</span> },
@@ -39,6 +39,17 @@ export default function GeneralBoardPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-general'] }); setOpen(false); toast.success('게시글이 등록되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/board/posts/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-general'] }); toast.success('게시글이 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (e: React.MouseEvent, id: string, title: string) => {
+    e.stopPropagation()
+    if (window.confirm(`게시글 [${title}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
 
   const commentMutation = useMutation({
     mutationFn: ({ postId, content }: { postId: string; content: string }) => api.post(`/board/posts/${postId}/comments`, { content }),
@@ -84,7 +95,7 @@ export default function GeneralBoardPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={columns} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

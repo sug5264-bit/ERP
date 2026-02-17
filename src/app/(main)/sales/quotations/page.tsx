@@ -65,6 +65,11 @@ export default function QuotationsPage() {
         <FileDown className="h-4 w-4" />
       </Button>
     )},
+    { id: 'delete', header: '', cell: ({ row }) => (
+      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.quotationNo)}>
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    ), size: 50 },
   ]
 
   const qp = new URLSearchParams({ pageSize: '50' })
@@ -79,6 +84,16 @@ export default function QuotationsPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-quotations'] }); setOpen(false); setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }]); toast.success('견적이 등록되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/sales/quotations/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-quotations'] }); toast.success('견적이 삭제되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleDelete = (id: string, no: string) => {
+    if (window.confirm(`견적 [${no}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+  }
 
   const partners = partnersData?.data || []
   const items = itemsData?.data || []

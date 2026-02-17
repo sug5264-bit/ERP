@@ -65,3 +65,36 @@ export async function PUT(
     return handleApiError(error)
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession()
+    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+
+    const { id } = await params
+
+    // 연결된 사용자 계정이 있는지 확인
+    const employee = await prisma.employee.findUnique({
+      where: { id },
+      include: { user: true },
+    })
+    if (!employee) return errorResponse('사원을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+    // 연결된 사용자 계정이 있으면 비활성화 처리
+    if (employee.user) {
+      await prisma.user.update({
+        where: { id: employee.user.id },
+        data: { isActive: false },
+      })
+    }
+
+    await prisma.employee.delete({ where: { id } })
+
+    return successResponse({ message: '사원이 삭제되었습니다.' })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
