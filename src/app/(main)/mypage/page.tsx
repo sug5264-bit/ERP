@@ -72,22 +72,35 @@ export default function MyPage() {
   const emp = user?.employee
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="마이페이지" description="내 정보와 활동 내역을 확인합니다" />
 
       <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="info"><User className="mr-1 h-4 w-4" /> 내 정보</TabsTrigger>
-          <TabsTrigger value="leave"><CalendarOff className="mr-1 h-4 w-4" /> 휴가</TabsTrigger>
-          <TabsTrigger value="approval"><FileText className="mr-1 h-4 w-4" /> 결재</TabsTrigger>
-          <TabsTrigger value="security"><Shield className="mr-1 h-4 w-4" /> 보안</TabsTrigger>
+        <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+          <TabsTrigger value="info" className="text-xs sm:text-sm gap-1">
+            <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">내 정보</span>
+            <span className="sm:hidden">정보</span>
+          </TabsTrigger>
+          <TabsTrigger value="leave" className="text-xs sm:text-sm gap-1">
+            <CalendarOff className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span>휴가</span>
+          </TabsTrigger>
+          <TabsTrigger value="approval" className="text-xs sm:text-sm gap-1">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span>결재</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="text-xs sm:text-sm gap-1">
+            <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span>보안</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* 내 정보 탭 */}
         <TabsContent value="info">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <Card>
-              <CardHeader><CardTitle className="text-base">기본 정보</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm sm:text-base">기본 정보</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <InfoRow label="이름" value={emp?.nameKo || user?.name} />
                 <InfoRow label="영문명" value={emp?.nameEn || '-'} />
@@ -99,7 +112,7 @@ export default function MyPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-base">계정 정보</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-sm sm:text-base">계정 정보</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <InfoRow label="아이디" value={user?.username} />
                 <InfoRow label="이메일" value={user?.email} />
@@ -111,7 +124,7 @@ export default function MyPage() {
                     <DialogTrigger asChild>
                       <Button variant="outline" size="sm"><KeyRound className="mr-1 h-4 w-4" /> 비밀번호 변경</Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-md max-h-[85dvh] overflow-y-auto">
                       <DialogHeader><DialogTitle>비밀번호 변경</DialogTitle></DialogHeader>
                       <form onSubmit={handleChangePassword} className="space-y-4">
                         <div className="space-y-2"><Label>현재 비밀번호</Label><Input name="currentPassword" type="password" required /></div>
@@ -131,9 +144,9 @@ export default function MyPage() {
 
         {/* 휴가 탭 */}
         <TabsContent value="leave">
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* 휴가 잔여 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {(leaveBalances || []).length === 0 ? (
                 <Card className="col-span-full">
                   <CardContent className="py-6 text-center text-sm text-muted-foreground">
@@ -145,7 +158,7 @@ export default function MyPage() {
                   <Card key={lb.id}>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{lb.year}년 휴가</CardTitle></CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{Number(lb.remainingDays)}일</div>
+                      <div className="text-xl sm:text-2xl font-bold">{Number(lb.remainingDays)}일</div>
                       <p className="text-xs text-muted-foreground mt-1">
                         총 {Number(lb.totalDays)}일 / 사용 {Number(lb.usedDays)}일
                       </p>
@@ -165,8 +178,8 @@ export default function MyPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">올해 휴가 내역</CardTitle>
-                  <Link href="/hr/leave"><Badge variant="outline" className="cursor-pointer">전체보기</Badge></Link>
+                  <CardTitle className="text-sm sm:text-base">올해 휴가 내역</CardTitle>
+                  <Link href="/hr/leave"><Badge variant="outline" className="cursor-pointer text-xs">전체보기</Badge></Link>
                 </div>
               </CardHeader>
               <CardContent>
@@ -175,13 +188,13 @@ export default function MyPage() {
                 ) : (
                   <div className="space-y-2">
                     {(myLeaves || []).map((l: any) => (
-                      <div key={l.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{LEAVE_TYPE_MAP[l.leaveType] || l.leaveType}</Badge>
-                          <span>{formatDate(l.startDate)} ~ {formatDate(l.endDate)}</span>
-                          <span className="text-muted-foreground">({l.days}일)</span>
+                      <div key={l.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-sm border-b pb-2 last:border-0 gap-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs">{LEAVE_TYPE_MAP[l.leaveType] || l.leaveType}</Badge>
+                          <span className="text-xs sm:text-sm">{formatDate(l.startDate)} ~ {formatDate(l.endDate)}</span>
+                          <span className="text-muted-foreground text-xs">({l.days}일)</span>
                         </div>
-                        <Badge variant={LEAVE_STATUS[l.status]?.variant || 'outline'}>
+                        <Badge variant={LEAVE_STATUS[l.status]?.variant || 'outline'} className="w-fit text-xs">
                           {LEAVE_STATUS[l.status]?.label || l.status}
                         </Badge>
                       </div>
@@ -198,8 +211,8 @@ export default function MyPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">내 결재 문서</CardTitle>
-                <Link href="/approval/draft"><Badge variant="outline" className="cursor-pointer">기안하기</Badge></Link>
+                <CardTitle className="text-sm sm:text-base">내 결재 문서</CardTitle>
+                <Link href="/approval/draft"><Badge variant="outline" className="cursor-pointer text-xs">기안하기</Badge></Link>
               </div>
             </CardHeader>
             <CardContent>
@@ -208,14 +221,14 @@ export default function MyPage() {
               ) : (
                 <div className="space-y-2">
                   {(myApprovals || []).map((doc: any) => (
-                    <div key={doc.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs">{doc.documentNo}</span>
-                        <span className="font-medium truncate max-w-[200px]">{doc.title}</span>
+                    <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-sm border-b pb-2 last:border-0 gap-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-xs shrink-0">{doc.documentNo}</span>
+                        <span className="font-medium truncate">{doc.title}</span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs text-muted-foreground">{doc.currentStep}/{doc.totalSteps}</span>
-                        <Badge variant={APPROVAL_STATUS[doc.status]?.variant || 'outline'}>
+                        <Badge variant={APPROVAL_STATUS[doc.status]?.variant || 'outline'} className="text-xs">
                           {APPROVAL_STATUS[doc.status]?.label || doc.status}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{formatDate(doc.draftDate)}</span>
@@ -231,7 +244,7 @@ export default function MyPage() {
         {/* 보안 탭 */}
         <TabsContent value="security">
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> 최근 로그인 이력</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm sm:text-base flex items-center gap-2"><Clock className="h-4 w-4" /> 최근 로그인 이력</CardTitle></CardHeader>
             <CardContent>
               {(loginHistory || []).length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">로그인 이력이 없습니다.</p>
@@ -240,7 +253,7 @@ export default function MyPage() {
                   {(loginHistory || []).map((log: any) => (
                     <div key={log.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
                       <span className="font-mono text-xs">{log.ipAddress || '-'}</span>
-                      <span className="text-muted-foreground">{formatDateTime(log.createdAt)}</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm">{formatDateTime(log.createdAt)}</span>
                     </div>
                   ))}
                 </div>
@@ -255,9 +268,9 @@ export default function MyPage() {
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value || '-'}</span>
+    <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right truncate">{value || '-'}</span>
     </div>
   )
 }

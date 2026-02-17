@@ -65,7 +65,7 @@ export function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
+      <PopoverContent className="w-[calc(100vw-16px)] sm:w-80 p-0 max-h-[80dvh]" align="end" sideOffset={8}>
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h4 className="text-sm font-semibold">알림</h4>
           <div className="flex gap-1">
@@ -82,7 +82,7 @@ export function NotificationBell() {
             )}
           </div>
         </div>
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="max-h-[60dvh] sm:max-h-[400px]">
           {notifications.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
               알림이 없습니다

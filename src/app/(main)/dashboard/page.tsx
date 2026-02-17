@@ -43,10 +43,10 @@ export default function DashboardPage() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <p className="text-sm font-medium mb-1">{label}</p>
+      <div className="rounded-lg border bg-background p-2 shadow-sm text-xs sm:text-sm">
+        <p className="font-medium mb-1">{label}</p>
         {payload.map((entry: any, idx: number) => (
-          <p key={idx} className="text-sm" style={{ color: entry.color }}>
+          <p key={idx} style={{ color: entry.color }}>
             {entry.name}: {typeof entry.value === 'number' && entry.value > 1000 ? formatCurrency(entry.value) : entry.value}
           </p>
         ))}
@@ -55,59 +55,84 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title={`안녕하세요, ${session?.user?.name || '사용자'}님`} description="웰그린 ERP 대시보드입니다" />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         <Link href="/hr/employees">
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs sm:text-sm font-medium">전체 사원</CardTitle><Users className="h-4 w-4 text-muted-foreground hidden sm:block" /></CardHeader>
-            <CardContent><div className="text-xl sm:text-2xl font-bold">{empCount}명</div></CardContent>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">전체 사원</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground hidden sm:block" />
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{empCount}명</div>
+            </CardContent>
           </Card>
         </Link>
         <Link href="/inventory/items">
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs sm:text-sm font-medium">등록 품목</CardTitle><Package className="h-4 w-4 text-muted-foreground hidden sm:block" /></CardHeader>
-            <CardContent><div className="text-xl sm:text-2xl font-bold">{itemCount}건</div></CardContent>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">등록 품목</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground hidden sm:block" />
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{itemCount}건</div>
+            </CardContent>
           </Card>
         </Link>
         <Link href="/approval/pending">
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs sm:text-sm font-medium">결재 대기</CardTitle><FileText className="h-4 w-4 text-orange-500 hidden sm:block" /></CardHeader>
-            <CardContent><div className={`text-xl sm:text-2xl font-bold ${pendingApproval > 0 ? 'text-orange-600' : ''}`}>{pendingApproval}건</div></CardContent>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">결재 대기</CardTitle>
+              <FileText className="h-4 w-4 text-orange-500 hidden sm:block" />
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className={`text-lg sm:text-2xl font-bold ${pendingApproval > 0 ? 'text-orange-600' : ''}`}>{pendingApproval}건</div>
+            </CardContent>
           </Card>
         </Link>
         <Link href="/hr/leave">
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs sm:text-sm font-medium">휴가 대기</CardTitle><CalendarOff className="h-4 w-4 text-blue-500 hidden sm:block" /></CardHeader>
-            <CardContent><div className={`text-xl sm:text-2xl font-bold ${pendingLeaves > 0 ? 'text-blue-600' : ''}`}>{pendingLeaves}건</div></CardContent>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">휴가 대기</CardTitle>
+              <CalendarOff className="h-4 w-4 text-blue-500 hidden sm:block" />
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className={`text-lg sm:text-2xl font-bold ${pendingLeaves > 0 ? 'text-blue-600' : ''}`}>{pendingLeaves}건</div>
+            </CardContent>
           </Card>
         </Link>
-        <Link href="/inventory/stock-status">
+        <Link href="/inventory/stock-status" className="col-span-2 lg:col-span-1">
           <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-            <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-xs sm:text-sm font-medium">재고 부족</CardTitle><Package className="h-4 w-4 text-red-500 hidden sm:block" /></CardHeader>
-            <CardContent><div className={`text-xl sm:text-2xl font-bold ${alertCount > 0 ? 'text-red-600' : ''}`}>{alertCount}건</div></CardContent>
+            <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
+              <CardTitle className="text-xs sm:text-sm font-medium">재고 부족</CardTitle>
+              <Package className="h-4 w-4 text-red-500 hidden sm:block" />
+            </CardHeader>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className={`text-lg sm:text-2xl font-bold ${alertCount > 0 ? 'text-red-600' : ''}`}>{alertCount}건</div>
+            </CardContent>
           </Card>
         </Link>
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 월별 매출 */}
         <Card>
-          <CardHeader><CardTitle className="text-sm sm:text-base">월별 매출 현황</CardTitle></CardHeader>
-          <CardContent>
+          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">월별 매출 현황</CardTitle></CardHeader>
+          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
             {monthlyData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">매출 데이터가 없습니다.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={monthlyData}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v: number) => formatCurrency(v)} />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => v >= 10000 ? `${(v/10000).toFixed(0)}만` : `${v}`} width={45} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="online" name="온라인" stackId="sales" fill="#3b82f6" />
                   <Bar dataKey="offline" name="오프라인" stackId="sales" fill="#22c55e" />
                 </BarChart>
@@ -118,22 +143,23 @@ export default function DashboardPage() {
 
         {/* 부서별 인원 */}
         <Card>
-          <CardHeader><CardTitle className="text-sm sm:text-base">부서별 인원</CardTitle></CardHeader>
-          <CardContent>
+          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">부서별 인원</CardTitle></CardHeader>
+          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
             {deptData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">부서 데이터가 없습니다.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
                     data={deptData}
                     cx="50%"
                     cy="50%"
-                    outerRadius={90}
+                    outerRadius={80}
                     dataKey="count"
                     nameKey="name"
                     label={({ name, value }: any) => `${name} (${value})`}
                     labelLine={{ strokeWidth: 1 }}
+                    fontSize={10}
                   >
                     {deptData.map((_: any, idx: number) => (
                       <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
@@ -148,19 +174,19 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* 재고 상위 품목 */}
         <Card>
-          <CardHeader><CardTitle className="text-sm sm:text-base">재고 상위 품목</CardTitle></CardHeader>
-          <CardContent>
+          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">재고 상위 품목</CardTitle></CardHeader>
+          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
             {stockData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">재고 데이터가 없습니다.</p>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={stockData} layout="vertical">
+                <BarChart data={stockData} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
+                  <XAxis type="number" tick={{ fontSize: 10 }} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="quantity" name="수량" fill="#8b5cf6" />
                 </BarChart>
@@ -171,18 +197,18 @@ export default function DashboardPage() {
 
         {/* 휴가 유형별 통계 */}
         <Card>
-          <CardHeader><CardTitle className="text-sm sm:text-base">올해 휴가 유형별 현황</CardTitle></CardHeader>
-          <CardContent>
+          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">올해 휴가 유형별 현황</CardTitle></CardHeader>
+          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
             {leaveStatData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">휴가 데이터가 없습니다.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={leaveStatData}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={leaveStatData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="type" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="type" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} width={35} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="count" name="건수" fill="#f59e0b" />
                   <Bar dataKey="days" name="일수" fill="#06b6d4" />
                 </BarChart>
@@ -193,17 +219,20 @@ export default function DashboardPage() {
       </div>
 
       {/* Lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2"><ShoppingCart className="h-4 w-4" /> 최근 발주</CardTitle>
             <Link href="/sales/orders"><Badge variant="outline" className="cursor-pointer text-xs">더보기</Badge></Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {(orderData?.data || []).length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">발주 데이터가 없습니다.</p> :
               <div className="space-y-2">{(orderData?.data || []).slice(0, 5).map((o: any) => (
-                <div key={o.id} className="flex items-center justify-between text-sm border-b pb-2">
-                  <div className="truncate flex-1 mr-2"><span className="font-mono text-xs mr-2">{o.orderNo}</span><span>{o.partner?.partnerName || '-'}</span></div>
+                <div key={o.id} className="flex items-center justify-between text-xs sm:text-sm border-b pb-2">
+                  <div className="truncate flex-1 mr-2">
+                    <span className="font-mono text-xs mr-1 sm:mr-2">{o.orderNo}</span>
+                    <span>{o.partner?.partnerName || '-'}</span>
+                  </div>
                   <span className="font-medium whitespace-nowrap">{formatCurrency(Number(o.totalAmount || 0))}</span>
                 </div>
               ))}</div>
@@ -212,14 +241,14 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2"><ClipboardList className="h-4 w-4" /> 공지사항</CardTitle>
             <Link href="/board/notices"><Badge variant="outline" className="cursor-pointer text-xs">더보기</Badge></Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {(noticeData?.data || []).length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">공지사항이 없습니다.</p> :
               <div className="space-y-2">{(noticeData?.data || []).slice(0, 5).map((n: any) => (
-                <div key={n.id} className="flex items-center justify-between text-sm border-b pb-2">
+                <div key={n.id} className="flex items-center justify-between text-xs sm:text-sm border-b pb-2">
                   <span className="truncate flex-1">{n.isPinned && <span className="text-red-500 mr-1">[필독]</span>}{n.title}</span>
                   <span className="text-muted-foreground text-xs ml-2 whitespace-nowrap">{formatDate(n.createdAt)}</span>
                 </div>

@@ -73,13 +73,13 @@ export default function ApprovalPendingPage() {
 
       {/* 일괄 처리 버튼 */}
       {selectedRows.length > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
-          <span className="text-sm font-medium">{selectedRows.length}건 선택됨</span>
-          <Button size="sm" onClick={() => handleBatchAction('approve')} disabled={batchMutation.isPending}>
-            <CheckCheck className="mr-1 h-4 w-4" /> 일괄 승인
+        <div className="flex flex-wrap items-center gap-2 p-2 sm:p-3 bg-muted/50 rounded-lg border">
+          <span className="text-xs sm:text-sm font-medium">{selectedRows.length}건 선택</span>
+          <Button size="sm" className="text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBatchAction('approve')} disabled={batchMutation.isPending}>
+            <CheckCheck className="mr-1 h-3.5 w-3.5" /> 일괄 승인
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => handleBatchAction('reject')} disabled={batchMutation.isPending}>
-            <XCircle className="mr-1 h-4 w-4" /> 일괄 반려
+          <Button size="sm" variant="destructive" className="text-xs sm:text-sm h-7 sm:h-8" onClick={() => handleBatchAction('reject')} disabled={batchMutation.isPending}>
+            <XCircle className="mr-1 h-3.5 w-3.5" /> 일괄 반려
           </Button>
         </div>
       )}
@@ -97,32 +97,31 @@ export default function ApprovalPendingPage() {
       />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>{selectedDoc?.title}</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="text-base sm:text-lg pr-8">{selectedDoc?.title}</DialogTitle></DialogHeader>
           {selectedDoc && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm">
                 <div><span className="text-muted-foreground">문서번호:</span> {selectedDoc.documentNo}</div>
                 <div><span className="text-muted-foreground">기안일:</span> {formatDate(selectedDoc.draftDate)}</div>
                 <div><span className="text-muted-foreground">기안자:</span> {selectedDoc.drafter?.nameKo}</div>
                 <div><span className="text-muted-foreground">긴급도:</span> {selectedDoc.urgency === 'NORMAL' ? '일반' : selectedDoc.urgency === 'URGENT' ? '긴급' : '초긴급'}</div>
               </div>
-              <div className="border rounded-md p-3 text-sm whitespace-pre-wrap">{selectedDoc.content?.body || '-'}</div>
+              <div className="border rounded-md p-3 text-xs sm:text-sm whitespace-pre-wrap max-h-[30vh] overflow-y-auto">{selectedDoc.content?.body || '-'}</div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">결재선</Label>
+                <Label className="text-xs sm:text-sm font-medium">결재선</Label>
                 {(selectedDoc.steps || []).map((step: any, idx: number) => (
-                  <div key={step.id} className="flex items-center gap-2 text-sm">
-                    <span className="w-6">{idx + 1}.</span>
-                    <span className="flex-1">{step.approver?.nameKo || '-'} <span className="text-muted-foreground">({step.approver?.position?.name || '-'})</span></span>
-                    <Badge variant={step.status === 'APPROVED' ? 'default' : step.status === 'REJECTED' ? 'destructive' : 'outline'}>
+                  <div key={step.id} className="flex items-center gap-2 text-xs sm:text-sm">
+                    <span className="w-5 shrink-0">{idx + 1}.</span>
+                    <span className="flex-1 truncate">{step.approver?.nameKo || '-'} <span className="text-muted-foreground">({step.approver?.position?.name || '-'})</span></span>
+                    <Badge variant={step.status === 'APPROVED' ? 'default' : step.status === 'REJECTED' ? 'destructive' : 'outline'} className="text-xs shrink-0">
                       {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
                     </Badge>
-                    {step.comment && <span className="text-muted-foreground text-xs">({step.comment})</span>}
                   </div>
                 ))}
               </div>
-              <div className="space-y-2"><Label>의견</Label><Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="결재 의견을 입력하세요..." /></div>
-              <div className="flex gap-2">
+              <div className="space-y-2"><Label className="text-xs sm:text-sm">의견</Label><Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="결재 의견을 입력하세요..." className="min-h-[60px]" /></div>
+              <div className="flex gap-2 sticky bottom-0 bg-background pt-2">
                 <Button className="flex-1" onClick={() => actionMutation.mutate({ id: selectedDoc.id, body: { action: 'approve', comment } })} disabled={actionMutation.isPending}>
                   <CheckCircle className="mr-1 h-4 w-4" /> 승인
                 </Button>

@@ -128,7 +128,7 @@ export function DataTable<TData, TValue>({
   }, [rowSelection])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {searchColumn && (
           <div className="relative w-full sm:max-w-sm">
@@ -145,7 +145,7 @@ export function DataTable<TData, TValue>({
             />
           </div>
         )}
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap">
           {onBulkDelete &&
             table.getFilteredSelectedRowModel().rows.length > 0 && (
               <Button
@@ -159,123 +159,130 @@ export function DataTable<TData, TValue>({
                   )
                 }
               >
-                <Trash2 className="mr-2 h-4 w-4" />
-                선택 삭제 ({table.getFilteredSelectedRowModel().rows.length}건)
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                <span className="hidden sm:inline">선택 삭제</span> ({table.getFilteredSelectedRowModel().rows.length}건)
               </Button>
             )}
           {onExport?.excel && (
             <Button variant="outline" size="sm" onClick={onExport.excel}>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="mr-1.5 h-4 w-4" />
               Excel
             </Button>
           )}
           {onExport?.pdf && (
             <Button variant="outline" size="sm" onClick={onExport.pdf}>
-              <FileText className="mr-2 h-4 w-4" />
+              <FileText className="mr-1.5 h-4 w-4" />
               PDF
             </Button>
           )}
         </div>
       </div>
 
-      <div className="rounded-md border overflow-x-auto">
-        <Table className="min-w-[640px]">
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={allColumns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  로딩 중...
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className={onRowClick ? 'cursor-pointer hover:bg-muted/50' : ''} onClick={() => onRowClick?.(row.original)}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
+      {/* Table with horizontal scroll on mobile */}
+      <div className="relative rounded-md border">
+        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="whitespace-nowrap text-xs sm:text-sm">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={allColumns.length}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  데이터가 없습니다.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={allColumns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    로딩 중...
+                  </TableCell>
+                </TableRow>
+              ) : table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className={onRowClick ? 'cursor-pointer hover:bg-muted/50 active:bg-muted/70' : ''}
+                    onClick={() => onRowClick?.(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="text-xs sm:text-sm py-2.5 sm:py-3">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={allColumns.length}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    데이터가 없습니다.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           총 {table.getFilteredRowModel().rows.length}건
         </p>
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1">
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronsLeft className="h-4 w-4" />
+            <ChevronsLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
-          <span className="text-sm px-1">
-            {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+          <span className="text-xs sm:text-sm px-1 tabular-nums">
+            {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
           </span>
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
-            <ChevronsRight className="h-4 w-4" />
+            <ChevronsRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
         </div>
       </div>
