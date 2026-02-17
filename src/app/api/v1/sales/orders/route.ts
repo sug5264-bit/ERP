@@ -60,28 +60,26 @@ export async function POST(request: NextRequest) {
     })
     const orderedMap = new Map(orderedAggs.map(o => [o.itemId, Number(o._sum.remainingQty ?? 0)]))
 
+    // 품목 정보 일괄 조회 (N+1 쿼리 방지)
+    const itemsInfo = await prisma.item.findMany({
+      where: { id: { in: orderItemIds } },
+      select: { id: true, itemName: true, taxType: true },
+    })
+    const itemInfoMap = new Map(itemsInfo.map(i => [i.id, i]))
+
     for (const d of data.details) {
       const currentStock = stockMap.get(d.itemId) || 0
       const existingOrdered = orderedMap.get(d.itemId) || 0
       const availableQty = Math.max(0, currentStock - existingOrdered)
       if (d.quantity > availableQty) {
-        const item = await prisma.item.findUnique({ where: { id: d.itemId }, select: { itemName: true } })
-        const itemName = item?.itemName ?? d.itemId
+        const itemName = itemInfoMap.get(d.itemId)?.itemName ?? d.itemId
         warnings.push(`품목 ${itemName}: 주문수량 ${d.quantity}개, 가용재고 ${availableQty}개 (재고 부족)`)
       }
     }
 
-    // Fetch item tax types for tax calculation
-    const itemIds = data.details.map(d => d.itemId)
-    const itemsForTax = await prisma.item.findMany({
-      where: { id: { in: itemIds } },
-      select: { id: true, taxType: true },
-    })
-    const itemTaxMap = new Map(itemsForTax.map(i => [i.id, i.taxType]))
-
     const details = data.details.map((d, idx) => {
       const supplyAmount = d.quantity * d.unitPrice
-      const taxType = itemTaxMap.get(d.itemId) || 'TAXABLE'
+      const taxType = itemInfoMap.get(d.itemId)?.taxType || 'TAXABLE'
       const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
       return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty: 0, remainingQty: d.quantity, remark: d.remark || null }
     })

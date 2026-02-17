@@ -523,6 +523,7 @@ model VoucherDetail {
   costCenter     CostCenter?    @relation(fields: [costCenterId], references: [id])
 
   @@index([voucherId])
+  @@index([accountSubjectId])
   @@map("voucher_details")
 }
 
@@ -774,6 +775,7 @@ model StockBalance {
   zone      WarehouseZone? @relation(fields: [zoneId], references: [id])
 
   @@unique([itemId, warehouseId, zoneId])
+  @@index([itemId])
   @@map("stock_balances")
 }
 
@@ -906,6 +908,7 @@ model SalesOrder {
   deliveries Delivery[]
 
   @@index([orderDate])
+  @@index([status])
   @@map("sales_orders")
 }
 
@@ -926,6 +929,8 @@ model SalesOrderDetail {
   salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
   item       Item       @relation(fields: [itemId], references: [id])
 
+  @@index([salesOrderId])
+  @@index([itemId])
   @@map("sales_order_details")
 }
 
@@ -1265,6 +1270,7 @@ model ApprovalDocument {
 
   @@index([status])
   @@index([drafterId])
+  @@index([createdAt])
   @@map("approval_documents")
 }
 

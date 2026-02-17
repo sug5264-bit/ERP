@@ -23,8 +23,9 @@ export async function GET(request: NextRequest) {
       status: { not: 'CANCELLED' as const },
     }
 
-    // Channel summary
-    const [onlineOrders, offlineOrders] = await Promise.all([
+    // 모든 독립 쿼리를 병렬 실행
+    const [onlineOrders, offlineOrders, allOrders, topItemAggs] = await Promise.all([
+      // Channel summary
       prisma.salesOrder.aggregate({
         where: { ...where, salesChannel: 'ONLINE' },
         _count: true,
@@ -35,20 +36,27 @@ export async function GET(request: NextRequest) {
         _count: true,
         _sum: { totalAmount: true, totalSupply: true, totalTax: true },
       }),
+      // Monthly breakdown (select only needed fields)
+      prisma.salesOrder.findMany({
+        where,
+        select: {
+          orderDate: true,
+          salesChannel: true,
+          totalAmount: true,
+        },
+        orderBy: { orderDate: 'asc' },
+      }),
+      // Top items: DB에서 집계 (unbounded findMany 제거)
+      prisma.salesOrderDetail.groupBy({
+        by: ['itemId'],
+        where: { salesOrder: { ...where } },
+        _sum: { totalAmount: true, quantity: true },
+        orderBy: { _sum: { totalAmount: 'desc' } },
+        take: 10,
+      }),
     ])
 
-    // Monthly breakdown
-    const allOrders = await prisma.salesOrder.findMany({
-      where,
-      select: {
-        orderDate: true,
-        salesChannel: true,
-        totalAmount: true,
-        totalSupply: true,
-      },
-      orderBy: { orderDate: 'asc' },
-    })
-
+    // Monthly breakdown 처리
     const monthlyMap = new Map<string, { online: number; offline: number; total: number }>()
     for (const order of allOrders) {
       const key = `${order.orderDate.getFullYear()}-${String(order.orderDate.getMonth() + 1).padStart(2, '0')}`
@@ -65,33 +73,39 @@ export async function GET(request: NextRequest) {
       ...data,
     }))
 
-    // Top items by channel
-    const topItemsRaw = await prisma.salesOrderDetail.findMany({
-      where: { salesOrder: { ...where } },
-      select: {
-        item: { select: { itemCode: true, itemName: true } },
-        totalAmount: true,
-        quantity: true,
-        salesOrder: { select: { salesChannel: true } },
-      },
+    // Top items: 상위 10개만 추가 조회 (채널별 분류)
+    const topItemIds = topItemAggs.map(a => a.itemId)
+    const [itemInfos, onlineItemAggs] = await Promise.all([
+      prisma.item.findMany({
+        where: { id: { in: topItemIds } },
+        select: { id: true, itemCode: true, itemName: true },
+      }),
+      prisma.salesOrderDetail.groupBy({
+        by: ['itemId'],
+        where: {
+          itemId: { in: topItemIds },
+          salesOrder: { ...where, salesChannel: 'ONLINE' },
+        },
+        _sum: { totalAmount: true },
+      }),
+    ])
+
+    const itemInfoMap = new Map(itemInfos.map(i => [i.id, i]))
+    const onlineMap = new Map(onlineItemAggs.map(a => [a.itemId, Number(a._sum.totalAmount || 0)]))
+
+    const topItems = topItemAggs.map(agg => {
+      const item = itemInfoMap.get(agg.itemId)
+      const total = Number(agg._sum.totalAmount || 0)
+      const online = onlineMap.get(agg.itemId) || 0
+      return {
+        itemCode: item?.itemCode || '',
+        itemName: item?.itemName || '',
+        online,
+        offline: total - online,
+        total,
+        qty: Number(agg._sum.quantity || 0),
+      }
     })
-
-    const itemMap = new Map<string, { itemCode: string; itemName: string; online: number; offline: number; total: number; qty: number }>()
-    for (const d of topItemsRaw) {
-      const key = d.item.itemCode
-      if (!itemMap.has(key)) itemMap.set(key, { itemCode: d.item.itemCode, itemName: d.item.itemName, online: 0, offline: 0, total: 0, qty: 0 })
-      const entry = itemMap.get(key)!
-      const amount = Number(d.totalAmount)
-      const qty = Number(d.quantity)
-      if (d.salesOrder.salesChannel === 'ONLINE') entry.online += amount
-      else entry.offline += amount
-      entry.total += amount
-      entry.qty += qty
-    }
-
-    const topItems = Array.from(itemMap.values())
-      .sort((a, b) => b.total - a.total)
-      .slice(0, 10)
 
     return successResponse({
       period: { year, month },

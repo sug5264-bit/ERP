@@ -1,15 +1,29 @@
-import axios from 'axios'
+const BASE_URL = '/api/v1'
 
-export const api = axios.create({
-  baseURL: '/api/v1',
-  headers: { 'Content-Type': 'application/json' },
-})
-
-api.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    const message =
-      error.response?.data?.error?.message || '요청 처리 중 오류가 발생했습니다.'
-    return Promise.reject(new Error(message))
+async function request(method: string, url: string, data?: any) {
+  const options: RequestInit = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
   }
-)
+  if (data !== undefined) {
+    options.body = JSON.stringify(data)
+  }
+
+  const res = await fetch(`${BASE_URL}${url}`, options)
+  const json = await res.json()
+
+  if (!res.ok) {
+    const message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'
+    throw new Error(message)
+  }
+
+  return json
+}
+
+export const api = {
+  get: (url: string) => request('GET', url),
+  post: (url: string, data?: any) => request('POST', url, data),
+  put: (url: string, data?: any) => request('PUT', url, data),
+  patch: (url: string, data?: any) => request('PATCH', url, data),
+  delete: (url: string) => request('DELETE', url),
+}

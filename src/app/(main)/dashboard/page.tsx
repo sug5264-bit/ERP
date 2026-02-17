@@ -9,23 +9,39 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { Users, Package, FileText, ClipboardList, ShoppingCart, CalendarOff } from 'lucide-react'
 import Link from 'next/link'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  PieChart, Pie, Cell,
-} from 'recharts'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6']
+// recharts lazy load (번들 사이즈 ~200KB 절감)
+const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
+  ssr: false,
+  loading: () => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      {[1, 2, 3, 4].map((i) => (
+        <Card key={i}>
+          <CardContent className="flex items-center justify-center h-[300px]">
+            <div className="animate-pulse text-muted-foreground text-sm">차트 로딩중...</div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  ),
+})
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+
+  // KPI 카운트 쿼리 (가벼운 데이터만)
   const { data: empData } = useQuery({ queryKey: ['dash-employees'], queryFn: () => api.get('/hr/employees?pageSize=1') as Promise<any> })
   const { data: itemData } = useQuery({ queryKey: ['dash-items'], queryFn: () => api.get('/inventory/items?pageSize=1') as Promise<any> })
-  const { data: orderData } = useQuery({ queryKey: ['dash-orders'], queryFn: () => api.get('/sales/orders?pageSize=5') as Promise<any> })
   const { data: approvalData } = useQuery({ queryKey: ['dash-approval'], queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=5') as Promise<any> })
-  const { data: noticeData } = useQuery({ queryKey: ['dash-notices'], queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=5') as Promise<any> })
   const { data: stockAlert } = useQuery({ queryKey: ['dash-stock-alert'], queryFn: () => api.get('/inventory/stock-balance?belowSafety=true&pageSize=1') as Promise<any> })
-  const { data: salesSummary } = useQuery({ queryKey: ['dash-sales-summary'], queryFn: () => api.get('/sales/summary') as Promise<any> })
   const { data: leaveData } = useQuery({ queryKey: ['dash-leave-pending'], queryFn: () => api.get('/hr/leave?status=REQUESTED&pageSize=1') as Promise<any> })
+
+  // 리스트/차트 데이터
+  const { data: orderData } = useQuery({ queryKey: ['dash-orders'], queryFn: () => api.get('/sales/orders?pageSize=5') as Promise<any> })
+  const { data: noticeData } = useQuery({ queryKey: ['dash-notices'], queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=5') as Promise<any> })
+  const { data: salesSummary } = useQuery({ queryKey: ['dash-sales-summary'], queryFn: () => api.get('/sales/summary') as Promise<any> })
   const { data: dashStats } = useQuery({ queryKey: ['dash-stats'], queryFn: () => api.get('/dashboard/stats') as Promise<any> })
 
   const empCount = empData?.meta?.totalCount || 0
@@ -33,26 +49,6 @@ export default function DashboardPage() {
   const pendingApproval = approvalData?.meta?.totalCount || 0
   const alertCount = stockAlert?.meta?.totalCount || 0
   const pendingLeaves = leaveData?.meta?.totalCount || 0
-
-  const monthlyData = (salesSummary?.data?.monthly || []).map((m: any) => ({
-    month: m.month, online: m.online, offline: m.offline,
-  }))
-
-  const { deptData = [], stockData = [], leaveData: leaveStatData = [] } = dashStats?.data || {}
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload?.length) return null
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm text-xs sm:text-sm">
-        <p className="font-medium mb-1">{label}</p>
-        {payload.map((entry: any, idx: number) => (
-          <p key={idx} style={{ color: entry.color }}>
-            {entry.name}: {typeof entry.value === 'number' && entry.value > 1000 ? formatCurrency(entry.value) : entry.value}
-          </p>
-        ))}
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -117,106 +113,10 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* 월별 매출 */}
-        <Card>
-          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">월별 매출 현황</CardTitle></CardHeader>
-          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
-            {monthlyData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">매출 데이터가 없습니다.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => v >= 10000 ? `${(v/10000).toFixed(0)}만` : `${v}`} width={45} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="online" name="온라인" stackId="sales" fill="#3b82f6" />
-                  <Bar dataKey="offline" name="오프라인" stackId="sales" fill="#22c55e" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 부서별 인원 */}
-        <Card>
-          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">부서별 인원</CardTitle></CardHeader>
-          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
-            {deptData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">부서 데이터가 없습니다.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={deptData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="count"
-                    nameKey="name"
-                    label={({ name, value }: any) => `${name} (${value})`}
-                    labelLine={{ strokeWidth: 1 }}
-                    fontSize={10}
-                  >
-                    {deptData.map((_: any, idx: number) => (
-                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* 재고 상위 품목 */}
-        <Card>
-          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">재고 상위 품목</CardTitle></CardHeader>
-          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
-            {stockData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">재고 데이터가 없습니다.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={stockData} layout="vertical" margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tick={{ fontSize: 10 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={80} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="quantity" name="수량" fill="#8b5cf6" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* 휴가 유형별 통계 */}
-        <Card>
-          <CardHeader className="p-3 sm:p-6"><CardTitle className="text-sm sm:text-base">올해 휴가 유형별 현황</CardTitle></CardHeader>
-          <CardContent className="p-2 sm:p-6 pt-0 sm:pt-0">
-            {leaveStatData.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">휴가 데이터가 없습니다.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={leaveStatData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="type" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} width={35} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="count" name="건수" fill="#f59e0b" />
-                  <Bar dataKey="days" name="일수" fill="#06b6d4" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Charts (lazy loaded) */}
+      <Suspense>
+        <DashboardCharts salesSummary={salesSummary} dashStats={dashStats} />
+      </Suspense>
 
       {/* Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

@@ -20,46 +20,40 @@ export async function GET(request: NextRequest) {
 
     // 계정과목별 집계 보기 (선택 없을 때)
     if (!accountSubjectId) {
-      const accounts = await prisma.accountSubject.findMany({
-        where: { isActive: true },
-        orderBy: { code: 'asc' },
-      })
+      const voucherDateWhere: any = {}
+      if (startDate) voucherDateWhere.gte = new Date(startDate)
+      if (endDate) voucherDateWhere.lte = new Date(endDate)
 
-      const result = await Promise.all(
-        accounts.map(async (account) => {
-          const dateWhere: any = {}
-          if (startDate || endDate) {
-            dateWhere.voucher = { voucherDate: {} }
-            if (startDate) dateWhere.voucher.voucherDate.gte = new Date(startDate)
-            if (endDate) dateWhere.voucher.voucherDate.lte = new Date(endDate)
-          }
-
-          const agg = await prisma.voucherDetail.aggregate({
-            where: {
-              accountSubjectId: account.id,
-              voucher: {
-                status: { in: ['APPROVED', 'CONFIRMED'] },
-                ...(dateWhere.voucher || {}),
-              },
+      // groupBy 단일 쿼리로 모든 계정과목 집계 (N+1 → 1 쿼리)
+      const [accounts, aggs] = await Promise.all([
+        prisma.accountSubject.findMany({
+          where: { isActive: true },
+          orderBy: { code: 'asc' },
+        }),
+        prisma.voucherDetail.groupBy({
+          by: ['accountSubjectId'],
+          where: {
+            voucher: {
+              status: { in: ['APPROVED', 'CONFIRMED'] },
+              ...(startDate || endDate ? { voucherDate: voucherDateWhere } : {}),
             },
-            _sum: {
-              debitAmount: true,
-              creditAmount: true,
-            },
-          })
+          },
+          _sum: { debitAmount: true, creditAmount: true },
+        }),
+      ])
 
+      const aggMap = new Map(aggs.map(a => [a.accountSubjectId, a._sum]))
+
+      const filtered = accounts
+        .map(account => {
+          const sums = aggMap.get(account.id)
           return {
             ...account,
-            totalDebit: agg._sum.debitAmount || 0,
-            totalCredit: agg._sum.creditAmount || 0,
+            totalDebit: sums?.debitAmount || 0,
+            totalCredit: sums?.creditAmount || 0,
           }
         })
-      )
-
-      // 잔액이 있는 계정만 필터
-      const filtered = result.filter(
-        (r) => Number(r.totalDebit) !== 0 || Number(r.totalCredit) !== 0
-      )
+        .filter(r => Number(r.totalDebit) !== 0 || Number(r.totalCredit) !== 0)
 
       return successResponse(filtered)
     }

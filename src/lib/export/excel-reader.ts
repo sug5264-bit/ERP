@@ -1,6 +1,6 @@
-import ExcelJS from 'exceljs'
-
 export async function readExcelFile(file: File, keyMap: Record<string, string>): Promise<any[]> {
+  const { default: ExcelJS } = await import('exceljs')
+
   const buffer = await file.arrayBuffer()
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.load(buffer)

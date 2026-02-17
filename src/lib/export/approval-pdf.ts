@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf'
-import 'jspdf-autotable'
-
 interface ApprovalDocExport {
   documentNo: string
   title: string
@@ -41,7 +38,10 @@ const URGENCY_MAP: Record<string, string> = {
   EMERGENCY: '초긴급',
 }
 
-export function exportApprovalPdf(doc: ApprovalDocExport) {
+export async function exportApprovalPdf(doc: ApprovalDocExport) {
+  const { default: jsPDF } = await import('jspdf')
+  await import('jspdf-autotable')
+
   const pdf = new jsPDF('p', 'mm', 'a4')
   const pageWidth = pdf.internal.pageSize.getWidth()
 
