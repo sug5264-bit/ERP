@@ -223,7 +223,7 @@ export default function EmployeesPage() {
         title="사원관리"
         description="사원 정보를 등록하고 관리합니다"
       />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="전체 상태" />
@@ -247,7 +247,7 @@ export default function EmployeesPage() {
               <DialogTitle>신규 사원 등록</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>사번 *</Label>
                   <Input name="employeeNo" required placeholder="EMP001" />

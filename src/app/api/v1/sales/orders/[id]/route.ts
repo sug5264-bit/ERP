@@ -39,17 +39,18 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
     const { id } = await params
 
-    const order = await prisma.salesOrder.findUnique({
-      where: { id },
-      include: { deliveries: true },
-    })
+    const order = await prisma.salesOrder.findUnique({ where: { id } })
     if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    if (order.deliveries.length > 0) {
-      return errorResponse('연결된 납품이 있어 삭제할 수 없습니다.', 'HAS_DELIVERIES')
-    }
 
-    await prisma.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
-    await prisma.salesOrder.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      const deliveries = await tx.delivery.findMany({ where: { salesOrderId: id }, select: { id: true } })
+      if (deliveries.length > 0) {
+        await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map(d => d.id) } } })
+        await tx.delivery.deleteMany({ where: { salesOrderId: id } })
+      }
+      await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
+      await tx.salesOrder.delete({ where: { id } })
+    })
 
     return successResponse({ message: '발주가 삭제되었습니다.' })
   } catch (error) { return handleApiError(error) }

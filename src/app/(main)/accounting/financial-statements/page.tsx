@@ -73,7 +73,7 @@ export default function FinancialStatementsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="재무제표" description="재무상태표, 손익계산서 등을 조회합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Label className="whitespace-nowrap">기간</Label>
         <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
         <span>~</span>

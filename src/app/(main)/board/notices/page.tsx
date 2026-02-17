@@ -72,7 +72,7 @@ export default function NoticesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="공지사항" description="전사 공지사항을 확인합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>공지 등록</Button></DialogTrigger>
           <DialogContent className="max-w-2xl">

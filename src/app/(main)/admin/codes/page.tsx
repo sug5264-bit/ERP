@@ -126,7 +126,7 @@ export default function CodesPage() {
         title="코드관리"
         description="시스템 공통 코드를 관리합니다"
       />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={selectedGroup} onValueChange={setSelectedGroup}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="전체 그룹" />
@@ -153,7 +153,7 @@ export default function CodesPage() {
                 <Label>그룹코드 *</Label>
                 <Input name="groupCode" required placeholder="BANK" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>코드 *</Label>
                   <Input name="code" required />

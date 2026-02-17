@@ -178,7 +178,7 @@ export default function VouchersPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>전표 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>전표일자 *</Label><Input name="voucherDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>전표유형 *</Label>

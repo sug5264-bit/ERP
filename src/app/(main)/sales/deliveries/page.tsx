@@ -196,7 +196,7 @@ export default function DeliveriesPage() {
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>납품 등록</DialogTitle></DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2"><Label>납품일 *</Label><Input name="deliveryDate" type="date" required /></div>
             <div className="space-y-2">
               <Label>발주 *</Label>
@@ -240,7 +240,7 @@ export default function DeliveriesPage() {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>운송장 일괄 업로드</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
             <Button variant="outline" size="sm" onClick={handleTemplateDownload}>템플릿 다운로드</Button>
             <div className="flex-1">
               <Input
@@ -323,7 +323,7 @@ export default function DeliveriesPage() {
 
         <TabsContent value="ONLINE">
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               {createDialog}
               {trackingDialog}
             </div>
@@ -333,7 +333,7 @@ export default function DeliveriesPage() {
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               {createDialog}
             </div>
             <DataTable columns={columns} data={offlineDeliveries} searchColumn="deliveryNo" searchPlaceholder="납품번호로 검색..." isLoading={offlineLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />

@@ -39,17 +39,24 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
     const { id } = await params
 
-    const quotation = await prisma.quotation.findUnique({
-      where: { id },
-      include: { salesOrders: true },
-    })
+    const quotation = await prisma.quotation.findUnique({ where: { id } })
     if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    if (quotation.salesOrders.length > 0) {
-      return errorResponse('연결된 수주가 있어 삭제할 수 없습니다.', 'HAS_ORDERS')
-    }
 
-    await prisma.quotationDetail.deleteMany({ where: { quotationId: id } })
-    await prisma.quotation.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      const salesOrders = await tx.salesOrder.findMany({ where: { quotationId: id }, select: { id: true } })
+      if (salesOrders.length > 0) {
+        const orderIds = salesOrders.map(o => o.id)
+        const deliveries = await tx.delivery.findMany({ where: { salesOrderId: { in: orderIds } }, select: { id: true } })
+        if (deliveries.length > 0) {
+          await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map(d => d.id) } } })
+          await tx.delivery.deleteMany({ where: { salesOrderId: { in: orderIds } } })
+        }
+        await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: { in: orderIds } } })
+        await tx.salesOrder.deleteMany({ where: { quotationId: id } })
+      }
+      await tx.quotationDetail.deleteMany({ where: { quotationId: id } })
+      await tx.quotation.delete({ where: { id } })
+    })
 
     return successResponse({ message: '견적이 삭제되었습니다.' })
   } catch (error) { return handleApiError(error) }

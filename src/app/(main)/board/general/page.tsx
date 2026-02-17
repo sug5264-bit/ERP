@@ -82,7 +82,7 @@ export default function GeneralBoardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="자유게시판" description="자유롭게 의견을 나눌 수 있는 게시판입니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>글 작성</Button></DialogTrigger>
           <DialogContent className="max-w-2xl">

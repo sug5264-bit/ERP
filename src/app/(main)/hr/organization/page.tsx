@@ -144,7 +144,7 @@ export default function OrganizationPage() {
                   <DialogTitle>부서 등록</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreateDept} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>부서코드 *</Label>
                       <Input name="code" required placeholder="DIV-001" />
@@ -245,7 +245,7 @@ export default function OrganizationPage() {
                   <DialogTitle>직급 등록</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreatePos} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>직급코드 *</Label>
                       <Input name="code" required placeholder="POS-001" />
@@ -255,7 +255,7 @@ export default function OrganizationPage() {
                       <Input name="name" required />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>레벨 *</Label>
                       <Input name="level" type="number" required defaultValue={1} min={1} />

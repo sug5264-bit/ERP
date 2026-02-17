@@ -82,13 +82,13 @@ export default function ApprovalDraftsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="내 기안문서" description="기안한 결재 문서를 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>기안 작성</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>기안 작성</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>제목 *</Label><Input name="title" required /></div>
                 <div className="space-y-2"><Label>기안일 *</Label><Input name="draftDate" type="date" required /></div>
                 <div className="space-y-2">

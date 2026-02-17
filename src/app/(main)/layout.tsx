@@ -13,16 +13,25 @@ export default function MainLayout({
 }: {
   children: React.ReactNode
 }) {
-  const isOpen = useSidebarStore((s) => s.isOpen)
+  const { isOpen, setOpen } = useSidebarStore()
 
   return (
     <div className="flex h-screen overflow-hidden">
       <ThemeInitializer />
-      {/* Sidebar */}
+
+      {/* Mobile sidebar overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - mobile: overlay, desktop: static */}
       <aside
         className={cn(
-          'hidden border-r bg-background transition-all duration-300 lg:block',
-          isOpen ? 'w-64' : 'w-0 overflow-hidden'
+          'fixed inset-y-0 left-0 z-50 w-64 border-r bg-background transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:w-0 lg:overflow-hidden'
         )}
       >
         <div className="flex h-14 items-center border-b px-4">
@@ -36,7 +45,7 @@ export default function MainLayout({
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6">
           <BreadcrumbNav />
           {children}
         </main>

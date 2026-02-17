@@ -181,7 +181,7 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="발주관리" description="발주를 등록하고 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>
@@ -202,7 +202,7 @@ export default function OrdersPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>발주 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2"><Label>발주일 *</Label><Input name="orderDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>거래처 *</Label>

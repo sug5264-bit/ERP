@@ -76,7 +76,7 @@ export default function PayrollPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="급여 관리" description="월별 급여를 생성하고 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>급여 생성</Button></DialogTrigger>
           <DialogContent>
@@ -97,7 +97,7 @@ export default function PayrollPage() {
           <DialogHeader><DialogTitle>{selectedPayroll?.payPeriod} 급여명세</DialogTitle></DialogHeader>
           {selectedPayroll && (
             <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">대상인원</CardTitle></CardHeader><CardContent><span className="text-xl font-bold">{details.length}명</span></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총지급액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold text-blue-600">{formatCurrency(totals.totalEarnings)}</span></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총공제액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold text-red-600">{formatCurrency(totals.totalDeductions)}</span></CardContent></Card>

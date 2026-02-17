@@ -62,13 +62,13 @@ export default function ReceivingPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="입고관리" description="발주 품목의 입고 처리를 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>입고 등록</Button></DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>입고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>입고일 *</Label><Input name="receivingDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>발주 *</Label>

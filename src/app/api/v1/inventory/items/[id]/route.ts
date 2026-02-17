@@ -42,10 +42,18 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const { id } = await params
-    const balances = await prisma.stockBalance.findMany({ where: { itemId: id, quantity: { gt: 0 } } })
-    if (balances.length > 0) return errorResponse('재고가 존재하는 품목은 삭제할 수 없습니다.', 'HAS_STOCK')
 
-    await prisma.item.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      await tx.receivingDetail.deleteMany({ where: { itemId: id } })
+      await tx.purchaseOrderDetail.deleteMany({ where: { itemId: id } })
+      await tx.purchaseRequestDetail.deleteMany({ where: { itemId: id } })
+      await tx.deliveryDetail.deleteMany({ where: { itemId: id } })
+      await tx.salesOrderDetail.deleteMany({ where: { itemId: id } })
+      await tx.quotationDetail.deleteMany({ where: { itemId: id } })
+      await tx.stockMovementDetail.deleteMany({ where: { itemId: id } })
+      await tx.stockBalance.deleteMany({ where: { itemId: id } })
+      await tx.item.delete({ where: { id } })
+    })
     return successResponse({ deleted: true })
   } catch (error) {
     return handleApiError(error)

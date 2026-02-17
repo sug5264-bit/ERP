@@ -82,7 +82,7 @@ export function Header() {
         <Menu className="h-5 w-5" />
       </Button>
 
-      <div className="hidden font-semibold lg:block">{APP_NAME}</div>
+      <div className="font-semibold text-sm lg:text-base truncate">{pageTitle || APP_NAME}</div>
 
       {/* Favorites */}
       {favorites.length > 0 && (
@@ -102,7 +102,7 @@ export function Header() {
         </div>
       )}
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
         {/* Favorite toggle */}
         {canFavorite && (
           <Button

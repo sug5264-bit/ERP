@@ -65,7 +65,7 @@ export default function StockStatusPage() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
           <SelectTrigger className="w-48"><SelectValue placeholder="전체 창고" /></SelectTrigger>
           <SelectContent>

@@ -62,13 +62,13 @@ export default function RequestsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="구매요청" description="부서별 구매 요청을 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>구매요청 등록</Button></DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>구매요청 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>요청일 *</Label><Input name="requestDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>부서 *</Label>

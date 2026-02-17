@@ -71,7 +71,7 @@ export default function MessagesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="사내 메시지" description="사내 메시지를 주고받습니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Send className="mr-1 h-4 w-4" /> 메시지 보내기</Button></DialogTrigger>
           <DialogContent className="max-w-lg">

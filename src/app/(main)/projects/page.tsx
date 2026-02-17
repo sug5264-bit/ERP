@@ -119,13 +119,13 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="프로젝트 관리" description="프로젝트를 생성하고 작업/멤버를 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>프로젝트 생성</Button></DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>프로젝트 생성</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>프로젝트 코드 *</Label><Input name="projectCode" required placeholder="PRJ-001" /></div>
                 <div className="space-y-2"><Label>프로젝트명 *</Label><Input name="projectName" required /></div>
                 <div className="space-y-2"><Label>담당부서 *</Label><Select name="departmentId"><SelectTrigger><SelectValue placeholder="부서 선택" /></SelectTrigger><SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent></Select></div>
@@ -147,7 +147,7 @@ export default function ProjectsPage() {
           <DialogHeader><DialogTitle>{selectedProject?.projectName}</DialogTitle></DialogHeader>
           {selectedProject && (
             <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">상태</CardTitle></CardHeader><CardContent><Badge variant={STATUS_MAP[selectedProject.status]?.variant || 'outline'}>{STATUS_MAP[selectedProject.status]?.label}</Badge></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">진행률</CardTitle></CardHeader><CardContent><div className="flex items-center gap-2"><Progress value={Number(selectedProject.progress)} className="h-2 flex-1" /><span className="text-sm font-bold">{Number(selectedProject.progress)}%</span></div></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">멤버</CardTitle></CardHeader><CardContent><span className="text-xl font-bold">{selectedProject.members?.length || 0}명</span></CardContent></Card>
@@ -196,7 +196,7 @@ export default function ProjectsPage() {
         <DialogContent><DialogHeader><DialogTitle>작업 추가</DialogTitle></DialogHeader>
           <form onSubmit={handleAddTask} className="space-y-4">
             <div className="space-y-2"><Label>작업명 *</Label><Input name="taskName" required /></div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2"><Label>담당자</Label><Select name="assigneeId"><SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><Label>우선순위</Label><Select name="priority" defaultValue="NORMAL"><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="URGENT">긴급</SelectItem><SelectItem value="HIGH">높음</SelectItem><SelectItem value="NORMAL">보통</SelectItem><SelectItem value="LOW">낮음</SelectItem></SelectContent></Select></div>
               <div className="space-y-2"><Label>시작일</Label><Input name="startDate" type="date" /></div>

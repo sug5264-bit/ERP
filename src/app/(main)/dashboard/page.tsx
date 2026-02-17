@@ -60,7 +60,7 @@ export default function DashboardPage() {
       <PageHeader title={`안녕하세요, ${session?.user?.name || '사용자'}님`} description="웰그린 ERP 대시보드입니다" />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link href="/hr/employees">
           <Card className="hover:shadow-md transition-shadow cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">전체 사원</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
@@ -88,7 +88,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Content Grid: 2 columns */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Sales Chart */}
         <Card>
           <CardHeader>

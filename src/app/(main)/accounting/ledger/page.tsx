@@ -56,7 +56,7 @@ export default function LedgerPage() {
 
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <Button variant="ghost" size="sm" onClick={() => setSelectedAccountId(null)}>
             <ArrowLeft className="mr-1 h-4 w-4" /> 뒤로
           </Button>
@@ -75,7 +75,7 @@ export default function LedgerPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="총계정원장" description="계정과목별 거래 내역을 조회합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Label className="whitespace-nowrap">기간</Label>
         <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
         <span>~</span>

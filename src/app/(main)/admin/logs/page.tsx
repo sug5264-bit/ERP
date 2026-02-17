@@ -93,7 +93,7 @@ export default function LogsPage() {
         title="감사로그"
         description="시스템 사용 기록을 조회합니다"
       />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={action} onValueChange={setAction}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="전체 작업" />

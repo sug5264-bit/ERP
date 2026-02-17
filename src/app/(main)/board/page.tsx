@@ -19,7 +19,7 @@ export default function BoardPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="게시판" description="공지사항, 자유게시판, 사내메시지를 관리합니다" />
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">공지사항</CardTitle><Megaphone className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{notices?.meta?.totalCount || 0}</div></CardContent></Card>
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">자유게시판</CardTitle><MessageSquare className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{general?.meta?.totalCount || 0}</div></CardContent></Card>
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">읽지 않은 메시지</CardTitle><Mail className="h-4 w-4 text-orange-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-orange-600">{unreadCount}</div></CardContent></Card>

@@ -119,9 +119,9 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {searchColumn && (
-          <div className="relative max-w-sm">
+          <div className="relative w-full sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
@@ -135,7 +135,7 @@ export function DataTable<TData, TValue>({
             />
           </div>
         )}
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {onBulkDelete &&
             table.getFilteredSelectedRowModel().rows.length > 0 && (
               <Button
@@ -168,8 +168,8 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="min-w-[640px]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -223,14 +223,15 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           총 {table.getFilteredRowModel().rows.length}건
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
             size="icon"
+            className="h-8 w-8"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
@@ -239,17 +240,19 @@ export function DataTable<TData, TValue>({
           <Button
             variant="outline"
             size="icon"
+            className="h-8 w-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm">
+          <span className="text-sm px-1">
             {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
           </span>
           <Button
             variant="outline"
             size="icon"
+            className="h-8 w-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
@@ -258,6 +261,7 @@ export function DataTable<TData, TValue>({
           <Button
             variant="outline"
             size="icon"
+            className="h-8 w-8"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >

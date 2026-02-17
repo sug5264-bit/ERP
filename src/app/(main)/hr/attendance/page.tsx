@@ -149,7 +149,7 @@ export default function AttendancePage() {
         title="근태관리"
         description="사원들의 출퇴근 기록을 관리합니다"
       />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>근태 등록</Button>
@@ -174,7 +174,7 @@ export default function AttendancePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>근무일 *</Label>
                   <Input name="workDate" type="date" required />
@@ -193,7 +193,7 @@ export default function AttendancePage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>출근시간</Label>
                   <Input name="checkInTime" type="time" />

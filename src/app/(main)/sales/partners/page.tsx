@@ -159,7 +159,7 @@ export default function PartnersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="거래처관리" description="고객 및 공급업체 정보를 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
           <SelectContent>
@@ -177,11 +177,11 @@ export default function PartnersPage() {
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>거래처 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>거래처코드 *</Label><Input name="partnerCode" required placeholder="PTN-001" /></div>
                 <div className="space-y-2"><Label>거래처명 *</Label><Input name="partnerName" required /></div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>구분</Label>
                   <Select name="partnerType" defaultValue="BOTH">
@@ -205,19 +205,19 @@ export default function PartnersPage() {
                 </div>
                 <div className="space-y-2"><Label>사업자번호</Label><Input name="bizNo" placeholder="000-00-00000" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>대표자</Label><Input name="ceoName" /></div>
                 <div className="space-y-2"><Label>담당자</Label><Input name="contactPerson" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>업태</Label><Input name="bizType" /></div>
                 <div className="space-y-2"><Label>종목</Label><Input name="bizCategory" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>전화번호</Label><Input name="phone" /></div>
                 <div className="space-y-2"><Label>팩스</Label><Input name="fax" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>이메일</Label><Input name="email" type="email" /></div>
                 <div className="space-y-2"><Label>여신한도</Label><Input name="creditLimit" type="number" /></div>
               </div>

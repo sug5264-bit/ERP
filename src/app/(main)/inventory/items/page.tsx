@@ -154,7 +154,7 @@ export default function ItemsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="품목관리" description="상품 및 원자재 품목을 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Input
           placeholder="품목코드, 품목명, 바코드 검색..."
           className="w-72"
@@ -178,11 +178,11 @@ export default function ItemsPage() {
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>품목 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>품목코드 *</Label><Input name="itemCode" required placeholder="ITM-001" /></div>
                 <div className="space-y-2"><Label>품목명 *</Label><Input name="itemName" required /></div>
               </div>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label>구분 *</Label>
                   <Select name="itemType" defaultValue="GOODS">
@@ -218,11 +218,11 @@ export default function ItemsPage() {
                 </div>
                 <div className="space-y-2"><Label>단위</Label><Input name="unit" defaultValue="EA" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>규격</Label><Input name="specification" /></div>
                 <div className="space-y-2"><Label>바코드</Label><Input name="barcode" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>기준가</Label><Input name="standardPrice" type="number" defaultValue="0" /></div>
                 <div className="space-y-2"><Label>안전재고</Label><Input name="safetyStock" type="number" defaultValue="0" /></div>
               </div>

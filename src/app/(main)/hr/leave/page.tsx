@@ -160,7 +160,7 @@ export default function LeavePage() {
         title="휴가관리"
         description="휴가 신청 및 승인을 관리합니다"
       />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36">
             <SelectValue placeholder="전체 상태" />
@@ -209,7 +209,7 @@ export default function LeavePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>시작일 *</Label>
                   <Input name="startDate" type="date" required />

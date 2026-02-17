@@ -48,7 +48,7 @@ export default function BudgetPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="예산관리" description="부서별 예산을 설정하고 집행 현황을 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={yearFilter} onValueChange={setYearFilter}>
           <SelectTrigger className="w-48"><SelectValue placeholder="전체 회계연도" /></SelectTrigger>
           <SelectContent>

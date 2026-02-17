@@ -24,6 +24,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { useState } from 'react'
+import { useSidebarStore } from '@/stores/sidebar-store'
 
 interface NavItem {
   title: string
@@ -150,6 +151,7 @@ const navItems: NavItem[] = [
 export function SidebarNav() {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const setOpen = useSidebarStore((s) => s.setOpen)
 
   const userPermissions = (session?.user as any)?.permissions || []
   const userRoles = (session?.user as any)?.roles || []
@@ -158,12 +160,15 @@ export function SidebarNav() {
   const filteredNavItems = navItems.filter((item) => {
     if (!item.module) return true
     if (isAdmin) return true
-    // 부서장도 모든 메뉴 접근 가능
     if (userRoles.includes('부서장')) return true
     return userPermissions.some(
       (p: any) => p.module === item.module && p.action === 'read'
     )
   })
+
+  const closeMobileSidebar = () => {
+    if (window.innerWidth < 1024) setOpen(false)
+  }
 
   return (
     <nav className="flex flex-col gap-1 p-2">
@@ -172,6 +177,7 @@ export function SidebarNav() {
           key={item.href}
           item={item}
           pathname={pathname}
+          onNavigate={closeMobileSidebar}
         />
       ))}
     </nav>
@@ -181,9 +187,11 @@ export function SidebarNav() {
 function NavItemComponent({
   item,
   pathname,
+  onNavigate,
 }: {
   item: NavItem
   pathname: string
+  onNavigate: () => void
 }) {
   const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
   const [isOpen, setIsOpen] = useState(isActive)
@@ -192,6 +200,7 @@ function NavItemComponent({
     return (
       <Link
         href={item.href}
+        onClick={onNavigate}
         className={cn(
           'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
           isActive
@@ -234,6 +243,7 @@ function NavItemComponent({
               <Link
                 key={child.href}
                 href={child.href}
+                onClick={onNavigate}
                 className={cn(
                   'rounded-md px-3 py-1.5 text-sm transition-colors',
                   childActive

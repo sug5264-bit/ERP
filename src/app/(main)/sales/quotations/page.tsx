@@ -132,7 +132,7 @@ export default function QuotationsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="견적관리" description="고객 견적서를 작성하고 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>
@@ -145,7 +145,7 @@ export default function QuotationsPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>견적 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>견적일 *</Label><Input name="quotationDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>거래처 *</Label>

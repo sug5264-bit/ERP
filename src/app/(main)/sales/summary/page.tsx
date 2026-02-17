@@ -97,7 +97,7 @@ export default function SalesSummaryPage() {
     <div className="space-y-6">
       <PageHeader title="매출집계" description="온라인/오프라인 매출 현황을 분석합니다" />
 
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={year} onValueChange={setYear}>
           <SelectTrigger className="w-28">
             <SelectValue />

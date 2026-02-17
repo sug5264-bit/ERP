@@ -12,22 +12,17 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Check if warehouse has stock balances
-    const stockCount = await prisma.stockBalance.count({ where: { warehouseId: id } })
-    if (stockCount > 0) {
-      return errorResponse('재고가 존재하는 창고는 삭제할 수 없습니다. 재고를 먼저 이동해주세요.', 'HAS_STOCK')
-    }
-
-    // Check if warehouse has stock movements
-    const movementCount = await prisma.stockMovement.count({
-      where: { OR: [{ sourceWarehouseId: id }, { targetWarehouseId: id }] },
-    })
-    if (movementCount > 0) {
-      return errorResponse('입출고 이력이 있는 창고는 삭제할 수 없습니다.', 'HAS_MOVEMENTS')
-    }
-
-    // Delete zones first, then warehouse
     await prisma.$transaction(async (tx) => {
+      await tx.stockBalance.deleteMany({ where: { warehouseId: id } })
+      const movements = await tx.stockMovement.findMany({
+        where: { OR: [{ sourceWarehouseId: id }, { targetWarehouseId: id }] },
+        select: { id: true },
+      })
+      if (movements.length > 0) {
+        const movementIds = movements.map(m => m.id)
+        await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: movementIds } } })
+        await tx.stockMovement.deleteMany({ where: { id: { in: movementIds } } })
+      }
       await tx.warehouseZone.deleteMany({ where: { warehouseId: id } })
       await tx.warehouse.delete({ where: { id } })
     })

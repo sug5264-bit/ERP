@@ -91,7 +91,7 @@ export default function WarehousesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="창고관리" description="창고 정보를 등록하고 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>창고 등록</Button></DialogTrigger>
           <DialogContent>

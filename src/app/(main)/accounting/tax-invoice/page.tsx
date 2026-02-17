@@ -107,7 +107,7 @@ export default function TaxInvoicePage() {
   return (
     <div className="space-y-6">
       <PageHeader title="세금계산서" description="세금계산서를 발행하고 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
           <SelectContent>
@@ -121,7 +121,7 @@ export default function TaxInvoicePage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>세금계산서 발행</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>발행일 *</Label><Input name="issueDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>구분 *</Label>
@@ -131,7 +131,7 @@ export default function TaxInvoicePage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-3 rounded border p-3">
                   <h4 className="text-sm font-medium">공급자</h4>
                   <div className="space-y-2"><Label>사업자번호 *</Label><Input name="supplierBizNo" required placeholder="000-00-00000" /></div>

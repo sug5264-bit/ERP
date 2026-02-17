@@ -52,7 +52,7 @@ export default function ApprovalCompletedPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="결재 완료" description="처리가 완료된 결재 문서입니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>

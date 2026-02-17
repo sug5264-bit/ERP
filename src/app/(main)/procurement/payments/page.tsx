@@ -57,13 +57,13 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="구매대금" description="공급업체 대금 지급을 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>대금 등록</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>구매대금 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>지급일 *</Label><Input name="paymentDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>거래처 *</Label>
@@ -72,7 +72,7 @@ export default function PaymentsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>금액 *</Label><Input name="totalAmount" type="number" required /></div>
                 <div className="space-y-2">
                   <Label>결제방법</Label>

@@ -122,7 +122,7 @@ export default function StockMovementPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="입출고" description="재고의 입고/출고/이동/조정 내역을 관리합니다" />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-36"><SelectValue placeholder="전체 유형" /></SelectTrigger>
           <SelectContent>
@@ -137,7 +137,7 @@ export default function StockMovementPage() {
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>입출고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>이동일자 *</Label><Input name="movementDate" type="date" required /></div>
                 <div className="space-y-2">
                   <Label>유형 *</Label>
@@ -151,7 +151,7 @@ export default function StockMovementPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(movementType === 'OUTBOUND' || movementType === 'TRANSFER') && (
                   <div className="space-y-2">
                     <Label>출고창고 *</Label>
@@ -182,42 +182,39 @@ export default function StockMovementPage() {
                     <Plus className="mr-1 h-3 w-3" /> 행 추가
                   </Button>
                 </div>
-                <div className="rounded-md border overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="p-2 text-left">품목</th>
-                        <th className="p-2 w-24">수량</th>
-                        <th className="p-2 w-32">단가</th>
-                        <th className="p-2 w-32">금액</th>
-                        <th className="p-2 w-10"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {details.map((d, idx) => (
-                        <tr key={idx} className="border-b">
-                          <td className="p-1">
-                            <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
-                              <SelectTrigger><SelectValue placeholder="품목 선택" /></SelectTrigger>
-                              <SelectContent>
-                                {allItems.map((item: any) => (
-                                  <SelectItem key={item.id} value={item.id}>{item.itemCode} - {item.itemName}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </td>
-                          <td className="p-1"><Input type="number" value={d.quantity || ''} onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></td>
-                          <td className="p-1"><Input type="number" value={d.unitPrice || ''} onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></td>
-                          <td className="p-1 text-right font-mono">{formatCurrency(d.quantity * d.unitPrice)}</td>
-                          <td className="p-1">
-                            <Button type="button" variant="ghost" size="icon" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-3">
+                  {details.map((d, idx) => (
+                    <div key={idx} className="rounded-md border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                        <SelectTrigger><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                        <SelectContent>
+                          {allItems.map((item: any) => (
+                            <SelectItem key={item.id} value={item.id}>{item.itemCode} - {item.itemName}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">수량</Label>
+                          <Input type="number" value={d.quantity || ''} onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">단가</Label>
+                          <Input type="number" value={d.unitPrice || ''} onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">금액</Label>
+                          <div className="h-9 flex items-center justify-end px-3 rounded-md border bg-muted/50 font-mono text-sm">{formatCurrency(d.quantity * d.unitPrice)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>

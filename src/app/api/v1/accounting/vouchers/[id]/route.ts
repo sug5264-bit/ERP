@@ -137,11 +137,12 @@ export async function DELETE(
 
     const existing = await prisma.voucher.findUnique({ where: { id } })
     if (!existing) return errorResponse('전표를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    if (existing.status !== 'DRAFT') {
-      return errorResponse('작성 상태의 전표만 삭제할 수 있습니다.', 'INVALID_STATUS')
-    }
 
-    await prisma.voucher.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      await tx.taxInvoice.deleteMany({ where: { voucherId: id } })
+      await tx.voucherDetail.deleteMany({ where: { voucherId: id } })
+      await tx.voucher.delete({ where: { id } })
+    })
 
     return successResponse({ deleted: true })
   } catch (error) {
