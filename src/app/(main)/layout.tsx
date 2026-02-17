@@ -31,7 +31,7 @@ export default function MainLayout({
       <aside
         className={cn(
           'fixed inset-y-0 left-0 z-50 w-64 border-r bg-background transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:w-0 lg:overflow-hidden'
+          isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="flex h-14 items-center border-b px-4">
