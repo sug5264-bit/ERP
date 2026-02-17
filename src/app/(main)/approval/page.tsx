@@ -28,7 +28,7 @@ export default function ApprovalPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">내 기안문서</CardTitle>
-            <Link href="/approval/drafts"><Button variant="ghost" size="sm">더보기</Button></Link>
+            <Link href="/approval/draft"><Button variant="ghost" size="sm">더보기</Button></Link>
           </CardHeader>
           <CardContent>
             {(drafts?.data || []).length === 0 ? <p className="text-muted-foreground text-sm">기안 문서가 없습니다.</p> :
