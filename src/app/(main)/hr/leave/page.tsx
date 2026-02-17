@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { CheckCircle, XCircle, CheckCheck } from 'lucide-react'
+import { CheckCircle, XCircle, CheckCheck, ArrowRight, Plus, Trash2, Send } from 'lucide-react'
 
 interface LeaveRow {
   id: string
@@ -48,10 +49,21 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   CANCELLED: { label: '취소', variant: 'secondary' },
 }
 
+// 결재라인 기본: 담당-팀장-부문장-본부장-대표이사
+const DEFAULT_APPROVAL_LINE = ['담당', '팀장', '부문장', '본부장', '대표이사']
+
+interface ApprovalStep { approverId: string; approvalType: string; lineLabel: string }
+
 export default function LeavePage() {
   const [open, setOpen] = useState(false)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedLeave, setSelectedLeave] = useState<any>(null)
+  const [approvalComment, setApprovalComment] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [selectedRows, setSelectedRows] = useState<LeaveRow[]>([])
+  const [approvalSteps, setApprovalSteps] = useState<ApprovalStep[]>(
+    DEFAULT_APPROVAL_LINE.map(label => ({ approverId: '', approvalType: 'APPROVE', lineLabel: label }))
+  )
   const queryClient = useQueryClient()
 
   const queryParams = new URLSearchParams({ pageSize: '50' })
@@ -72,17 +84,20 @@ export default function LeavePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       setOpen(false)
+      setApprovalSteps(DEFAULT_APPROVAL_LINE.map(label => ({ approverId: '', approvalType: 'APPROVE', lineLabel: label })))
       toast.success('휴가가 신청되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const actionMutation = useMutation({
-    mutationFn: (body: { id: string; action: string }) => api.put('/hr/leave', body),
+    mutationFn: (body: { id: string; action: string; comment?: string }) => api.put('/hr/leave', body),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       const msg = variables.action === 'approve' ? '승인' : variables.action === 'reject' ? '반려' : '취소'
       toast.success(`휴가가 ${msg}되었습니다.`)
+      setDetailOpen(false)
+      setApprovalComment('')
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -119,7 +134,7 @@ export default function LeavePage() {
   const handleAction = (id: string, action: string, name: string) => {
     const actionLabel = action === 'approve' ? '승인' : action === 'reject' ? '반려' : '취소'
     if (confirm(`${name}님의 휴가를 ${actionLabel}하시겠습니까?`)) {
-      actionMutation.mutate({ id, action })
+      actionMutation.mutate({ id, action, comment: approvalComment || undefined })
     }
   }
 
@@ -134,6 +149,20 @@ export default function LeavePage() {
     if (confirm(`선택한 ${ids.length}건을 일괄 ${label}하시겠습니까?`)) {
       batchMutation.mutate({ ids, action })
     }
+  }
+
+  const handleRowClick = (row: LeaveRow) => {
+    setSelectedLeave(row)
+    setApprovalComment('')
+    setDetailOpen(true)
+  }
+
+  const addStep = () => {
+    setApprovalSteps([...approvalSteps, { approverId: '', approvalType: 'APPROVE', lineLabel: '' }])
+  }
+
+  const removeStep = (idx: number) => {
+    if (approvalSteps.length > 1) setApprovalSteps(approvalSteps.filter((_, i) => i !== idx))
   }
 
   const columns: ColumnDef<LeaveRow>[] = [
@@ -181,33 +210,98 @@ export default function LeavePage() {
             <SelectItem value="CANCELLED">취소</SelectItem>
           </SelectContent>
         </Select>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setApprovalSteps(DEFAULT_APPROVAL_LINE.map(label => ({ approverId: '', approvalType: 'APPROVE', lineLabel: label }))) }}>
           <DialogTrigger asChild><Button>휴가 신청</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>휴가 신청</DialogTitle></DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label>사원 *</Label>
-                <Select name="employeeId" required>
-                  <SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger>
-                  <SelectContent>
-                    {employees.map((e: any) => (<SelectItem key={e.id} value={e.id}>{e.employeeNo} - {e.nameKo}</SelectItem>))}
-                  </SelectContent>
-                </Select>
+            <form onSubmit={handleCreate} className="space-y-5">
+              {/* 기본정보 */}
+              <div className="rounded-md border p-4 space-y-4">
+                <h3 className="text-sm font-semibold text-muted-foreground">신청정보</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>사원 *</Label>
+                    <Select name="employeeId" required>
+                      <SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger>
+                      <SelectContent>
+                        {employees.map((e: any) => (<SelectItem key={e.id} value={e.id}>{e.employeeNo} - {e.nameKo}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>휴가유형 *</Label>
+                    <Select name="leaveType" required>
+                      <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectContent>{Object.entries(LEAVE_TYPE_MAP).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>시작일 *</Label><Input name="startDate" type="date" required /></div>
+                  <div className="space-y-2"><Label>종료일 *</Label><Input name="endDate" type="date" required /></div>
+                </div>
+                <div className="space-y-2"><Label>사유</Label><Textarea name="reason" placeholder="휴가 사유를 입력하세요" rows={3} /></div>
               </div>
-              <div className="space-y-2">
-                <Label>휴가유형 *</Label>
-                <Select name="leaveType" required>
-                  <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                  <SelectContent>{Object.entries(LEAVE_TYPE_MAP).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}</SelectContent>
-                </Select>
+
+              {/* 결재선 */}
+              <div className="rounded-md border p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-muted-foreground">결재선 (담당 → 팀장 → 부문장 → 본부장 → 대표이사)</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={addStep}>
+                    <Plus className="mr-1 h-3 w-3" /> 결재자 추가
+                  </Button>
+                </div>
+                {/* 결재선 시각화 */}
+                <div className="flex items-center gap-1 flex-wrap">
+                  {approvalSteps.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-1">
+                      <div className={`rounded-md border px-3 py-1.5 text-xs text-center min-w-[60px] ${s.approverId ? 'bg-primary/10 border-primary/30' : 'bg-muted'}`}>
+                        <div className="font-medium">{s.lineLabel || `${idx + 1}차`}</div>
+                        <div className="text-muted-foreground truncate max-w-[80px]">
+                          {s.approverId ? employees.find((e: any) => e.id === s.approverId)?.nameKo || '선택됨' : '미지정'}
+                        </div>
+                      </div>
+                      {idx < approvalSteps.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+                    </div>
+                  ))}
+                </div>
+                {/* 상세 설정 */}
+                <div className="space-y-2">
+                  {approvalSteps.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-muted-foreground w-16 shrink-0">
+                        {s.lineLabel || `${idx + 1}차`}
+                      </span>
+                      <Select value={s.approverId} onValueChange={v => { const ns = [...approvalSteps]; ns[idx].approverId = v; setApprovalSteps(ns) }}>
+                        <SelectTrigger className="flex-1 text-xs"><SelectValue placeholder="결재자 선택" /></SelectTrigger>
+                        <SelectContent>
+                          {employees.map((e: any) => (
+                            <SelectItem key={e.id} value={e.id}>
+                              {e.nameKo} ({e.position?.name || '-'} / {e.department?.name || '-'})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={s.approvalType} onValueChange={v => { const ns = [...approvalSteps]; ns[idx].approvalType = v; setApprovalSteps(ns) }}>
+                        <SelectTrigger className="w-24 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="APPROVE">결재</SelectItem>
+                          <SelectItem value="REVIEW">검토</SelectItem>
+                          <SelectItem value="NOTIFY">통보</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(idx)} disabled={approvalSteps.length <= 1}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>시작일 *</Label><Input name="startDate" type="date" required /></div>
-                <div className="space-y-2"><Label>종료일 *</Label><Input name="endDate" type="date" required /></div>
-              </div>
-              <div className="space-y-2"><Label>사유</Label><Input name="reason" placeholder="휴가 사유를 입력하세요" /></div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '신청 중...' : '신청'}</Button>
+
+              <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+                <Send className="mr-1 h-4 w-4" />
+                {createMutation.isPending ? '신청 중...' : '휴가 신청'}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -233,7 +327,83 @@ export default function LeavePage() {
         pageSize={50}
         selectable
         onSelectionChange={(rows) => setSelectedRows(rows as LeaveRow[])}
+        onRowClick={handleRowClick}
       />
+
+      {/* 상세 / 승인처리 다이얼로그 */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>휴가 상세</DialogTitle></DialogHeader>
+          {selectedLeave && (
+            <div className="space-y-4">
+              {/* 휴가 정보 */}
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground">사원:</span> <span className="font-medium">{selectedLeave.employee.nameKo}</span></div>
+                <div><span className="text-muted-foreground">사번:</span> <span className="font-mono text-xs">{selectedLeave.employee.employeeNo}</span></div>
+                <div><span className="text-muted-foreground">부서:</span> {selectedLeave.employee.department?.name || '-'}</div>
+                <div><span className="text-muted-foreground">직급:</span> {selectedLeave.employee.position?.name || '-'}</div>
+                <div><span className="text-muted-foreground">휴가유형:</span> <Badge variant="outline">{LEAVE_TYPE_MAP[selectedLeave.leaveType] || selectedLeave.leaveType}</Badge></div>
+                <div><span className="text-muted-foreground">일수:</span> {selectedLeave.days}일</div>
+                <div className="col-span-2"><span className="text-muted-foreground">기간:</span> {formatDate(selectedLeave.startDate)} ~ {formatDate(selectedLeave.endDate)}</div>
+                <div className="col-span-2"><span className="text-muted-foreground">상태:</span> <Badge variant={STATUS_MAP[selectedLeave.status]?.variant || 'outline'}>{STATUS_MAP[selectedLeave.status]?.label || selectedLeave.status}</Badge></div>
+              </div>
+
+              {/* 사유 */}
+              {selectedLeave.reason && (
+                <div className="rounded-md border p-3">
+                  <Label className="text-sm font-medium">사유</Label>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">{selectedLeave.reason}</p>
+                </div>
+              )}
+
+              {/* 결재선 시각화 */}
+              <div className="rounded-md border p-4 space-y-3">
+                <h4 className="text-sm font-semibold">결재선</h4>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {DEFAULT_APPROVAL_LINE.map((label, idx) => (
+                    <div key={idx} className="flex items-center gap-1">
+                      <div className={`rounded-md border px-3 py-1.5 text-xs text-center min-w-[60px] ${
+                        selectedLeave.status === 'APPROVED' ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' :
+                        selectedLeave.status === 'REJECTED' ? 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800' :
+                        'bg-muted'
+                      }`}>
+                        <div className="font-medium">{label}</div>
+                        <div className="text-muted-foreground text-[10px]">
+                          {selectedLeave.status === 'APPROVED' ? '승인' : selectedLeave.status === 'REJECTED' ? '반려' : selectedLeave.status === 'REQUESTED' ? '대기' : '-'}
+                        </div>
+                      </div>
+                      {idx < DEFAULT_APPROVAL_LINE.length - 1 && <ArrowRight className="h-3 w-3 text-muted-foreground" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 승인/반려 */}
+              {selectedLeave.status === 'REQUESTED' && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm">결재 의견</Label>
+                    <Textarea
+                      value={approvalComment}
+                      onChange={e => setApprovalComment(e.target.value)}
+                      placeholder="결재 의견을 입력하세요..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button className="flex-1" onClick={() => handleAction(selectedLeave.id, 'approve', selectedLeave.employee.nameKo)} disabled={actionMutation.isPending}>
+                      <CheckCircle className="mr-1 h-4 w-4" /> 승인
+                    </Button>
+                    <Button variant="destructive" className="flex-1" onClick={() => handleAction(selectedLeave.id, 'reject', selectedLeave.employee.nameKo)} disabled={actionMutation.isPending}>
+                      <XCircle className="mr-1 h-4 w-4" /> 반려
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

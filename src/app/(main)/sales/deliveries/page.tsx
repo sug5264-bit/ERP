@@ -136,6 +136,7 @@ export default function DeliveriesPage() {
     createMutation.mutate({
       deliveryDate: form.get('deliveryDate'), salesOrderId: form.get('salesOrderId'),
       deliveryAddress: form.get('deliveryAddress') || undefined,
+      carrier: form.get('carrier') || undefined, trackingNo: form.get('trackingNo') || undefined,
       details: details.filter(d => d.itemId),
     })
   }
@@ -193,8 +194,8 @@ export default function DeliveriesPage() {
   const createDialog = (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button>납품 등록</Button></DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>납품 등록</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>납품 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle></DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2"><Label>납품일 *</Label><Input name="deliveryDate" type="date" required /></div>
@@ -205,6 +206,12 @@ export default function DeliveriesPage() {
               </Select>
             </div>
           </div>
+          {activeTab === 'ONLINE' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>택배사</Label><Input name="carrier" placeholder="CJ대한통운, 한진택배 등" /></div>
+              <div className="space-y-2"><Label>운송장번호</Label><Input name="trackingNo" placeholder="운송장번호 입력" /></div>
+            </div>
+          )}
           <div className="space-y-2"><Label>납품주소</Label><Input name="deliveryAddress" /></div>
           <div className="space-y-2">
             <div className="flex items-center justify-between"><Label>품목</Label>
@@ -218,13 +225,13 @@ export default function DeliveriesPage() {
                     <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}><Trash2 className="h-3 w-3" /></Button>
                   </div>
                   <Select value={d.itemId} onValueChange={v => updateDetail(idx, 'itemId', v)}>
-                    <SelectTrigger className="text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
-                    <SelectContent>{items.map((it: any) => <SelectItem key={it.id} value={it.id}>{it.itemCode} - {it.itemName}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                    <SelectContent className="max-w-[calc(100vw-4rem)]">{items.map((it: any) => <SelectItem key={it.id} value={it.id}><span className="truncate">{it.itemCode} - {it.itemName}</span></SelectItem>)}</SelectContent>
                   </Select>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1"><Label className="text-xs">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></div>
-                    <div className="space-y-1"><Label className="text-xs">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
-                    <div className="space-y-1"><Label className="text-xs">금액</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(d.quantity * d.unitPrice)}</div></div>
+                  <div className="grid grid-cols-3 gap-2 min-w-0">
+                    <div className="space-y-1 min-w-0"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></div>
+                    <div className="space-y-1 min-w-0"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
+                    <div className="space-y-1 min-w-0"><Label className="text-[11px]">금액</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(d.quantity * d.unitPrice)}</div></div>
                   </div>
                 </div>
               ))}
