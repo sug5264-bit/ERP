@@ -56,7 +56,6 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   REQUESTED: { label: '승인대기', variant: 'outline' },
-  PENDING: { label: '승인대기', variant: 'outline' },
   APPROVED: { label: '승인', variant: 'default' },
   REJECTED: { label: '반려', variant: 'destructive' },
   CANCELLED: { label: '취소', variant: 'secondary' },
@@ -185,7 +184,7 @@ export default function LeavePage() {
       header: '승인처리',
       cell: ({ row }) => {
         const { status, id, employee } = row.original
-        if (status !== 'REQUESTED' && status !== 'PENDING') return null
+        if (status !== 'REQUESTED') return null
         return (
           <div className="flex items-center gap-1">
             <Button

@@ -1,36 +1,74 @@
+'use client'
+
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Users, Clock, CalendarOff, Briefcase } from 'lucide-react'
 
 export default function HRPage() {
+  const { data: empData } = useQuery({
+    queryKey: ['hr-employees-summary'],
+    queryFn: () => api.get('/hr/employees?pageSize=1') as Promise<any>,
+  })
+
+  const { data: attendanceData } = useQuery({
+    queryKey: ['hr-attendance-today'],
+    queryFn: () => api.get(`/hr/attendance?date=${new Date().toISOString().split('T')[0]}&pageSize=1`) as Promise<any>,
+  })
+
+  const { data: leaveData } = useQuery({
+    queryKey: ['hr-leave-pending'],
+    queryFn: () => api.get('/hr/leave?status=REQUESTED&pageSize=1') as Promise<any>,
+  })
+
+  const { data: recruitData } = useQuery({
+    queryKey: ['hr-recruit-open'],
+    queryFn: () => api.get('/hr/recruitment?status=OPEN&pageSize=1') as Promise<any>,
+  })
+
+  const totalEmployees = empData?.meta?.totalCount ?? 0
+  const todayAttendance = attendanceData?.meta?.totalCount ?? 0
+  const pendingLeaves = leaveData?.meta?.totalCount ?? 0
+  const openRecruits = recruitData?.meta?.totalCount ?? 0
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">인사 모듈</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Module KPI cards will be added */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">총 사원 수</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">-</p>
-            <p className="text-xs text-muted-foreground">준비 중</p>
+            <p className="text-2xl font-bold">{totalEmployees}명</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">금일 출근</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">-</p>
-            <p className="text-xs text-muted-foreground">준비 중</p>
+            <p className="text-2xl font-bold">{todayAttendance}명</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">휴가 현황</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">휴가 승인대기</CardTitle>
+            <CalendarOff className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">-</p>
-            <p className="text-xs text-muted-foreground">준비 중</p>
+            <p className={`text-2xl font-bold ${pendingLeaves > 0 ? 'text-orange-600' : ''}`}>{pendingLeaves}건</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">진행중 채용</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{openRecruits}건</p>
           </CardContent>
         </Card>
       </div>
