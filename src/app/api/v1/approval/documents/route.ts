@@ -15,24 +15,58 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status
     const drafterId = sp.get('drafterId')
     if (drafterId) where.drafterId = drafterId
-    const myDrafts = sp.get('myDrafts')
-    if (myDrafts === 'true') {
+
+    // filter 파라미터 통합 지원
+    const filter = sp.get('filter')
+    const isMyDrafts = sp.get('myDrafts') === 'true' || filter === 'myDrafts'
+    const isMyApprovals = sp.get('myApprovals') === 'true' || filter === 'myApprovals'
+
+    let employeeId: string | null = null
+    if (isMyDrafts || isMyApprovals) {
       const emp = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
-      if (emp) where.drafterId = emp.id
+      employeeId = emp?.id || null
     }
-    const myApprovals = sp.get('myApprovals')
-    if (myApprovals === 'true') {
-      const emp = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
-      if (emp) where.steps = { some: { approverId: emp.id } }
+
+    if (isMyDrafts && employeeId) {
+      where.drafterId = employeeId
     }
+
+    if (isMyApprovals && employeeId) {
+      // 결재 대기: IN_PROGRESS 상태이고, 내가 결재자인 문서
+      where.status = 'IN_PROGRESS'
+      where.steps = {
+        some: {
+          approverId: employeeId,
+          status: 'PENDING',
+        },
+      }
+    }
+
     const [items, totalCount] = await Promise.all([
       prisma.approvalDocument.findMany({
-        where, include: { drafter: true, template: true, steps: { include: { approver: true }, orderBy: { stepOrder: 'asc' } } },
-        orderBy: { createdAt: 'desc' }, skip, take: pageSize,
+        where,
+        include: {
+          drafter: { include: { department: true, position: true } },
+          template: true,
+          steps: { include: { approver: { include: { position: true, department: true } } }, orderBy: { stepOrder: 'asc' } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
       }),
       prisma.approvalDocument.count({ where }),
     ])
-    return successResponse(items, buildMeta(page, pageSize, totalCount))
+
+    // myApprovals: 현재 결재 차례인 문서만 필터 (currentStep == 내 stepOrder)
+    let result = items
+    if (isMyApprovals && employeeId) {
+      result = items.filter(doc => {
+        const currentStepData = doc.steps.find(s => s.stepOrder === doc.currentStep)
+        return currentStepData?.approverId === employeeId && currentStepData?.status === 'PENDING'
+      })
+    }
+
+    return successResponse(result, buildMeta(page, pageSize, totalCount))
   } catch (error) { return handleApiError(error) }
 }
 

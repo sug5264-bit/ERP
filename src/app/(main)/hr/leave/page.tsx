@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
+import { CheckCircle, XCircle } from 'lucide-react'
 
 interface LeaveRow {
   id: string
@@ -40,6 +41,7 @@ interface LeaveRow {
     employeeNo: string
     nameKo: string
     department: { name: string } | null
+    position: { name: string } | null
   }
 }
 
@@ -53,57 +55,12 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  PENDING: { label: '대기', variant: 'outline' },
+  REQUESTED: { label: '승인대기', variant: 'outline' },
+  PENDING: { label: '승인대기', variant: 'outline' },
   APPROVED: { label: '승인', variant: 'default' },
   REJECTED: { label: '반려', variant: 'destructive' },
   CANCELLED: { label: '취소', variant: 'secondary' },
 }
-
-const columns: ColumnDef<LeaveRow>[] = [
-  {
-    header: '사번',
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.employee.employeeNo}</span>
-    ),
-  },
-  {
-    header: '이름',
-    cell: ({ row }) => row.original.employee.nameKo,
-  },
-  {
-    header: '부서',
-    cell: ({ row }) => row.original.employee.department?.name || '-',
-  },
-  {
-    header: '휴가유형',
-    cell: ({ row }) => (
-      <Badge variant="outline">
-        {LEAVE_TYPE_MAP[row.original.leaveType] || row.original.leaveType}
-      </Badge>
-    ),
-  },
-  {
-    header: '기간',
-    cell: ({ row }) =>
-      `${formatDate(row.original.startDate)} ~ ${formatDate(row.original.endDate)}`,
-  },
-  {
-    accessorKey: 'days',
-    header: '일수',
-    cell: ({ row }) => `${row.original.days}일`,
-  },
-  {
-    header: '사유',
-    cell: ({ row }) => row.original.reason || '-',
-  },
-  {
-    header: '상태',
-    cell: ({ row }) => {
-      const s = STATUS_MAP[row.original.status]
-      return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
-    },
-  },
-]
 
 export default function LeavePage() {
   const [open, setOpen] = useState(false)
@@ -133,6 +90,16 @@ export default function LeavePage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const actionMutation = useMutation({
+    mutationFn: (body: { id: string; action: string }) => api.put('/hr/leave', body),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
+      const msg = variables.action === 'approve' ? '승인' : variables.action === 'reject' ? '반려' : '취소'
+      toast.success(`휴가가 ${msg}되었습니다.`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const leaves: LeaveRow[] = data?.data || []
   const employees = empData?.data || []
 
@@ -154,6 +121,97 @@ export default function LeavePage() {
     })
   }
 
+  const handleAction = (id: string, action: string, name: string) => {
+    const actionLabel = action === 'approve' ? '승인' : action === 'reject' ? '반려' : '취소'
+    if (confirm(`${name}님의 휴가를 ${actionLabel}하시겠습니까?`)) {
+      actionMutation.mutate({ id, action })
+    }
+  }
+
+  const columns: ColumnDef<LeaveRow>[] = [
+    {
+      header: '사번',
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">{row.original.employee.employeeNo}</span>
+      ),
+    },
+    {
+      header: '이름',
+      cell: ({ row }) => row.original.employee.nameKo,
+    },
+    {
+      header: '부서',
+      cell: ({ row }) => row.original.employee.department?.name || '-',
+    },
+    {
+      header: '직급',
+      cell: ({ row }) => row.original.employee.position?.name || '-',
+    },
+    {
+      header: '휴가유형',
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {LEAVE_TYPE_MAP[row.original.leaveType] || row.original.leaveType}
+        </Badge>
+      ),
+    },
+    {
+      header: '기간',
+      cell: ({ row }) =>
+        `${formatDate(row.original.startDate)} ~ ${formatDate(row.original.endDate)}`,
+    },
+    {
+      accessorKey: 'days',
+      header: '일수',
+      cell: ({ row }) => `${row.original.days}일`,
+    },
+    {
+      header: '사유',
+      cell: ({ row }) => (
+        <span className="max-w-[150px] truncate block" title={row.original.reason || '-'}>
+          {row.original.reason || '-'}
+        </span>
+      ),
+    },
+    {
+      header: '상태',
+      cell: ({ row }) => {
+        const s = STATUS_MAP[row.original.status]
+        return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
+      },
+    },
+    {
+      id: 'actions',
+      header: '승인처리',
+      cell: ({ row }) => {
+        const { status, id, employee } = row.original
+        if (status !== 'REQUESTED' && status !== 'PENDING') return null
+        return (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={(e) => { e.stopPropagation(); handleAction(id, 'approve', employee.nameKo) }}
+              disabled={actionMutation.isPending}
+            >
+              <CheckCircle className="mr-1 h-3 w-3" /> 승인
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={(e) => { e.stopPropagation(); handleAction(id, 'reject', employee.nameKo) }}
+              disabled={actionMutation.isPending}
+            >
+              <XCircle className="mr-1 h-3 w-3" /> 반려
+            </Button>
+          </div>
+        )
+      },
+    },
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -167,9 +225,10 @@ export default function LeavePage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="PENDING">대기</SelectItem>
+            <SelectItem value="REQUESTED">승인대기</SelectItem>
             <SelectItem value="APPROVED">승인</SelectItem>
             <SelectItem value="REJECTED">반려</SelectItem>
+            <SelectItem value="CANCELLED">취소</SelectItem>
           </SelectContent>
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
