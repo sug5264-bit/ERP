@@ -194,34 +194,32 @@ export default function VouchersPage() {
                   <Label>분개 내역</Label>
                   <Button type="button" variant="outline" size="sm" onClick={addLine}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
                 </div>
-                <div className="rounded-md border">
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b bg-muted/50"><th className="p-2 text-left">계정과목</th><th className="p-2 text-right w-32">차변</th><th className="p-2 text-right w-32">대변</th><th className="p-2 text-left">적요</th><th className="p-2 w-10"></th></tr></thead>
-                    <tbody>
-                      {details.map((line, idx) => (
-                        <tr key={idx} className="border-b">
-                          <td className="p-1">
-                            <select className="w-full rounded border p-1 text-sm" value={line.accountSubjectId} onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}>
-                              <option value="">계정 선택</option>
-                              {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code} - {a.nameKo}</option>)}
-                            </select>
-                          </td>
-                          <td className="p-1"><Input type="number" className="text-right" value={line.debitAmount || ''} onChange={(e) => updateLine(idx, 'debitAmount', parseFloat(e.target.value) || 0)} /></td>
-                          <td className="p-1"><Input type="number" className="text-right" value={line.creditAmount || ''} onChange={(e) => updateLine(idx, 'creditAmount', parseFloat(e.target.value) || 0)} /></td>
-                          <td className="p-1"><Input value={line.description} onChange={(e) => updateLine(idx, 'description', e.target.value)} /></td>
-                          <td className="p-1"><Button type="button" variant="ghost" size="icon" onClick={() => removeLine(idx)} disabled={details.length <= 2}><Trash2 className="h-3 w-3" /></Button></td>
-                        </tr>
-                      ))}
-                      <tr className="bg-muted/50 font-medium">
-                        <td className="p-2">합계</td>
-                        <td className="p-2 text-right">{formatCurrency(totalDebit)}</td>
-                        <td className="p-2 text-right">{formatCurrency(totalCredit)}</td>
-                        <td className="p-2" colSpan={2}>
-                          {Math.abs(totalDebit - totalCredit) > 0.01 && <span className="text-destructive text-xs">차액: {formatCurrency(Math.abs(totalDebit - totalCredit))}</span>}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="space-y-3">
+                  {details.map((line, idx) => (
+                    <div key={idx} className="rounded-md border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground font-medium">분개 #{idx + 1}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)} disabled={details.length <= 2}><Trash2 className="h-3 w-3" /></Button>
+                      </div>
+                      <select className="w-full rounded border p-2 text-xs bg-background" value={line.accountSubjectId} onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}>
+                        <option value="">계정과목 선택</option>
+                        {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code} - {a.nameKo}</option>)}
+                      </select>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="space-y-1"><Label className="text-xs">차변</Label><Input type="number" className="text-xs text-right" value={line.debitAmount || ''} onChange={(e) => updateLine(idx, 'debitAmount', parseFloat(e.target.value) || 0)} /></div>
+                        <div className="space-y-1"><Label className="text-xs">대변</Label><Input type="number" className="text-xs text-right" value={line.creditAmount || ''} onChange={(e) => updateLine(idx, 'creditAmount', parseFloat(e.target.value) || 0)} /></div>
+                        <div className="space-y-1"><Label className="text-xs">적요</Label><Input className="text-xs" value={line.description} onChange={(e) => updateLine(idx, 'description', e.target.value)} /></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3 text-sm font-medium">
+                  <span>합계</span>
+                  <div className="flex items-center gap-4">
+                    <span>차변: {formatCurrency(totalDebit)}</span>
+                    <span>대변: {formatCurrency(totalCredit)}</span>
+                    {Math.abs(totalDebit - totalCredit) > 0.01 && <span className="text-destructive text-xs">차액: {formatCurrency(Math.abs(totalDebit - totalCredit))}</span>}
+                  </div>
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending || Math.abs(totalDebit - totalCredit) > 0.01}>

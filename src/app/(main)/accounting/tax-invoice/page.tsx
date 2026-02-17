@@ -152,29 +152,32 @@ export default function TaxInvoicePage() {
                     <Plus className="mr-1 h-3 w-3" /> 행 추가
                   </Button>
                 </div>
-                <div className="rounded-md border overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b bg-muted/50"><th className="p-2">일자</th><th className="p-2">품목</th><th className="p-2 w-20">수량</th><th className="p-2 w-28">단가</th><th className="p-2 w-28">공급가액</th><th className="p-2 w-24">세액</th><th className="p-2 w-10"></th></tr></thead>
-                    <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={idx} className="border-b">
-                          <td className="p-1"><Input type="date" value={item.itemDate} onChange={(e) => updateItem(idx, 'itemDate', e.target.value)} /></td>
-                          <td className="p-1"><Input value={item.itemName} onChange={(e) => updateItem(idx, 'itemName', e.target.value)} /></td>
-                          <td className="p-1"><Input type="number" value={item.qty || ''} onChange={(e) => updateItem(idx, 'qty', parseFloat(e.target.value) || 0)} /></td>
-                          <td className="p-1"><Input type="number" value={item.unitPrice || ''} onChange={(e) => updateItem(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></td>
-                          <td className="p-1 text-right font-mono">{formatCurrency(item.supplyAmount)}</td>
-                          <td className="p-1 text-right font-mono">{formatCurrency(item.taxAmount)}</td>
-                          <td className="p-1"><Button type="button" variant="ghost" size="icon" onClick={() => items.length > 1 && setItems(items.filter((_, i) => i !== idx))} disabled={items.length <= 1}><Trash2 className="h-3 w-3" /></Button></td>
-                        </tr>
-                      ))}
-                      <tr className="bg-muted/50 font-medium">
-                        <td className="p-2" colSpan={4}>합계</td>
-                        <td className="p-2 text-right">{formatCurrency(items.reduce((s, i) => s + i.supplyAmount, 0))}</td>
-                        <td className="p-2 text-right">{formatCurrency(items.reduce((s, i) => s + i.taxAmount, 0))}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="space-y-3">
+                  {items.map((item, idx) => (
+                    <div key={idx} className="rounded-md border p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => items.length > 1 && setItems(items.filter((_, i) => i !== idx))} disabled={items.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1"><Label className="text-xs">일자</Label><Input type="date" className="text-xs" value={item.itemDate} onChange={(e) => updateItem(idx, 'itemDate', e.target.value)} /></div>
+                        <div className="space-y-1"><Label className="text-xs">품목명</Label><Input className="text-xs" value={item.itemName} onChange={(e) => updateItem(idx, 'itemName', e.target.value)} /></div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="space-y-1"><Label className="text-xs">수량</Label><Input type="number" className="text-xs" value={item.qty || ''} onChange={(e) => updateItem(idx, 'qty', parseFloat(e.target.value) || 0)} /></div>
+                        <div className="space-y-1"><Label className="text-xs">단가</Label><Input type="number" className="text-xs" value={item.unitPrice || ''} onChange={(e) => updateItem(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
+                        <div className="space-y-1"><Label className="text-xs">공급가액</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(item.supplyAmount)}</div></div>
+                        <div className="space-y-1"><Label className="text-xs">세액</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(item.taxAmount)}</div></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3 text-sm font-medium">
+                  <span>합계</span>
+                  <div className="flex items-center gap-4">
+                    <span>공급가: {formatCurrency(items.reduce((s, i) => s + i.supplyAmount, 0))}</span>
+                    <span>세액: {formatCurrency(items.reduce((s, i) => s + i.taxAmount, 0))}</span>
+                  </div>
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>

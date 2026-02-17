@@ -14,7 +14,6 @@ import {
   MessageSquare,
   Settings,
   ChevronDown,
-  Truck,
   FolderKanban,
   type LucideIcon,
 } from 'lucide-react'
@@ -91,18 +90,6 @@ const navItems: NavItem[] = [
       { title: '견적관리', href: '/sales/quotations' },
       { title: '발주관리', href: '/sales/orders' },
       { title: '납품관리', href: '/sales/deliveries' },
-    ],
-  },
-  {
-    title: '구매',
-    href: '/procurement',
-    icon: Truck,
-    module: 'procurement',
-    children: [
-      { title: '구매요청', href: '/procurement/requests' },
-      { title: '구매발주', href: '/procurement/purchase-orders' },
-      { title: '입고관리', href: '/procurement/receiving' },
-      { title: '구매대금', href: '/procurement/payments' },
     ],
   },
   {

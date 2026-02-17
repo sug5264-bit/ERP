@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const warehouseId = sp.get('warehouseId')
     const itemId = sp.get('itemId')
-    const belowSafety = sp.get('belowSafety')
 
     const where: any = {}
     if (warehouseId) where.warehouseId = warehouseId
@@ -26,10 +25,34 @@ export async function GET(request: NextRequest) {
       orderBy: [{ warehouse: { code: 'asc' } }, { item: { itemCode: 'asc' } }],
     })
 
-    let result = balances
-    if (belowSafety === 'true') {
-      result = balances.filter((b) => Number(b.quantity) < b.item.safetyStock)
+    // 미처리 수주(ORDERED, IN_PROGRESS)의 잔량 합산 → 품목별 수주잔량
+    const activeOrderDetails = await prisma.salesOrderDetail.groupBy({
+      by: ['itemId'],
+      where: {
+        salesOrder: {
+          status: { in: ['ORDERED', 'IN_PROGRESS'] },
+        },
+        remainingQty: { gt: 0 },
+      },
+      _sum: { remainingQty: true },
+    })
+
+    const orderedQtyMap = new Map<string, number>()
+    for (const d of activeOrderDetails) {
+      orderedQtyMap.set(d.itemId, Number(d._sum.remainingQty ?? 0))
     }
+
+    // 각 balance에 orderedQty, availableQty 추가
+    const result = balances.map((b) => {
+      const currentQty = Number(b.quantity)
+      const orderedQty = orderedQtyMap.get(b.itemId) || 0
+      const availableQty = Math.max(0, currentQty - orderedQty)
+      return {
+        ...b,
+        orderedQty,
+        availableQty,
+      }
+    })
 
     return successResponse(result)
   } catch (error) {

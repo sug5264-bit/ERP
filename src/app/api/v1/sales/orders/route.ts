@@ -36,14 +36,34 @@ export async function POST(request: NextRequest) {
     const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    // Stock level check for each order item
+    // 가용재고 체크: 현재고 - 기존 미처리 수주잔량
     const warnings: string[] = []
+    const orderItemIds = data.details.map(d => d.itemId)
+
+    // 품목별 현재고 합산
+    const stockAggs = await prisma.stockBalance.groupBy({
+      by: ['itemId'],
+      where: { itemId: { in: orderItemIds } },
+      _sum: { quantity: true },
+    })
+    const stockMap = new Map(stockAggs.map(s => [s.itemId, Number(s._sum.quantity ?? 0)]))
+
+    // 품목별 기존 미처리 수주잔량 합산
+    const orderedAggs = await prisma.salesOrderDetail.groupBy({
+      by: ['itemId'],
+      where: {
+        itemId: { in: orderItemIds },
+        salesOrder: { status: { in: ['ORDERED', 'IN_PROGRESS'] } },
+        remainingQty: { gt: 0 },
+      },
+      _sum: { remainingQty: true },
+    })
+    const orderedMap = new Map(orderedAggs.map(o => [o.itemId, Number(o._sum.remainingQty ?? 0)]))
+
     for (const d of data.details) {
-      const stockAgg = await prisma.stockBalance.aggregate({
-        where: { itemId: d.itemId },
-        _sum: { quantity: true },
-      })
-      const availableQty = Number(stockAgg._sum.quantity ?? 0)
+      const currentStock = stockMap.get(d.itemId) || 0
+      const existingOrdered = orderedMap.get(d.itemId) || 0
+      const availableQty = Math.max(0, currentStock - existingOrdered)
       if (d.quantity > availableQty) {
         const item = await prisma.item.findUnique({ where: { id: d.itemId }, select: { itemName: true } })
         const itemName = item?.itemName ?? d.itemId

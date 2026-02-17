@@ -160,24 +160,31 @@ export default function QuotationsPage() {
                 <div className="flex items-center justify-between"><Label>품목</Label>
                   <Button type="button" variant="outline" size="sm" onClick={() => setDetails([...details, { itemId: '', quantity: 1, unitPrice: 0 }])}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
                 </div>
-                <div className="rounded-md border overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b bg-muted/50"><th className="p-2 text-left">품목</th><th className="p-2 w-24">수량</th><th className="p-2 w-32">단가</th><th className="p-2 w-32">공급가</th><th className="p-2 w-28">세액</th><th className="p-2 w-32">합계</th><th className="p-2 w-10"></th></tr></thead>
-                    <tbody>{details.map((d, idx) => {
-                      const supply = d.quantity * d.unitPrice; const tax = Math.round(supply * 0.1)
-                      return (<tr key={idx} className="border-b">
-                        <td className="p-1"><Select value={d.itemId} onValueChange={v => updateDetail(idx, 'itemId', v)}><SelectTrigger><SelectValue placeholder="품목 선택" /></SelectTrigger><SelectContent>{items.map((it: any) => <SelectItem key={it.id} value={it.id}>{it.itemCode} - {it.itemName}</SelectItem>)}</SelectContent></Select></td>
-                        <td className="p-1"><Input type="number" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></td>
-                        <td className="p-1"><Input type="number" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></td>
-                        <td className="p-1 text-right font-mono">{formatCurrency(supply)}</td>
-                        <td className="p-1 text-right font-mono">{formatCurrency(tax)}</td>
-                        <td className="p-1 text-right font-mono font-medium">{formatCurrency(supply + tax)}</td>
-                        <td className="p-1"><Button type="button" variant="ghost" size="icon" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}><Trash2 className="h-3 w-3" /></Button></td>
-                      </tr>)
-                    })}</tbody>
-                  </table>
+                <div className="space-y-3">
+                  {details.map((d, idx) => {
+                    const supply = d.quantity * d.unitPrice; const tax = Math.round(supply * 0.1)
+                    return (
+                      <div key={idx} className="rounded-md border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                        <Select value={d.itemId} onValueChange={v => updateDetail(idx, 'itemId', v)}>
+                          <SelectTrigger className="text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                          <SelectContent>{items.map((it: any) => <SelectItem key={it.id} value={it.id}>{it.itemCode} - {it.itemName}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <div className="grid grid-cols-5 gap-2">
+                          <div className="space-y-1"><Label className="text-xs">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></div>
+                          <div className="space-y-1"><Label className="text-xs">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
+                          <div className="space-y-1"><Label className="text-xs">공급가</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(supply)}</div></div>
+                          <div className="space-y-1"><Label className="text-xs">세액</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(tax)}</div></div>
+                          <div className="space-y-1"><Label className="text-xs">합계</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + tax)}</div></div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                <div className="text-right font-medium">합계: {formatCurrency(details.reduce((s, d) => { const sup = d.quantity * d.unitPrice; return s + sup + Math.round(sup * 0.1) }, 0))}</div>
+                <div className="text-right font-medium text-sm">합계: {formatCurrency(details.reduce((s, d) => { const sup = d.quantity * d.unitPrice; return s + sup + Math.round(sup * 0.1) }, 0))}</div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '등록 중...' : '견적 등록'}</Button>
             </form>

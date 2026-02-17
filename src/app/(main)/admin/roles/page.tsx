@@ -63,7 +63,6 @@ const MODULE_LABELS: Record<string, string> = {
   accounting: '회계관리',
   inventory: '재고관리',
   sales: '영업관리',
-  procurement: '구매관리',
   project: '프로젝트',
   approval: '전자결재',
   board: '게시판',
