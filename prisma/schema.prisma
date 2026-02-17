@@ -523,6 +523,7 @@ model VoucherDetail {
   costCenter     CostCenter?    @relation(fields: [costCenterId], references: [id])
 
   @@index([voucherId])
+  @@index([accountSubjectId])
   @@map("voucher_details")
 }
 

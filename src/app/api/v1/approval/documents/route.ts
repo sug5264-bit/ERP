@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (isMyApprovals && employeeId) {
-      // 결재 대기: IN_PROGRESS 상태이고, 내가 결재자인 문서
+      // 결재 대기: IN_PROGRESS 상태이고, 현재 결재 차례인 문서만 (DB에서 직접 필터)
       where.status = 'IN_PROGRESS'
       where.steps = {
         some: {
@@ -42,14 +42,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const includeFields = {
+      drafter: { select: { id: true, nameKo: true, department: { select: { name: true } }, position: { select: { name: true } } } },
+      template: { select: { id: true, templateName: true } },
+      steps: { include: { approver: { select: { id: true, nameKo: true, position: { select: { name: true } } } } }, orderBy: { stepOrder: 'asc' as const } },
+    }
+
     const [items, totalCount] = await Promise.all([
       prisma.approvalDocument.findMany({
         where,
-        include: {
-          drafter: { include: { department: true, position: true } },
-          template: true,
-          steps: { include: { approver: { include: { position: true, department: true } } }, orderBy: { stepOrder: 'asc' } },
-        },
+        include: includeFields,
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
     let result = items
     if (isMyApprovals && employeeId) {
       result = items.filter(doc => {
-        const currentStepData = doc.steps.find(s => s.stepOrder === doc.currentStep)
+        const currentStepData = doc.steps.find((s: any) => s.stepOrder === doc.currentStep)
         return currentStepData?.approverId === employeeId && currentStepData?.status === 'PENDING'
       })
     }
