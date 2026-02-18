@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
     if (partnerId) where.partnerId = partnerId
     const [items, totalCount] = await Promise.all([
       prisma.quotation.findMany({
-        where, include: { partner: true, employee: true, details: { include: { item: true } } },
+        where,
+        include: {
+          partner: { select: { id: true, partnerCode: true, partnerName: true } },
+          employee: { select: { id: true, nameKo: true } },
+          _count: { select: { details: true } },
+        },
         orderBy: { createdAt: 'desc' }, skip, take: pageSize,
       }),
       prisma.quotation.count({ where }),
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createQuotationSchema.parse(body)
     const quotationNo = await generateDocumentNumber('QT', new Date(data.quotationDate))
-    const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
+    const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } }, select: { id: true } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     const details = data.details.map((d, idx) => {

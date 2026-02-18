@@ -78,8 +78,8 @@ export default function QuotationsPage() {
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
   const { data, isLoading } = useQuery({ queryKey: ['sales-quotations', statusFilter], queryFn: () => api.get(`/sales/quotations?${qp}`) as Promise<any> })
-  const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any> })
-  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any> })
+  const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
+  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/quotations', body),

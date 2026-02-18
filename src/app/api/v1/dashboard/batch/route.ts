@@ -26,8 +26,8 @@ export async function GET() {
     const [
       empCount, itemCount, approvalCount, leaveCount,
       recentOrders, notices,
-      deptStats, departments, stockBalances, approvalDocs, leaveStats,
-      onlineOrders, offlineOrders, monthlyOrders,
+      deptStats, departments, stockBalances, approvalAggs, leaveStats,
+      onlineOrders, offlineOrders, monthlyAggs,
     ] = await Promise.all([
       // KPI
       prisma.employee.count({ where: { status: 'ACTIVE' } }),
@@ -69,15 +69,22 @@ export async function GET() {
       }),
       // Stats: 재고 상위 10
       prisma.stockBalance.findMany({
-        include: { item: { select: { itemName: true, unit: true } } },
+        select: {
+          itemId: true,
+          quantity: true,
+          item: { select: { itemName: true, unit: true } },
+        },
         orderBy: { quantity: 'desc' },
         take: 10,
       }),
-      // Stats: 결재 현황
-      prisma.approvalDocument.findMany({
-        where: { createdAt: { gte: sixMonthsAgo } },
-        select: { status: true, createdAt: true },
-      }),
+      // Stats: 결재 현황 (DB-level aggregation, 개별 row fetch 제거)
+      prisma.$queryRaw<{ month: string; status: string; count: bigint }[]>`
+        SELECT to_char("createdAt", 'YYYY-MM') as month, status, COUNT(*)::bigint as count
+        FROM approval_documents
+        WHERE "createdAt" >= ${sixMonthsAgo}
+        GROUP BY to_char("createdAt", 'YYYY-MM'), status
+        ORDER BY month
+      `,
       // Stats: 휴가 통계
       prisma.leave.groupBy({
         by: ['leaveType'],
@@ -96,11 +103,16 @@ export async function GET() {
         _count: true,
         _sum: { totalAmount: true },
       }),
-      prisma.salesOrder.findMany({
-        where: { orderDate: { gte: yearStart }, status: { not: 'CANCELLED' } },
-        select: { orderDate: true, salesChannel: true, totalAmount: true },
-        orderBy: { orderDate: 'asc' },
-      }),
+      // 월별 매출 DB-level aggregation (최대 50,000 row fetch → 최대 24 row)
+      prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
+        SELECT to_char("orderDate", 'YYYY-MM') as month,
+               "salesChannel" as channel,
+               SUM("totalAmount")::float as total
+        FROM sales_orders
+        WHERE "orderDate" >= ${yearStart} AND status != 'CANCELLED'
+        GROUP BY to_char("orderDate", 'YYYY-MM'), "salesChannel"
+        ORDER BY month
+      `,
     ])
 
     // 안전재고 이하 품목 수
@@ -130,13 +142,13 @@ export async function GET() {
     }))
 
     const approvalByMonth: Record<string, { approved: number; rejected: number; pending: number }> = {}
-    approvalDocs.forEach((doc) => {
-      const month = doc.createdAt.toISOString().slice(0, 7)
-      if (!approvalByMonth[month]) approvalByMonth[month] = { approved: 0, rejected: 0, pending: 0 }
-      if (doc.status === 'APPROVED') approvalByMonth[month].approved++
-      else if (doc.status === 'REJECTED') approvalByMonth[month].rejected++
-      else approvalByMonth[month].pending++
-    })
+    for (const row of approvalAggs) {
+      if (!approvalByMonth[row.month]) approvalByMonth[row.month] = { approved: 0, rejected: 0, pending: 0 }
+      const count = Number(row.count)
+      if (row.status === 'APPROVED') approvalByMonth[row.month].approved += count
+      else if (row.status === 'REJECTED') approvalByMonth[row.month].rejected += count
+      else approvalByMonth[row.month].pending += count
+    }
     const approvalData = Object.entries(approvalByMonth)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, data]) => ({ month, ...data }))
@@ -150,14 +162,13 @@ export async function GET() {
       days: Number(l._sum.days || 0),
     }))
 
-    // Sales monthly
+    // Sales monthly (이미 DB에서 집계된 결과 사용)
     const monthlyMap = new Map<string, { online: number; offline: number; total: number }>()
-    for (const order of monthlyOrders) {
-      const key = `${order.orderDate.getFullYear()}-${String(order.orderDate.getMonth() + 1).padStart(2, '0')}`
-      if (!monthlyMap.has(key)) monthlyMap.set(key, { online: 0, offline: 0, total: 0 })
-      const entry = monthlyMap.get(key)!
-      const amount = Number(order.totalAmount)
-      if (order.salesChannel === 'ONLINE') entry.online += amount
+    for (const row of monthlyAggs) {
+      if (!monthlyMap.has(row.month)) monthlyMap.set(row.month, { online: 0, offline: 0, total: 0 })
+      const entry = monthlyMap.get(row.month)!
+      const amount = Number(row.total)
+      if (row.channel === 'ONLINE') entry.online += amount
       else entry.offline += amount
       entry.total += amount
     }

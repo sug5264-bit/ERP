@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
     const [items, totalCount] = await Promise.all([
       prisma.post.findMany({
-        where, include: { board: true, author: { select: { id: true, name: true } }, _count: { select: { comments: true } } },
+        where, include: { board: { select: { id: true, boardCode: true, boardName: true } }, author: { select: { id: true, name: true } }, _count: { select: { comments: true } } },
         orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }], skip, take: pageSize,
       }),
       prisma.post.count({ where }),

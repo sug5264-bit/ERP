@@ -32,9 +32,17 @@ export async function GET(req: NextRequest) {
     const [users, totalCount] = await Promise.all([
       prisma.user.findMany({
         where,
-        include: {
-          userRoles: { include: { role: true } },
-          employee: { include: { department: true, position: true } },
+        select: {
+          id: true, username: true, email: true, name: true,
+          isActive: true, lastLoginAt: true, createdAt: true,
+          userRoles: { select: { role: { select: { id: true, name: true, description: true } } } },
+          employee: {
+            select: {
+              id: true, employeeNo: true, nameKo: true,
+              department: { select: { name: true } },
+              position: { select: { name: true } },
+            },
+          },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -51,11 +59,7 @@ export async function GET(req: NextRequest) {
       isActive: u.isActive,
       lastLoginAt: u.lastLoginAt,
       createdAt: u.createdAt,
-      roles: u.userRoles.map((ur) => ({
-        id: ur.role.id,
-        name: ur.role.name,
-        description: ur.role.description,
-      })),
+      roles: u.userRoles.map((ur) => ur.role),
       employee: u.employee
         ? {
             id: u.employee.id,

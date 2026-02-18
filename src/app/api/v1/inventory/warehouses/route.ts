@@ -10,7 +10,7 @@ export async function GET() {
 
     const warehouses = await prisma.warehouse.findMany({
       include: {
-        zones: { orderBy: { zoneCode: 'asc' } },
+        zones: { select: { id: true, zoneCode: true, zoneName: true }, orderBy: { zoneCode: 'asc' } },
         _count: { select: { stockBalances: true } },
       },
       orderBy: { code: 'asc' },
