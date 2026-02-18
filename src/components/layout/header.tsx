@@ -95,6 +95,7 @@ export function Header() {
   const [dataResults, setDataResults] = useState<any[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const user = session?.user
@@ -155,6 +156,19 @@ export function Header() {
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus()
+  }, [searchOpen])
+
+  // 데스크톱 검색 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    if (searchOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
   }, [searchOpen])
 
   useEffect(() => {
@@ -218,7 +232,7 @@ export function Header() {
           </Button>
 
           {/* 통합 검색 - 데스크톱 */}
-          <div className="hidden lg:block relative">
+          <div ref={searchContainerRef} className="hidden lg:block relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               ref={searchRef}

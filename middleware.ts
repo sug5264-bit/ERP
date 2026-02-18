@@ -82,7 +82,8 @@ function hasPermission(
   action: string
 ): boolean {
   if (roles.includes('SYSTEM_ADMIN') || roles.includes('관리자')) return true
-  if (roles.includes('부서장') && (action === 'read' || action === 'approve')) return true
+  // 부서장은 읽기, 승인만 가능하며 관리(admin) 모듈은 접근 불가
+  if (roles.includes('부서장') && module !== 'admin' && (action === 'read' || action === 'approve')) return true
   return permissions.some((p) => p.module === module && p.action === action)
 }
 
@@ -120,9 +121,13 @@ export default auth((req) => {
 
   // API 변경 요청 보안 검증
   if (pathname.startsWith('/api/v1') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-    // CSRF 보호: 커스텀 헤더 확인
+    // CSRF 보호: 커스텀 헤더 + Origin 확인
     const hasHeader = req.headers.get('x-requested-with') === 'XMLHttpRequest'
-    if (!hasHeader) {
+    const origin = req.headers.get('origin')
+    const host = req.headers.get('host')
+    const originMismatch = origin && host && !origin.includes(host)
+
+    if (!hasHeader || originMismatch) {
       return NextResponse.json(
         { success: false, error: { code: 'CSRF_ERROR', message: 'Invalid request' } },
         { status: 403 }
@@ -151,12 +156,6 @@ export default auth((req) => {
     const user = req.auth.user as any
     const permissions = user?.permissions || []
     const roles = user?.roles || []
-
-    // 대시보드, 마이페이지, 검색 API는 인증만 되면 접근 가능
-    if (pathname === '/dashboard' || pathname.startsWith('/mypage') || pathname.startsWith('/api/v1/search') || pathname.startsWith('/api/v1/dashboard')) {
-      return NextResponse.next()
-    }
-
     const action = METHOD_ACTION_MAP[method] || 'read'
 
     if (!hasPermission(permissions, roles, requiredModule, action)) {

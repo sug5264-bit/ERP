@@ -23,9 +23,12 @@ async function request(method: string, url: string, data?: any) {
     options.body = JSON.stringify(data)
   }
 
+  // 변경 요청(POST/PUT/PATCH/DELETE)은 중복 실행 방지를 위해 재시도하지 않음
+  const isMutation = method !== 'GET'
+  const maxRetries = isMutation ? 0 : MAX_RETRIES
   let lastError: unknown
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const res = await fetch(`${BASE_URL}${url}`, options)
 
@@ -57,8 +60,8 @@ async function request(method: string, url: string, data?: any) {
       if (error instanceof PermissionError) throw error
       if (error instanceof Error && !isRetryableError(error)) throw error
 
-      // 네트워크 에러: 재시도
-      if (attempt < MAX_RETRIES) {
+      // 네트워크 에러: GET만 재시도
+      if (attempt < maxRetries) {
         await wait(RETRY_DELAY_MS * (attempt + 1))
         continue
       }

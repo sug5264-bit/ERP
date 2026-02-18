@@ -6,6 +6,7 @@ import {
   handleApiError,
   getSession,
 } from '@/lib/api-helpers'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 /**
  * 글로벌 통합 검색 API
@@ -19,13 +20,15 @@ export async function GET(req: NextRequest) {
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const { searchParams } = req.nextUrl
-    const query = searchParams.get('q')?.trim()
-    if (!query || query.length < 2) {
+    const rawQuery = searchParams.get('q')?.trim()
+    if (!rawQuery || rawQuery.length < 2) {
       return errorResponse('검색어를 2글자 이상 입력해주세요.', 'VALIDATION_ERROR', 400)
     }
 
+    const query = sanitizeSearchQuery(rawQuery)
     const modulesParam = searchParams.get('modules')
-    const limit = Math.min(50, parseInt(searchParams.get('limit') || '5'))
+    const rawLimit = parseInt(searchParams.get('limit') || '5')
+    const limit = Math.min(50, Number.isFinite(rawLimit) ? rawLimit : 5)
     const enabledModules = modulesParam
       ? modulesParam.split(',')
       : ['employee', 'partner', 'item', 'voucher', 'project']

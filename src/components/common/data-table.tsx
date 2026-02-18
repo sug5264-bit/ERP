@@ -140,13 +140,14 @@ export function DataTable<TData, TValue>({
     },
   })
 
-  // 선택 변경 콜백
+  // 선택 변경 콜백 (table은 매 렌더링마다 새 참조이므로 deps에서 제외)
   useEffect(() => {
     if (onSelectionChange) {
       const selected = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
       onSelectionChange(selected)
     }
-  }, [rowSelection, onSelectionChange, table])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowSelection, onSelectionChange])
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
@@ -344,7 +345,7 @@ export function DataTable<TData, TValue>({
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm px-1.5 tabular-nums">
-            {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
+            {table.getPageCount() > 0 ? table.getState().pagination.pageIndex + 1 : 0}/{table.getPageCount()}
           </span>
           <Button
             variant="outline"

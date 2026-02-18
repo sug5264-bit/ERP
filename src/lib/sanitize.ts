@@ -41,13 +41,24 @@ export function sanitizeSearchQuery(query: string): string {
 }
 
 /**
- * 객체의 모든 문자열 필드를 살균
+ * 객체의 모든 문자열 필드를 재귀적으로 살균
  */
 export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
   const result = { ...obj } as Record<string, any>
   for (const key of Object.keys(result)) {
-    if (typeof result[key] === 'string') {
-      result[key] = sanitizeString(result[key])
+    const value = result[key]
+    if (typeof value === 'string') {
+      result[key] = sanitizeString(value)
+    } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = sanitizeObject(value)
+    } else if (Array.isArray(value)) {
+      result[key] = value.map((item: any) =>
+        typeof item === 'string'
+          ? sanitizeString(item)
+          : item !== null && typeof item === 'object'
+            ? sanitizeObject(item)
+            : item
+      )
     }
   }
   return result as T

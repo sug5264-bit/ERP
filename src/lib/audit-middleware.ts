@@ -16,7 +16,7 @@ const METHOD_AUDIT_ACTION: Record<string, AuditAction> = {
 interface AuditOptions {
   tableName: string
   getRecordId?: (req: NextRequest, response: any) => string | undefined
-  getOldValue?: (req: NextRequest) => Promise<any>
+  getOldValue?: (req: Request) => Promise<any>
   action?: AuditAction
 }
 
@@ -48,10 +48,11 @@ export function withAuditLog(
     }
 
     // 변경 전 값 캡처 (UPDATE/DELETE 시)
+    // getOldValue에 cloned request를 전달하여 원본 body 보존
     let oldValue: any = undefined
     if ((auditAction === 'UPDATE' || auditAction === 'DELETE') && options.getOldValue) {
       try {
-        oldValue = await options.getOldValue(req)
+        oldValue = await options.getOldValue(req.clone())
       } catch {
         // 캡처 실패해도 원래 작업은 진행
       }
