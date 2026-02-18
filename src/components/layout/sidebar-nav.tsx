@@ -22,7 +22,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { useState } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { useSidebarStore } from '@/stores/sidebar-store'
 
 interface NavItem {
@@ -143,18 +143,18 @@ export function SidebarNav() {
   const userRoles = (session?.user as any)?.roles || []
   const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 
-  const filteredNavItems = navItems.filter((item) => {
+  const filteredNavItems = useMemo(() => navItems.filter((item) => {
     if (!item.module) return true
     if (isAdmin) return true
     if (userRoles.includes('부서장')) return true
     return userPermissions.some(
       (p: any) => p.module === item.module && p.action === 'read'
     )
-  })
+  }), [userPermissions, userRoles, isAdmin])
 
-  const closeMobileSidebar = () => {
+  const closeMobileSidebar = useCallback(() => {
     if (window.innerWidth < 1024) setOpen(false)
-  }
+  }, [setOpen])
 
   return (
     <nav className="flex flex-col gap-1 p-2">
@@ -170,7 +170,7 @@ export function SidebarNav() {
   )
 }
 
-function NavItemComponent({
+const NavItemComponent = memo(function NavItemComponent({
   item,
   pathname,
   onNavigate,
@@ -188,7 +188,7 @@ function NavItemComponent({
         href={item.href}
         onClick={onNavigate}
         className={cn(
-          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
             ? 'bg-primary text-primary-foreground'
             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -204,7 +204,7 @@ function NavItemComponent({
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <CollapsibleTrigger
         className={cn(
-          'flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          'flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
             ? 'bg-accent text-accent-foreground'
             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -231,7 +231,7 @@ function NavItemComponent({
                 href={child.href}
                 onClick={onNavigate}
                 className={cn(
-                  'rounded-md px-3 py-1.5 text-sm transition-colors',
+                  'rounded-md px-3 py-2 text-sm transition-colors',
                   childActive
                     ? 'font-medium text-primary'
                     : 'text-muted-foreground hover:text-foreground'
@@ -245,4 +245,4 @@ function NavItemComponent({
       </CollapsibleContent>
     </Collapsible>
   )
-}
+})

@@ -64,8 +64,8 @@ export function BreadcrumbNav() {
   if (segments.length <= 1) return null
 
   return (
-    <Breadcrumb className="mb-3 sm:mb-4 overflow-x-auto">
-      <BreadcrumbList className="flex-nowrap text-xs sm:text-sm">
+    <Breadcrumb className="mb-3 sm:mb-4 overflow-x-auto scrollbar-none">
+      <BreadcrumbList className="flex-nowrap text-[13px] sm:text-sm">
         {segments.map((segment, index) => {
           const href = '/' + segments.slice(0, index + 1).join('/')
           const label = pathLabels[segment] || segment

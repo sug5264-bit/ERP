@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (isMyApprovals && employeeId) {
-      // 결재 대기: IN_PROGRESS 상태이고, 현재 결재 차례인 문서만 (DB에서 직접 필터)
+      // 결재 대기: IN_PROGRESS 상태이고, 현재 결재 차례(currentStep == stepOrder)인 문서만
       where.status = 'IN_PROGRESS'
       where.steps = {
         some: {
@@ -48,6 +48,31 @@ export async function GET(request: NextRequest) {
       steps: { include: { approver: { select: { id: true, nameKo: true, position: { select: { name: true } } } } }, orderBy: { stepOrder: 'asc' as const } },
     }
 
+    // myApprovals: raw query로 currentStep == stepOrder 조건을 DB에서 처리
+    if (isMyApprovals && employeeId) {
+      const docIds = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT ad.id FROM approval_documents ad
+        JOIN approval_steps ast ON ast."documentId" = ad.id
+        WHERE ad.status = 'IN_PROGRESS'
+          AND ast."approverId" = ${employeeId}
+          AND ast.status = 'PENDING'
+          AND ast."stepOrder" = ad."currentStep"
+        ORDER BY ad."createdAt" DESC
+      `
+      const ids = docIds.map(d => d.id)
+      const [items, totalCount] = await Promise.all([
+        ids.length > 0
+          ? prisma.approvalDocument.findMany({
+              where: { id: { in: ids.slice(skip, skip + pageSize) } },
+              include: includeFields,
+              orderBy: { createdAt: 'desc' },
+            })
+          : Promise.resolve([]),
+        Promise.resolve(ids.length),
+      ])
+      return successResponse(items, buildMeta(page, pageSize, totalCount))
+    }
+
     const [items, totalCount] = await Promise.all([
       prisma.approvalDocument.findMany({
         where,
@@ -59,16 +84,7 @@ export async function GET(request: NextRequest) {
       prisma.approvalDocument.count({ where }),
     ])
 
-    // myApprovals: 현재 결재 차례인 문서만 필터 (currentStep == 내 stepOrder)
-    let result = items
-    if (isMyApprovals && employeeId) {
-      result = items.filter(doc => {
-        const currentStepData = doc.steps.find((s: any) => s.stepOrder === doc.currentStep)
-        return currentStepData?.approverId === employeeId && currentStepData?.status === 'PENDING'
-      })
-    }
-
-    return successResponse(result, buildMeta(page, pageSize, totalCount))
+    return successResponse(items, buildMeta(page, pageSize, totalCount))
   } catch (error) { return handleApiError(error) }
 }
 

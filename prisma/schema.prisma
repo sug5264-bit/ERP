@@ -253,6 +253,7 @@ model Employee {
 
   @@index([departmentId])
   @@index([status])
+  @@index([positionId])
   @@map("employees")
 }
 
@@ -370,6 +371,7 @@ model Leave {
   employee Employee @relation(fields: [employeeId], references: [id])
 
   @@index([employeeId, startDate])
+  @@index([status])
   @@map("leaves")
 }
 
@@ -503,6 +505,7 @@ model Voucher {
 
   @@index([voucherDate])
   @@index([voucherType])
+  @@index([status, voucherDate])
   @@map("vouchers")
 }
 
@@ -558,6 +561,8 @@ model TaxInvoice {
   items   TaxInvoiceItem[]
 
   @@index([issueDate])
+  @@index([partnerId])
+  @@index([transmissionStatus])
   @@map("tax_invoices")
 }
 
@@ -685,6 +690,8 @@ model Item {
   purchaseOrderDetails   PurchaseOrderDetail[]
   receivingDetails       ReceivingDetail[]
 
+  @@index([itemName])
+  @@index([isActive, itemType])
   @@map("items")
 }
 
@@ -742,6 +749,7 @@ model StockMovement {
   details         StockMovementDetail[]
 
   @@index([movementDate])
+  @@index([movementType, movementDate])
   @@map("stock_movements")
 }
 
@@ -776,6 +784,7 @@ model StockBalance {
 
   @@unique([itemId, warehouseId, zoneId])
   @@index([itemId])
+  @@index([warehouseId])
   @@map("stock_balances")
 }
 
@@ -851,6 +860,8 @@ model Quotation {
   salesOrders SalesOrder[]
 
   @@index([quotationDate])
+  @@index([partnerId])
+  @@index([status])
   @@map("quotations")
 }
 
@@ -909,6 +920,9 @@ model SalesOrder {
 
   @@index([orderDate])
   @@index([status])
+  @@index([status, salesChannel])
+  @@index([partnerId])
+  @@index([status, createdAt])
   @@map("sales_orders")
 }
 
@@ -1027,6 +1041,8 @@ model PurchaseOrder {
   receivings Receiving[]
 
   @@index([orderDate])
+  @@index([partnerId])
+  @@index([status])
   @@map("purchase_orders")
 }
 
@@ -1271,6 +1287,7 @@ model ApprovalDocument {
   @@index([status])
   @@index([drafterId])
   @@index([createdAt])
+  @@index([status, createdAt])
   @@map("approval_documents")
 }
 
@@ -1295,6 +1312,7 @@ model ApprovalStep {
   approver Employee         @relation(fields: [approverId], references: [id])
 
   @@index([approverId, status])
+  @@index([documentId, stepOrder])
   @@map("approval_steps")
 }
 
@@ -1364,5 +1382,6 @@ model Message {
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@index([receiverId, isRead])
+  @@index([senderId, sentAt])
   @@map("messages")
 }

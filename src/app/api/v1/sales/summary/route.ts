@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       },
       monthly,
       topItems,
-    })
+    }, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

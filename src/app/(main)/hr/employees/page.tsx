@@ -30,6 +30,7 @@ import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Upload, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface EmployeeRow {
   id: string
@@ -154,8 +155,10 @@ export default function EmployeesPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`사원 [${name}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name })
   }
 
   const employees: EmployeeRow[] = data?.data || []
@@ -225,7 +228,7 @@ export default function EmployeesPage() {
       />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="w-full sm:w-36">
             <SelectValue placeholder="전체 상태" />
           </SelectTrigger>
           <SelectContent>
@@ -353,6 +356,16 @@ export default function EmployeesPage() {
         templateFileName="사원_업로드_템플릿"
         keyMap={importKeyMap}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['hr-employees'] })}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="사원 삭제"
+        description={`사원 [${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
       />
     </div>
   )

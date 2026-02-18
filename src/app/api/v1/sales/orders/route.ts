@@ -17,7 +17,13 @@ export async function GET(request: NextRequest) {
     if (salesChannel) where.salesChannel = salesChannel
     const [items, totalCount] = await Promise.all([
       prisma.salesOrder.findMany({
-        where, include: { partner: true, employee: true, quotation: true, details: { include: { item: true } } },
+        where,
+        include: {
+          partner: { select: { id: true, partnerCode: true, partnerName: true, partnerType: true } },
+          employee: { select: { id: true, nameKo: true } },
+          quotation: { select: { id: true, quotationNo: true } },
+          _count: { select: { details: true } },
+        },
         orderBy: { createdAt: 'desc' }, skip, take: pageSize,
       }),
       prisma.salesOrder.count({ where }),
@@ -40,31 +46,29 @@ export async function POST(request: NextRequest) {
     const warnings: string[] = []
     const orderItemIds = data.details.map(d => d.itemId)
 
-    // 품목별 현재고 합산
-    const stockAggs = await prisma.stockBalance.groupBy({
-      by: ['itemId'],
-      where: { itemId: { in: orderItemIds } },
-      _sum: { quantity: true },
-    })
+    // 재고, 수주잔량, 품목정보를 병렬 조회
+    const [stockAggs, orderedAggs, itemsInfo] = await Promise.all([
+      prisma.stockBalance.groupBy({
+        by: ['itemId'],
+        where: { itemId: { in: orderItemIds } },
+        _sum: { quantity: true },
+      }),
+      prisma.salesOrderDetail.groupBy({
+        by: ['itemId'],
+        where: {
+          itemId: { in: orderItemIds },
+          salesOrder: { status: { in: ['ORDERED', 'IN_PROGRESS'] } },
+          remainingQty: { gt: 0 },
+        },
+        _sum: { remainingQty: true },
+      }),
+      prisma.item.findMany({
+        where: { id: { in: orderItemIds } },
+        select: { id: true, itemName: true, taxType: true },
+      }),
+    ])
     const stockMap = new Map(stockAggs.map(s => [s.itemId, Number(s._sum.quantity ?? 0)]))
-
-    // 품목별 기존 미처리 수주잔량 합산
-    const orderedAggs = await prisma.salesOrderDetail.groupBy({
-      by: ['itemId'],
-      where: {
-        itemId: { in: orderItemIds },
-        salesOrder: { status: { in: ['ORDERED', 'IN_PROGRESS'] } },
-        remainingQty: { gt: 0 },
-      },
-      _sum: { remainingQty: true },
-    })
     const orderedMap = new Map(orderedAggs.map(o => [o.itemId, Number(o._sum.remainingQty ?? 0)]))
-
-    // 품목 정보 일괄 조회 (N+1 쿼리 방지)
-    const itemsInfo = await prisma.item.findMany({
-      where: { id: { in: orderItemIds } },
-      select: { id: true, itemName: true, taxType: true },
-    })
     const itemInfoMap = new Map(itemsInfo.map(i => [i.id, i]))
 
     for (const d of data.details) {

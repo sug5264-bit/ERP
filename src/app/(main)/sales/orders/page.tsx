@@ -20,6 +20,7 @@ import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
 import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   ORDERED: { label: '발주', variant: 'default' }, IN_PROGRESS: { label: '진행중', variant: 'secondary' },
@@ -39,26 +40,36 @@ export default function OrdersPage() {
   const [open, setOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
-  const handleTaxInvoicePDF = (order: any) => {
-    const orderDate = new Date(order.orderDate)
+  const handleTaxInvoicePDF = async (order: any) => {
+    // 목록 API에서는 details를 포함하지 않으므로 개별 주문 상세 조회
+    let orderDetail = order
+    try {
+      const res = await api.get(`/sales/orders/${order.id}`) as any
+      orderDetail = res.data || res
+    } catch {
+      toast.error('주문 상세 정보를 불러올 수 없습니다.')
+      return
+    }
+    const orderDate = new Date(orderDetail.orderDate)
     const pdfData: TaxInvoicePDFData = {
-      invoiceNo: order.orderNo,
-      invoiceDate: formatDate(order.orderDate),
+      invoiceNo: orderDetail.orderNo,
+      invoiceDate: formatDate(orderDetail.orderDate),
       supplier: { name: COMPANY_NAME, bizNo: '', ceo: '', address: '' },
-      buyer: { name: order.partner?.partnerName || '', bizNo: order.partner?.bizNo || '', ceo: order.partner?.ceoName || '', address: order.partner?.address || '' },
-      items: (order.details || []).map((d: any) => ({
+      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '' },
+      items: (orderDetail.details || []).map((d: any) => ({
         month: String(orderDate.getMonth() + 1), day: String(orderDate.getDate()),
         itemName: d.item?.itemName || '', spec: d.item?.spec || '',
         qty: Number(d.quantity), unitPrice: Number(d.unitPrice),
         supplyAmount: Number(d.supplyAmount), taxAmount: Number(d.taxAmount),
       })),
-      totalSupply: Number(order.totalSupply), totalTax: Number(order.totalTax), totalAmount: Number(order.totalAmount),
+      totalSupply: Number(orderDetail.totalSupply), totalTax: Number(orderDetail.totalTax), totalAmount: Number(orderDetail.totalAmount),
     }
     generateTaxInvoicePDF(pdfData)
     toast.success('세금계산서 PDF가 다운로드되었습니다.')
@@ -95,7 +106,7 @@ export default function OrdersPage() {
   })
 
   const handleDelete = (id: string, no: string) => {
-    if (window.confirm(`발주 [${no}]를 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: no })
   }
 
   const columns: ColumnDef<any>[] = [
@@ -358,7 +369,7 @@ export default function OrdersPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">전체</SelectItem>
                   {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
@@ -375,7 +386,7 @@ export default function OrdersPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">전체</SelectItem>
                   {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
@@ -387,6 +398,16 @@ export default function OrdersPage() {
           </div>
         </TabsContent>
       </Tabs>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="발주 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

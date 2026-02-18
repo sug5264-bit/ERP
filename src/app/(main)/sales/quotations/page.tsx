@@ -18,6 +18,7 @@ import { generateQuotationPDF, type QuotationPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
 import { Plus, Trash2, FileDown } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   DRAFT: { label: '임시', variant: 'outline' }, SUBMITTED: { label: '제출', variant: 'default' },
@@ -29,6 +30,7 @@ interface Detail { itemId: string; quantity: number; unitPrice: number }
 export default function QuotationsPage() {
   const [open, setOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const queryClient = useQueryClient()
 
@@ -92,7 +94,7 @@ export default function QuotationsPage() {
   })
 
   const handleDelete = (id: string, no: string) => {
-    if (window.confirm(`견적 [${no}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: no })
   }
 
   const partners = partnersData?.data || []
@@ -134,7 +136,7 @@ export default function QuotationsPage() {
       <PageHeader title="견적관리" description="고객 견적서를 작성하고 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
@@ -192,6 +194,16 @@ export default function QuotationsPage() {
         </Dialog>
       </div>
       <DataTable columns={columns} data={quotations} searchColumn="quotationNo" searchPlaceholder="견적번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="견적 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

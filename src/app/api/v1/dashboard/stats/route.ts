@@ -33,10 +33,14 @@ export async function GET(req: NextRequest) {
           orderBy: { quantity: 'desc' },
           take: 10,
         }),
-        prisma.approvalDocument.findMany({
-          where: { createdAt: { gte: sixMonthsAgo } },
-          select: { status: true, createdAt: true },
-        }),
+        // 월별 결재 현황을 DB에서 직접 집계 (전체 레코드 fetch 방지)
+        prisma.$queryRaw<{ month: string; status: string; count: bigint }[]>`
+          SELECT TO_CHAR("createdAt", 'YYYY-MM') as month, status, COUNT(*)::bigint as count
+          FROM approval_documents
+          WHERE "createdAt" >= ${sixMonthsAgo}
+          GROUP BY TO_CHAR("createdAt", 'YYYY-MM'), status
+          ORDER BY month ASC
+        `,
         prisma.leave.groupBy({
           by: ['leaveType'],
           where: { startDate: { gte: yearStart }, status: { in: ['APPROVED', 'REQUESTED'] } },
@@ -58,15 +62,15 @@ export async function GET(req: NextRequest) {
       unit: sb.item?.unit || 'EA',
     }))
 
-    // 월별 결재 처리 현황
+    // 월별 결재 처리 현황 (DB 집계 결과 변환)
     const approvalByMonth: Record<string, { approved: number; rejected: number; pending: number }> = {}
-    approvalDocs.forEach((doc) => {
-      const month = doc.createdAt.toISOString().slice(0, 7)
-      if (!approvalByMonth[month]) approvalByMonth[month] = { approved: 0, rejected: 0, pending: 0 }
-      if (doc.status === 'APPROVED') approvalByMonth[month].approved++
-      else if (doc.status === 'REJECTED') approvalByMonth[month].rejected++
-      else approvalByMonth[month].pending++
-    })
+    for (const row of approvalDocs) {
+      if (!approvalByMonth[row.month]) approvalByMonth[row.month] = { approved: 0, rejected: 0, pending: 0 }
+      const count = Number(row.count)
+      if (row.status === 'APPROVED') approvalByMonth[row.month].approved = count
+      else if (row.status === 'REJECTED') approvalByMonth[row.month].rejected = count
+      else approvalByMonth[row.month].pending += count
+    }
     const approvalData = Object.entries(approvalByMonth)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, data]) => ({ month, ...data }))
@@ -86,7 +90,7 @@ export async function GET(req: NextRequest) {
       stockData,
       approvalData,
       leaveData,
-    })
+    }, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

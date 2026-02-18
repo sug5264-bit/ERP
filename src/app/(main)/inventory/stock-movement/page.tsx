@@ -19,6 +19,7 @@ import {
 import { formatDate, formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
 import { Plus, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const MOVEMENT_TYPE_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   INBOUND: { label: '입고', variant: 'default' },
@@ -50,6 +51,7 @@ export default function StockMovementPage() {
   const [open, setOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
   const [movementType, setMovementType] = useState('INBOUND')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [details, setDetails] = useState<MovementDetail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const queryClient = useQueryClient()
 
@@ -94,7 +96,7 @@ export default function StockMovementPage() {
   })
 
   const handleDelete = (id: string, no: string) => {
-    if (window.confirm(`입출고 [${no}]를 삭제하시겠습니까? 재고가 원복됩니다.`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: no })
   }
 
   const movements: MovementRow[] = data?.data || []
@@ -124,7 +126,7 @@ export default function StockMovementPage() {
       <PageHeader title="입출고" description="재고의 입고/출고/이동/조정 내역을 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 유형" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 유형" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(MOVEMENT_TYPE_MAP).map(([k, v]) => (
@@ -225,6 +227,16 @@ export default function StockMovementPage() {
         </Dialog>
       </div>
       <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.movementNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={movements} searchColumn="movementNo" searchPlaceholder="이동번호로 검색..." isLoading={isLoading} pageSize={50} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="입출고 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

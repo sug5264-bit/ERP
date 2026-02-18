@@ -31,13 +31,16 @@ export async function POST(req: NextRequest) {
     let failCount = 0
     const errors: string[] = []
 
+    // 일괄 조회로 N+1 쿼리 제거 (ids.length번 → 1번 쿼리)
+    const docs = await prisma.approvalDocument.findMany({
+      where: { id: { in: ids } },
+      include: { steps: { orderBy: { stepOrder: 'asc' } }, drafter: { include: { user: true } } },
+    })
+    const docMap = new Map(docs.map((d) => [d.id, d]))
+
     for (const docId of ids) {
       try {
-        const doc = await prisma.approvalDocument.findUnique({
-          where: { id: docId },
-          include: { steps: { orderBy: { stepOrder: 'asc' } }, drafter: { include: { user: true } } },
-        })
-
+        const doc = docMap.get(docId)
         if (!doc) { failCount++; errors.push(`문서 ${docId}: 찾을 수 없음`); continue }
 
         const currentStepData = doc.steps.find(
@@ -46,43 +49,42 @@ export async function POST(req: NextRequest) {
 
         if (!currentStepData) { failCount++; errors.push(`문서 ${doc.documentNo}: 결재 권한 없음`); continue }
 
-        // 결재 단계 업데이트
-        await prisma.approvalStep.update({
-          where: { id: currentStepData.id },
-          data: {
-            status: action === 'approve' ? 'APPROVED' : 'REJECTED',
-            comment: comment || null,
-            actionDate: new Date(),
-          },
-        })
+        // 결재 단계 + 문서 상태 + 감사로그 + 알림을 병렬 실행
+        const docStatus = action === 'reject'
+          ? 'REJECTED' as const
+          : doc.currentStep >= doc.totalSteps
+            ? 'APPROVED' as const
+            : null
 
-        // 문서 상태 업데이트
-        if (action === 'reject') {
-          await prisma.approvalDocument.update({ where: { id: docId }, data: { status: 'REJECTED' } })
-        } else if (doc.currentStep >= doc.totalSteps) {
-          await prisma.approvalDocument.update({ where: { id: docId }, data: { status: 'APPROVED' } })
-        } else {
-          await prisma.approvalDocument.update({ where: { id: docId }, data: { currentStep: doc.currentStep + 1 } })
-        }
+        const actionLabel = action === 'approve' ? '승인' : '반려'
 
-        // 감사 로그
-        await writeAuditLog({
-          action: action === 'approve' ? 'APPROVE' : 'REJECT',
-          tableName: 'approval_documents',
-          recordId: docId,
-        })
-
-        // 기안자에게 알림
-        if (doc.drafter?.user) {
-          const actionLabel = action === 'approve' ? '승인' : '반려'
-          await createNotification({
-            userId: doc.drafter.user.id,
-            type: 'APPROVAL',
-            title: `결재 ${actionLabel}`,
-            message: `"${doc.title}" 문서가 ${actionLabel}되었습니다.`,
-            relatedUrl: `/approval/${action === 'approve' ? 'completed' : 'rejected'}`,
-          })
-        }
+        await Promise.all([
+          prisma.approvalStep.update({
+            where: { id: currentStepData.id },
+            data: {
+              status: action === 'approve' ? 'APPROVED' : 'REJECTED',
+              comment: comment || null,
+              actionDate: new Date(),
+            },
+          }),
+          docStatus
+            ? prisma.approvalDocument.update({ where: { id: docId }, data: { status: docStatus } })
+            : prisma.approvalDocument.update({ where: { id: docId }, data: { currentStep: doc.currentStep + 1 } }),
+          writeAuditLog({
+            action: action === 'approve' ? 'APPROVE' : 'REJECT',
+            tableName: 'approval_documents',
+            recordId: docId,
+          }),
+          doc.drafter?.user
+            ? createNotification({
+                userId: doc.drafter.user.id,
+                type: 'APPROVAL',
+                title: `결재 ${actionLabel}`,
+                message: `"${doc.title}" 문서가 ${actionLabel}되었습니다.`,
+                relatedUrl: `/approval/${action === 'approve' ? 'completed' : 'rejected'}`,
+              })
+            : Promise.resolve(),
+        ])
 
         successCount++
       } catch (err) {
