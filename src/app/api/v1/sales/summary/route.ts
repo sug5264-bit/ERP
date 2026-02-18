@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 모든 독립 쿼리를 병렬 실행
-    const [onlineOrders, offlineOrders, allOrders, topItemAggs] = await Promise.all([
+    const [onlineOrders, offlineOrders, monthlyAggs, topItemAggs] = await Promise.all([
       // Channel summary
       prisma.salesOrder.aggregate({
         where: { ...where, salesChannel: 'ONLINE' },
@@ -36,16 +36,17 @@ export async function GET(request: NextRequest) {
         _count: true,
         _sum: { totalAmount: true, totalSupply: true, totalTax: true },
       }),
-      // Monthly breakdown (select only needed fields)
-      prisma.salesOrder.findMany({
-        where,
-        select: {
-          orderDate: true,
-          salesChannel: true,
-          totalAmount: true,
-        },
-        orderBy: { orderDate: 'asc' },
-      }),
+      // Monthly breakdown: DB-level aggregation (unbounded row fetch 제거)
+      prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
+        SELECT to_char("orderDate", 'YYYY-MM') as month,
+               "salesChannel" as channel,
+               SUM("totalAmount")::float as total
+        FROM sales_orders
+        WHERE "orderDate" >= ${startDate} AND "orderDate" < ${endDate}
+          AND status != 'CANCELLED'
+        GROUP BY to_char("orderDate", 'YYYY-MM'), "salesChannel"
+        ORDER BY month
+      `,
       // Top items: DB에서 집계 (unbounded findMany 제거)
       prisma.salesOrderDetail.groupBy({
         by: ['itemId'],
@@ -56,14 +57,13 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    // Monthly breakdown 처리
+    // Monthly breakdown 처리 (이미 DB에서 집계된 결과)
     const monthlyMap = new Map<string, { online: number; offline: number; total: number }>()
-    for (const order of allOrders) {
-      const key = `${order.orderDate.getFullYear()}-${String(order.orderDate.getMonth() + 1).padStart(2, '0')}`
-      if (!monthlyMap.has(key)) monthlyMap.set(key, { online: 0, offline: 0, total: 0 })
-      const entry = monthlyMap.get(key)!
-      const amount = Number(order.totalAmount)
-      if (order.salesChannel === 'ONLINE') entry.online += amount
+    for (const row of monthlyAggs) {
+      if (!monthlyMap.has(row.month)) monthlyMap.set(row.month, { online: 0, offline: 0, total: 0 })
+      const entry = monthlyMap.get(row.month)!
+      const amount = Number(row.total)
+      if (row.channel === 'ONLINE') entry.online += amount
       else entry.offline += amount
       entry.total += amount
     }

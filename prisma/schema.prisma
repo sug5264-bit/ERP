@@ -422,6 +422,7 @@ model Applicant {
 
   recruitment Recruitment @relation(fields: [recruitmentId], references: [id])
 
+  @@index([recruitmentId])
   @@map("applicants")
 }
 
@@ -509,6 +510,8 @@ model Voucher {
   @@index([voucherDate])
   @@index([voucherType])
   @@index([status, voucherDate])
+  @@index([fiscalYearId])
+  @@index([createdById])
   @@map("vouchers")
 }
 
@@ -582,6 +585,7 @@ model TaxInvoiceItem {
 
   taxInvoice TaxInvoice @relation(fields: [taxInvoiceId], references: [id], onDelete: Cascade)
 
+  @@index([taxInvoiceId])
   @@map("tax_invoice_items")
 }
 
@@ -769,6 +773,8 @@ model StockMovementDetail {
   stockMovement StockMovement @relation(fields: [stockMovementId], references: [id], onDelete: Cascade)
   item          Item          @relation(fields: [itemId], references: [id])
 
+  @@index([stockMovementId])
+  @@index([itemId])
   @@map("stock_movement_details")
 }
 
@@ -868,6 +874,7 @@ model Quotation {
   @@index([quotationDate])
   @@index([partnerId])
   @@index([status])
+  @@index([employeeId])
   @@map("quotations")
 }
 
@@ -1051,6 +1058,7 @@ model PurchaseOrder {
   @@index([orderDate])
   @@index([partnerId])
   @@index([status])
+  @@index([employeeId])
   @@map("purchase_orders")
 }
 
@@ -1215,6 +1223,9 @@ model ProjectTask {
   parentTask ProjectTask?  @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
   subTasks   ProjectTask[] @relation("TaskHierarchy")
 
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
   @@map("project_tasks")
 }
 
@@ -1357,6 +1368,7 @@ model Post {
   comments PostComment[]
 
   @@index([boardId, createdAt])
+  @@index([authorId])
   @@map("posts")
 }
 
@@ -1373,6 +1385,7 @@ model PostComment {
   parentComment PostComment?  @relation("CommentHierarchy", fields: [parentCommentId], references: [id])
   replies       PostComment[] @relation("CommentHierarchy")
 
+  @@index([postId])
   @@map("post_comments")
 }
 
