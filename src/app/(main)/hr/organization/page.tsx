@@ -36,8 +36,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Building2, Users, ChevronRight } from 'lucide-react'
+import { Building2, Users, ChevronRight, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface Department {
   id: string
@@ -64,6 +65,8 @@ interface Position {
 export default function OrganizationPage() {
   const [deptOpen, setDeptOpen] = useState(false)
   const [posOpen, setPosOpen] = useState(false)
+  const [deleteDeptTarget, setDeleteDeptTarget] = useState<{ id: string; name: string } | null>(null)
+  const [deletePosTarget, setDeletePosTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data: deptData, isLoading: deptLoading } = useQuery({
@@ -92,6 +95,24 @@ export default function OrganizationPage() {
       queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
       setPosOpen(false)
       toast.success('직급이 등록되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const deleteDeptMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/hr/departments/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-departments'] })
+      toast.success('부서가 삭제되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const deletePosMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/hr/positions/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
+      toast.success('직급이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -192,6 +213,7 @@ export default function OrganizationPage() {
                     <TableHead>코드</TableHead>
                     <TableHead>인원</TableHead>
                     <TableHead>상태</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -215,11 +237,21 @@ export default function OrganizationPage() {
                           {dept.isActive ? '활성' : '비활성'}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteDeptTarget({ id: dept.id, name: dept.name })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {departments.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
                         등록된 부서가 없습니다.
                       </TableCell>
                     </TableRow>
@@ -284,6 +316,7 @@ export default function OrganizationPage() {
                     <TableHead>레벨</TableHead>
                     <TableHead>인원</TableHead>
                     <TableHead>상태</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -298,11 +331,21 @@ export default function OrganizationPage() {
                           {pos.isActive ? '활성' : '비활성'}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => setDeletePosTarget({ id: pos.id, name: pos.name })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {positions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground">
                         등록된 직급이 없습니다.
                       </TableCell>
                     </TableRow>
@@ -313,6 +356,28 @@ export default function OrganizationPage() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteDeptTarget}
+        onOpenChange={(open) => !open && setDeleteDeptTarget(null)}
+        title="부서 삭제"
+        description={`부서 [${deleteDeptTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteDeptTarget && deleteDeptMutation.mutate(deleteDeptTarget.id)}
+        isPending={deleteDeptMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deletePosTarget}
+        onOpenChange={(open) => !open && setDeletePosTarget(null)}
+        title="직급 삭제"
+        description={`직급 [${deletePosTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deletePosTarget && deletePosMutation.mutate(deletePosTarget.id)}
+        isPending={deletePosMutation.isPending}
+      />
     </div>
   )
 }
