@@ -157,12 +157,12 @@ export default function ItemsPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Input
           placeholder="품목코드, 품목명, 바코드 검색..."
-          className="w-72"
+          className="w-full sm:w-72"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(ITEM_TYPE_MAP).map(([k, v]) => (

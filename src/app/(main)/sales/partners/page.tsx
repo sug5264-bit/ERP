@@ -161,7 +161,7 @@ export default function PartnersPage() {
       <PageHeader title="거래처관리" description="고객 및 공급업체 정보를 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(PARTNER_TYPE_MAP).map(([k, v]) => (

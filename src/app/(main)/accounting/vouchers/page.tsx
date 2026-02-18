@@ -158,16 +158,16 @@ export default function VouchersPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="전표관리" description="회계 전표를 등록하고 관리합니다" />
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 유형" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 유형" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}

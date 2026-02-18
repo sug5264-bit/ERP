@@ -134,7 +134,7 @@ export default function QuotationsPage() {
       <PageHeader title="견적관리" description="고객 견적서를 작성하고 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}

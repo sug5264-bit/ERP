@@ -247,45 +247,45 @@ export function DataTable<TData, TValue>({
         <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           총 {table.getFilteredRowModel().rows.length}건
         </p>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 sm:gap-1">
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7 sm:h-8 sm:w-8"
+            className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronsLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7 sm:h-8 sm:w-8"
+            className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-xs sm:text-sm px-1 tabular-nums">
+          <span className="text-sm px-1.5 tabular-nums">
             {table.getState().pagination.pageIndex + 1}/{table.getPageCount()}
           </span>
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7 sm:h-8 sm:w-8"
+            className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="h-7 w-7 sm:h-8 sm:w-8"
+            className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
-            <ChevronsRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -27,10 +27,10 @@ export default function MainLayout({
         />
       )}
 
-      {/* Sidebar - mobile: overlay, desktop: static */}
+      {/* Sidebar - mobile: 좁은 오버레이, desktop: 고정 */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 border-r bg-background transition-transform duration-200 will-change-transform lg:static lg:z-auto lg:translate-x-0 lg:duration-0 motion-reduce:duration-0',
+          'fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r bg-background transition-transform duration-200 will-change-transform lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:duration-0 motion-reduce:duration-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
@@ -45,7 +45,7 @@ export default function MainLayout({
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           <BreadcrumbNav />
           {children}
         </main>

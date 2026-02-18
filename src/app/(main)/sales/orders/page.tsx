@@ -358,7 +358,7 @@ export default function OrdersPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">전체</SelectItem>
                   {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
@@ -375,7 +375,7 @@ export default function OrdersPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">전체</SelectItem>
                   {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}

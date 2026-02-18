@@ -50,7 +50,7 @@ export default function StockStatusPage() {
     <div className="space-y-6">
       <PageHeader title="재고현황" description="현재 재고 상태를 조회합니다" />
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">품목수</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{totalItems}종</p></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총 현재고</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{totalCurrentQty.toLocaleString()}</p></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총 가용재고</CardTitle></CardHeader><CardContent><p className={`text-xl font-bold ${totalAvailableQty < totalCurrentQty ? 'text-orange-600' : ''}`}>{totalAvailableQty.toLocaleString()}</p></CardContent></Card>
@@ -59,7 +59,7 @@ export default function StockStatusPage() {
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="전체 창고" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="전체 창고" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 창고</SelectItem>
             {warehouses.map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
