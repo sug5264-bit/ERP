@@ -7,6 +7,10 @@ import { BreadcrumbNav } from '@/components/layout/breadcrumb-nav'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useSidebarStore } from '@/stores/sidebar-store'
 import { ThemeInitializer } from '@/components/common/theme-initializer'
+import { SessionMonitor } from '@/components/common/session-monitor'
+import { KeyboardShortcutsHelp } from '@/components/common/keyboard-shortcuts-help'
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
+import { useState, useCallback } from 'react'
 
 export default function MainLayout({
   children,
@@ -14,10 +18,20 @@ export default function MainLayout({
   children: React.ReactNode
 }) {
   const { isOpen, setOpen } = useSidebarStore()
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
+
+  const toggleShortcutsHelp = useCallback(() => {
+    setShortcutsHelpOpen((prev) => !prev)
+  }, [])
+
+  useKeyboardShortcuts(toggleShortcutsHelp)
 
   return (
     <div className="flex h-[100dvh] overflow-hidden">
       <ThemeInitializer />
+      <SessionMonitor />
+      <KeyboardShortcutsHelp open={shortcutsHelpOpen} onOpenChange={setShortcutsHelpOpen} />
+
       {/* 접근성: 본문 바로가기 */}
       <a
         href="#main-content"

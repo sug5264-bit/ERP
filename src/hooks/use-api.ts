@@ -1,5 +1,17 @@
 const BASE_URL = '/api/v1'
 
+const MAX_RETRIES = 2
+const RETRY_DELAY_MS = 1000
+
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof TypeError && error.message.includes('fetch')) return true
+  return false
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function request(method: string, url: string, data?: any) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -11,15 +23,59 @@ async function request(method: string, url: string, data?: any) {
     options.body = JSON.stringify(data)
   }
 
-  const res = await fetch(`${BASE_URL}${url}`, options)
-  const json = await res.json()
+  let lastError: unknown
 
-  if (!res.ok) {
-    const message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'
-    throw new Error(message)
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(`${BASE_URL}${url}`, options)
+
+      // 401 → 세션 만료
+      if (res.status === 401) {
+        window.location.href = '/login?error=session_expired'
+        throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
+      }
+
+      // 403 → 권한 없음
+      if (res.status === 403) {
+        const json = await res.json().catch(() => ({}))
+        const message = json?.error?.message || '이 작업에 대한 권한이 없습니다.'
+        throw new PermissionError(message)
+      }
+
+      const json = await res.json()
+
+      if (!res.ok) {
+        const message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'
+        throw new Error(message)
+      }
+
+      return json
+    } catch (error) {
+      lastError = error
+
+      // 권한 에러나 비즈니스 에러는 재시도 불필요
+      if (error instanceof PermissionError) throw error
+      if (error instanceof Error && !isRetryableError(error)) throw error
+
+      // 네트워크 에러: 재시도
+      if (attempt < MAX_RETRIES) {
+        await wait(RETRY_DELAY_MS * (attempt + 1))
+        continue
+      }
+    }
   }
 
-  return json
+  throw lastError || new Error('요청 처리 중 오류가 발생했습니다.')
+}
+
+/**
+ * 권한 에러 전용 클래스
+ */
+export class PermissionError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PermissionError'
+  }
 }
 
 export const api = {

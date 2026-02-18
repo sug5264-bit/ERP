@@ -24,6 +24,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -32,9 +38,19 @@ import {
   Download,
   FileText,
   Trash2,
+  CheckCircle,
+  XCircle,
+  ChevronDown,
 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
+
+export interface BulkAction<TData> {
+  label: string
+  icon?: React.ReactNode
+  variant?: 'default' | 'destructive'
+  action: (selectedRows: TData[]) => void
+}
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -42,12 +58,13 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string
   searchColumn?: string
   pageSize?: number
-  onExport?: { excel?: () => void; pdf?: () => void }
+  onExport?: { excel?: () => void; pdf?: () => void; csv?: () => void }
   isLoading?: boolean
   onRowClick?: (row: TData) => void
   selectable?: boolean
   onBulkDelete?: (selectedRows: TData[]) => void
   onSelectionChange?: (selectedRows: TData[]) => void
+  bulkActions?: BulkAction<TData>[]
 }
 
 export function DataTable<TData, TValue>({
@@ -62,6 +79,7 @@ export function DataTable<TData, TValue>({
   selectable,
   onBulkDelete,
   onSelectionChange,
+  bulkActions = [],
 }: DataTableProps<TData, TValue>) {
   const isMobile = useIsMobile()
   const effectivePageSize = isMobile ? Math.min(pageSize, 10) : pageSize
@@ -130,6 +148,23 @@ export function DataTable<TData, TValue>({
     }
   }, [rowSelection, onSelectionChange, table])
 
+  const selectedCount = table.getFilteredSelectedRowModel().rows.length
+  const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
+  const hasSelection = selectedCount > 0
+
+  // 전체 일괄 작업 목록 (삭제 포함)
+  const allBulkActions: BulkAction<TData>[] = [
+    ...bulkActions,
+    ...(onBulkDelete
+      ? [{
+          label: '선택 삭제',
+          icon: <Trash2 className="mr-1.5 h-4 w-4" />,
+          variant: 'destructive' as const,
+          action: onBulkDelete,
+        }]
+      : []),
+  ]
+
   return (
     <div className="space-y-3 sm:space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -149,23 +184,58 @@ export function DataTable<TData, TValue>({
           </div>
         )}
         <div className="flex gap-2 shrink-0 flex-wrap">
-          {onBulkDelete &&
-            table.getFilteredSelectedRowModel().rows.length > 0 && (
+          {/* 일괄 작업 버튼 */}
+          {hasSelection && allBulkActions.length > 0 && (
+            allBulkActions.length === 1 ? (
               <Button
-                variant="destructive"
+                variant={allBulkActions[0].variant === 'destructive' ? 'destructive' : 'secondary'}
                 size="sm"
-                onClick={() =>
-                  onBulkDelete(
-                    table
-                      .getFilteredSelectedRowModel()
-                      .rows.map((row) => row.original)
-                  )
-                }
+                onClick={() => allBulkActions[0].action(selectedRows)}
               >
-                <Trash2 className="mr-1.5 h-4 w-4" />
-                <span className="hidden sm:inline">선택 삭제</span> ({table.getFilteredSelectedRowModel().rows.length}건)
+                {allBulkActions[0].icon}
+                <span className="hidden sm:inline">{allBulkActions[0].label}</span> ({selectedCount}건)
               </Button>
-            )}
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="sm">
+                    <CheckCircle className="mr-1.5 h-4 w-4" />
+                    일괄 작업 ({selectedCount}건)
+                    <ChevronDown className="ml-1 h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {allBulkActions.map((ba, i) => (
+                    <DropdownMenuItem
+                      key={i}
+                      onClick={() => ba.action(selectedRows)}
+                      className={ba.variant === 'destructive' ? 'text-destructive focus:text-destructive' : ''}
+                    >
+                      {ba.icon}
+                      {ba.label} ({selectedCount}건)
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )
+          )}
+          {/* 선택 해제 */}
+          {hasSelection && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => table.resetRowSelection()}
+            >
+              <XCircle className="mr-1 h-4 w-4" />
+              선택 해제
+            </Button>
+          )}
+          {onExport?.csv && (
+            <Button variant="outline" size="sm" onClick={onExport.csv}>
+              <Download className="mr-1.5 h-4 w-4" />
+              CSV
+            </Button>
+          )}
           {onExport?.excel && (
             <Button variant="outline" size="sm" onClick={onExport.excel}>
               <Download className="mr-1.5 h-4 w-4" />
@@ -216,6 +286,7 @@ export function DataTable<TData, TValue>({
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
                     className={onRowClick ? 'cursor-pointer hover:bg-muted/50 active:bg-muted/70' : ''}
                     onClick={() => onRowClick?.(row.original)}
                   >
@@ -247,6 +318,11 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
           총 {table.getFilteredRowModel().rows.length}건
+          {hasSelection && (
+            <span className="ml-1 text-primary">
+              ({selectedCount}건 선택)
+            </span>
+          )}
         </p>
         <div className="flex items-center gap-1.5 sm:gap-1">
           <Button
