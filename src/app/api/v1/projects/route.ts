@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
     const [items, totalCount] = await Promise.all([
       prisma.project.findMany({
         where,
-        include: { department: { select: { id: true, name: true } }, members: { include: { employee: { select: { id: true, nameKo: true } } } }, _count: { select: { tasks: true } } },
+        include: {
+          department: { select: { id: true, name: true } },
+          _count: { select: { tasks: true, members: true } },
+        },
         orderBy: { createdAt: 'desc' }, skip, take: pageSize,
       }),
       prisma.project.count({ where }),
