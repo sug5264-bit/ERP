@@ -70,6 +70,8 @@ const nextConfig: NextConfig = {
       'radix-ui',
       'exceljs',
       'zod',
+      '@tanstack/react-query',
+      '@tanstack/react-table',
     ],
     // 클라이언트 라우터 캐시 (동적 페이지 30초, 정적 페이지 5분 캐싱)
     staleTimes: {

@@ -371,6 +371,7 @@ model Leave {
   employee Employee @relation(fields: [employeeId], references: [id])
 
   @@index([employeeId, startDate])
+  @@index([status])
   @@map("leaves")
 }
 
@@ -1286,6 +1287,7 @@ model ApprovalDocument {
   @@index([status])
   @@index([drafterId])
   @@index([createdAt])
+  @@index([status, createdAt])
   @@map("approval_documents")
 }
 

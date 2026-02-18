@@ -47,20 +47,29 @@ export default function OrdersPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
-  const handleTaxInvoicePDF = (order: any) => {
-    const orderDate = new Date(order.orderDate)
+  const handleTaxInvoicePDF = async (order: any) => {
+    // 목록 API에서는 details를 포함하지 않으므로 개별 주문 상세 조회
+    let orderDetail = order
+    try {
+      const res = await api.get(`/sales/orders/${order.id}`) as any
+      orderDetail = res.data || res
+    } catch {
+      toast.error('주문 상세 정보를 불러올 수 없습니다.')
+      return
+    }
+    const orderDate = new Date(orderDetail.orderDate)
     const pdfData: TaxInvoicePDFData = {
-      invoiceNo: order.orderNo,
-      invoiceDate: formatDate(order.orderDate),
+      invoiceNo: orderDetail.orderNo,
+      invoiceDate: formatDate(orderDetail.orderDate),
       supplier: { name: COMPANY_NAME, bizNo: '', ceo: '', address: '' },
-      buyer: { name: order.partner?.partnerName || '', bizNo: order.partner?.bizNo || '', ceo: order.partner?.ceoName || '', address: order.partner?.address || '' },
-      items: (order.details || []).map((d: any) => ({
+      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '' },
+      items: (orderDetail.details || []).map((d: any) => ({
         month: String(orderDate.getMonth() + 1), day: String(orderDate.getDate()),
         itemName: d.item?.itemName || '', spec: d.item?.spec || '',
         qty: Number(d.quantity), unitPrice: Number(d.unitPrice),
         supplyAmount: Number(d.supplyAmount), taxAmount: Number(d.taxAmount),
       })),
-      totalSupply: Number(order.totalSupply), totalTax: Number(order.totalTax), totalAmount: Number(order.totalAmount),
+      totalSupply: Number(orderDetail.totalSupply), totalTax: Number(orderDetail.totalTax), totalAmount: Number(orderDetail.totalAmount),
     }
     generateTaxInvoicePDF(pdfData)
     toast.success('세금계산서 PDF가 다운로드되었습니다.')
