@@ -116,6 +116,7 @@ model AuditLog {
 
   @@index([tableName, recordId])
   @@index([createdAt])
+  @@index([userId, action])
   @@map("audit_logs")
 }
 
@@ -254,6 +255,8 @@ model Employee {
   @@index([departmentId])
   @@index([status])
   @@index([positionId])
+  @@index([nameKo])
+  @@index([email])
   @@map("employees")
 }
 
@@ -828,6 +831,9 @@ model Partner {
   taxInvoices      TaxInvoice[]
   purchasePayments PurchasePayment[]
 
+  @@index([partnerName])
+  @@index([bizNo])
+  @@index([isActive, partnerType])
   @@map("partners")
 }
 
@@ -923,6 +929,8 @@ model SalesOrder {
   @@index([status, salesChannel])
   @@index([partnerId])
   @@index([status, createdAt])
+  @@index([employeeId])
+  @@index([orderDate, status])
   @@map("sales_orders")
 }
 

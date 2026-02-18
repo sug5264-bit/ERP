@@ -99,7 +99,7 @@ export default function DeliveriesPage() {
   })
 
   const { data: ordersData } = useQuery({ queryKey: ['sales-orders-active'], queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any> })
-  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any> })
+  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/deliveries', body),

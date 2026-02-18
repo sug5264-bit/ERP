@@ -100,6 +100,7 @@ export async function GET() {
         where: { orderDate: { gte: yearStart }, status: { not: 'CANCELLED' } },
         select: { orderDate: true, salesChannel: true, totalAmount: true },
         orderBy: { orderDate: 'asc' },
+        take: 50000, // 안전 한도: 메모리 보호
       }),
     ])
 

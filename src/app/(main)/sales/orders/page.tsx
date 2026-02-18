@@ -164,8 +164,8 @@ export default function OrdersPage() {
 
   const { data: onlineData, isLoading: onlineLoading } = useQuery({ queryKey: ['sales-orders', 'ONLINE', statusFilter], queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any> })
   const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
-  const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any> })
-  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any> })
+  const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
+  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/orders', body),
