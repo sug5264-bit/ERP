@@ -37,6 +37,37 @@ const METHOD_ACTION_MAP: Record<string, string> = {
   DELETE: 'delete',
 }
 
+/**
+ * API 변경 요청 Rate Limiting (인메모리)
+ * IP + 모듈 기반, 분당 30회 제한
+ */
+const apiRateMap = new Map<string, { count: number; resetAt: number }>()
+const API_RATE_LIMIT = 30
+const API_RATE_WINDOW = 60 * 1000 // 1분
+
+function checkApiRateLimit(key: string): boolean {
+  const now = Date.now()
+  const entry = apiRateMap.get(key)
+
+  if (!entry || entry.resetAt < now) {
+    apiRateMap.set(key, { count: 1, resetAt: now + API_RATE_WINDOW })
+    return true
+  }
+
+  entry.count += 1
+  return entry.count <= API_RATE_LIMIT
+}
+
+// 5분마다 만료 항목 정리
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, val] of apiRateMap) {
+      if (val.resetAt < now) apiRateMap.delete(key)
+    }
+  }, 5 * 60 * 1000)
+}
+
 function getRequiredModule(pathname: string): string | null {
   for (const [prefix, module] of Object.entries(ROUTE_MODULE_MAP)) {
     if (pathname.startsWith(prefix)) return module
@@ -53,6 +84,12 @@ function hasPermission(
   if (roles.includes('SYSTEM_ADMIN') || roles.includes('관리자')) return true
   if (roles.includes('부서장') && (action === 'read' || action === 'approve')) return true
   return permissions.some((p) => p.module === module && p.action === action)
+}
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  return req.headers.get('x-real-ip') || '0.0.0.0'
 }
 
 export default auth((req) => {
@@ -79,17 +116,31 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl)
   }
 
-  // CSRF 보호: 변경 요청에 커스텀 헤더 확인
   const method = req.method
-  if (
-    pathname.startsWith('/api/v1') &&
-    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
-  ) {
+
+  // API 변경 요청 보안 검증
+  if (pathname.startsWith('/api/v1') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    // CSRF 보호: 커스텀 헤더 확인
     const hasHeader = req.headers.get('x-requested-with') === 'XMLHttpRequest'
     if (!hasHeader) {
       return NextResponse.json(
         { success: false, error: { code: 'CSRF_ERROR', message: 'Invalid request' } },
         { status: 403 }
+      )
+    }
+
+    // API Rate Limiting: IP + 모듈 기반
+    const ip = getClientIp(req)
+    const module = getRequiredModule(pathname) || 'general'
+    const rateLimitKey = `${ip}:${module}:mutation`
+
+    if (!checkApiRateLimit(rateLimitKey)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+        },
+        { status: 429, headers: { 'Retry-After': '60' } }
       )
     }
   }
