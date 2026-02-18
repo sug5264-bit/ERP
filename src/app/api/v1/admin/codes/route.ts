@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       orderBy: [{ groupCode: 'asc' }, { sortOrder: 'asc' }],
     })
 
-    return successResponse(codes)
+    return successResponse(codes, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

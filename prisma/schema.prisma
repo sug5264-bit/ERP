@@ -253,6 +253,7 @@ model Employee {
 
   @@index([departmentId])
   @@index([status])
+  @@index([positionId])
   @@map("employees")
 }
 
@@ -503,6 +504,7 @@ model Voucher {
 
   @@index([voucherDate])
   @@index([voucherType])
+  @@index([status, voucherDate])
   @@map("vouchers")
 }
 
@@ -558,6 +560,8 @@ model TaxInvoice {
   items   TaxInvoiceItem[]
 
   @@index([issueDate])
+  @@index([partnerId])
+  @@index([transmissionStatus])
   @@map("tax_invoices")
 }
 
@@ -744,6 +748,7 @@ model StockMovement {
   details         StockMovementDetail[]
 
   @@index([movementDate])
+  @@index([movementType, movementDate])
   @@map("stock_movements")
 }
 
@@ -854,6 +859,8 @@ model Quotation {
   salesOrders SalesOrder[]
 
   @@index([quotationDate])
+  @@index([partnerId])
+  @@index([status])
   @@map("quotations")
 }
 
@@ -913,6 +920,8 @@ model SalesOrder {
   @@index([orderDate])
   @@index([status])
   @@index([status, salesChannel])
+  @@index([partnerId])
+  @@index([status, createdAt])
   @@map("sales_orders")
 }
 
@@ -1031,6 +1040,8 @@ model PurchaseOrder {
   receivings Receiving[]
 
   @@index([orderDate])
+  @@index([partnerId])
+  @@index([status])
   @@map("purchase_orders")
 }
 
@@ -1369,5 +1380,6 @@ model Message {
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@index([receiverId, isRead])
+  @@index([senderId, sentAt])
   @@map("messages")
 }

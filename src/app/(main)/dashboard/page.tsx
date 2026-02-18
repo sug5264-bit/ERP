@@ -31,23 +31,22 @@ const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
 export default function DashboardPage() {
   const { data: session } = useSession()
 
-  // KPI 카운트 통합 쿼리 (5개 개별 요청 → 1개 요청)
-  const { data: kpiData } = useQuery({
-    queryKey: ['dash-kpi'],
-    queryFn: () => api.get('/dashboard/kpi') as Promise<any>,
+  // 대시보드 전체 데이터 단일 요청 (5개 HTTP 요청 → 1개)
+  const { data: dashData } = useQuery({
+    queryKey: ['dashboard-batch'],
+    queryFn: () => api.get('/dashboard/batch') as Promise<any>,
+    staleTime: 60 * 1000,
   })
 
-  // 리스트/차트 데이터
-  const { data: orderData } = useQuery({ queryKey: ['dash-orders'], queryFn: () => api.get('/sales/orders?pageSize=5') as Promise<any> })
-  const { data: noticeData } = useQuery({ queryKey: ['dash-notices'], queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=5') as Promise<any> })
-  const { data: salesSummary } = useQuery({ queryKey: ['dash-sales-summary'], queryFn: () => api.get('/sales/summary') as Promise<any> })
-  const { data: dashStats } = useQuery({ queryKey: ['dash-stats'], queryFn: () => api.get('/dashboard/stats') as Promise<any> })
+  const kpi = dashData?.data?.kpi
+  const empCount = kpi?.empCount || 0
+  const itemCount = kpi?.itemCount || 0
+  const pendingApproval = kpi?.approvalCount || 0
+  const alertCount = kpi?.stockAlertCount || 0
+  const pendingLeaves = kpi?.leaveCount || 0
 
-  const empCount = kpiData?.data?.empCount || 0
-  const itemCount = kpiData?.data?.itemCount || 0
-  const pendingApproval = kpiData?.data?.approvalCount || 0
-  const alertCount = kpiData?.data?.stockAlertCount || 0
-  const pendingLeaves = kpiData?.data?.leaveCount || 0
+  const recentOrders = dashData?.data?.recentOrders || []
+  const notices = dashData?.data?.notices || []
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -114,7 +113,7 @@ export default function DashboardPage() {
 
       {/* Charts (lazy loaded) */}
       <Suspense>
-        <DashboardCharts salesSummary={salesSummary} dashStats={dashStats} />
+        <DashboardCharts salesSummary={dashData?.data?.salesSummary ? { data: dashData.data.salesSummary } : undefined} dashStats={dashData?.data?.stats ? { data: dashData.data.stats } : undefined} />
       </Suspense>
 
       {/* Lists */}
@@ -125,8 +124,8 @@ export default function DashboardPage() {
             <Link href="/sales/orders"><Badge variant="outline" className="cursor-pointer text-xs">더보기</Badge></Link>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            {(orderData?.data || []).length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">발주 데이터가 없습니다.</p> :
-              <div className="space-y-2">{(orderData?.data || []).slice(0, 5).map((o: any) => (
+            {recentOrders.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">발주 데이터가 없습니다.</p> :
+              <div className="space-y-2">{recentOrders.slice(0, 5).map((o: any) => (
                 <div key={o.id} className="flex items-center justify-between text-xs sm:text-sm border-b pb-2">
                   <div className="truncate flex-1 mr-2">
                     <span className="font-mono text-xs mr-1 sm:mr-2">{o.orderNo}</span>
@@ -145,8 +144,8 @@ export default function DashboardPage() {
             <Link href="/board/notices"><Badge variant="outline" className="cursor-pointer text-xs">더보기</Badge></Link>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            {(noticeData?.data || []).length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">공지사항이 없습니다.</p> :
-              <div className="space-y-2">{(noticeData?.data || []).slice(0, 5).map((n: any) => (
+            {notices.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">공지사항이 없습니다.</p> :
+              <div className="space-y-2">{notices.slice(0, 5).map((n: any) => (
                 <div key={n.id} className="flex items-center justify-between text-xs sm:text-sm border-b pb-2">
                   <span className="truncate flex-1">{n.isPinned && <span className="text-red-500 mr-1">[필독]</span>}{n.title}</span>
                   <span className="text-muted-foreground text-xs ml-2 whitespace-nowrap">{formatDate(n.createdAt)}</span>

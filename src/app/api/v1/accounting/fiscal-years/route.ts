@@ -19,7 +19,7 @@ export async function GET() {
       orderBy: { year: 'desc' },
     })
 
-    return successResponse(years)
+    return successResponse(years, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

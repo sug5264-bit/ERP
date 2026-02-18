@@ -44,12 +44,24 @@ const METHOD_ACTION_MAP: Record<string, string> = {
 const apiRateMap = new Map<string, { count: number; resetAt: number }>()
 const API_RATE_LIMIT = 30
 const API_RATE_WINDOW = 60 * 1000 // 1분
+const API_RATE_MAP_MAX_SIZE = 10000 // 메모리 제한
 
 function checkApiRateLimit(key: string): boolean {
   const now = Date.now()
   const entry = apiRateMap.get(key)
 
   if (!entry || entry.resetAt < now) {
+    // Map 크기 제한: 초과 시 만료 항목 정리
+    if (apiRateMap.size >= API_RATE_MAP_MAX_SIZE) {
+      for (const [k, v] of apiRateMap) {
+        if (v.resetAt < now) apiRateMap.delete(k)
+      }
+      // 정리 후에도 초과하면 가장 오래된 항목 삭제
+      if (apiRateMap.size >= API_RATE_MAP_MAX_SIZE) {
+        const firstKey = apiRateMap.keys().next().value
+        if (firstKey) apiRateMap.delete(firstKey)
+      }
+    }
     apiRateMap.set(key, { count: 1, resetAt: now + API_RATE_WINDOW })
     return true
   }
@@ -58,18 +70,13 @@ function checkApiRateLimit(key: string): boolean {
   return entry.count <= API_RATE_LIMIT
 }
 
-// 5분마다 만료 항목 정리
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now()
-    for (const [key, val] of apiRateMap) {
-      if (val.resetAt < now) apiRateMap.delete(key)
-    }
-  }, 5 * 60 * 1000)
-}
+// 긴 prefix부터 매칭하도록 정렬 (캐시)
+const sortedRouteEntries = Object.entries(ROUTE_MODULE_MAP).sort(
+  (a, b) => b[0].length - a[0].length
+)
 
 function getRequiredModule(pathname: string): string | null {
-  for (const [prefix, module] of Object.entries(ROUTE_MODULE_MAP)) {
+  for (const [prefix, module] of sortedRouteEntries) {
     if (pathname.startsWith(prefix)) return module
   }
   return null

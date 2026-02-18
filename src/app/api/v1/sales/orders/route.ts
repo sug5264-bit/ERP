@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
           partner: { select: { id: true, partnerCode: true, partnerName: true, partnerType: true } },
           employee: { select: { id: true, nameKo: true } },
           quotation: { select: { id: true, quotationNo: true } },
-          details: { include: { item: { select: { id: true, itemCode: true, itemName: true, unit: true } } } },
+          _count: { select: { details: true } },
         },
         orderBy: { createdAt: 'desc' }, skip, take: pageSize,
       }),

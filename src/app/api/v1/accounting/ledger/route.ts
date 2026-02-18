@@ -5,6 +5,8 @@ import {
   errorResponse,
   handleApiError,
   getSession,
+  getPaginationParams,
+  buildMeta,
 } from '@/lib/api-helpers'
 
 // 총계정원장: 계정과목별 집계 + 거래내역
@@ -58,7 +60,8 @@ export async function GET(request: NextRequest) {
       return successResponse(filtered)
     }
 
-    // 특정 계정과목의 거래내역 보기
+    // 특정 계정과목의 거래내역 보기 (페이지네이션 적용)
+    const { page, pageSize, skip } = getPaginationParams(searchParams)
     const dateWhere: any = {}
     if (startDate || endDate) {
       dateWhere.voucherDate = {}
@@ -66,33 +69,39 @@ export async function GET(request: NextRequest) {
       if (endDate) dateWhere.voucherDate.lte = new Date(endDate)
     }
 
-    const details = await prisma.voucherDetail.findMany({
-      where: {
-        accountSubjectId,
-        voucher: {
-          status: { in: ['APPROVED', 'CONFIRMED'] },
-          ...dateWhere,
-        },
+    const detailWhere = {
+      accountSubjectId,
+      voucher: {
+        status: { in: ['APPROVED', 'CONFIRMED'] as const },
+        ...dateWhere,
       },
-      include: {
-        voucher: {
-          select: {
-            voucherNo: true,
-            voucherDate: true,
-            voucherType: true,
-            description: true,
+    }
+
+    const [details, totalCount, account] = await Promise.all([
+      prisma.voucherDetail.findMany({
+        where: detailWhere,
+        include: {
+          voucher: {
+            select: {
+              voucherNo: true,
+              voucherDate: true,
+              voucherType: true,
+              description: true,
+            },
           },
+          partner: { select: { partnerName: true } },
         },
-        partner: { select: { partnerName: true } },
-      },
-      orderBy: { voucher: { voucherDate: 'asc' } },
-    })
+        orderBy: { voucher: { voucherDate: 'asc' } },
+        skip,
+        take: pageSize,
+      }),
+      prisma.voucherDetail.count({ where: detailWhere }),
+      prisma.accountSubject.findUnique({
+        where: { id: accountSubjectId },
+      }),
+    ])
 
-    const account = await prisma.accountSubject.findUnique({
-      where: { id: accountSubjectId },
-    })
-
-    return successResponse({ account, details })
+    return successResponse({ account, details }, buildMeta(page, pageSize, totalCount))
   } catch (error) {
     return handleApiError(error)
   }

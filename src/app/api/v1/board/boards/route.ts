@@ -10,6 +10,6 @@ export async function GET() {
       include: { _count: { select: { posts: true } } },
       orderBy: { boardCode: 'asc' },
     })
-    return successResponse(boards)
+    return successResponse(boards, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) { return handleApiError(error) }
 }

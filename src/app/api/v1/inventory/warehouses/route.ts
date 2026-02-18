@@ -15,7 +15,7 @@ export async function GET() {
       },
       orderBy: { code: 'asc' },
     })
-    return successResponse(warehouses)
+    return successResponse(warehouses, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }
