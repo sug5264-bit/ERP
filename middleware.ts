@@ -45,18 +45,20 @@ const apiRateMap = new Map<string, { count: number; resetAt: number }>()
 const API_RATE_LIMIT = 30
 const API_RATE_WINDOW = 60 * 1000 // 1분
 const API_RATE_MAP_MAX_SIZE = 10000 // 메모리 제한
+let lastCleanupAt = 0
+const CLEANUP_INTERVAL = 30 * 1000 // 30초마다 정리 (매 요청마다 정리하지 않음)
 
 function checkApiRateLimit(key: string): boolean {
   const now = Date.now()
   const entry = apiRateMap.get(key)
 
   if (!entry || entry.resetAt < now) {
-    // Map 크기 제한: 초과 시 만료 항목 정리
-    if (apiRateMap.size >= API_RATE_MAP_MAX_SIZE) {
+    // 일정 간격으로만 만료 항목 정리 (매 요청마다 O(n) 방지)
+    if (apiRateMap.size >= API_RATE_MAP_MAX_SIZE && now - lastCleanupAt > CLEANUP_INTERVAL) {
+      lastCleanupAt = now
       for (const [k, v] of apiRateMap) {
         if (v.resetAt < now) apiRateMap.delete(k)
       }
-      // 정리 후에도 초과하면 가장 오래된 항목 삭제
       if (apiRateMap.size >= API_RATE_MAP_MAX_SIZE) {
         const firstKey = apiRateMap.keys().next().value
         if (firstKey) apiRateMap.delete(firstKey)

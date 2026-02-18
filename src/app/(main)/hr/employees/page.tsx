@@ -132,11 +132,13 @@ export default function EmployeesPage() {
   const { data: deptData } = useQuery({
     queryKey: ['hr-departments'],
     queryFn: () => api.get('/hr/departments') as Promise<any>,
+    staleTime: 30 * 60 * 1000, // 부서 데이터는 자주 변경되지 않음
   })
 
   const { data: posData } = useQuery({
     queryKey: ['hr-positions'],
     queryFn: () => api.get('/hr/positions') as Promise<any>,
+    staleTime: 30 * 60 * 1000, // 직급 데이터는 자주 변경되지 않음
   })
 
   const createMutation = useMutation({

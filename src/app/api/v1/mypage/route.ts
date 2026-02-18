@@ -44,61 +44,46 @@ export async function GET(req: NextRequest) {
 
     if (!user) return errorResponse('사용자 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    // 휴가 잔여 (LeaveBalance)
-    let leaveBalances: any[] = []
-    if (user.employee) {
-      leaveBalances = await prisma.leaveBalance.findMany({
-        where: { employeeId: user.employee.id, year: new Date().getFullYear() },
-      })
-    }
+    const employeeId = user.employee?.id
+    const yearStart = new Date(new Date().getFullYear(), 0, 1)
 
-    // 내 결재 문서 (최근 10건)
-    let myApprovals: any[] = []
-    if (user.employee) {
-      myApprovals = await prisma.approvalDocument.findMany({
-        where: { drafterId: user.employee.id },
+    // 모든 독립 쿼리를 병렬 실행 (순차 5개 → 병렬 1번)
+    const [leaveBalances, myApprovals, myLeaves, recentNotifications, loginHistory] = await Promise.all([
+      employeeId
+        ? prisma.leaveBalance.findMany({
+            where: { employeeId, year: new Date().getFullYear() },
+          })
+        : [],
+      employeeId
+        ? prisma.approvalDocument.findMany({
+            where: { drafterId: employeeId },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: {
+              id: true, documentNo: true, title: true, status: true,
+              currentStep: true, totalSteps: true, draftDate: true,
+            },
+          })
+        : [],
+      employeeId
+        ? prisma.leave.findMany({
+            where: { employeeId, startDate: { gte: yearStart } },
+            orderBy: { startDate: 'desc' },
+            take: 10,
+          })
+        : [],
+      prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+      prisma.auditLog.findMany({
+        where: { userId, action: 'LOGIN' },
         orderBy: { createdAt: 'desc' },
         take: 10,
-        select: {
-          id: true,
-          documentNo: true,
-          title: true,
-          status: true,
-          currentStep: true,
-          totalSteps: true,
-          draftDate: true,
-        },
-      })
-    }
-
-    // 내 휴가 내역 (올해)
-    let myLeaves: any[] = []
-    if (user.employee) {
-      const yearStart = new Date(new Date().getFullYear(), 0, 1)
-      myLeaves = await prisma.leave.findMany({
-        where: {
-          employeeId: user.employee.id,
-          startDate: { gte: yearStart },
-        },
-        orderBy: { startDate: 'desc' },
-        take: 10,
-      })
-    }
-
-    // 내게 온 알림 (최근 5건)
-    const recentNotifications = await prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-    })
-
-    // 로그인 이력 (최근 10건)
-    const loginHistory = await prisma.auditLog.findMany({
-      where: { userId, action: 'LOGIN' },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-      select: { id: true, ipAddress: true, createdAt: true },
-    })
+        select: { id: true, ipAddress: true, createdAt: true },
+      }),
+    ])
 
     return successResponse({
       user,

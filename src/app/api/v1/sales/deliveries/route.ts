@@ -17,7 +17,12 @@ export async function GET(request: NextRequest) {
     if (salesChannel) where.salesOrder = { salesChannel }
     const [items, totalCount] = await Promise.all([
       prisma.delivery.findMany({
-        where, include: { salesOrder: true, partner: true, details: { include: { item: true } } },
+        where,
+        include: {
+          salesOrder: { select: { id: true, orderNo: true, orderDate: true, status: true, salesChannel: true } },
+          partner: { select: { id: true, partnerCode: true, partnerName: true } },
+          _count: { select: { details: true } },
+        },
         orderBy: { createdAt: 'desc' }, skip, take: pageSize,
       }),
       prisma.delivery.count({ where }),
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createDeliverySchema.parse(body)
 
-    const salesOrder = await prisma.salesOrder.findUnique({ where: { id: data.salesOrderId }, include: { partner: true } })
+    const salesOrder = await prisma.salesOrder.findUnique({ where: { id: data.salesOrderId }, select: { id: true, partnerId: true } })
     if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate))

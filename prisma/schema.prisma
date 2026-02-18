@@ -116,6 +116,7 @@ model AuditLog {
 
   @@index([tableName, recordId])
   @@index([createdAt])
+  @@index([userId, action])
   @@map("audit_logs")
 }
 
@@ -254,6 +255,8 @@ model Employee {
   @@index([departmentId])
   @@index([status])
   @@index([positionId])
+  @@index([nameKo])
+  @@index([email])
   @@map("employees")
 }
 
@@ -419,6 +422,7 @@ model Applicant {
 
   recruitment Recruitment @relation(fields: [recruitmentId], references: [id])
 
+  @@index([recruitmentId])
   @@map("applicants")
 }
 
@@ -506,6 +510,8 @@ model Voucher {
   @@index([voucherDate])
   @@index([voucherType])
   @@index([status, voucherDate])
+  @@index([fiscalYearId])
+  @@index([createdById])
   @@map("vouchers")
 }
 
@@ -579,6 +585,7 @@ model TaxInvoiceItem {
 
   taxInvoice TaxInvoice @relation(fields: [taxInvoiceId], references: [id], onDelete: Cascade)
 
+  @@index([taxInvoiceId])
   @@map("tax_invoice_items")
 }
 
@@ -766,6 +773,8 @@ model StockMovementDetail {
   stockMovement StockMovement @relation(fields: [stockMovementId], references: [id], onDelete: Cascade)
   item          Item          @relation(fields: [itemId], references: [id])
 
+  @@index([stockMovementId])
+  @@index([itemId])
   @@map("stock_movement_details")
 }
 
@@ -828,6 +837,9 @@ model Partner {
   taxInvoices      TaxInvoice[]
   purchasePayments PurchasePayment[]
 
+  @@index([partnerName])
+  @@index([bizNo])
+  @@index([isActive, partnerType])
   @@map("partners")
 }
 
@@ -862,6 +874,7 @@ model Quotation {
   @@index([quotationDate])
   @@index([partnerId])
   @@index([status])
+  @@index([employeeId])
   @@map("quotations")
 }
 
@@ -923,6 +936,8 @@ model SalesOrder {
   @@index([status, salesChannel])
   @@index([partnerId])
   @@index([status, createdAt])
+  @@index([employeeId])
+  @@index([orderDate, status])
   @@map("sales_orders")
 }
 
@@ -965,6 +980,7 @@ model Delivery {
   details    DeliveryDetail[]
 
   @@index([deliveryDate])
+  @@index([salesOrderId])
   @@map("deliveries")
 }
 
@@ -980,6 +996,7 @@ model DeliveryDetail {
   delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
   item     Item     @relation(fields: [itemId], references: [id])
 
+  @@index([deliveryId])
   @@map("delivery_details")
 }
 
@@ -1043,6 +1060,7 @@ model PurchaseOrder {
   @@index([orderDate])
   @@index([partnerId])
   @@index([status])
+  @@index([employeeId])
   @@map("purchase_orders")
 }
 
@@ -1063,6 +1081,7 @@ model PurchaseOrderDetail {
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   item          Item          @relation(fields: [itemId], references: [id])
 
+  @@index([purchaseOrderId])
   @@map("purchase_order_details")
 }
 
@@ -1099,6 +1118,7 @@ model ReceivingDetail {
   receiving Receiving @relation(fields: [receivingId], references: [id], onDelete: Cascade)
   item      Item      @relation(fields: [itemId], references: [id])
 
+  @@index([receivingId])
   @@map("receiving_details")
 }
 
@@ -1207,6 +1227,9 @@ model ProjectTask {
   parentTask ProjectTask?  @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
   subTasks   ProjectTask[] @relation("TaskHierarchy")
 
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
   @@map("project_tasks")
 }
 
@@ -1252,6 +1275,7 @@ model ApprovalLine {
 
   template ApprovalTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
+  @@index([templateId])
   @@map("approval_lines")
 }
 
@@ -1349,6 +1373,7 @@ model Post {
   comments PostComment[]
 
   @@index([boardId, createdAt])
+  @@index([authorId])
   @@map("posts")
 }
 
@@ -1365,6 +1390,7 @@ model PostComment {
   parentComment PostComment?  @relation("CommentHierarchy", fields: [parentCommentId], references: [id])
   replies       PostComment[] @relation("CommentHierarchy")
 
+  @@index([postId])
   @@map("post_comments")
 }
 
