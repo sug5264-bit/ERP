@@ -125,11 +125,25 @@
   }
 }
 
+/* 접근성: 모션 감소 선호 시 모든 애니메이션/전환 비활성화 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Mobile improvements */
 @media (max-width: 640px) {
-  /* iOS touch scroll */
+  /* iOS touch scroll + 테이블 가로 스크롤 최적화 */
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    contain: paint;
   }
 
   /* Prevent input zoom on iOS (font-size < 16px triggers zoom) */

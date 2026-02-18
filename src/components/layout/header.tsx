@@ -20,8 +20,9 @@ import { useThemeStore } from '@/stores/theme-store'
 import { useFavoritesStore } from '@/stores/favorites-store'
 import { NotificationBell } from '@/components/layout/notification-bell'
 import { APP_NAME } from '@/lib/constants'
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
@@ -69,6 +70,7 @@ export function Header() {
   const toggle = useSidebarStore((s) => s.toggle)
   const { theme, toggle: toggleTheme } = useThemeStore()
   const { favorites, addFavorite, removeFavorite, isFavorite } = useFavoritesStore()
+  const isMobile = useIsMobile()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -111,11 +113,11 @@ export function Header() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const handleSearchNavigate = (href: string) => {
+  const handleSearchNavigate = useCallback((href: string) => {
     router.push(href)
     setSearchOpen(false)
     setSearchQuery('')
-  }
+  }, [router])
 
   return (
     <>
@@ -126,8 +128,8 @@ export function Header() {
 
         <div className="font-semibold text-sm lg:text-base truncate min-w-0">{pageTitle || APP_NAME}</div>
 
-        {/* Favorites - desktop only */}
-        {favorites.length > 0 && (
+        {/* Favorites - desktop only (모바일에서 DOM 자체를 렌더링하지 않음) */}
+        {!isMobile && favorites.length > 0 && (
           <div className="hidden xl:flex items-center gap-1 ml-2">
             {favorites.map((fav) => (
               <Link key={fav.href} href={fav.href}>

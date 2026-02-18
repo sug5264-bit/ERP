@@ -34,6 +34,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -62,6 +63,8 @@ export function DataTable<TData, TValue>({
   onBulkDelete,
   onSelectionChange,
 }: DataTableProps<TData, TValue>) {
+  const isMobile = useIsMobile()
+  const effectivePageSize = isMobile ? Math.min(pageSize, 10) : pageSize
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -115,7 +118,7 @@ export function DataTable<TData, TValue>({
       rowSelection,
     },
     initialState: {
-      pagination: { pageSize },
+      pagination: { pageSize: effectivePageSize },
     },
   })
 

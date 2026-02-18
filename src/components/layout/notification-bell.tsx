@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from '@/lib/format'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const TYPE_ICONS: Record<string, string> = {
   APPROVAL: '📋',
@@ -28,11 +29,12 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const router = useRouter()
   const queryClient = useQueryClient()
+  const isMobile = useIsMobile()
 
   const { data } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => api.get('/notifications?pageSize=30') as Promise<any>,
-    refetchInterval: 30000, // 30초마다 새로고침
+    queryFn: () => api.get(`/notifications?pageSize=${isMobile ? 15 : 30}`) as Promise<any>,
+    refetchInterval: isMobile ? 60000 : 30000, // 모바일 60초, 데스크톱 30초
     refetchIntervalInBackground: false, // 탭 비활성 시 폴링 중단
   })
 
