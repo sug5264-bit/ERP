@@ -33,6 +33,7 @@ export function NotificationBell() {
     queryKey: ['notifications'],
     queryFn: () => api.get('/notifications?pageSize=30') as Promise<any>,
     refetchInterval: 30000, // 30초마다 새로고침
+    refetchIntervalInBackground: false, // 탭 비활성 시 폴링 중단
   })
 
   const actionMutation = useMutation({

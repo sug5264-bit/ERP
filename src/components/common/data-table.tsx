@@ -33,7 +33,7 @@ import {
   FileText,
   Trash2,
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -66,7 +66,7 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
-  const selectColumn: ColumnDef<TData, TValue>[] = selectable
+  const selectColumn = useMemo<ColumnDef<TData, TValue>[]>(() => selectable
     ? [
         {
           id: 'select',
@@ -94,9 +94,9 @@ export function DataTable<TData, TValue>({
           enableHiding: false,
         } as ColumnDef<TData, TValue>,
       ]
-    : []
+    : [], [selectable])
 
-  const allColumns = [...selectColumn, ...columns]
+  const allColumns = useMemo(() => [...selectColumn, ...columns], [selectColumn, columns])
 
   const table = useReactTable({
     data,
@@ -125,7 +125,7 @@ export function DataTable<TData, TValue>({
       const selected = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
       onSelectionChange(selected)
     }
-  }, [rowSelection])
+  }, [rowSelection, onSelectionChange, table])
 
   return (
     <div className="space-y-3 sm:space-y-4">

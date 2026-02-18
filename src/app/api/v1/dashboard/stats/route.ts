@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       stockData,
       approvalData,
       leaveData,
-    })
+    }, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
   } catch (error) {
     return handleApiError(error)
   }

@@ -83,8 +83,9 @@ export async function POST(request: NextRequest) {
         include: { details: { include: { item: true } }, sourceWarehouse: true, targetWarehouse: true },
       })
 
-      // Update stock balances
-      for (const detail of data.details) {
+      // Update stock balances - 병렬 실행으로 성능 개선
+      const movementDate = new Date(data.movementDate)
+      await Promise.all(data.details.map(async (detail) => {
         if (data.movementType === 'INBOUND' || data.movementType === 'TRANSFER') {
           if (data.targetWarehouseId) {
             await tx.stockBalance.upsert({
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
               },
               update: {
                 quantity: { increment: detail.quantity },
-                lastMovementDate: new Date(data.movementDate),
+                lastMovementDate: movementDate,
               },
               create: {
                 itemId: detail.itemId,
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
                 zoneId: null,
                 quantity: detail.quantity,
                 averageCost: detail.unitPrice || 0,
-                lastMovementDate: new Date(data.movementDate),
+                lastMovementDate: movementDate,
               },
             })
           }
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
               where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
               data: {
                 quantity: { decrement: detail.quantity },
-                lastMovementDate: new Date(data.movementDate),
+                lastMovementDate: movementDate,
               },
             })
           }
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
             },
             update: {
               quantity: detail.quantity,
-              lastMovementDate: new Date(data.movementDate),
+              lastMovementDate: movementDate,
             },
             create: {
               itemId: detail.itemId,
@@ -140,11 +141,11 @@ export async function POST(request: NextRequest) {
               zoneId: null,
               quantity: detail.quantity,
               averageCost: detail.unitPrice || 0,
-              lastMovementDate: new Date(data.movementDate),
+              lastMovementDate: movementDate,
             },
           })
         }
-      }
+      }))
 
       return movement
     })

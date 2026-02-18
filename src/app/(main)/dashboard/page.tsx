@@ -31,12 +31,11 @@ const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
 export default function DashboardPage() {
   const { data: session } = useSession()
 
-  // KPI 카운트 쿼리 (가벼운 데이터만)
-  const { data: empData } = useQuery({ queryKey: ['dash-employees'], queryFn: () => api.get('/hr/employees?pageSize=1') as Promise<any> })
-  const { data: itemData } = useQuery({ queryKey: ['dash-items'], queryFn: () => api.get('/inventory/items?pageSize=1') as Promise<any> })
-  const { data: approvalData } = useQuery({ queryKey: ['dash-approval'], queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=5') as Promise<any> })
-  const { data: stockAlert } = useQuery({ queryKey: ['dash-stock-alert'], queryFn: () => api.get('/inventory/stock-balance?belowSafety=true&pageSize=1') as Promise<any> })
-  const { data: leaveData } = useQuery({ queryKey: ['dash-leave-pending'], queryFn: () => api.get('/hr/leave?status=REQUESTED&pageSize=1') as Promise<any> })
+  // KPI 카운트 통합 쿼리 (5개 개별 요청 → 1개 요청)
+  const { data: kpiData } = useQuery({
+    queryKey: ['dash-kpi'],
+    queryFn: () => api.get('/dashboard/kpi') as Promise<any>,
+  })
 
   // 리스트/차트 데이터
   const { data: orderData } = useQuery({ queryKey: ['dash-orders'], queryFn: () => api.get('/sales/orders?pageSize=5') as Promise<any> })
@@ -44,11 +43,11 @@ export default function DashboardPage() {
   const { data: salesSummary } = useQuery({ queryKey: ['dash-sales-summary'], queryFn: () => api.get('/sales/summary') as Promise<any> })
   const { data: dashStats } = useQuery({ queryKey: ['dash-stats'], queryFn: () => api.get('/dashboard/stats') as Promise<any> })
 
-  const empCount = empData?.meta?.totalCount || 0
-  const itemCount = itemData?.meta?.totalCount || 0
-  const pendingApproval = approvalData?.meta?.totalCount || 0
-  const alertCount = stockAlert?.meta?.totalCount || 0
-  const pendingLeaves = leaveData?.meta?.totalCount || 0
+  const empCount = kpiData?.data?.empCount || 0
+  const itemCount = kpiData?.data?.itemCount || 0
+  const pendingApproval = kpiData?.data?.approvalCount || 0
+  const alertCount = kpiData?.data?.stockAlertCount || 0
+  const pendingLeaves = kpiData?.data?.leaveCount || 0
 
   return (
     <div className="space-y-4 sm:space-y-6">

@@ -685,6 +685,8 @@ model Item {
   purchaseOrderDetails   PurchaseOrderDetail[]
   receivingDetails       ReceivingDetail[]
 
+  @@index([itemName])
+  @@index([isActive, itemType])
   @@map("items")
 }
 
@@ -776,6 +778,7 @@ model StockBalance {
 
   @@unique([itemId, warehouseId, zoneId])
   @@index([itemId])
+  @@index([warehouseId])
   @@map("stock_balances")
 }
 
@@ -909,6 +912,7 @@ model SalesOrder {
 
   @@index([orderDate])
   @@index([status])
+  @@index([status, salesChannel])
   @@map("sales_orders")
 }
 
@@ -1295,6 +1299,7 @@ model ApprovalStep {
   approver Employee         @relation(fields: [approverId], references: [id])
 
   @@index([approverId, status])
+  @@index([documentId, stepOrder])
   @@map("approval_steps")
 }
 

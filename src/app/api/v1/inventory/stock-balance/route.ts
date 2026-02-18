@@ -15,18 +15,18 @@ export async function GET(request: NextRequest) {
     if (warehouseId) where.warehouseId = warehouseId
     if (itemId) where.itemId = itemId
 
-    const balances = await prisma.stockBalance.findMany({
-      where,
-      include: {
-        item: { include: { category: true } },
-        warehouse: true,
-        zone: true,
-      },
-      orderBy: [{ warehouse: { code: 'asc' } }, { item: { itemCode: 'asc' } }],
-    })
-
-    // 미처리 수주(ORDERED, IN_PROGRESS)의 잔량 합산 → 품목별 수주잔량
-    const activeOrderDetails = await prisma.salesOrderDetail.groupBy({
+    // 재고 + 수주잔량 쿼리 병렬 실행, select로 필요 필드만 조회
+    const [balances, activeOrderDetails] = await Promise.all([
+      prisma.stockBalance.findMany({
+        where,
+        include: {
+          item: { select: { id: true, itemCode: true, itemName: true, unit: true, itemType: true, category: { select: { name: true } } } },
+          warehouse: { select: { id: true, code: true, name: true } },
+          zone: { select: { zoneCode: true, zoneName: true } },
+        },
+        orderBy: [{ warehouse: { code: 'asc' } }, { item: { itemCode: 'asc' } }],
+      }),
+      prisma.salesOrderDetail.groupBy({
       by: ['itemId'],
       where: {
         salesOrder: {
@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
         remainingQty: { gt: 0 },
       },
       _sum: { remainingQty: true },
-    })
+    }),
+    ])
 
     const orderedQtyMap = new Map<string, number>()
     for (const d of activeOrderDetails) {

@@ -54,12 +54,13 @@ export async function POST(request: NextRequest) {
         include: { details: { include: { item: true } }, partner: true, salesOrder: true },
       })
 
-      for (const d of data.details) {
-        await tx.salesOrderDetail.updateMany({
+      // 수주 상세 업데이트 병렬 실행
+      await Promise.all(data.details.map((d) =>
+        tx.salesOrderDetail.updateMany({
           where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
           data: { deliveredQty: { increment: d.quantity }, remainingQty: { decrement: d.quantity } },
         })
-      }
+      ))
       return delivery
     })
     return successResponse(result)
