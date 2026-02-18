@@ -187,3 +187,47 @@
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Print styles */
+@media print {
+  header,
+  aside,
+  nav,
+  .no-print,
+  [role="dialog"],
+  .fixed {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc !important;
+    padding: 4px 8px !important;
+  }
+
+  .border {
+    border-color: #ccc !important;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+}

@@ -2,6 +2,7 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit, resetRateLimit } from '@/lib/rate-limit'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -15,6 +16,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) {
           return null
+        }
+
+        // Rate limiting: 15분 내 5회 실패 시 차단
+        const rateLimitKey = `login:${credentials.username}`
+        const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000)
+        if (!rateCheck.allowed) {
+          throw new Error(`로그인 시도가 너무 많습니다. ${rateCheck.retryAfterSeconds}초 후 다시 시도해주세요.`)
         }
 
         const user = await prisma.user.findUnique({
@@ -52,6 +60,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!isPasswordValid) {
           return null
         }
+
+        // 로그인 성공 시 rate limit 초기화
+        resetRateLimit(rateLimitKey)
 
         await prisma.user.update({
           where: { id: user.id },

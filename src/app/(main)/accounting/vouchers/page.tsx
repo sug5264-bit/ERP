@@ -28,6 +28,7 @@ import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Plus, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface VoucherRow {
   id: string
@@ -72,6 +73,7 @@ export default function VouchersPage() {
   const [open, setOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [details, setDetails] = useState<DetailLine[]>([
     { accountSubjectId: '', debitAmount: 0, creditAmount: 0, description: '' },
     { accountSubjectId: '', debitAmount: 0, creditAmount: 0, description: '' },
@@ -112,7 +114,7 @@ export default function VouchersPage() {
   })
 
   const handleDelete = (id: string, voucherNo: string) => {
-    if (window.confirm(`전표 [${voucherNo}]를 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: voucherNo })
   }
 
   const vouchers: VoucherRow[] = data?.data || []
@@ -230,6 +232,16 @@ export default function VouchersPage() {
         </Dialog>
       </div>
       <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="전표 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

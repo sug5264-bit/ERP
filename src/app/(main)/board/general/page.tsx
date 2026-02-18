@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { Eye, MessageCircle, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const columns: ColumnDef<any>[] = [
   { header: '제목', accessorKey: 'title', cell: ({ row }) => <span className="font-medium">{row.original.title}</span> },
@@ -27,6 +28,7 @@ export default function GeneralBoardPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedPost, setSelectedPost] = useState<any>(null)
   const [newComment, setNewComment] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['board-general'], queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=50') as Promise<any> })
@@ -48,7 +50,7 @@ export default function GeneralBoardPage() {
 
   const handleDelete = (e: React.MouseEvent, id: string, title: string) => {
     e.stopPropagation()
-    if (window.confirm(`게시글 [${title}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: title })
   }
 
   const commentMutation = useMutation({
@@ -128,6 +130,16 @@ export default function GeneralBoardPage() {
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="게시글 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

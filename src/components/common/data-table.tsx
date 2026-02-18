@@ -203,14 +203,15 @@ export function DataTable<TData, TValue>({
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={allColumns.length}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    로딩 중...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: Math.min(effectivePageSize, 5) }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    {allColumns.map((_, j) => (
+                      <TableCell key={j} className="py-2.5 sm:py-3">
+                        <div className="h-4 animate-pulse rounded bg-muted" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
               ) : table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow

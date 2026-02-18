@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { Eye, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const columns: ColumnDef<any>[] = [
   { id: 'pinned', header: '', cell: ({ row }) => row.original.isPinned ? <Badge variant="destructive" className="text-xs">필독</Badge> : null, size: 50 },
@@ -30,6 +31,7 @@ export default function NoticesPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedPost, setSelectedPost] = useState<any>(null)
   const [isPinned, setIsPinned] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['board-notices'], queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=50') as Promise<any> })
@@ -51,7 +53,7 @@ export default function NoticesPage() {
 
   const handleDelete = (e: React.MouseEvent, id: string, title: string) => {
     e.stopPropagation()
-    if (window.confirm(`공지 [${title}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: title })
   }
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -120,6 +122,16 @@ export default function NoticesPage() {
           )}
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="공지사항 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

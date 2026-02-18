@@ -1,10 +1,12 @@
 const BASE_URL = '/api/v1'
 
 async function request(method: string, url: string, data?: any) {
-  const options: RequestInit = {
-    method,
-    headers: { 'Content-Type': 'application/json' },
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   }
+
+  const options: RequestInit = { method, headers }
   if (data !== undefined) {
     options.body = JSON.stringify(data)
   }

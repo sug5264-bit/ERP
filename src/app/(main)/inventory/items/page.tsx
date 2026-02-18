@@ -22,6 +22,7 @@ import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Upload, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const ITEM_TYPE_MAP: Record<string, string> = {
   RAW_MATERIAL: '원자재', PRODUCT: '제품', GOODS: '상품', SUBSIDIARY: '부자재',
@@ -57,6 +58,7 @@ export default function ItemsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const qp = new URLSearchParams({ pageSize: '50' })
@@ -90,7 +92,7 @@ export default function ItemsPage() {
   })
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`품목 [${name}]을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name })
   }
 
   const items: ItemRow[] = data?.data || []
@@ -243,6 +245,16 @@ export default function ItemsPage() {
         templateFileName="품목_업로드_템플릿"
         keyMap={importKeyMap}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['inventory-items'] })}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="품목 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
       />
     </div>
   )

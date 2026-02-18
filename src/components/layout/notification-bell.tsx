@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
-import { Bell, Check, CheckCheck, Trash2 } from 'lucide-react'
+import { Bell, CheckCheck, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -10,7 +10,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
 import { formatDistanceToNow } from '@/lib/format'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -34,13 +33,48 @@ export function NotificationBell() {
   const { data } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => api.get(`/notifications?pageSize=${isMobile ? 15 : 30}`) as Promise<any>,
-    refetchInterval: isMobile ? 60000 : 30000, // 모바일 60초, 데스크톱 30초
-    refetchIntervalInBackground: false, // 탭 비활성 시 폴링 중단
+    refetchInterval: isMobile ? 60000 : 30000,
+    refetchIntervalInBackground: false,
   })
 
   const actionMutation = useMutation({
     mutationFn: (body: any) => api.put('/notifications', body),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    onMutate: async (body) => {
+      await queryClient.cancelQueries({ queryKey: ['notifications'] })
+      const prev = queryClient.getQueryData(['notifications'])
+
+      // Optimistic update
+      queryClient.setQueryData(['notifications'], (old: any) => {
+        if (!old) return old
+        if (body.action === 'read' && body.id) {
+          return {
+            ...old,
+            data: old.data?.map((n: any) =>
+              n.id === body.id ? { ...n, isRead: true } : n
+            ),
+            meta: old.meta ? { ...old.meta, totalCount: Math.max(0, (old.meta.totalCount || 1) - 1) } : old.meta,
+          }
+        }
+        if (body.action === 'readAll') {
+          return {
+            ...old,
+            data: old.data?.map((n: any) => ({ ...n, isRead: true })),
+            meta: old.meta ? { ...old.meta, totalCount: 0 } : old.meta,
+          }
+        }
+        return old
+      })
+
+      return { prev }
+    },
+    onError: (_err, _body, context) => {
+      if (context?.prev) {
+        queryClient.setQueryData(['notifications'], context.prev)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    },
   })
 
   const notifications = data?.data || []

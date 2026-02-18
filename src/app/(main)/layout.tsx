@@ -18,6 +18,13 @@ export default function MainLayout({
   return (
     <div className="flex h-[100dvh] overflow-hidden">
       <ThemeInitializer />
+      {/* 접근성: 본문 바로가기 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:text-sm"
+      >
+        본문 바로가기
+      </a>
 
       {/* Mobile sidebar overlay */}
       {isOpen && (
@@ -45,7 +52,7 @@ export default function MainLayout({
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
           <BreadcrumbNav />
           {children}
         </main>

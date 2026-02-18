@@ -20,6 +20,7 @@ import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
 import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   ORDERED: { label: '발주', variant: 'default' }, IN_PROGRESS: { label: '진행중', variant: 'secondary' },
@@ -39,6 +40,7 @@ export default function OrdersPage() {
   const [open, setOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
@@ -95,7 +97,7 @@ export default function OrdersPage() {
   })
 
   const handleDelete = (id: string, no: string) => {
-    if (window.confirm(`발주 [${no}]를 삭제하시겠습니까?`)) deleteMutation.mutate(id)
+    setDeleteTarget({ id, name: no })
   }
 
   const columns: ColumnDef<any>[] = [
@@ -387,6 +389,16 @@ export default function OrdersPage() {
           </div>
         </TabsContent>
       </Tabs>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="발주 삭제"
+        description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }
