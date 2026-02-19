@@ -113,8 +113,8 @@ export default function ItemsPage() {
   ]
 
   const importTemplateColumns: TemplateColumn[] = [
-    { header: '품목코드', key: 'itemCode', example: 'ITM-001' },
-    { header: '품목명', key: 'itemName', example: '테스트 품목' },
+    { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
+    { header: '품목명', key: 'itemName', example: '테스트 품목', required: true },
     { header: '구분', key: 'itemType', example: '상품' },
     { header: '규격', key: 'specification', example: '100x200mm' },
     { header: '단위', key: 'unit', example: 'EA' },

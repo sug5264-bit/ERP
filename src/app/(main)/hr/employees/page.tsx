@@ -180,11 +180,11 @@ export default function EmployeesPage() {
   ]
 
   const importTemplateColumns: TemplateColumn[] = [
-    { header: '사번', key: 'employeeNo', example: 'EMP001' },
-    { header: '이름', key: 'nameKo', example: '홍길동' },
+    { header: '사번', key: 'employeeNo', example: 'EMP001', required: true },
+    { header: '이름', key: 'nameKo', example: '홍길동', required: true },
     { header: '영문이름', key: 'nameEn', example: 'Hong Gildong' },
-    { header: '부서', key: 'department', example: '경영지원팀' },
-    { header: '직급', key: 'position', example: '사원' },
+    { header: '부서', key: 'department', example: '경영지원팀', required: true },
+    { header: '직급', key: 'position', example: '사원', required: true },
     { header: '입사일', key: 'joinDate', example: '2026-01-01' },
     { header: '고용형태', key: 'employeeType', example: '정규직' },
     { header: '연락처', key: 'phone', example: '01012345678' },

@@ -17,6 +17,7 @@ export interface TemplateColumn {
   key: string
   example?: string
   width?: number
+  required?: boolean
 }
 
 export interface TemplateConfig {
