@@ -37,10 +37,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# aws
+.amplify
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 /src/generated/prisma
-
-.vercel
