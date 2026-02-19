@@ -151,7 +151,7 @@ git push -u origin --all --force
 ```
 데이터베이스 생성 방식: "표준 생성" 선택
 엔진 유형:            "PostgreSQL" 선택
-엔진 버전:            "PostgreSQL 16.x" 선택 (최신 16 버전)
+엔진 버전:            최신 버전 선택 (예: PostgreSQL 18.2)
 ```
 
 **템플릿:**
