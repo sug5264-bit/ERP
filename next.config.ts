@@ -36,8 +36,6 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
-  // standalone 모드: Docker 및 AWS 배포 최적화
-  output: 'standalone',
   reactCompiler: true,
   // 보안 헤더
   async headers() {
