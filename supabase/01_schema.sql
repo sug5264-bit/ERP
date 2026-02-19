@@ -1,3 +1,99 @@
+-- ============================================================
+-- 기존 테이블/타입 전체 삭제 (재실행 시 충돌 방지)
+-- ============================================================
+
+-- 테이블 삭제 (FK 의존 역순)
+DROP TABLE IF EXISTS "messages" CASCADE;
+DROP TABLE IF EXISTS "post_comments" CASCADE;
+DROP TABLE IF EXISTS "posts" CASCADE;
+DROP TABLE IF EXISTS "boards" CASCADE;
+DROP TABLE IF EXISTS "approval_steps" CASCADE;
+DROP TABLE IF EXISTS "approval_documents" CASCADE;
+DROP TABLE IF EXISTS "approval_lines" CASCADE;
+DROP TABLE IF EXISTS "approval_templates" CASCADE;
+DROP TABLE IF EXISTS "project_schedules" CASCADE;
+DROP TABLE IF EXISTS "project_tasks" CASCADE;
+DROP TABLE IF EXISTS "project_members" CASCADE;
+DROP TABLE IF EXISTS "projects" CASCADE;
+DROP TABLE IF EXISTS "purchase_payments" CASCADE;
+DROP TABLE IF EXISTS "receiving_details" CASCADE;
+DROP TABLE IF EXISTS "receivings" CASCADE;
+DROP TABLE IF EXISTS "purchase_order_details" CASCADE;
+DROP TABLE IF EXISTS "purchase_orders" CASCADE;
+DROP TABLE IF EXISTS "purchase_request_details" CASCADE;
+DROP TABLE IF EXISTS "purchase_requests" CASCADE;
+DROP TABLE IF EXISTS "delivery_details" CASCADE;
+DROP TABLE IF EXISTS "deliveries" CASCADE;
+DROP TABLE IF EXISTS "sales_order_details" CASCADE;
+DROP TABLE IF EXISTS "sales_orders" CASCADE;
+DROP TABLE IF EXISTS "quotation_details" CASCADE;
+DROP TABLE IF EXISTS "quotations" CASCADE;
+DROP TABLE IF EXISTS "partners" CASCADE;
+DROP TABLE IF EXISTS "stock_balances" CASCADE;
+DROP TABLE IF EXISTS "stock_movement_details" CASCADE;
+DROP TABLE IF EXISTS "stock_movements" CASCADE;
+DROP TABLE IF EXISTS "warehouse_zones" CASCADE;
+DROP TABLE IF EXISTS "warehouses" CASCADE;
+DROP TABLE IF EXISTS "items" CASCADE;
+DROP TABLE IF EXISTS "item_categories" CASCADE;
+DROP TABLE IF EXISTS "budget_details" CASCADE;
+DROP TABLE IF EXISTS "budget_headers" CASCADE;
+DROP TABLE IF EXISTS "cost_centers" CASCADE;
+DROP TABLE IF EXISTS "tax_invoice_items" CASCADE;
+DROP TABLE IF EXISTS "tax_invoices" CASCADE;
+DROP TABLE IF EXISTS "voucher_details" CASCADE;
+DROP TABLE IF EXISTS "vouchers" CASCADE;
+DROP TABLE IF EXISTS "account_subjects" CASCADE;
+DROP TABLE IF EXISTS "fiscal_years" CASCADE;
+DROP TABLE IF EXISTS "applicants" CASCADE;
+DROP TABLE IF EXISTS "recruitments" CASCADE;
+DROP TABLE IF EXISTS "leave_balances" CASCADE;
+DROP TABLE IF EXISTS "leaves" CASCADE;
+DROP TABLE IF EXISTS "attendances" CASCADE;
+DROP TABLE IF EXISTS "payroll_details" CASCADE;
+DROP TABLE IF EXISTS "payroll_headers" CASCADE;
+DROP TABLE IF EXISTS "employee_histories" CASCADE;
+DROP TABLE IF EXISTS "employees" CASCADE;
+DROP TABLE IF EXISTS "positions" CASCADE;
+DROP TABLE IF EXISTS "departments" CASCADE;
+DROP TABLE IF EXISTS "document_sequences" CASCADE;
+DROP TABLE IF EXISTS "notifications" CASCADE;
+DROP TABLE IF EXISTS "attachments" CASCADE;
+DROP TABLE IF EXISTS "audit_logs" CASCADE;
+DROP TABLE IF EXISTS "common_codes" CASCADE;
+DROP TABLE IF EXISTS "user_roles" CASCADE;
+DROP TABLE IF EXISTS "role_permissions" CASCADE;
+DROP TABLE IF EXISTS "permissions" CASCADE;
+DROP TABLE IF EXISTS "roles" CASCADE;
+DROP TABLE IF EXISTS "users" CASCADE;
+
+-- ENUM 타입 삭제
+DROP TYPE IF EXISTS "StepStatus";
+DROP TYPE IF EXISTS "ApprovalStatus";
+DROP TYPE IF EXISTS "TaskStatus";
+DROP TYPE IF EXISTS "TaskPriority";
+DROP TYPE IF EXISTS "ProjectMemberRole";
+DROP TYPE IF EXISTS "ProjectStatus";
+DROP TYPE IF EXISTS "SalesChannel";
+DROP TYPE IF EXISTS "SalesOrderStatus";
+DROP TYPE IF EXISTS "QuotationStatus";
+DROP TYPE IF EXISTS "PartnerType";
+DROP TYPE IF EXISTS "MovementType";
+DROP TYPE IF EXISTS "TaxType";
+DROP TYPE IF EXISTS "ItemType";
+DROP TYPE IF EXISTS "VoucherStatus";
+DROP TYPE IF EXISTS "VoucherType";
+DROP TYPE IF EXISTS "AccountType";
+DROP TYPE IF EXISTS "LeaveStatus";
+DROP TYPE IF EXISTS "LeaveType";
+DROP TYPE IF EXISTS "AttendanceType";
+DROP TYPE IF EXISTS "EmployeeStatus";
+DROP TYPE IF EXISTS "EmployeeType";
+
+-- ============================================================
+-- 스키마 생성
+-- ============================================================
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
