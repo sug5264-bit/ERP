@@ -29,7 +29,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Upload, Trash2 } from 'lucide-react'
+import { Upload, Trash2, Pencil } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface EmployeeRow {
@@ -151,16 +151,46 @@ export default function EmployeesPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: any) => api.put(`/hr/employees/${id}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
+      setEditTarget(null)
+      toast.success('사원 정보가 수정되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/hr/employees/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr-employees'] }); toast.success('사원이 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const [editTarget, setEditTarget] = useState<EmployeeRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const handleDelete = (id: string, name: string) => {
     setDeleteTarget({ id, name })
+  }
+
+  const handleUpdate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editTarget) return
+    const form = new FormData(e.currentTarget)
+    updateMutation.mutate({
+      id: editTarget.id,
+      nameKo: form.get('nameKo'),
+      nameEn: form.get('nameEn') || undefined,
+      departmentId: form.get('departmentId'),
+      positionId: form.get('positionId'),
+      joinDate: form.get('joinDate'),
+      employeeType: form.get('employeeType'),
+      status: form.get('status'),
+      resignDate: form.get('resignDate') || null,
+      email: form.get('email') || undefined,
+      phone: form.get('phone') || undefined,
+    })
   }
 
   const employees: EmployeeRow[] = data?.data || []
@@ -342,7 +372,12 @@ export default function EmployeesPage() {
         </Dialog>
       </div>
       <DataTable
-        columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.nameKo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]}
+        columns={[...columns, { id: 'actions', header: '', cell: ({ row }: any) => (
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)}><Pencil className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.nameKo)}><Trash2 className="h-4 w-4" /></Button>
+          </div>
+        ), size: 80 }]}
         data={employees}
         searchColumn="nameKo"
         searchPlaceholder="이름으로 검색..."
@@ -359,6 +394,103 @@ export default function EmployeesPage() {
         keyMap={importKeyMap}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['hr-employees'] })}
       />
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>사원 정보 수정</DialogTitle>
+          </DialogHeader>
+          {editTarget && (
+            <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>사번</Label>
+                  <Input value={editTarget.employeeNo} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label>이름 (한글) *</Label>
+                  <Input name="nameKo" required defaultValue={editTarget.nameKo} />
+                </div>
+                <div className="space-y-2">
+                  <Label>이름 (영문)</Label>
+                  <Input name="nameEn" defaultValue={editTarget.nameEn || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>이메일</Label>
+                  <Input name="email" type="email" defaultValue={editTarget.email || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>부서 *</Label>
+                  <Select name="departmentId" required defaultValue={editTarget.department?.id}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="부서 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments.map((d: any) => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>직급 *</Label>
+                  <Select name="positionId" required defaultValue={editTarget.position?.id}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="직급 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {positions.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>입사일 *</Label>
+                  <Input name="joinDate" type="date" required defaultValue={editTarget.joinDate?.split('T')[0]} />
+                </div>
+                <div className="space-y-2">
+                  <Label>고용형태 *</Label>
+                  <Select name="employeeType" required defaultValue={editTarget.employeeType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="REGULAR">정규직</SelectItem>
+                      <SelectItem value="CONTRACT">계약직</SelectItem>
+                      <SelectItem value="DISPATCH">파견직</SelectItem>
+                      <SelectItem value="INTERN">인턴</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>상태</Label>
+                  <Select name="status" defaultValue={editTarget.status}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">재직</SelectItem>
+                      <SelectItem value="ON_LEAVE">휴직</SelectItem>
+                      <SelectItem value="RESIGNED">퇴직</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>퇴직일</Label>
+                  <Input name="resignDate" type="date" defaultValue={editTarget.resignDate?.split('T')[0] || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>연락처</Label>
+                  <Input name="phone" defaultValue={editTarget.phone || ''} placeholder="01012345678" />
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? '수정 중...' : '수정'}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}

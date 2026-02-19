@@ -21,7 +21,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Upload, Trash2 } from 'lucide-react'
+import { Upload, Trash2, Pencil } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const ITEM_TYPE_MAP: Record<string, string> = {
@@ -58,6 +58,7 @@ export default function ItemsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [editTarget, setEditTarget] = useState<ItemRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
@@ -85,6 +86,16 @@ export default function ItemsPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: any) => api.put(`/inventory/items/${id}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
+      setEditTarget(null)
+      toast.success('품목 정보가 수정되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/inventory/items/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['inventory-items'] }); toast.success('품목이 삭제되었습니다.') },
@@ -93,6 +104,25 @@ export default function ItemsPage() {
 
   const handleDelete = (id: string, name: string) => {
     setDeleteTarget({ id, name })
+  }
+
+  const handleUpdate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editTarget) return
+    const form = new FormData(e.currentTarget)
+    updateMutation.mutate({
+      id: editTarget.id,
+      itemName: form.get('itemName'),
+      specification: form.get('specification') || undefined,
+      categoryId: form.get('categoryId') || undefined,
+      unit: form.get('unit') || 'EA',
+      standardPrice: parseFloat(form.get('standardPrice') as string) || 0,
+      safetyStock: parseInt(form.get('safetyStock') as string) || 0,
+      itemType: form.get('itemType'),
+      taxType: form.get('taxType'),
+      barcode: form.get('barcode') || undefined,
+      isActive: form.get('isActive') === 'true',
+    })
   }
 
   const items: ItemRow[] = data?.data || []
@@ -235,7 +265,12 @@ export default function ItemsPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.itemName)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={items} isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable columns={[...columns, { id: 'actions', header: '', cell: ({ row }: any) => (
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)}><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.itemName)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ), size: 80 }]} data={items} isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
       <ExcelImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
@@ -246,6 +281,76 @@ export default function ItemsPage() {
         keyMap={importKeyMap}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['inventory-items'] })}
       />
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>품목 수정</DialogTitle></DialogHeader>
+          {editTarget && (
+            <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>품목코드</Label><Input value={editTarget.itemCode} disabled className="bg-muted" /></div>
+                <div className="space-y-2"><Label>품목명 *</Label><Input name="itemName" required defaultValue={editTarget.itemName} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>구분</Label>
+                  <Select name="itemType" defaultValue={editTarget.itemType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ITEM_TYPE_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>과세구분</Label>
+                  <Select name="taxType" defaultValue={editTarget.taxType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(TAX_TYPE_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>분류</Label>
+                  <Select name="categoryId" defaultValue={editTarget.category?.code}>
+                    <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>단위</Label><Input name="unit" defaultValue={editTarget.unit} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>규격</Label><Input name="specification" defaultValue={editTarget.specification || ''} /></div>
+                <div className="space-y-2"><Label>바코드</Label><Input name="barcode" defaultValue={editTarget.barcode || ''} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>기준가</Label><Input name="standardPrice" type="number" defaultValue={editTarget.standardPrice} /></div>
+                <div className="space-y-2"><Label>안전재고</Label><Input name="safetyStock" type="number" defaultValue={editTarget.safetyStock} /></div>
+              </div>
+              <div className="space-y-2">
+                <Label>상태</Label>
+                <Select name="isActive" defaultValue={editTarget.isActive ? 'true' : 'false'}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">활성</SelectItem>
+                    <SelectItem value="false">비활성</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? '수정 중...' : '수정'}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}

@@ -21,7 +21,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Upload, Trash2 } from 'lucide-react'
+import { Upload, Trash2, Pencil } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const PARTNER_TYPE_MAP: Record<string, string> = {
@@ -35,9 +35,10 @@ const CHANNEL_MAP: Record<string, string> = {
 interface PartnerRow {
   id: string; partnerCode: string; partnerName: string; partnerType: string
   salesChannel: string
-  bizNo: string | null; ceoName: string | null; phone: string | null
+  bizNo: string | null; ceoName: string | null; phone: string | null; fax: string | null
   email: string | null; address: string | null; contactPerson: string | null
-  creditLimit: number | null; isActive: boolean
+  bizType: string | null; bizCategory: string | null
+  creditLimit: number | null; paymentTerms: string | null; isActive: boolean
 }
 
 const columns: ColumnDef<PartnerRow>[] = [
@@ -57,6 +58,7 @@ export default function PartnersPage() {
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
+  const [editTarget, setEditTarget] = useState<PartnerRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
@@ -78,6 +80,16 @@ export default function PartnersPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: any) => api.put(`/partners/${id}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['partners'] })
+      setEditTarget(null)
+      toast.success('거래처 정보가 수정되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/partners/${id}`),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['partners'] }); toast.success('거래처가 삭제되었습니다.') },
@@ -86,6 +98,30 @@ export default function PartnersPage() {
 
   const handleDelete = (id: string, name: string) => {
     setDeleteTarget({ id, name })
+  }
+
+  const handleUpdate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editTarget) return
+    const form = new FormData(e.currentTarget)
+    updateMutation.mutate({
+      id: editTarget.id,
+      partnerName: form.get('partnerName'),
+      partnerType: form.get('partnerType'),
+      salesChannel: form.get('salesChannel'),
+      bizNo: form.get('bizNo') || undefined,
+      ceoName: form.get('ceoName') || undefined,
+      bizType: form.get('bizType') || undefined,
+      bizCategory: form.get('bizCategory') || undefined,
+      phone: form.get('phone') || undefined,
+      fax: form.get('fax') || undefined,
+      email: form.get('email') || undefined,
+      address: form.get('address') || undefined,
+      contactPerson: form.get('contactPerson') || undefined,
+      creditLimit: parseFloat(form.get('creditLimit') as string) || undefined,
+      paymentTerms: form.get('paymentTerms') || undefined,
+      isActive: form.get('isActive') === 'true',
+    })
   }
 
   const partners: PartnerRow[] = data?.data || []
@@ -232,7 +268,12 @@ export default function PartnersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.partnerName)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={partners} searchColumn="partnerName" searchPlaceholder="거래처명으로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable columns={[...columns, { id: 'actions', header: '', cell: ({ row }: any) => (
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)}><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.partnerName)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ), size: 80 }]} data={partners} searchColumn="partnerName" searchPlaceholder="거래처명으로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
       <ExcelImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
@@ -243,6 +284,74 @@ export default function PartnersPage() {
         keyMap={importKeyMap}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['partners'] })}
       />
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>거래처 수정</DialogTitle></DialogHeader>
+          {editTarget && (
+            <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>거래처코드</Label><Input value={editTarget.partnerCode} disabled className="bg-muted" /></div>
+                <div className="space-y-2"><Label>거래처명 *</Label><Input name="partnerName" required defaultValue={editTarget.partnerName} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>구분</Label>
+                  <Select name="partnerType" defaultValue={editTarget.partnerType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(PARTNER_TYPE_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>판매채널</Label>
+                  <Select name="salesChannel" defaultValue={editTarget.salesChannel}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ONLINE">온라인</SelectItem>
+                      <SelectItem value="OFFLINE">오프라인</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>사업자번호</Label><Input name="bizNo" defaultValue={editTarget.bizNo || ''} placeholder="000-00-00000" /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>대표자</Label><Input name="ceoName" defaultValue={editTarget.ceoName || ''} /></div>
+                <div className="space-y-2"><Label>담당자</Label><Input name="contactPerson" defaultValue={editTarget.contactPerson || ''} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>업태</Label><Input name="bizType" defaultValue={editTarget.bizType || ''} /></div>
+                <div className="space-y-2"><Label>종목</Label><Input name="bizCategory" defaultValue={editTarget.bizCategory || ''} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>전화번호</Label><Input name="phone" defaultValue={editTarget.phone || ''} /></div>
+                <div className="space-y-2"><Label>팩스</Label><Input name="fax" defaultValue={editTarget.fax || ''} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>이메일</Label><Input name="email" type="email" defaultValue={editTarget.email || ''} /></div>
+                <div className="space-y-2"><Label>여신한도</Label><Input name="creditLimit" type="number" defaultValue={editTarget.creditLimit || ''} /></div>
+              </div>
+              <div className="space-y-2"><Label>주소</Label><Input name="address" defaultValue={editTarget.address || ''} /></div>
+              <div className="space-y-2"><Label>결제조건</Label><Input name="paymentTerms" defaultValue={editTarget.paymentTerms || ''} placeholder="월말 30일" /></div>
+              <div className="space-y-2">
+                <Label>상태</Label>
+                <Select name="isActive" defaultValue={editTarget.isActive ? 'true' : 'false'}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">활성</SelectItem>
+                    <SelectItem value="false">비활성</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? '수정 중...' : '수정'}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
