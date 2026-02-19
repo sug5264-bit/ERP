@@ -27,5 +27,26 @@ services:
     depends_on:
       - postgres
 
+  # ERP Application (for local Docker testing)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erp-app
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://erp_admin:erp_password_2026@postgres:5432/erp_database
+      DIRECT_URL: postgresql://erp_admin:erp_password_2026@postgres:5432/erp_database
+      AUTH_SECRET: local-dev-secret-change-in-production
+      AUTH_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3000
+    depends_on:
+      - postgres
+    profiles:
+      - full
+
 volumes:
   postgres_data:

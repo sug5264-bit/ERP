@@ -36,6 +36,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   reactCompiler: true,
   // 보안 헤더
   async headers() {

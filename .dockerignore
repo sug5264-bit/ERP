@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+.vercelignore
+vercel.json
+docker-compose.yml
+Dockerfile
+*.md
+.vscode
+.idea
+.DS_Store
+prisma/*.db
+prisma/migrations
