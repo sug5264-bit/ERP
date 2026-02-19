@@ -9,12 +9,13 @@ import {
   Calculator,
   Users,
   Package,
-  ShoppingCart,
+  TrendingUp,
   FileCheck,
   MessageSquare,
   Settings,
   ChevronDown,
   FolderKanban,
+  CalendarCheck,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -86,9 +87,9 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    title: '판매',
+    title: '매출',
     href: '/sales',
-    icon: ShoppingCart,
+    icon: TrendingUp,
     module: 'sales',
     children: [
       { title: '매출집계', href: '/sales/summary', permission: 'sales.summary' },
@@ -96,6 +97,16 @@ const navItems: NavItem[] = [
       { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
       { title: '발주관리', href: '/sales/orders', permission: 'sales.orders' },
       { title: '납품관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
+    ],
+  },
+  {
+    title: '마감',
+    href: '/closing',
+    icon: CalendarCheck,
+    module: 'closing',
+    children: [
+      { title: '상계내역', href: '/closing/netting', permission: 'closing.netting' },
+      { title: '대금지급', href: '/closing/payments', permission: 'closing.payments' },
     ],
   },
   {
