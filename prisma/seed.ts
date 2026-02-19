@@ -28,6 +28,16 @@ async function main() {
     update: {},
     create: { name: '부서장', description: '부서 관리자' },
   })
+  const hrManagerRole = await prisma.role.upsert({
+    where: { name: '인사 관리자' },
+    update: {},
+    create: { name: '인사 관리자', description: '인사 모듈 관리자' },
+  })
+  const financeManagerRole = await prisma.role.upsert({
+    where: { name: '재무 관리자' },
+    update: {},
+    create: { name: '재무 관리자', description: '회계/재무 모듈 관리자' },
+  })
 
   // ============================================================
   // 1-2. 권한 (Permissions) - 모듈 및 하위 페이지별
@@ -39,6 +49,7 @@ async function main() {
     'hr.leave', 'hr.payroll', 'hr.recruitment',
     'inventory', 'inventory.items', 'inventory.stock', 'inventory.status', 'inventory.warehouses',
     'sales', 'sales.summary', 'sales.partners', 'sales.quotations', 'sales.orders', 'sales.deliveries',
+    'closing', 'closing.netting', 'closing.payments',
     'projects',
     'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
     'board', 'board.notices', 'board.general', 'board.messages',
@@ -68,9 +79,77 @@ async function main() {
     })
   }
 
-  // 부서장 역할: 모듈 수준 전체 + 게시판/결재
+  // 인사 관리자 역할: 인사 모듈 전체 (휴가관리 제외)
+  const hrManagerModules = [
+    'hr', 'hr.employees', 'hr.organization', 'hr.attendance',
+    'hr.payroll', 'hr.recruitment',
+  ]
+  for (const mod of hrManagerModules) {
+    for (const action of actions) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: hrManagerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: hrManagerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+  // 인사 관리자도 게시판/결재/프로젝트 접근
+  for (const mod of ['board', 'board.notices', 'board.general', 'board.messages',
+    'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
+    'projects']) {
+    for (const action of ['read', 'create']) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: hrManagerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: hrManagerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+
+  // 재무 관리자 역할: 회계 + 마감 모듈 전체
+  const financeManagerModules = [
+    'accounting', 'accounting.vouchers', 'accounting.journal', 'accounting.ledger',
+    'accounting.financial', 'accounting.tax', 'accounting.budget',
+    'closing', 'closing.netting', 'closing.payments',
+  ]
+  for (const mod of financeManagerModules) {
+    for (const action of actions) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: financeManagerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: financeManagerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+  // 재무 관리자도 게시판/결재/프로젝트 접근
+  for (const mod of ['board', 'board.notices', 'board.general', 'board.messages',
+    'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
+    'projects']) {
+    for (const action of ['read', 'create']) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: financeManagerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: financeManagerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+
+  // 부서장 역할: 재고/매출/마감/프로젝트 + 게시판/결재 + 휴가관리
   const managerModules = [
-    'accounting', 'hr', 'inventory', 'sales', 'projects',
+    'inventory', 'sales', 'closing', 'projects',
+    'hr.leave',
     'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
     'board', 'board.notices', 'board.general', 'board.messages',
   ]
@@ -87,11 +166,12 @@ async function main() {
     }
   }
 
-  // 일반사용자 역할: 게시판, 결재, 프로젝트 read
+  // 일반사용자 역할: 게시판, 결재, 프로젝트, 휴가관리
   const userModules = [
     'board', 'board.notices', 'board.general', 'board.messages',
     'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
     'projects',
+    'hr.leave',
   ]
   for (const mod of userModules) {
     for (const action of ['read', 'create']) {
