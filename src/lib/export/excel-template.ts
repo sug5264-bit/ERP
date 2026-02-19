@@ -14,7 +14,7 @@ export async function downloadImportTemplate(config: TemplateConfig) {
   const headerRow = sheet.getRow(1)
   columns.forEach((col, i) => {
     const cell = headerRow.getCell(i + 1)
-    cell.value = col.header
+    cell.value = col.required ? `${col.header} *` : col.header
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
     cell.alignment = { horizontal: 'center', vertical: 'middle' }

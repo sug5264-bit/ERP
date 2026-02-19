@@ -105,8 +105,8 @@ export default function PartnersPage() {
   ]
 
   const importTemplateColumns: TemplateColumn[] = [
-    { header: '거래처코드', key: 'partnerCode', example: 'PTN-001' },
-    { header: '거래처명', key: 'partnerName', example: '테스트거래처' },
+    { header: '거래처코드', key: 'partnerCode', example: 'PTN-001', required: true },
+    { header: '거래처명', key: 'partnerName', example: '테스트거래처', required: true },
     { header: '구분', key: 'partnerType', example: '매출/매입' },
     { header: '사업자번호', key: 'bizNo', example: '123-45-67890' },
     { header: '대표자', key: 'ceoName', example: '홍길동' },

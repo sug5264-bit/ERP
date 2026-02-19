@@ -87,10 +87,11 @@ export function ExcelImportDialog({
     try {
       const rows = await readExcelFile(file, keyMap)
       const res = await api.post(apiEndpoint, { rows }) as any
+      const body = res.data ?? res
       const importResult: ImportResult = {
-        success: res.success || 0,
-        failed: res.failed || 0,
-        errors: res.errors || [],
+        success: body.success || 0,
+        failed: body.failed || 0,
+        errors: body.errors || [],
       }
       setResult(importResult)
       if (importResult.success > 0) {
