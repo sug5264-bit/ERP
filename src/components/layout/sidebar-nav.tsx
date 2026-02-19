@@ -25,12 +25,18 @@ import {
 import { useState, useMemo, useCallback, memo } from 'react'
 import { useSidebarStore } from '@/stores/sidebar-store'
 
+interface NavChild {
+  title: string
+  href: string
+  permission?: string
+}
+
 interface NavItem {
   title: string
   href: string
   icon: LucideIcon
   module?: string
-  children?: { title: string; href: string }[]
+  children?: NavChild[]
 }
 
 const navItems: NavItem[] = [
@@ -45,12 +51,12 @@ const navItems: NavItem[] = [
     icon: Calculator,
     module: 'accounting',
     children: [
-      { title: '전표관리', href: '/accounting/vouchers' },
-      { title: '분개장', href: '/accounting/journal' },
-      { title: '총계정원장', href: '/accounting/ledger' },
-      { title: '재무제표', href: '/accounting/financial-statements' },
-      { title: '세금계산서', href: '/accounting/tax-invoice' },
-      { title: '예산관리', href: '/accounting/budget' },
+      { title: '전표관리', href: '/accounting/vouchers', permission: 'accounting.vouchers' },
+      { title: '분개장', href: '/accounting/journal', permission: 'accounting.journal' },
+      { title: '총계정원장', href: '/accounting/ledger', permission: 'accounting.ledger' },
+      { title: '재무제표', href: '/accounting/financial-statements', permission: 'accounting.financial' },
+      { title: '세금계산서', href: '/accounting/tax-invoice', permission: 'accounting.tax' },
+      { title: '예산관리', href: '/accounting/budget', permission: 'accounting.budget' },
     ],
   },
   {
@@ -59,12 +65,12 @@ const navItems: NavItem[] = [
     icon: Users,
     module: 'hr',
     children: [
-      { title: '사원관리', href: '/hr/employees' },
-      { title: '부서/직급', href: '/hr/organization' },
-      { title: '근태관리', href: '/hr/attendance' },
-      { title: '휴가관리', href: '/hr/leave' },
-      { title: '급여관리', href: '/hr/payroll' },
-      { title: '채용관리', href: '/hr/recruitment' },
+      { title: '사원관리', href: '/hr/employees', permission: 'hr.employees' },
+      { title: '부서/직급', href: '/hr/organization', permission: 'hr.organization' },
+      { title: '근태관리', href: '/hr/attendance', permission: 'hr.attendance' },
+      { title: '휴가관리', href: '/hr/leave', permission: 'hr.leave' },
+      { title: '급여관리', href: '/hr/payroll', permission: 'hr.payroll' },
+      { title: '채용관리', href: '/hr/recruitment', permission: 'hr.recruitment' },
     ],
   },
   {
@@ -73,10 +79,10 @@ const navItems: NavItem[] = [
     icon: Package,
     module: 'inventory',
     children: [
-      { title: '품목관리', href: '/inventory/items' },
-      { title: '입출고', href: '/inventory/stock-movement' },
-      { title: '재고현황', href: '/inventory/stock-status' },
-      { title: '창고관리', href: '/inventory/warehouses' },
+      { title: '품목관리', href: '/inventory/items', permission: 'inventory.items' },
+      { title: '입출고', href: '/inventory/stock-movement', permission: 'inventory.stock' },
+      { title: '재고현황', href: '/inventory/stock-status', permission: 'inventory.status' },
+      { title: '창고관리', href: '/inventory/warehouses', permission: 'inventory.warehouses' },
     ],
   },
   {
@@ -85,11 +91,11 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
     module: 'sales',
     children: [
-      { title: '매출집계', href: '/sales/summary' },
-      { title: '거래처관리', href: '/sales/partners' },
-      { title: '견적관리', href: '/sales/quotations' },
-      { title: '발주관리', href: '/sales/orders' },
-      { title: '납품관리', href: '/sales/deliveries' },
+      { title: '매출집계', href: '/sales/summary', permission: 'sales.summary' },
+      { title: '거래처관리', href: '/sales/partners', permission: 'sales.partners' },
+      { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
+      { title: '발주관리', href: '/sales/orders', permission: 'sales.orders' },
+      { title: '납품관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
     ],
   },
   {
@@ -104,10 +110,10 @@ const navItems: NavItem[] = [
     icon: FileCheck,
     module: 'approval',
     children: [
-      { title: '기안하기', href: '/approval/draft' },
-      { title: '결재대기', href: '/approval/pending' },
-      { title: '결재완료', href: '/approval/completed' },
-      { title: '반려문서', href: '/approval/rejected' },
+      { title: '기안하기', href: '/approval/draft', permission: 'approval.draft' },
+      { title: '결재대기', href: '/approval/pending', permission: 'approval.pending' },
+      { title: '결재완료', href: '/approval/completed', permission: 'approval.completed' },
+      { title: '반려문서', href: '/approval/rejected', permission: 'approval.rejected' },
     ],
   },
   {
@@ -116,9 +122,9 @@ const navItems: NavItem[] = [
     icon: MessageSquare,
     module: 'board',
     children: [
-      { title: '공지사항', href: '/board/notices' },
-      { title: '자유게시판', href: '/board/general' },
-      { title: '사내메시지', href: '/board/messages' },
+      { title: '공지사항', href: '/board/notices', permission: 'board.notices' },
+      { title: '자유게시판', href: '/board/general', permission: 'board.general' },
+      { title: '사내메시지', href: '/board/messages', permission: 'board.messages' },
     ],
   },
   {
@@ -127,9 +133,10 @@ const navItems: NavItem[] = [
     icon: Settings,
     module: 'admin',
     children: [
-      { title: '사용자관리', href: '/admin/users' },
-      { title: '코드관리', href: '/admin/codes' },
-      { title: '감사로그', href: '/admin/logs' },
+      { title: '사용자관리', href: '/admin/users', permission: 'admin.users' },
+      { title: '권한관리', href: '/admin/roles', permission: 'admin.roles' },
+      { title: '코드관리', href: '/admin/codes', permission: 'admin.codes' },
+      { title: '감사로그', href: '/admin/logs', permission: 'admin.logs' },
     ],
   },
 ]
@@ -143,14 +150,46 @@ export function SidebarNav() {
   const userRoles = (session?.user as any)?.roles || []
   const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 
-  const filteredNavItems = useMemo(() => navItems.filter((item) => {
-    if (!item.module) return true
-    if (isAdmin) return true
-    if (userRoles.includes('부서장')) return true
-    return userPermissions.some(
-      (p: any) => p.module === item.module && p.action === 'read'
-    )
-  }), [userPermissions, userRoles, isAdmin])
+  const hasPermission = useCallback(
+    (module: string) =>
+      userPermissions.some(
+        (p: any) =>
+          (p.module === module || p.module.startsWith(module + '.')) &&
+          p.action === 'read'
+      ),
+    [userPermissions]
+  )
+
+  const filteredNavItems = useMemo(() => {
+    return navItems
+      .map((item) => {
+        if (!item.module) return item
+        if (isAdmin) return item
+
+        // 모듈 전체 권한 보유 시 모든 하위 페이지 표시
+        const hasModuleAccess = userPermissions.some(
+          (p: any) => p.module === item.module && p.action === 'read'
+        )
+        if (hasModuleAccess) return item
+
+        // 하위 페이지별 권한 체크
+        if (item.children) {
+          const filteredChildren = item.children.filter((child) => {
+            if (!child.permission) return hasModuleAccess
+            return userPermissions.some(
+              (p: any) => p.module === child.permission && p.action === 'read'
+            )
+          })
+          if (filteredChildren.length === 0) return null
+          return { ...item, children: filteredChildren }
+        }
+
+        // 자식 없는 단일 항목은 모듈 또는 하위 모듈 권한 체크
+        if (hasModuleAccess || hasPermission(item.module)) return item
+        return null
+      })
+      .filter(Boolean) as NavItem[]
+  }, [userPermissions, userRoles, isAdmin, hasPermission])
 
   const closeMobileSidebar = useCallback(() => {
     if (window.innerWidth < 1024) setOpen(false)

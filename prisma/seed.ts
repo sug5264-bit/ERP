@@ -30,6 +30,85 @@ async function main() {
   })
 
   // ============================================================
+  // 1-2. 권한 (Permissions) - 모듈 및 하위 페이지별
+  // ============================================================
+  const modules = [
+    'accounting', 'accounting.vouchers', 'accounting.journal', 'accounting.ledger',
+    'accounting.financial', 'accounting.tax', 'accounting.budget',
+    'hr', 'hr.employees', 'hr.organization', 'hr.attendance',
+    'hr.leave', 'hr.payroll', 'hr.recruitment',
+    'inventory', 'inventory.items', 'inventory.stock', 'inventory.status', 'inventory.warehouses',
+    'sales', 'sales.summary', 'sales.partners', 'sales.quotations', 'sales.orders', 'sales.deliveries',
+    'projects',
+    'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
+    'board', 'board.notices', 'board.general', 'board.messages',
+    'admin', 'admin.users', 'admin.roles', 'admin.codes', 'admin.logs',
+  ]
+  const actions = ['read', 'create', 'update', 'delete']
+
+  const permMap: Record<string, any> = {}
+  for (const mod of modules) {
+    for (const action of actions) {
+      const perm = await prisma.permission.upsert({
+        where: { module_action: { module: mod, action } },
+        update: {},
+        create: { module: mod, action, description: `${mod} ${action}` },
+      })
+      permMap[`${mod}:${action}`] = perm
+    }
+  }
+
+  // 관리자 역할에 모든 권한 할당
+  const allPermIds = Object.values(permMap).map((p: any) => p.id)
+  for (const permId of allPermIds) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: adminRole.id, permissionId: permId } },
+      update: {},
+      create: { roleId: adminRole.id, permissionId: permId },
+    })
+  }
+
+  // 부서장 역할: 모듈 수준 전체 + 게시판/결재
+  const managerModules = [
+    'accounting', 'hr', 'inventory', 'sales', 'projects',
+    'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
+    'board', 'board.notices', 'board.general', 'board.messages',
+  ]
+  for (const mod of managerModules) {
+    for (const action of actions) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: managerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: managerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+
+  // 일반사용자 역할: 게시판, 결재, 프로젝트 read
+  const userModules = [
+    'board', 'board.notices', 'board.general', 'board.messages',
+    'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
+    'projects',
+  ]
+  for (const mod of userModules) {
+    for (const action of ['read', 'create']) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: userRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: userRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+
+  console.log(`Created ${Object.keys(permMap).length} permissions`)
+
+  // ============================================================
   // 2. 부서 (Departments)
   // ============================================================
   const deptMgmt = await prisma.department.upsert({
