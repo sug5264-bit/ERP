@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { Users, Package, FileText, ClipboardList, ShoppingCart, CalendarOff } from 'lucide-react'
+import { Users, Package, FileText, ClipboardList, ShoppingCart, CalendarOff, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
@@ -45,6 +45,12 @@ export default function DashboardPage() {
   const alertCount = kpi?.stockAlertCount || 0
   const pendingLeaves = kpi?.leaveCount || 0
 
+  const trends = dashData?.data?.trends
+  const salesTrend = trends?.salesAmount?.change ?? 0
+  const orderTrend = trends?.orderCount?.change ?? 0
+  const todayOrders = trends?.todayOrders ?? 0
+  const thisMonthAmount = trends?.salesAmount?.current ?? 0
+
   const recentOrders = dashData?.data?.recentOrders || []
   const notices = dashData?.data?.notices || []
 
@@ -62,6 +68,9 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
               <div className="text-lg sm:text-2xl font-bold">{empCount}명</div>
+              {trends?.newEmployees && (trends.newEmployees.current > 0) && (
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">이번 달 +{trends.newEmployees.current}명</p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -110,6 +119,47 @@ export default function DashboardPage() {
           </Card>
         </Link>
       </div>
+
+      {/* 매출 트렌드 요약 */}
+      <Card>
+        <CardContent className="p-3 sm:p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            <div>
+              <p className="text-xs text-muted-foreground">이번 달 매출</p>
+              <p className="text-base sm:text-xl font-bold mt-0.5">{formatCurrency(thisMonthAmount)}</p>
+              {salesTrend !== 0 && (
+                <div className={`flex items-center gap-1 mt-0.5 text-xs ${salesTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {salesTrend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  전월 대비 {salesTrend > 0 ? '+' : ''}{salesTrend}%
+                </div>
+              )}
+              {salesTrend === 0 && <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground"><Minus className="h-3 w-3" />전월 동일</div>}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">이번 달 발주</p>
+              <p className="text-base sm:text-xl font-bold mt-0.5">{trends?.orderCount?.current ?? 0}건</p>
+              {orderTrend !== 0 && (
+                <div className={`flex items-center gap-1 mt-0.5 text-xs ${orderTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {orderTrend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  전월 대비 {orderTrend > 0 ? '+' : ''}{orderTrend}%
+                </div>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">오늘 발주</p>
+              <p className="text-base sm:text-xl font-bold mt-0.5">{todayOrders}건</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">발주 평균 금액</p>
+              <p className="text-base sm:text-xl font-bold mt-0.5">
+                {(trends?.orderCount?.current ?? 0) > 0
+                  ? formatCurrency(Math.round(thisMonthAmount / (trends?.orderCount?.current || 1)))
+                  : '-'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts (lazy loaded) */}
       <Suspense>

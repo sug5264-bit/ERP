@@ -18,7 +18,7 @@ import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type
 import { generateTaxInvoicePDF, generateTransactionStatementPDF, type TaxInvoicePDFData, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload, Pencil, Download, FileText } from 'lucide-react'
+import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload, Pencil, Download, FileText, Search, Filter, RotateCcw } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
@@ -43,9 +43,15 @@ export default function OrdersPage() {
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
-  const [dateFilter, setDateFilter] = useState<'monthly' | 'daily'>('monthly')
+  const [dateFilter, setDateFilter] = useState<'monthly' | 'daily' | 'preset'>('preset')
   const [filterMonth, setFilterMonth] = useState('')
   const [filterDate, setFilterDate] = useState('')
+  const [datePreset, setDatePreset] = useState('thisMonth')
+  const [partnerFilter, setPartnerFilter] = useState('')
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
+  const [batchCompleteOpen, setBatchCompleteOpen] = useState(false)
+  const [batchCompleteIds, setBatchCompleteIds] = useState<string[]>([])
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
@@ -188,8 +194,35 @@ export default function OrdersPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const batchMutation = useMutation({
+    mutationFn: (body: any) => api.post('/sales/orders/batch', body),
+    onSuccess: (res: any) => {
+      const result = res.data || res
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setBatchCompleteOpen(false)
+      setBatchCompleteIds([])
+      if (result.failed > 0) {
+        toast.error(`성공 ${result.success}건, 실패 ${result.failed}건`)
+      } else {
+        toast.success(`${result.success}건이 처리되었습니다.`)
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const handleDelete = (id: string, no: string) => {
     setDeleteTarget({ id, name: no })
+  }
+
+  const handleResetFilters = () => {
+    setStatusFilter('')
+    setDateFilter('preset')
+    setDatePreset('thisMonth')
+    setFilterMonth('')
+    setFilterDate('')
+    setPartnerFilter('')
+    setSearchKeyword('')
+    setShowAdvancedFilter(false)
   }
 
   const columns: ColumnDef<any>[] = [
@@ -251,14 +284,41 @@ export default function OrdersPage() {
     },
   ]
 
-  const qpOnline = new URLSearchParams({ pageSize: '50', salesChannel: 'ONLINE' })
-  const qpOffline = new URLSearchParams({ pageSize: '50', salesChannel: 'OFFLINE' })
-  if (statusFilter && statusFilter !== 'all') { qpOnline.set('status', statusFilter); qpOffline.set('status', statusFilter) }
-  if (filterMonth && dateFilter === 'monthly') { qpOnline.set('startDate', `${filterMonth}-01`); qpOnline.set('endDate', `${filterMonth}-31`); qpOffline.set('startDate', `${filterMonth}-01`); qpOffline.set('endDate', `${filterMonth}-31`) }
-  if (filterDate && dateFilter === 'daily') { qpOnline.set('startDate', filterDate); qpOnline.set('endDate', filterDate); qpOffline.set('startDate', filterDate); qpOffline.set('endDate', filterDate) }
+  // 날짜 프리셋 계산
+  const getPresetDates = (preset: string) => {
+    const now = new Date()
+    const y = now.getFullYear(), m = now.getMonth(), d = now.getDate()
+    switch (preset) {
+      case 'today': return { start: new Date(y, m, d).toISOString().split('T')[0], end: new Date(y, m, d).toISOString().split('T')[0] }
+      case 'thisWeek': { const dow = now.getDay(); const s = new Date(y, m, d - dow); return { start: s.toISOString().split('T')[0], end: now.toISOString().split('T')[0] } }
+      case 'thisMonth': return { start: new Date(y, m, 1).toISOString().split('T')[0], end: new Date(y, m + 1, 0).toISOString().split('T')[0] }
+      case 'lastMonth': return { start: new Date(y, m - 1, 1).toISOString().split('T')[0], end: new Date(y, m, 0).toISOString().split('T')[0] }
+      case 'last3Months': return { start: new Date(y, m - 2, 1).toISOString().split('T')[0], end: new Date(y, m + 1, 0).toISOString().split('T')[0] }
+      case 'thisYear': return { start: new Date(y, 0, 1).toISOString().split('T')[0], end: new Date(y, 11, 31).toISOString().split('T')[0] }
+      default: return { start: '', end: '' }
+    }
+  }
 
-  const { data: onlineData, isLoading: onlineLoading } = useQuery({ queryKey: ['sales-orders', 'ONLINE', statusFilter, filterMonth, filterDate, dateFilter], queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any> })
-  const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter, filterMonth, filterDate, dateFilter], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
+  const buildQueryParams = (channel: string) => {
+    const qp = new URLSearchParams({ pageSize: '50', salesChannel: channel })
+    if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
+    if (dateFilter === 'preset' && datePreset) {
+      const { start, end } = getPresetDates(datePreset)
+      if (start) qp.set('startDate', start)
+      if (end) qp.set('endDate', end)
+    }
+    if (dateFilter === 'monthly' && filterMonth) { qp.set('startDate', `${filterMonth}-01`); qp.set('endDate', `${filterMonth}-31`) }
+    if (dateFilter === 'daily' && filterDate) { qp.set('startDate', filterDate); qp.set('endDate', filterDate) }
+    if (partnerFilter && partnerFilter !== 'all') qp.set('partnerId', partnerFilter)
+    if (searchKeyword) qp.set('search', searchKeyword)
+    return qp
+  }
+
+  const qpOnline = buildQueryParams('ONLINE')
+  const qpOffline = buildQueryParams('OFFLINE')
+
+  const { data: onlineData, isLoading: onlineLoading } = useQuery({ queryKey: ['sales-orders', 'ONLINE', statusFilter, filterMonth, filterDate, dateFilter, datePreset, partnerFilter, searchKeyword], queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any> })
+  const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter, filterMonth, filterDate, dateFilter, datePreset, partnerFilter, searchKeyword], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
   const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
   const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
@@ -272,6 +332,16 @@ export default function OrdersPage() {
   const items = itemsData?.data || []
   const onlineOrders = onlineData?.data || []
   const offlineOrders = offlineData?.data || []
+
+  // 요약 통계 계산
+  const summaryOrders = activeTab === 'ONLINE' ? onlineOrders : offlineOrders
+  const summaryStats = {
+    totalCount: summaryOrders.length,
+    totalAmount: summaryOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0),
+    orderedCount: summaryOrders.filter((o: any) => o.status === 'ORDERED').length,
+    inProgressCount: summaryOrders.filter((o: any) => o.status === 'IN_PROGRESS').length,
+    completedCount: summaryOrders.filter((o: any) => o.status === 'COMPLETED').length,
+  }
 
   const exportColumns: ExportColumn[] = [
     { header: '발주번호', accessor: 'orderNo' },
@@ -470,60 +540,134 @@ export default function OrdersPage() {
           <TabsTrigger value="OFFLINE">오프라인</TabsTrigger>
         </TabsList>
 
+        {/* 공통 필터 영역 */}
+        <div className="space-y-3">
+          {/* 요약 통계 바 */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="rounded-lg border bg-muted/30 p-2 sm:p-3 text-center">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">전체</p>
+              <p className="text-sm sm:text-lg font-bold">{summaryStats.totalCount}건</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-2 sm:p-3 text-center">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">합계 금액</p>
+              <p className="text-sm sm:text-lg font-bold">{formatCurrency(summaryStats.totalAmount)}</p>
+            </div>
+            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-2 sm:p-3 text-center">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">발주</p>
+              <p className="text-sm sm:text-lg font-bold text-blue-600">{summaryStats.orderedCount}건</p>
+            </div>
+            <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/20 p-2 sm:p-3 text-center">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">진행중</p>
+              <p className="text-sm sm:text-lg font-bold text-yellow-600">{summaryStats.inProgressCount}건</p>
+            </div>
+            <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-2 sm:p-3 text-center col-span-2 sm:col-span-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">완료</p>
+              <p className="text-sm sm:text-lg font-bold text-green-600">{summaryStats.completedCount}건</p>
+            </div>
+          </div>
+
+          {/* 필터 바 1행 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={datePreset} onValueChange={(v) => { setDatePreset(v); setDateFilter('preset') }}>
+              <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="기간" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">오늘</SelectItem>
+                <SelectItem value="thisWeek">이번 주</SelectItem>
+                <SelectItem value="thisMonth">이번 달</SelectItem>
+                <SelectItem value="lastMonth">지난 달</SelectItem>
+                <SelectItem value="last3Months">최근 3개월</SelectItem>
+                <SelectItem value="thisYear">올해</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1 min-w-[140px] sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="발주번호 / 거래처 검색..."
+                value={searchKeyword}
+                onChange={e => setSearchKeyword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && queryClient.invalidateQueries({ queryKey: ['sales-orders'] })}
+              />
+            </div>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}>
+              <Filter className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters}>
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* 고급 필터 (토글) */}
+          {showAdvancedFilter && (
+            <div className="flex flex-wrap items-end gap-2 rounded-lg border p-3 bg-muted/20">
+              <div className="space-y-1">
+                <Label className="text-xs">거래처</Label>
+                <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+                  <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="전체 거래처" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">전체</SelectItem>
+                    {partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">기간 유형</Label>
+                <Select value={dateFilter} onValueChange={(v: 'monthly' | 'daily' | 'preset') => setDateFilter(v)}>
+                  <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="preset">프리셋</SelectItem>
+                    <SelectItem value="monthly">월별</SelectItem>
+                    <SelectItem value="daily">일자별</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {dateFilter === 'monthly' && (
+                <div className="space-y-1">
+                  <Label className="text-xs">월</Label>
+                  <Input type="month" className="w-full sm:w-44" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+                </div>
+              )}
+              {dateFilter === 'daily' && (
+                <div className="space-y-1">
+                  <Label className="text-xs">일자</Label>
+                  <Input type="date" className="w-full sm:w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <TabsContent value="ONLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={dateFilter} onValueChange={(v: 'monthly' | 'daily') => setDateFilter(v)}>
-                <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">월별</SelectItem>
-                  <SelectItem value="daily">일자별</SelectItem>
-                </SelectContent>
-              </Select>
-              {dateFilter === 'monthly' ? (
-                <Input type="month" className="w-full sm:w-44" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
-              ) : (
-                <Input type="date" className="w-full sm:w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
-              )}
+            <div className="flex flex-wrap items-center gap-2">
               {createDialog}
               {trackingDialog}
             </div>
-            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[{ label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } }]} />
+            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
+              { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
+              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => { if (confirm(`선택한 ${rows.length}건을 취소하시겠습니까?`)) batchMutation.mutate({ ids: rows.map((r: any) => r.id), action: 'cancel' }) } },
+              { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
+            ]} />
           </div>
         </TabsContent>
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={dateFilter} onValueChange={(v: 'monthly' | 'daily') => setDateFilter(v)}>
-                <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">월별</SelectItem>
-                  <SelectItem value="daily">일자별</SelectItem>
-                </SelectContent>
-              </Select>
-              {dateFilter === 'monthly' ? (
-                <Input type="month" className="w-full sm:w-44" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
-              ) : (
-                <Input type="date" className="w-full sm:w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
-              )}
+            <div className="flex flex-wrap items-center gap-2">
               {createDialog}
             </div>
-            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[{ label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } }]} />
+            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
+              { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
+              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => { if (confirm(`선택한 ${rows.length}건을 취소하시겠습니까?`)) batchMutation.mutate({ ids: rows.map((r: any) => r.id), action: 'cancel' }) } },
+              { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
+            ]} />
           </div>
         </TabsContent>
       </Tabs>
@@ -615,6 +759,34 @@ export default function OrdersPage() {
             </div>
             <Button type="submit" className="w-full" disabled={completeMutation.isPending}>
               {completeMutation.isPending ? '처리 중...' : '완료 처리'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 일괄 완료 처리 Dialog */}
+      <Dialog open={batchCompleteOpen} onOpenChange={(v) => { if (!v) { setBatchCompleteOpen(false); setBatchCompleteIds([]) } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>일괄 완료 처리 ({batchCompleteIds.length}건)</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const form = new FormData(e.currentTarget)
+            const dispatchInfo = form.get('dispatchInfo') as string
+            const receivedBy = form.get('receivedBy') as string
+            if (!dispatchInfo || !receivedBy) { toast.error('배차정보와 담당자를 입력해주세요.'); return }
+            batchMutation.mutate({ ids: batchCompleteIds, action: 'complete', dispatchInfo, receivedBy })
+          }} className="space-y-4">
+            <p className="text-sm text-muted-foreground">선택한 {batchCompleteIds.length}건의 발주를 일괄 완료 처리합니다.</p>
+            <div className="space-y-2">
+              <Label>배차정보 *</Label>
+              <Input name="dispatchInfo" required placeholder="차량번호, 운송업체 등" />
+            </div>
+            <div className="space-y-2">
+              <Label>발주 담당자 *</Label>
+              <Input name="receivedBy" required placeholder="담당자 이름" />
+            </div>
+            <Button type="submit" className="w-full" disabled={batchMutation.isPending}>
+              {batchMutation.isPending ? '처리 중...' : `${batchCompleteIds.length}건 완료 처리`}
             </Button>
           </form>
         </DialogContent>
