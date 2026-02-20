@@ -90,6 +90,39 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // 자동으로 사용자 계정 생성
+    const bcrypt = await import('bcryptjs')
+    const defaultPassword = await bcrypt.default.hash('user1234', 10)
+    const username = validated.email
+      ? validated.email.split('@')[0]
+      : validated.employeeNo.toLowerCase().replace(/[^a-z0-9]/g, '')
+
+    try {
+      const existingUser = await prisma.user.findUnique({ where: { username } })
+      if (!existingUser) {
+        const newUser = await prisma.user.create({
+          data: {
+            username,
+            email: validated.email || `${username}@company.com`,
+            passwordHash: defaultPassword,
+            name: validated.nameKo,
+            isActive: true,
+            employeeId: employee.id,
+          },
+        })
+        // 일반사용자 역할 할당
+        const userRole = await prisma.role.findFirst({ where: { name: '일반사용자' } })
+        if (userRole) {
+          await prisma.userRole.create({
+            data: { userId: newUser.id, roleId: userRole.id },
+          })
+        }
+      }
+    } catch (userErr) {
+      // 사용자 생성 실패해도 사원 등록은 유지
+      console.error('Auto user creation failed:', userErr)
+    }
+
     return successResponse(employee)
   } catch (error) {
     return handleApiError(error)

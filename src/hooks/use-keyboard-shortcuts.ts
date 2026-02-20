@@ -23,7 +23,7 @@ export const SHORTCUT_LIST = [
   { keys: 'Alt+1', description: '회계 모듈' },
   { keys: 'Alt+2', description: '인사 모듈' },
   { keys: 'Alt+3', description: '재고 모듈' },
-  { keys: 'Alt+4', description: '판매 모듈' },
+  { keys: 'Alt+4', description: '매출 모듈' },
   { keys: 'Alt+5', description: '전자결재' },
   { keys: 'Escape', description: '다이얼로그/모달 닫기' },
   { keys: '?', description: '단축키 도움말 (Shift+/)' },

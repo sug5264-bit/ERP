@@ -15,16 +15,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
-import { generateTaxInvoicePDF, type TaxInvoicePDFData } from '@/lib/pdf-reports'
+import { generateTaxInvoicePDF, generateTransactionStatementPDF, type TaxInvoicePDFData, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload } from 'lucide-react'
+import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload, Pencil, Download, FileText } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   ORDERED: { label: '발주', variant: 'default' }, IN_PROGRESS: { label: '진행중', variant: 'secondary' },
   COMPLETED: { label: '완료', variant: 'outline' }, CANCELLED: { label: '취소', variant: 'destructive' },
+  COMPLAINT: { label: '컨플레인', variant: 'destructive' }, EXCHANGE: { label: '교환', variant: 'secondary' },
+  RETURN: { label: '반품', variant: 'destructive' },
 }
 
 interface Detail { itemId: string; quantity: number; unitPrice: number }
@@ -41,6 +43,9 @@ export default function OrdersPage() {
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [dateFilter, setDateFilter] = useState<'monthly' | 'daily'>('monthly')
+  const [filterMonth, setFilterMonth] = useState('')
+  const [filterDate, setFilterDate] = useState('')
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
@@ -58,10 +63,19 @@ export default function OrdersPage() {
       return
     }
     const orderDate = new Date(orderDetail.orderDate)
+    // 기본 회사 정보 조회
+    let companyInfo = { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '' }
+    try {
+      const compRes = await api.get('/admin/company') as any
+      const defaultCompany = (compRes?.data || []).find((c: any) => c.isDefault) || (compRes?.data || [])[0]
+      if (defaultCompany) {
+        companyInfo = { name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '', ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '', bizType: defaultCompany.bizType || '', bizItem: defaultCompany.bizCategory || '' }
+      }
+    } catch { /* use defaults */ }
     const pdfData: TaxInvoicePDFData = {
       invoiceNo: orderDetail.orderNo,
       invoiceDate: formatDate(orderDetail.orderDate),
-      supplier: { name: COMPANY_NAME, bizNo: '', ceo: '', address: '' },
+      supplier: companyInfo,
       buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '' },
       items: (orderDetail.details || []).map((d: any) => ({
         month: String(orderDate.getMonth() + 1), day: String(orderDate.getDate()),
@@ -75,9 +89,78 @@ export default function OrdersPage() {
     toast.success('세금계산서 PDF가 다운로드되었습니다.')
   }
 
+  // 거래명세표 PDF
+  const handleTransactionStatementPDF = async (order: any) => {
+    let orderDetail = order
+    try {
+      const res = await api.get(`/sales/orders/${order.id}`) as any
+      orderDetail = res.data || res
+    } catch {
+      toast.error('주문 상세 정보를 불러올 수 없습니다.')
+      return
+    }
+    // 기본 회사 정보 조회
+    let companyInfo = { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', tel: '' }
+    try {
+      const compRes = await api.get('/admin/company') as any
+      const defaultCompany = (compRes?.data || []).find((c: any) => c.isDefault) || (compRes?.data || [])[0]
+      if (defaultCompany) {
+        companyInfo = { name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '', ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '', tel: defaultCompany.phone || '' }
+      }
+    } catch { /* use defaults */ }
+    const pdfData: TransactionStatementPDFData = {
+      statementNo: orderDetail.orderNo,
+      statementDate: formatDate(orderDetail.orderDate),
+      supplier: companyInfo,
+      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '', tel: orderDetail.partner?.phone || '' },
+      items: (orderDetail.details || []).map((d: any, idx: number) => ({
+        no: idx + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
+        qty: Number(d.quantity), unitPrice: Number(d.unitPrice), amount: Number(d.supplyAmount), remark: d.remark || '',
+      })),
+      totalAmount: Number(orderDetail.totalAmount),
+    }
+    generateTransactionStatementPDF(pdfData)
+    toast.success('거래명세표 PDF가 다운로드되었습니다.')
+  }
+
+  // 발주 수정
+  const [editTarget, setEditTarget] = useState<any>(null)
+  const [editDetails, setEditDetails] = useState<Detail[]>([])
+  const editMutation = useMutation({
+    mutationFn: ({ id, ...body }: any) => api.put(`/sales/orders/${id}`, { action: 'update', ...body }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setEditTarget(null); toast.success('발주가 수정되었습니다.') },
+    onError: (err: Error) => toast.error(err.message),
+  })
+  const handleEdit = async (order: any) => {
+    try {
+      const res = await api.get(`/sales/orders/${order.id}`) as any
+      const detail = res.data || res
+      setEditTarget(detail)
+      setEditDetails((detail.details || []).map((d: any) => ({ itemId: d.itemId || d.item?.id, quantity: Number(d.quantity), unitPrice: Number(d.unitPrice) })))
+    } catch { toast.error('주문 상세를 불러올 수 없습니다.') }
+  }
+  const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editTarget) return
+    const form = new FormData(e.currentTarget)
+    editMutation.mutate({
+      id: editTarget.id,
+      orderDate: form.get('orderDate'),
+      partnerId: form.get('partnerId'),
+      deliveryDate: form.get('deliveryDate') || undefined,
+      description: form.get('description') || undefined,
+      dispatchInfo: form.get('dispatchInfo') || undefined,
+      receivedBy: form.get('receivedBy') || undefined,
+      details: editDetails.filter(d => d.itemId),
+    })
+  }
+
+  // 완료 처리 (배차정보/담당자 필요)
+  const [completeTarget, setCompleteTarget] = useState<any>(null)
   const completeMutation = useMutation({
-    mutationFn: (id: string) => api.put(`/sales/orders/${id}`, { action: 'complete' }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('발주가 완료 처리되었습니다.') },
+    mutationFn: ({ id, dispatchInfo, receivedBy }: { id: string; dispatchInfo: string; receivedBy: string }) =>
+      api.put(`/sales/orders/${id}`, { action: 'complete', dispatchInfo, receivedBy }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setCompleteTarget(null); toast.success('발주가 완료 처리되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -114,7 +197,7 @@ export default function OrdersPage() {
     { id: 'orderDate', header: '발주일', cell: ({ row }) => formatDate(row.original.orderDate) },
     { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
     { id: 'deliveryDate', header: '납기일', cell: ({ row }) => row.original.deliveryDate ? formatDate(row.original.deliveryDate) : '-' },
-    { id: 'totalAmount', header: '합계', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
+    { id: 'totalAmount', header: '합계(부가세 포함)', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
     { id: 'status', header: '상태', cell: ({ row }) => { const s = STATUS_MAP[row.original.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status } },
     {
       id: 'actions',
@@ -135,8 +218,18 @@ export default function OrdersPage() {
                 <FileDown className="mr-2 h-4 w-4" />
                 세금계산서 PDF
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleTransactionStatementPDF(row.original)}>
+                <FileText className="mr-2 h-4 w-4" />
+                거래명세표 PDF
+              </DropdownMenuItem>
               {canComplete && (
-                <DropdownMenuItem onClick={() => completeMutation.mutate(row.original.id)} disabled={completeMutation.isPending}>
+                <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  수정
+                </DropdownMenuItem>
+              )}
+              {canComplete && (
+                <DropdownMenuItem onClick={() => setCompleteTarget(row.original)}>
                   <CheckCircle className="mr-2 h-4 w-4" />
                   완료 처리
                 </DropdownMenuItem>
@@ -161,9 +254,11 @@ export default function OrdersPage() {
   const qpOnline = new URLSearchParams({ pageSize: '50', salesChannel: 'ONLINE' })
   const qpOffline = new URLSearchParams({ pageSize: '50', salesChannel: 'OFFLINE' })
   if (statusFilter && statusFilter !== 'all') { qpOnline.set('status', statusFilter); qpOffline.set('status', statusFilter) }
+  if (filterMonth && dateFilter === 'monthly') { qpOnline.set('startDate', `${filterMonth}-01`); qpOnline.set('endDate', `${filterMonth}-31`); qpOffline.set('startDate', `${filterMonth}-01`); qpOffline.set('endDate', `${filterMonth}-31`) }
+  if (filterDate && dateFilter === 'daily') { qpOnline.set('startDate', filterDate); qpOnline.set('endDate', filterDate); qpOffline.set('startDate', filterDate); qpOffline.set('endDate', filterDate) }
 
-  const { data: onlineData, isLoading: onlineLoading } = useQuery({ queryKey: ['sales-orders', 'ONLINE', statusFilter], queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any> })
-  const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
+  const { data: onlineData, isLoading: onlineLoading } = useQuery({ queryKey: ['sales-orders', 'ONLINE', statusFilter, filterMonth, filterDate, dateFilter], queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any> })
+  const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter, filterMonth, filterDate, dateFilter], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
   const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
   const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
@@ -183,7 +278,7 @@ export default function OrdersPage() {
     { header: '발주일', accessor: (r) => r.orderDate ? formatDate(r.orderDate) : '' },
     { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
     { header: '납기일', accessor: (r) => r.deliveryDate ? formatDate(r.deliveryDate) : '' },
-    { header: '합계', accessor: (r) => r.totalAmount ? formatCurrency(r.totalAmount) : '' },
+    { header: '합계(부가세 포함)', accessor: (r) => r.totalAmount ? formatCurrency(r.totalAmount) : '' },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
   ]
 
@@ -262,6 +357,16 @@ export default function OrdersPage() {
             </div>
           )}
           <div className="space-y-2"><Label>비고</Label><Input name="description" /></div>
+          <div className="space-y-2">
+            <Label>부가세</Label>
+            <Select name="vatIncluded" defaultValue="true">
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">부가세 포함</SelectItem>
+                <SelectItem value="false">부가세 미포함</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between"><Label>품목</Label>
               <Button type="button" variant="outline" size="sm" onClick={() => setDetails([...details, { itemId: '', quantity: 1, unitPrice: 0 }])}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
@@ -375,10 +480,22 @@ export default function OrdersPage() {
                   {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Select value={dateFilter} onValueChange={(v: 'monthly' | 'daily') => setDateFilter(v)}>
+                <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">월별</SelectItem>
+                  <SelectItem value="daily">일자별</SelectItem>
+                </SelectContent>
+              </Select>
+              {dateFilter === 'monthly' ? (
+                <Input type="month" className="w-full sm:w-44" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+              ) : (
+                <Input type="date" className="w-full sm:w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+              )}
               {createDialog}
               {trackingDialog}
             </div>
-            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[{ label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } }]} />
           </div>
         </TabsContent>
 
@@ -392,9 +509,21 @@ export default function OrdersPage() {
                   {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <Select value={dateFilter} onValueChange={(v: 'monthly' | 'daily') => setDateFilter(v)}>
+                <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">월별</SelectItem>
+                  <SelectItem value="daily">일자별</SelectItem>
+                </SelectContent>
+              </Select>
+              {dateFilter === 'monthly' ? (
+                <Input type="month" className="w-full sm:w-44" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+              ) : (
+                <Input type="date" className="w-full sm:w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+              )}
               {createDialog}
             </div>
-            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[{ label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } }]} />
           </div>
         </TabsContent>
       </Tabs>
@@ -408,6 +537,88 @@ export default function OrdersPage() {
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         isPending={deleteMutation.isPending}
       />
+
+      {/* 발주 수정 Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>발주 수정 - {editTarget?.orderNo}</DialogTitle></DialogHeader>
+          {editTarget && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2"><Label>발주일 *</Label><Input name="orderDate" type="date" required defaultValue={editTarget.orderDate?.split('T')[0]} /></div>
+                <div className="space-y-2">
+                  <Label>거래처 *</Label>
+                  <Select name="partnerId" defaultValue={editTarget.partnerId}>
+                    <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+                    <SelectContent>{partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>납기일</Label><Input name="deliveryDate" type="date" defaultValue={editTarget.deliveryDate?.split('T')[0] || ''} /></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>배차정보</Label><Input name="dispatchInfo" defaultValue={editTarget.dispatchInfo || ''} placeholder="차량번호, 운송업체 등" /></div>
+                <div className="space-y-2"><Label>발주 담당자</Label><Input name="receivedBy" defaultValue={editTarget.receivedBy || ''} placeholder="담당자 이름" /></div>
+              </div>
+              <div className="space-y-2"><Label>비고</Label><Input name="description" defaultValue={editTarget.description || ''} /></div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between"><Label>품목</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={() => setEditDetails([...editDetails, { itemId: '', quantity: 1, unitPrice: 0 }])}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
+                </div>
+                <div className="space-y-3">
+                  {editDetails.map((d, idx) => {
+                    const supply = d.quantity * d.unitPrice
+                    return (
+                      <div key={idx} className="rounded-md border p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))} disabled={editDetails.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                        </div>
+                        <Select value={d.itemId} onValueChange={v => { const nd = [...editDetails]; nd[idx].itemId = v; setEditDetails(nd) }}>
+                          <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                          <SelectContent className="max-w-[calc(100vw-4rem)]">{items.map((it: any) => <SelectItem key={it.id} value={it.id}><span className="truncate">{it.itemCode} - {it.itemName}</span></SelectItem>)}</SelectContent>
+                        </Select>
+                        <div className="grid grid-cols-3 gap-2 min-w-0">
+                          <div className="space-y-1"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => { const nd = [...editDetails]; nd[idx].quantity = parseFloat(e.target.value) || 0; setEditDetails(nd) }} /></div>
+                          <div className="space-y-1"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => { const nd = [...editDetails]; nd[idx].unitPrice = parseFloat(e.target.value) || 0; setEditDetails(nd) }} /></div>
+                          <div className="space-y-1"><Label className="text-[11px]">합계(부가세 포함)</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + Math.round(supply * 0.1))}</div></div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={editMutation.isPending}>{editMutation.isPending ? '수정 중...' : '발주 수정'}</Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 완료 처리 Dialog (배차정보/담당자 입력) */}
+      <Dialog open={!!completeTarget} onOpenChange={(v) => !v && setCompleteTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>발주 완료 처리 - {completeTarget?.orderNo}</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            const form = new FormData(e.currentTarget)
+            const dispatchInfo = form.get('dispatchInfo') as string
+            const receivedBy = form.get('receivedBy') as string
+            if (!dispatchInfo || !receivedBy) { toast.error('배차정보와 담당자를 입력해주세요.'); return }
+            completeMutation.mutate({ id: completeTarget.id, dispatchInfo, receivedBy })
+          }} className="space-y-4">
+            <div className="space-y-2">
+              <Label>배차정보 *</Label>
+              <Input name="dispatchInfo" required placeholder="차량번호, 운송업체 등" defaultValue={completeTarget?.dispatchInfo || ''} />
+            </div>
+            <div className="space-y-2">
+              <Label>발주 담당자 *</Label>
+              <Input name="receivedBy" required placeholder="담당자 이름" defaultValue={completeTarget?.receivedBy || ''} />
+            </div>
+            <Button type="submit" className="w-full" disabled={completeMutation.isPending}>
+              {completeMutation.isPending ? '처리 중...' : '완료 처리'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
