@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -28,6 +29,48 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.action === 'cancel') {
       const q = await prisma.quotation.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(q)
+    }
+    if (body.action === 'convert') {
+      const quotation = await prisma.quotation.findUnique({
+        where: { id }, include: { details: { include: { item: { select: { id: true, taxType: true } } } } },
+      })
+      if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (quotation.status === 'ORDERED') return errorResponse('이미 발주 전환된 견적입니다.', 'ALREADY_ORDERED')
+      if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 전환할 수 없습니다.', 'INVALID_STATUS')
+
+      const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
+      if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+      const orderNo = await generateDocumentNumber('SO', new Date())
+      const details = quotation.details.map((d, idx) => {
+        const supplyAmount = Number(d.supplyAmount)
+        const taxType = d.item?.taxType || 'TAXABLE'
+        const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+        return {
+          lineNo: idx + 1, itemId: d.itemId,
+          quantity: Number(d.quantity), unitPrice: Number(d.unitPrice),
+          supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount,
+          deliveredQty: 0, remainingQty: Number(d.quantity),
+        }
+      })
+      const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
+      const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
+
+      const result = await prisma.$transaction(async (tx) => {
+        const order = await tx.salesOrder.create({
+          data: {
+            orderNo, orderDate: new Date(), partnerId: quotation.partnerId,
+            quotationId: id, employeeId: employee.id,
+            totalSupply, totalTax, totalAmount: totalSupply + totalTax,
+            description: quotation.description,
+            details: { create: details },
+          },
+          include: { partner: true },
+        })
+        await tx.quotation.update({ where: { id }, data: { status: 'ORDERED' } })
+        return order
+      })
+      return successResponse(result)
     }
     return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
   } catch (error) { return handleApiError(error) }

@@ -79,7 +79,7 @@ export default function OrdersPage() {
       buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '' },
       items: (orderDetail.details || []).map((d: any) => ({
         month: String(orderDate.getMonth() + 1), day: String(orderDate.getDate()),
-        itemName: d.item?.itemName || '', spec: d.item?.spec || '',
+        itemName: d.item?.itemName || '', spec: d.item?.specification || '',
         qty: Number(d.quantity), unitPrice: Number(d.unitPrice),
         supplyAmount: Number(d.supplyAmount), taxAmount: Number(d.taxAmount),
       })),
