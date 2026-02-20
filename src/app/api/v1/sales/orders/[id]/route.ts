@@ -64,10 +64,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (body.receivedBy !== undefined) updateData.receivedBy = body.receivedBy
 
       if (body.details && Array.isArray(body.details)) {
+        // 기존 납품 수량 보존을 위해 맵 생성
+        const existingDelivered = new Map(
+          order.details.map((d: any) => [d.itemId, Number(d.deliveredQty ?? 0)])
+        )
         const details = body.details.map((d: any, idx: number) => {
           const supplyAmount = d.quantity * d.unitPrice
           const taxAmount = Math.round(supplyAmount * 0.1)
-          return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty: 0, remainingQty: d.quantity, remark: d.remark || null }
+          const deliveredQty = existingDelivered.get(d.itemId) || 0
+          const remainingQty = Math.max(0, d.quantity - deliveredQty)
+          return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty, remainingQty, remark: d.remark || null }
         })
         const totalSupply = details.reduce((s: number, d: any) => s + d.supplyAmount, 0)
         const totalTax = details.reduce((s: number, d: any) => s + d.taxAmount, 0)
