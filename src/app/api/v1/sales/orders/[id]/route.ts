@@ -68,9 +68,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const existingDelivered = new Map(
           order.details.map((d: any) => [d.itemId, Number(d.deliveredQty ?? 0)])
         )
+        // 품목 세금유형 조회
+        const orderItemIds = body.details.map((d: any) => d.itemId)
+        const itemsInfo = await prisma.item.findMany({
+          where: { id: { in: orderItemIds } },
+          select: { id: true, taxType: true },
+        })
+        const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
         const details = body.details.map((d: any, idx: number) => {
           const supplyAmount = d.quantity * d.unitPrice
-          const taxAmount = Math.round(supplyAmount * 0.1)
+          const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
+          const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
           const deliveredQty = existingDelivered.get(d.itemId) || 0
           const remainingQty = Math.max(0, d.quantity - deliveredQty)
           return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty, remainingQty, remark: d.remark || null }

@@ -42,7 +42,7 @@ export default function DeliveriesPage() {
       supplier: { name: COMPANY_NAME },
       buyer: { name: delivery.partner?.partnerName || '' },
       items: details.map((d: any, i: number) => ({
-        no: i + 1, itemName: d.item?.itemName || '', spec: d.item?.spec || '',
+        no: i + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
         qty: Number(d.quantity), unitPrice: Number(d.unitPrice), amount: Number(d.amount),
       })),
       totalAmount,

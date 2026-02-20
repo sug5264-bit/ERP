@@ -17,7 +17,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generateQuotationPDF, type QuotationPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, FileDown } from 'lucide-react'
+import { Plus, Trash2, FileDown, ArrowRightLeft } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -42,7 +42,7 @@ export default function QuotationsPage() {
       company: { name: COMPANY_NAME },
       partner: { name: q.partner?.partnerName || '' },
       items: (q.details || []).map((d: any, i: number) => ({
-        no: i + 1, itemName: d.item?.itemName || '', spec: d.item?.spec || '',
+        no: i + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
         qty: Number(d.quantity), unitPrice: Number(d.unitPrice),
         supplyAmount: Number(d.supplyAmount), taxAmount: Number(d.taxAmount), totalAmount: Number(d.totalAmount),
       })),
@@ -57,7 +57,7 @@ export default function QuotationsPage() {
     { accessorKey: 'quotationNo', header: '견적번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.quotationNo}</span> },
     { id: 'quotationDate', header: '견적일', cell: ({ row }) => formatDate(row.original.quotationDate) },
     { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
-    { id: 'employee', header: '담당자', cell: ({ row }) => row.original.employee?.name || '-' },
+    { id: 'employee', header: '담당자', cell: ({ row }) => row.original.employee?.nameKo || '-' },
     { id: 'totalSupply', header: '공급가액', cell: ({ row }) => formatCurrency(row.original.totalSupply) },
     { id: 'totalTax', header: '세액', cell: ({ row }) => formatCurrency(row.original.totalTax) },
     { id: 'totalAmount', header: '합계', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
@@ -67,11 +67,22 @@ export default function QuotationsPage() {
         <FileDown className="h-4 w-4" />
       </Button>
     )},
-    { id: 'delete', header: '', cell: ({ row }) => (
-      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.quotationNo)}>
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    ), size: 50 },
+    { id: 'actions', header: '', cell: ({ row }) => {
+      const q = row.original
+      const canConvert = q.status === 'DRAFT' || q.status === 'SUBMITTED'
+      return (
+        <div className="flex gap-1">
+          {canConvert && (
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => convertMutation.mutate(q.id)} title="수주 전환">
+              <ArrowRightLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(q.id, q.quotationNo)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    }, size: 100 },
   ]
 
   const qp = new URLSearchParams({ pageSize: '50' })
@@ -93,6 +104,16 @@ export default function QuotationsPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const convertMutation = useMutation({
+    mutationFn: (id: string) => api.put(`/sales/quotations/${id}`, { action: 'convert' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-quotations'] })
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      toast.success('수주로 전환되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const handleDelete = (id: string, no: string) => {
     setDeleteTarget({ id, name: no })
   }
@@ -105,7 +126,7 @@ export default function QuotationsPage() {
     { header: '견적번호', accessor: 'quotationNo' },
     { header: '견적일', accessor: (r) => r.quotationDate ? formatDate(r.quotationDate) : '' },
     { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
-    { header: '담당자', accessor: (r) => r.employee?.name || '' },
+    { header: '담당자', accessor: (r) => r.employee?.nameKo || '' },
     { header: '공급가액', accessor: (r) => formatCurrency(r.totalSupply) },
     { header: '세액', accessor: (r) => formatCurrency(r.totalTax) },
     { header: '합계', accessor: (r) => formatCurrency(r.totalAmount) },
