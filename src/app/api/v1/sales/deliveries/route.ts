@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
     const salesOrder = await prisma.salesOrder.findUnique({ where: { id: data.salesOrderId }, select: { id: true, partnerId: true } })
     if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
+    const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
     const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate))
+    const movementNo = await generateDocumentNumber('SM', new Date(data.deliveryDate))
 
     const result = await prisma.$transaction(async (tx) => {
       const delivery = await tx.delivery.create({
@@ -59,13 +61,54 @@ export async function POST(request: NextRequest) {
         include: { details: { include: { item: true } }, partner: true, salesOrder: true },
       })
 
-      // 수주 상세 업데이트 병렬 실행
+      // 수주 상세 업데이트 (납품수량 증가, 잔량 감소)
       await Promise.all(data.details.map((d) =>
         tx.salesOrderDetail.updateMany({
           where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
           data: { deliveredQty: { increment: d.quantity }, remainingQty: { decrement: d.quantity } },
         })
       ))
+
+      // 재고이동 자동 생성 (출고)
+      await tx.stockMovement.create({
+        data: {
+          movementNo, movementDate: new Date(data.deliveryDate),
+          movementType: 'OUTBOUND',
+          relatedDocType: 'DELIVERY', relatedDocId: delivery.id,
+          createdBy: employee?.id || session.user!.id!,
+          details: {
+            create: data.details.map((d) => ({
+              itemId: d.itemId, quantity: d.quantity,
+              unitPrice: d.unitPrice, amount: d.quantity * d.unitPrice,
+            })),
+          },
+        },
+      })
+
+      // 재고 잔량 차감
+      for (const d of data.details) {
+        await tx.stockBalance.updateMany({
+          where: { itemId: d.itemId },
+          data: { quantity: { decrement: d.quantity } },
+        })
+      }
+
+      // 수주 전체 납품 완료 시 상태 자동 변경
+      const remainingDetails = await tx.salesOrderDetail.findMany({
+        where: { salesOrderId: data.salesOrderId, remainingQty: { gt: 0 } },
+      })
+      if (remainingDetails.length === 0) {
+        await tx.salesOrder.update({
+          where: { id: data.salesOrderId },
+          data: { status: 'COMPLETED' },
+        })
+      } else {
+        await tx.salesOrder.update({
+          where: { id: data.salesOrderId },
+          data: { status: 'IN_PROGRESS' },
+        })
+      }
+
       return delivery
     })
     return successResponse(result)

@@ -8,11 +8,11 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
-    "db:generate": "npx prisma generate",
-    "db:migrate": "npx prisma migrate dev",
-    "db:push": "npx prisma db push",
-    "db:seed": "npx tsx prisma/seed.ts",
-    "db:studio": "npx prisma studio"
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
