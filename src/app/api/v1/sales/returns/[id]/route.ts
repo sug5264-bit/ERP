@@ -19,7 +19,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id },
       data: {
         status: body.status,
-        ...(body.status === 'COMPLETED' || body.status === 'APPROVED' ? { processedAt: new Date() } : {}),
+        ...(body.status === 'COMPLETED' || body.status === 'APPROVED'
+          ? { processedAt: new Date(), processedBy: session.user?.id || null }
+          : {}),
       },
     })
 

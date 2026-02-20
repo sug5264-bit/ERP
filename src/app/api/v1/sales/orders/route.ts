@@ -106,6 +106,7 @@ export async function POST(request: NextRequest) {
           salesChannel: data.salesChannel || 'OFFLINE',
           totalSupply, totalTax, totalAmount: totalSupply + totalTax,
           employeeId: employee.id, description: data.description || null,
+          vatIncluded: data.vatIncluded ?? true,
           details: { create: details },
         },
         include: { partner: true, details: { include: { item: true } } },
