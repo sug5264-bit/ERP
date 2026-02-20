@@ -24,6 +24,7 @@ export const createSalesOrderSchema = z.object({
   deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional().nullable().or(z.literal('')),
   salesChannel: z.enum(['ONLINE', 'OFFLINE']).optional().default('OFFLINE'),
   description: z.string().max(1000).optional().nullable(),
+  vatIncluded: z.boolean().optional().default(true),
   details: z.array(lineDetailSchema).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
 })
 

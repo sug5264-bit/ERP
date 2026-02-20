@@ -949,6 +949,8 @@ model SalesOrder {
   employeeId    String
   description   String?
   vatIncluded   Boolean          @default(true)
+  dispatchInfo  String?
+  receivedBy    String?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

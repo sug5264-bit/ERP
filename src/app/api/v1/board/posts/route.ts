@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const where: any = { isActive: true }
     const boardId = sp.get('boardId')
     if (boardId) where.boardId = boardId
+    const boardCode = sp.get('boardCode')
+    if (boardCode) where.board = { boardCode }
     const search = sp.get('search')
     if (search) {
       where.OR = [
