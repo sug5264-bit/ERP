@@ -6,6 +6,7 @@ import {
   handleApiError,
   getSession,
 } from '@/lib/api-helpers'
+import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(req: NextRequest) {
   try {
@@ -91,6 +92,93 @@ export async function GET(req: NextRequest) {
     }))
 
     return successResponse(result)
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getSession()
+    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+
+    const body = await req.json()
+    const { partnerId, amount, nettingDate, description } = body
+
+    if (!partnerId || !amount || !nettingDate) {
+      return errorResponse('거래처, 금액, 상계일을 입력하세요.', 'VALIDATION_ERROR')
+    }
+
+    // 상계 전표 생성
+    const voucherNo = await generateDocumentNumber('VOU', new Date(nettingDate))
+
+    const voucherDate = new Date(nettingDate)
+    const fiscalYear = await prisma.fiscalYear.findFirst({
+      where: {
+        startDate: { lte: voucherDate },
+        endDate: { gte: voucherDate },
+        isClosed: false,
+      },
+    })
+    if (!fiscalYear) {
+      return errorResponse('해당 일자의 활성 회계연도가 없습니다.', 'NO_FISCAL_YEAR')
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { employeeId: true },
+    })
+    if (!user?.employeeId) {
+      return errorResponse('사원 정보가 연결되어 있지 않습니다.', 'NO_EMPLOYEE')
+    }
+
+    // 매출채권(1100)과 매입채무(2100) 계정과목 조회
+    const [accReceivable, accPayable] = await Promise.all([
+      prisma.accountSubject.findUnique({ where: { code: '1100' } }),
+      prisma.accountSubject.findUnique({ where: { code: '2100' } }),
+    ])
+    if (!accReceivable || !accPayable) {
+      return errorResponse('계정과목을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    }
+
+    const parsedAmount = parseFloat(amount)
+    const voucher = await prisma.voucher.create({
+      data: {
+        voucherNo,
+        voucherDate,
+        voucherType: 'TRANSFER',
+        description: description || '상계 처리',
+        totalDebit: parsedAmount,
+        totalCredit: parsedAmount,
+        fiscalYearId: fiscalYear.id,
+        createdById: user.employeeId,
+        details: {
+          create: [
+            {
+              lineNo: 1,
+              accountSubjectId: accPayable.id,
+              debitAmount: parsedAmount,
+              creditAmount: 0,
+              partnerId,
+              description: '매입채무 상계',
+            },
+            {
+              lineNo: 2,
+              accountSubjectId: accReceivable.id,
+              debitAmount: 0,
+              creditAmount: parsedAmount,
+              partnerId,
+              description: '매출채권 상계',
+            },
+          ],
+        },
+      },
+      include: {
+        details: { include: { accountSubject: true, partner: true } },
+      },
+    })
+
+    return successResponse(voucher)
   } catch (error) {
     return handleApiError(error)
   }

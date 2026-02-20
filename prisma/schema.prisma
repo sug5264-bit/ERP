@@ -161,6 +161,30 @@ model DocumentSequence {
   @@map("document_sequences")
 }
 
+model Company {
+  id              String   @id @default(cuid())
+  companyName     String
+  bizNo           String?  @unique
+  ceoName         String?
+  bizType         String?
+  bizCategory     String?
+  address         String?
+  phone           String?
+  fax             String?
+  email           String?
+  bankName        String?
+  bankAccount     String?
+  bankHolder      String?
+  bankCopyPath    String?
+  bizCertPath     String?
+  logoPath        String?
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("companies")
+}
+
 // ============================================================
 // 인사 (HR)
 // ============================================================
@@ -696,6 +720,7 @@ model Item {
   purchaseRequestDetails PurchaseRequestDetail[]
   purchaseOrderDetails   PurchaseOrderDetail[]
   receivingDetails       ReceivingDetail[]
+  salesReturnDetails     SalesReturnDetail[]
 
   @@index([itemName])
   @@index([isActive, itemType])
@@ -836,6 +861,7 @@ model Partner {
   voucherDetails   VoucherDetail[]
   taxInvoices      TaxInvoice[]
   purchasePayments PurchasePayment[]
+  salesReturns     SalesReturn[]
 
   @@index([partnerName])
   @@index([bizNo])
@@ -922,6 +948,7 @@ model SalesOrder {
   status        SalesOrderStatus @default(ORDERED)
   employeeId    String
   description   String?
+  vatIncluded   Boolean          @default(true)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -930,6 +957,7 @@ model SalesOrder {
   employee   Employee           @relation(fields: [employeeId], references: [id])
   details    SalesOrderDetail[]
   deliveries Delivery[]
+  salesReturns SalesReturn[]
 
   @@index([orderDate])
   @@index([status])
@@ -1000,6 +1028,54 @@ model DeliveryDetail {
   @@map("delivery_details")
 }
 
+enum ReturnReason {
+  DEFECT
+  WRONG_ITEM
+  CUSTOMER_CHANGE
+  QUALITY_ISSUE
+  OTHER
+}
+
+model SalesReturn {
+  id            String       @id @default(cuid())
+  returnNo      String       @unique
+  returnDate    DateTime     @db.Date
+  salesOrderId  String
+  partnerId     String
+  reason        ReturnReason @default(OTHER)
+  reasonDetail  String?
+  status        String       @default("REQUESTED")
+  totalAmount   Decimal      @default(0) @db.Decimal(15, 2)
+  processedBy   String?
+  processedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  salesOrder    SalesOrder   @relation(fields: [salesOrderId], references: [id])
+  partner       Partner      @relation(fields: [partnerId], references: [id])
+  details       SalesReturnDetail[]
+
+  @@index([returnDate])
+  @@index([status])
+  @@map("sales_returns")
+}
+
+model SalesReturnDetail {
+  id              String  @id @default(cuid())
+  salesReturnId   String
+  itemId          String
+  quantity        Decimal @db.Decimal(15, 2)
+  unitPrice       Decimal @db.Decimal(15, 2)
+  amount          Decimal @db.Decimal(15, 2)
+  remark          String?
+
+  salesReturn     SalesReturn @relation(fields: [salesReturnId], references: [id], onDelete: Cascade)
+  item            Item        @relation(fields: [itemId], references: [id])
+
+  @@index([salesReturnId])
+  @@map("sales_return_details")
+}
+
 // ============================================================
 // 구매 (Procurement)
 // ============================================================
@@ -1049,6 +1125,9 @@ model PurchaseOrder {
   status            String    @default("ORDERED")
   employeeId        String
   description       String?
+  dispatchInfo      String?
+  receivedBy        String?
+  vatIncluded       Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

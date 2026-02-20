@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
 import { DataTable } from '@/components/common/data-table'
 import { PageHeader } from '@/components/common/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -21,8 +23,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { formatCurrency, formatDate } from '@/lib/format'
+import { toast } from 'sonner'
 
 interface NettingDetail {
   voucherNo: string
@@ -48,15 +52,51 @@ const currentYear = new Date().getFullYear()
 const currentMonth = new Date().getMonth() + 1
 
 export default function NettingPage() {
+  const queryClient = useQueryClient()
   const [year, setYear] = useState(currentYear.toString())
   const [month, setMonth] = useState(currentMonth.toString())
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedPartner, setSelectedPartner] = useState<NettingRow | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [formPartnerId, setFormPartnerId] = useState('')
+  const [formAmount, setFormAmount] = useState('')
+  const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  const [formDescription, setFormDescription] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['closing-netting', year, month],
     queryFn: () => api.get(`/closing/netting?year=${year}&month=${month}`) as Promise<any>,
   })
+
+  const { data: partnersData } = useQuery({
+    queryKey: ['partners-all'],
+    queryFn: () => api.get('/partners?pageSize=200') as Promise<any>,
+  })
+  const partners = (partnersData?.data || [])
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/closing/netting', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['closing-netting'] })
+      setCreateOpen(false)
+      setFormPartnerId(''); setFormAmount(''); setFormDescription('')
+      toast.success('상계 내역이 등록되었습니다.')
+    },
+    onError: (err: any) => toast.error(err?.message || '등록에 실패했습니다.'),
+  })
+
+  const handleCreateNetting = () => {
+    if (!formPartnerId || !formAmount || !formDate) {
+      toast.error('거래처, 금액, 상계일을 입력하세요.')
+      return
+    }
+    createMutation.mutate({
+      partnerId: formPartnerId,
+      amount: formAmount,
+      nettingDate: formDate,
+      description: formDescription,
+    })
+  }
 
   const rows: NettingRow[] = data?.data || []
 
@@ -170,6 +210,7 @@ export default function NettingPage() {
             </SelectContent>
           </Select>
         </div>
+        <Button onClick={() => setCreateOpen(true)}>상계 등록</Button>
       </div>
 
       {/* 요약 카드 */}
@@ -197,6 +238,46 @@ export default function NettingPage() {
         searchPlaceholder="거래처명으로 검색..."
         isLoading={isLoading}
       />
+
+      {/* 상계 등록 Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>상계 등록</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>거래처 *</Label>
+              <Select value={formPartnerId} onValueChange={setFormPartnerId}>
+                <SelectTrigger><SelectValue placeholder="거래처 선택" /></SelectTrigger>
+                <SelectContent>
+                  {partners.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>상계금액 *</Label>
+              <Input type="number" placeholder="0" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>상계일 *</Label>
+              <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>적요</Label>
+              <Textarea placeholder="상계 사유를 입력하세요" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button onClick={handleCreateNetting} disabled={createMutation.isPending}>
+              {createMutation.isPending ? '등록 중...' : '상계 등록'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 상세 Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

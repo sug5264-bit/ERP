@@ -8,13 +8,17 @@ export const createVoucherSchema = z.object({
   details: z
     .array(
       z.object({
-        accountSubjectId: z.string().min(1, '계정과목을 선택하세요'),
+        accountSubjectId: z.string().min(1, '계정과목을 선택하세요').optional(),
+        accountCode: z.string().optional(),
         debitAmount: z.number().min(0).default(0),
         creditAmount: z.number().min(0).default(0),
         partnerId: z.string().optional(),
         description: z.string().optional(),
         costCenterId: z.string().optional(),
-      })
+      }).refine(
+        (d) => d.accountSubjectId || d.accountCode,
+        { message: '계정과목 ID 또는 코드를 입력하세요' }
+      )
     )
     .min(1, '분개 항목을 하나 이상 입력하세요'),
 })

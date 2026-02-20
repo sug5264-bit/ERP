@@ -15,6 +15,13 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status
     const salesChannel = sp.get('salesChannel')
     if (salesChannel) where.salesChannel = salesChannel
+    const startDate = sp.get('startDate')
+    const endDate = sp.get('endDate')
+    if (startDate || endDate) {
+      where.orderDate = {}
+      if (startDate) where.orderDate.gte = new Date(startDate)
+      if (endDate) where.orderDate.lte = new Date(endDate)
+    }
     const [items, totalCount] = await Promise.all([
       prisma.salesOrder.findMany({
         where,

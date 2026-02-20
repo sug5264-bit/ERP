@@ -232,7 +232,7 @@ export default function PartnersPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>판매채널</Label>
+                  <Label>매출채널</Label>
                   <Select name="salesChannel" defaultValue="OFFLINE">
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -306,7 +306,7 @@ export default function PartnersPage() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>판매채널</Label>
+                  <Label>매출채널</Label>
                   <Select name="salesChannel" defaultValue={editTarget.salesChannel}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>

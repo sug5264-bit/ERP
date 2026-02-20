@@ -68,9 +68,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createVoucherSchema.parse(body)
 
+    // Resolve accountCode to accountSubjectId if needed
+    const resolvedDetails = await Promise.all(
+      data.details.map(async (d) => {
+        let accountSubjectId = d.accountSubjectId
+        if (!accountSubjectId && (d as any).accountCode) {
+          const acc = await prisma.accountSubject.findUnique({ where: { code: (d as any).accountCode } })
+          if (!acc) throw new Error(`계정과목 코드 ${(d as any).accountCode}를 찾을 수 없습니다.`)
+          accountSubjectId = acc.id
+        }
+        return { ...d, accountSubjectId: accountSubjectId! }
+      })
+    )
+
     // 차/대변 합계 검증
-    const totalDebit = data.details.reduce((sum, d) => sum + d.debitAmount, 0)
-    const totalCredit = data.details.reduce((sum, d) => sum + d.creditAmount, 0)
+    const totalDebit = resolvedDetails.reduce((sum, d) => sum + d.debitAmount, 0)
+    const totalCredit = resolvedDetails.reduce((sum, d) => sum + d.creditAmount, 0)
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
       return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
     }
@@ -110,7 +123,7 @@ export async function POST(request: NextRequest) {
         fiscalYearId: fiscalYear.id,
         createdById: user.employeeId,
         details: {
-          create: data.details.map((d, idx) => ({
+          create: resolvedDetails.map((d, idx) => ({
             lineNo: idx + 1,
             accountSubjectId: d.accountSubjectId,
             debitAmount: d.debitAmount,

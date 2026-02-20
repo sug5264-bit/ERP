@@ -89,6 +89,31 @@ const HEADER_FILL: [number, number, number] = [68, 114, 196]
 const HEADER_TEXT: [number, number, number] = [255, 255, 255]
 const LIGHT_GRAY: [number, number, number] = [240, 240, 240]
 
+// 한글 폰트 로드 헬퍼
+async function loadKoreanFont(doc: InstanceType<typeof import('jspdf').default>): Promise<string> {
+  let fontName = 'helvetica'
+  try {
+    const fontUrl = 'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf'
+    const response = await fetch(fontUrl)
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+      doc.addFileToVFS('malgun.ttf', base64)
+      doc.addFont('malgun.ttf', 'malgun', 'normal')
+      doc.setFont('malgun')
+      fontName = 'malgun'
+    }
+  } catch {
+    // Use default font
+  }
+  return fontName
+}
+
 // ---------------------------------------------------------------------------
 // 1. 견적서 (Quotation)
 // ---------------------------------------------------------------------------
@@ -101,6 +126,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const fontName = await loadKoreanFont(doc)
 
   let y = 15
 
@@ -135,7 +161,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
     head: [['', '공급자 (공급하는 자)', '', '공급받는자']],
     body: companyRows,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -159,7 +185,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
     head: [['합계금액', '공급가액', '세액', '총액']],
     body: [[fmt(data.totalAmount), fmt(data.totalSupply), fmt(data.totalTax), fmt(data.totalAmount)]],
     theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 2.5, halign: 'right' },
+    styles: { fontSize: 9, cellPadding: 2.5, halign: 'right', font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -192,7 +218,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
     head: itemHead,
     body: itemBody,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -243,6 +269,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const fontName = await loadKoreanFont(doc)
 
   let y = 15
 
@@ -272,7 +299,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
     head: [['', '공급자', '', '공급받는자']],
     body: infoRows,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -296,7 +323,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
     head: [['공급가액', '세액', '합계금액']],
     body: [[fmt(data.totalSupply), fmt(data.totalTax), fmt(data.totalAmount)]],
     theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 2.5, halign: 'right' },
+    styles: { fontSize: 9, cellPadding: 2.5, halign: 'right', font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -326,7 +353,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
     head: itemHead,
     body: itemBody,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -353,7 +380,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
     startY: y,
     body: [['합계', '', '', '', '', '', fmt(data.totalSupply), fmt(data.totalTax)]],
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     columnStyles: {
       0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', fillColor: LIGHT_GRAY },
       1: { cellWidth: 14 },
@@ -391,6 +418,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const fontName = await loadKoreanFont(doc)
 
   let y = 15
 
@@ -419,7 +447,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
     head: [['', '공급자', '', '공급받는자']],
     body: infoRows,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -454,7 +482,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
     head: itemHead,
     body: itemBody,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 8, cellPadding: 2, font: fontName },
     headStyles: {
       fillColor: HEADER_FILL,
       textColor: HEADER_TEXT,
@@ -480,7 +508,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
     startY: y,
     body: [['', '합 계', '', '', '', fmt(data.totalAmount), '']],
     theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 2.5 },
+    styles: { fontSize: 9, cellPadding: 2.5, font: fontName },
     columnStyles: {
       0: { cellWidth: 12 },
       1: { cellWidth: 45, halign: 'center', fontStyle: 'bold', fillColor: LIGHT_GRAY },

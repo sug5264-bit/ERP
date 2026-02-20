@@ -45,7 +45,7 @@ export default function DashboardCharts({ salesSummary, dashStats }: DashboardCh
             {monthlyData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">매출 데이터가 없습니다.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={240}>
+              <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 10 }} />

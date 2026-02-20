@@ -22,12 +22,72 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
     if (body.action === 'complete') {
-      const o = await prisma.salesOrder.update({ where: { id }, data: { status: 'COMPLETED' } })
+      const order = await prisma.salesOrder.findUnique({ where: { id } })
+      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+      // 배차정보 및 담당자 확인
+      const dispatchInfo = body.dispatchInfo || order.dispatchInfo
+      const receivedBy = body.receivedBy || order.receivedBy
+      if (!dispatchInfo || !receivedBy) {
+        return errorResponse('완료 처리를 위해 배차정보와 발주 담당자를 입력해주세요.', 'MISSING_FIELDS')
+      }
+
+      const o = await prisma.salesOrder.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+          dispatchInfo: dispatchInfo,
+          receivedBy: receivedBy,
+        }
+      })
       return successResponse(o)
     }
     if (body.action === 'cancel') {
       const o = await prisma.salesOrder.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(o)
+    }
+    // 발주서 수정
+    if (body.action === 'update' || (!body.action && body.orderDate)) {
+      const order = await prisma.salesOrder.findUnique({ where: { id }, include: { details: true } })
+      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
+        return errorResponse('완료 또는 취소된 발주는 수정할 수 없습니다.', 'INVALID_STATUS')
+      }
+
+      const updateData: any = {}
+      if (body.orderDate) updateData.orderDate = new Date(body.orderDate)
+      if (body.partnerId) updateData.partnerId = body.partnerId
+      if (body.deliveryDate !== undefined) updateData.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null
+      if (body.description !== undefined) updateData.description = body.description
+      if (body.vatIncluded !== undefined) updateData.vatIncluded = body.vatIncluded
+      if (body.dispatchInfo !== undefined) updateData.dispatchInfo = body.dispatchInfo
+      if (body.receivedBy !== undefined) updateData.receivedBy = body.receivedBy
+
+      if (body.details && Array.isArray(body.details)) {
+        const details = body.details.map((d: any, idx: number) => {
+          const supplyAmount = d.quantity * d.unitPrice
+          const taxAmount = Math.round(supplyAmount * 0.1)
+          return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty: 0, remainingQty: d.quantity, remark: d.remark || null }
+        })
+        const totalSupply = details.reduce((s: number, d: any) => s + d.supplyAmount, 0)
+        const totalTax = details.reduce((s: number, d: any) => s + d.taxAmount, 0)
+        updateData.totalSupply = totalSupply
+        updateData.totalTax = totalTax
+        updateData.totalAmount = totalSupply + totalTax
+
+        await prisma.$transaction(async (tx) => {
+          await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
+          await tx.salesOrderDetail.createMany({ data: details.map((d: any) => ({ ...d, salesOrderId: id })) })
+          await tx.salesOrder.update({ where: { id }, data: updateData })
+        })
+      } else {
+        await prisma.salesOrder.update({ where: { id }, data: updateData })
+      }
+
+      const updated = await prisma.salesOrder.findUnique({
+        where: { id }, include: { partner: true, details: { include: { item: true } } }
+      })
+      return successResponse(updated)
     }
     return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
   } catch (error) { return handleApiError(error) }

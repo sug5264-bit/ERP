@@ -6,7 +6,7 @@ export const MODULE_LABELS: Record<string, string> = {
   accounting: '회계',
   hr: '인사',
   inventory: '재고',
-  sales: '판매',
+  sales: '매출',
   projects: '프로젝트',
   approval: '전자결재',
   board: '게시판',

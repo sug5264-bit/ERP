@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { Eye, MessageCircle, Trash2 } from 'lucide-react'
+import { Eye, FileText, MessageCircle, Paperclip, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const columns: ColumnDef<any>[] = [
@@ -29,6 +29,7 @@ export default function GeneralBoardPage() {
   const [selectedPost, setSelectedPost] = useState<any>(null)
   const [newComment, setNewComment] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [attachments, setAttachments] = useState<File[]>([])
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['board-general'], queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=50') as Promise<any> })
@@ -66,11 +67,19 @@ export default function GeneralBoardPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     if (!generalBoard) { toast.error('게시판 정보를 찾을 수 없습니다.'); return }
-    createMutation.mutate({ boardId: generalBoard.id, title: form.get('title'), content: form.get('content') })
+
+    const postData: any = {
+      boardId: generalBoard.id,
+      title: form.get('title'),
+      content: form.get('content'),
+      attachments: attachments.map(f => f.name),
+      fileName: attachments.length > 0 ? attachments[0].name : undefined,
+    }
+    createMutation.mutate(postData)
   }
 
   const handleRowClick = async (row: any) => {
@@ -92,6 +101,25 @@ export default function GeneralBoardPage() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2"><Label>제목 *</Label><Input name="title" required /></div>
               <div className="space-y-2"><Label>내용 *</Label><Textarea name="content" rows={8} required /></div>
+              <div className="space-y-2">
+                <Label>첨부파일</Label>
+                <Input
+                  type="file"
+                  multiple
+                  onChange={(e) => setAttachments(Array.from(e.target.files || []))}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.hwp,.txt,.zip,.jpg,.jpeg,.png,.gif"
+                />
+                {attachments.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    {attachments.map((f, i) => (
+                      <div key={i} className="flex items-center gap-1">
+                        <span>{f.name}</span>
+                        <span>({(f.size / 1024).toFixed(1)}KB)</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '등록 중...' : '게시글 등록'}</Button>
             </form>
           </DialogContent>
@@ -110,6 +138,25 @@ export default function GeneralBoardPage() {
                 <span>조회 {selectedPost.viewCount}</span>
               </div>
               <div className="border rounded-md p-4 text-sm whitespace-pre-wrap min-h-[200px]">{selectedPost.content}</div>
+              {selectedPost?.attachments && selectedPost.attachments.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">첨부파일</Label>
+                  <div className="space-y-1">
+                    {selectedPost.attachments.map((a: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
+                        <FileText className="h-4 w-4" />
+                        <span>{a.fileName || a}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedPost?.fileName && (!selectedPost?.attachments || selectedPost.attachments.length === 0) && (
+                <div className="flex items-center gap-2 text-sm p-2 bg-muted rounded">
+                  <Paperclip className="h-4 w-4" />
+                  <span>{selectedPost.fileName}</span>
+                </div>
+              )}
               <div className="space-y-3">
                 <Label className="text-sm font-medium flex items-center gap-1"><MessageCircle className="h-4 w-4" /> 댓글 ({selectedPost.comments?.length || 0})</Label>
                 {(selectedPost.comments || []).map((c: any) => (

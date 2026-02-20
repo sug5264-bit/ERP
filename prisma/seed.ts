@@ -245,6 +245,26 @@ async function main() {
     where: { code: 'STF' }, update: {},
     create: { code: 'STF', name: '사원', level: 5, sortOrder: 5 },
   })
+  const posExecVP = await prisma.position.upsert({
+    where: { code: 'EVP' }, update: {},
+    create: { code: 'EVP', name: '전무', level: 2, sortOrder: 2 },
+  })
+  const posSrDir = await prisma.position.upsert({
+    where: { code: 'SMU' }, update: {},
+    create: { code: 'SMU', name: '상무', level: 2, sortOrder: 3 },
+  })
+  const posGM = await prisma.position.upsert({
+    where: { code: 'GM' }, update: {},
+    create: { code: 'GM', name: '부장', level: 3, sortOrder: 4 },
+  })
+  const posDM = await prisma.position.upsert({
+    where: { code: 'DM' }, update: {},
+    create: { code: 'DM', name: '차장', level: 4, sortOrder: 5 },
+  })
+  const posAsstMgr = await prisma.position.upsert({
+    where: { code: 'AM' }, update: {},
+    create: { code: 'AM', name: '과장', level: 5, sortOrder: 6 },
+  })
 
   // ============================================================
   // 4. 직원 (Employees)
@@ -706,7 +726,7 @@ async function main() {
   }
 
   console.log('Seed completed!')
-  console.log('Created: 6 departments, 5 positions, 10 employees, 5 users')
+  console.log('Created: 6 departments, 10 positions, 10 employees, 5 users')
   console.log('Created: 8 partners, 10 items, 3 warehouses')
   console.log('Created: 2 quotations, 3 sales orders, 3 vouchers')
   console.log('Created: 2 boards with 5 posts, attendance records, leave balances')

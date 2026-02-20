@@ -15,7 +15,32 @@ export async function exportToPDF(config: ExportConfig) {
 
   const { fileName, title, columns, data } = config
 
-  const doc = new jsPDF({ orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait' })
+  const doc = new jsPDF({
+    orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait',
+    putOnlyUsedFonts: true,
+  })
+
+  // 한글 폰트 등록
+  let fontName = 'helvetica'
+  try {
+    const fontUrl = 'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf'
+    const response = await fetch(fontUrl)
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+      doc.addFileToVFS('malgun.ttf', base64)
+      doc.addFont('malgun.ttf', 'malgun', 'normal')
+      doc.setFont('malgun')
+      fontName = 'malgun'
+    }
+  } catch {
+    // 폰트 로드 실패 시 기본 폰트 사용
+  }
 
   // 제목
   if (title) {
@@ -40,6 +65,7 @@ export async function exportToPDF(config: ExportConfig) {
     styles: {
       fontSize: 8,
       cellPadding: 2,
+      font: fontName,
     },
     headStyles: {
       fillColor: [68, 114, 196],

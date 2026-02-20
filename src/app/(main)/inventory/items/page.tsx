@@ -114,7 +114,7 @@ export default function ItemsPage() {
       id: editTarget.id,
       itemName: form.get('itemName'),
       specification: form.get('specification') || undefined,
-      categoryId: form.get('categoryId') || undefined,
+      categoryName: form.get('categoryName') || undefined,
       unit: form.get('unit') || 'EA',
       standardPrice: parseFloat(form.get('standardPrice') as string) || 0,
       safetyStock: parseInt(form.get('safetyStock') as string) || 0,
@@ -173,7 +173,7 @@ export default function ItemsPage() {
       itemCode: form.get('itemCode'),
       itemName: form.get('itemName'),
       specification: form.get('specification') || undefined,
-      categoryId: form.get('categoryId') || undefined,
+      categoryName: form.get('categoryName') || undefined,
       unit: form.get('unit') || 'EA',
       standardPrice: parseFloat(form.get('standardPrice') as string) || 0,
       safetyStock: parseInt(form.get('safetyStock') as string) || 0,
@@ -239,14 +239,12 @@ export default function ItemsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>분류</Label>
-                  <Select name="categoryId">
-                    <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input name="categoryName" placeholder="분류명 입력 (예: 전자부품)" list="category-list" />
+                  <datalist id="category-list">
+                    {categories.map((c: any) => (
+                      <option key={c.id} value={c.name} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="space-y-2"><Label>단위</Label><Input name="unit" defaultValue="EA" /></div>
               </div>
@@ -315,14 +313,12 @@ export default function ItemsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>분류</Label>
-                  <Select name="categoryId" defaultValue={editTarget.category?.code}>
-                    <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input name="categoryName" placeholder="분류명 입력 (예: 전자부품)" list="category-list-edit" defaultValue={editTarget.category?.name || ''} />
+                  <datalist id="category-list-edit">
+                    {categories.map((c: any) => (
+                      <option key={c.id} value={c.name} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="space-y-2"><Label>단위</Label><Input name="unit" defaultValue={editTarget.unit} /></div>
               </div>

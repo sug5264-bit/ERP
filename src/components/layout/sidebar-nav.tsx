@@ -96,7 +96,7 @@ const navItems: NavItem[] = [
       { title: '거래처관리', href: '/sales/partners', permission: 'sales.partners' },
       { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
       { title: '발주관리', href: '/sales/orders', permission: 'sales.orders' },
-      { title: '납품관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
+      { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
     ],
   },
   {
@@ -148,6 +148,7 @@ const navItems: NavItem[] = [
       { title: '권한관리', href: '/admin/roles', permission: 'admin.roles' },
       { title: '코드관리', href: '/admin/codes', permission: 'admin.codes' },
       { title: '감사로그', href: '/admin/logs', permission: 'admin.logs' },
+      { title: '회사관리', href: '/admin/company', permission: 'admin.company' },
     ],
   },
 ]
