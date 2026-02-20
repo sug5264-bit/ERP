@@ -45,11 +45,11 @@ export default function DashboardCharts({ salesSummary, dashStats }: DashboardCh
             {monthlyData.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">매출 데이터가 없습니다.</p>
             ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={monthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => v >= 10000 ? `${(v/10000).toFixed(0)}만` : `${v}`} width={45} />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.replace(/^\d{4}-/, '') + '월'} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v: number) => v >= 100000000 ? `${(v/100000000).toFixed(1)}억` : v >= 10000 ? `${(v/10000).toFixed(0)}만` : `${v}`} width={55} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="online" name="온라인" stackId="sales" fill="#3b82f6" />
