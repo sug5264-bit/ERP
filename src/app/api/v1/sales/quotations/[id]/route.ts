@@ -72,6 +72,50 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       })
       return successResponse(result)
     }
+    // 견적 수정
+    if (body.action === 'update' || (!body.action && body.quotationDate)) {
+      const quotation = await prisma.quotation.findUnique({ where: { id }, include: { details: true } })
+      if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (quotation.status === 'ORDERED') return errorResponse('발주 전환된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
+      if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
+
+      const updateData: any = {}
+      if (body.quotationDate) updateData.quotationDate = new Date(body.quotationDate)
+      if (body.partnerId) updateData.partnerId = body.partnerId
+      if (body.validUntil !== undefined) updateData.validUntil = body.validUntil ? new Date(body.validUntil) : null
+      if (body.description !== undefined) updateData.description = body.description || null
+
+      if (body.details && Array.isArray(body.details)) {
+        const itemIds = body.details.map((d: any) => d.itemId)
+        const itemsInfo = await prisma.item.findMany({ where: { id: { in: itemIds } }, select: { id: true, taxType: true } })
+        const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
+
+        const details = body.details.map((d: any, idx: number) => {
+          const supplyAmount = d.quantity * d.unitPrice
+          const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
+          const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+          return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, remark: d.remark || null }
+        })
+        const totalSupply = details.reduce((s: number, d: any) => s + d.supplyAmount, 0)
+        const totalTax = details.reduce((s: number, d: any) => s + d.taxAmount, 0)
+        updateData.totalSupply = totalSupply
+        updateData.totalTax = totalTax
+        updateData.totalAmount = totalSupply + totalTax
+
+        await prisma.$transaction(async (tx) => {
+          await tx.quotationDetail.deleteMany({ where: { quotationId: id } })
+          await tx.quotationDetail.createMany({ data: details.map((d: any) => ({ ...d, quotationId: id })) })
+          await tx.quotation.update({ where: { id }, data: updateData })
+        })
+      } else {
+        await prisma.quotation.update({ where: { id }, data: updateData })
+      }
+
+      const updated = await prisma.quotation.findUnique({
+        where: { id }, include: { partner: true, details: { include: { item: true } } }
+      })
+      return successResponse(updated)
+    }
     return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
   } catch (error) { return handleApiError(error) }
 }

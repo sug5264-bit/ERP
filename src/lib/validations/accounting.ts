@@ -18,6 +18,9 @@ export const createVoucherSchema = z.object({
       }).refine(
         (d) => d.accountSubjectId || d.accountCode,
         { message: '계정과목 ID 또는 코드를 입력하세요' }
+      ).refine(
+        (d) => (d.debitAmount > 0 || d.creditAmount > 0) && !(d.debitAmount > 0 && d.creditAmount > 0),
+        { message: '차변 또는 대변 중 하나만 입력하세요' }
       )
     )
     .min(1, '분개 항목을 하나 이상 입력하세요'),
@@ -74,18 +77,18 @@ export const createBudgetSchema = z.object({
   details: z.array(
     z.object({
       accountSubjectId: z.string().min(1),
-      month01: z.number().default(0),
-      month02: z.number().default(0),
-      month03: z.number().default(0),
-      month04: z.number().default(0),
-      month05: z.number().default(0),
-      month06: z.number().default(0),
-      month07: z.number().default(0),
-      month08: z.number().default(0),
-      month09: z.number().default(0),
-      month10: z.number().default(0),
-      month11: z.number().default(0),
-      month12: z.number().default(0),
+      month01: z.number().min(0).default(0),
+      month02: z.number().min(0).default(0),
+      month03: z.number().min(0).default(0),
+      month04: z.number().min(0).default(0),
+      month05: z.number().min(0).default(0),
+      month06: z.number().min(0).default(0),
+      month07: z.number().min(0).default(0),
+      month08: z.number().min(0).default(0),
+      month09: z.number().min(0).default(0),
+      month10: z.number().min(0).default(0),
+      month11: z.number().min(0).default(0),
+      month12: z.number().min(0).default(0),
     })
   ),
 })

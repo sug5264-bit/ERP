@@ -96,8 +96,11 @@ export default function ProjectsPage() {
   const handleRowClick = async (row: any) => {
     try {
       const res = await api.get(`/projects/${row.id}`) as any
-      setSelectedProject(res.data || res)
-      setDetailOpen(true)
+      const data = res.data || res
+      if (data) {
+        setSelectedProject(data)
+        setDetailOpen(true)
+      }
     } catch { toast.error('프로젝트를 불러올 수 없습니다.') }
   }
 

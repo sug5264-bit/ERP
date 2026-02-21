@@ -259,7 +259,7 @@ export default function NettingPage() {
             </div>
             <div className="space-y-2">
               <Label>상계금액 *</Label>
-              <Input type="number" placeholder="0" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
+              <Input type="number" placeholder="0" required min="1" step="1" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>상계일 *</Label>
