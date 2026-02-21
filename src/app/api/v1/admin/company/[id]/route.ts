@@ -15,31 +15,33 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params
     const body = await req.json()
 
-    const company = await prisma.company.update({
-      where: { id },
-      data: {
-        companyName: body.companyName,
-        bizNo: body.bizNo || null,
-        ceoName: body.ceoName || null,
-        bizType: body.bizType || null,
-        bizCategory: body.bizCategory || null,
-        address: body.address || null,
-        phone: body.phone || null,
-        fax: body.fax || null,
-        email: body.email || null,
-        bankName: body.bankName || null,
-        bankAccount: body.bankAccount || null,
-        bankHolder: body.bankHolder || null,
-        isDefault: body.isDefault || false,
-      },
-    })
-
-    if (body.isDefault) {
-      await prisma.company.updateMany({
-        where: { id: { not: company.id } },
-        data: { isDefault: false },
+    const company = await prisma.$transaction(async (tx) => {
+      const updated = await tx.company.update({
+        where: { id },
+        data: {
+          companyName: body.companyName,
+          bizNo: body.bizNo || null,
+          ceoName: body.ceoName || null,
+          bizType: body.bizType || null,
+          bizCategory: body.bizCategory || null,
+          address: body.address || null,
+          phone: body.phone || null,
+          fax: body.fax || null,
+          email: body.email || null,
+          bankName: body.bankName || null,
+          bankAccount: body.bankAccount || null,
+          bankHolder: body.bankHolder || null,
+          isDefault: body.isDefault || false,
+        },
       })
-    }
+      if (body.isDefault) {
+        await tx.company.updateMany({
+          where: { id: { not: updated.id } },
+          data: { isDefault: false },
+        })
+      }
+      return updated
+    })
 
     return successResponse(company)
   } catch (error) {

@@ -82,7 +82,7 @@ export default function PayrollPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>급여 생성</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>급여기간 *</Label><Input name="payPeriod" required placeholder="2026-02" /></div>
+              <div className="space-y-2"><Label>급여기간 *</Label><Input name="payPeriod" type="month" required /></div>
               <div className="space-y-2"><Label>지급일 *</Label><Input name="payDate" type="date" required /></div>
               <p className="text-xs text-muted-foreground">전체 재직 사원의 급여가 자동 계산되어 생성됩니다.</p>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '생성 중...' : '급여 생성'}</Button>

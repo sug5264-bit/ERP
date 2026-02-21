@@ -112,11 +112,23 @@ export default function StockMovementPage() {
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
+    const sourceWarehouseId = form.get('sourceWarehouseId') as string || undefined
+    const targetWarehouseId = form.get('targetWarehouseId') as string || undefined
+    // 유형별 필수 창고 검증
+    if ((movementType === 'OUTBOUND' || movementType === 'TRANSFER') && !sourceWarehouseId) {
+      toast.error('출고 창고를 선택해주세요.'); return
+    }
+    if ((movementType === 'INBOUND' || movementType === 'TRANSFER' || movementType === 'ADJUSTMENT') && !targetWarehouseId) {
+      toast.error('입고 창고를 선택해주세요.'); return
+    }
+    if (movementType === 'TRANSFER' && sourceWarehouseId === targetWarehouseId) {
+      toast.error('출발 창고와 도착 창고가 동일할 수 없습니다.'); return
+    }
     createMutation.mutate({
       movementDate: form.get('movementDate'),
       movementType,
-      sourceWarehouseId: form.get('sourceWarehouseId') || undefined,
-      targetWarehouseId: form.get('targetWarehouseId') || undefined,
+      sourceWarehouseId,
+      targetWarehouseId,
       details: details.filter((d) => d.itemId),
     })
   }
