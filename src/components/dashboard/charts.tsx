@@ -119,10 +119,10 @@ export default function DashboardCharts({ salesSummary, dashStats }: DashboardCh
               <p className="text-sm text-muted-foreground text-center py-8">휴가 데이터가 없습니다.</p>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={leaveStatData} margin={{ top: 5, right: 5, left: -15, bottom: 0 }}>
+                <BarChart data={leaveStatData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="type" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} width={35} />
+                  <YAxis tick={{ fontSize: 10 }} width={40} />
                   <Tooltip content={<CustomTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="count" name="건수" fill="#f59e0b" />

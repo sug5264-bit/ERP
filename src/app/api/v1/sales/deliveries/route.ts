@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         include: {
           salesOrder: { select: { id: true, orderNo: true, orderDate: true, status: true, salesChannel: true } },
           partner: { select: { id: true, partnerCode: true, partnerName: true } },
-          _count: { select: { details: true } },
+          details: { include: { item: { select: { id: true, itemName: true, specification: true } } } },
         },
         orderBy: { createdAt: 'desc' }, skip, take: pageSize,
       }),

@@ -444,6 +444,8 @@ export default function OrdersPage() {
             <div className="space-y-3">
               {details.map((d, idx) => {
                 const supply = d.quantity * d.unitPrice
+                const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                const tax = itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                 return (
                   <div key={idx} className="rounded-md border p-3 space-y-2">
                     <div className="flex items-center justify-between">
@@ -458,7 +460,7 @@ export default function OrdersPage() {
                       <div className="space-y-1 min-w-0"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></div>
                       <div className="space-y-1 min-w-0"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
                       <div className="space-y-1 min-w-0"><Label className="text-[11px]">공급가</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(supply)}</div></div>
-                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">합계</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + Math.round(supply * 0.1))}</div></div>
+                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">합계</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + tax)}</div></div>
                     </div>
                   </div>
                 )
@@ -711,6 +713,8 @@ export default function OrdersPage() {
                 <div className="space-y-3">
                   {editDetails.map((d, idx) => {
                     const supply = d.quantity * d.unitPrice
+                    const editItemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const editTax = editItemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
                       <div key={idx} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -724,7 +728,7 @@ export default function OrdersPage() {
                         <div className="grid grid-cols-3 gap-2 min-w-0">
                           <div className="space-y-1"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => { const nd = [...editDetails]; nd[idx].quantity = parseFloat(e.target.value) || 0; setEditDetails(nd) }} /></div>
                           <div className="space-y-1"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => { const nd = [...editDetails]; nd[idx].unitPrice = parseFloat(e.target.value) || 0; setEditDetails(nd) }} /></div>
-                          <div className="space-y-1"><Label className="text-[11px]">합계(부가세 포함)</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + Math.round(supply * 0.1))}</div></div>
+                          <div className="space-y-1"><Label className="text-[11px]">합계(부가세 포함)</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + editTax)}</div></div>
                         </div>
                       </div>
                     )

@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
               create: {
                 itemId: detail.itemId,
                 warehouseId: data.targetWarehouseId,
-                zoneId: null,
+                zoneId: '',
                 quantity: detail.quantity,
                 averageCost: detail.unitPrice || 0,
                 lastMovementDate: movementDate,
