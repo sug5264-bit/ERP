@@ -25,44 +25,45 @@ export async function POST(req: NextRequest) {
     }
 
     const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED'
+    const actionLabel = action === 'approve' ? '승인' : '반려'
     let successCount = 0
     let failCount = 0
 
+    // 일괄 조회로 N+1 제거
+    const leaves = await prisma.leave.findMany({
+      where: { id: { in: ids }, status: 'REQUESTED' },
+      include: { employee: { include: { user: true } } },
+    })
+    const leaveMap = new Map(leaves.map(l => [l.id, l]))
+
     for (const leaveId of ids) {
       try {
-        const leave = await prisma.leave.findUnique({
-          where: { id: leaveId },
-          include: { employee: { include: { user: true } } },
-        })
-
-        if (!leave || leave.status !== 'REQUESTED') {
-          failCount++
-          continue
-        }
+        const leave = leaveMap.get(leaveId)
+        if (!leave) { failCount++; continue }
 
         await prisma.leave.update({
           where: { id: leaveId },
           data: { status: newStatus },
         })
 
-        // 감사 로그
-        await writeAuditLog({
-          action: action === 'approve' ? 'APPROVE' : 'REJECT',
-          tableName: 'leaves',
-          recordId: leaveId,
-        })
-
-        // 알림
+        // 감사 로그 + 알림 병렬 실행
+        const tasks: Promise<any>[] = [
+          writeAuditLog({
+            action: action === 'approve' ? 'APPROVE' : 'REJECT',
+            tableName: 'leaves',
+            recordId: leaveId,
+          }),
+        ]
         if (leave.employee?.user) {
-          const actionLabel = action === 'approve' ? '승인' : '반려'
-          await createNotification({
+          tasks.push(createNotification({
             userId: leave.employee.user.id,
             type: 'LEAVE',
             title: `휴가 ${actionLabel}`,
             message: `신청하신 휴가가 ${actionLabel}되었습니다.`,
             relatedUrl: '/hr/leave',
-          })
+          }))
         }
+        await Promise.all(tasks)
 
         successCount++
       } catch {

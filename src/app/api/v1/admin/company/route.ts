@@ -27,31 +27,32 @@ export async function POST(req: NextRequest) {
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const body = await req.json()
-    const company = await prisma.company.create({
-      data: {
-        companyName: body.companyName,
-        bizNo: body.bizNo || null,
-        ceoName: body.ceoName || null,
-        bizType: body.bizType || null,
-        bizCategory: body.bizCategory || null,
-        address: body.address || null,
-        phone: body.phone || null,
-        fax: body.fax || null,
-        email: body.email || null,
-        bankName: body.bankName || null,
-        bankAccount: body.bankAccount || null,
-        bankHolder: body.bankHolder || null,
-        isDefault: body.isDefault || false,
-      },
-    })
-
-    // If set as default, unset other defaults
-    if (body.isDefault) {
-      await prisma.company.updateMany({
-        where: { id: { not: company.id } },
-        data: { isDefault: false },
+    const company = await prisma.$transaction(async (tx) => {
+      const created = await tx.company.create({
+        data: {
+          companyName: body.companyName,
+          bizNo: body.bizNo || null,
+          ceoName: body.ceoName || null,
+          bizType: body.bizType || null,
+          bizCategory: body.bizCategory || null,
+          address: body.address || null,
+          phone: body.phone || null,
+          fax: body.fax || null,
+          email: body.email || null,
+          bankName: body.bankName || null,
+          bankAccount: body.bankAccount || null,
+          bankHolder: body.bankHolder || null,
+          isDefault: body.isDefault || false,
+        },
       })
-    }
+      if (body.isDefault) {
+        await tx.company.updateMany({
+          where: { id: { not: created.id } },
+          data: { isDefault: false },
+        })
+      }
+      return created
+    })
 
     return successResponse(company)
   } catch (error) {

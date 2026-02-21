@@ -58,8 +58,22 @@ export default function OrdersPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
+  // 캐싱된 회사 정보에서 기본 회사 가져오기
+  const getCompanyInfo = () => {
+    const companies = companyData?.data || []
+    const defaultCompany = companies.find((c: any) => c.isDefault) || companies[0]
+    if (defaultCompany) {
+      return {
+        name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '',
+        ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '',
+        bizType: defaultCompany.bizType || '', bizItem: defaultCompany.bizCategory || '',
+        tel: defaultCompany.phone || '',
+      }
+    }
+    return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
+  }
+
   const handleTaxInvoicePDF = async (order: any) => {
-    // 목록 API에서는 details를 포함하지 않으므로 개별 주문 상세 조회
     let orderDetail = order
     try {
       const res = await api.get(`/sales/orders/${order.id}`) as any
@@ -69,19 +83,11 @@ export default function OrdersPage() {
       return
     }
     const orderDate = new Date(orderDetail.orderDate)
-    // 기본 회사 정보 조회
-    let companyInfo = { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '' }
-    try {
-      const compRes = await api.get('/admin/company') as any
-      const defaultCompany = (compRes?.data || []).find((c: any) => c.isDefault) || (compRes?.data || [])[0]
-      if (defaultCompany) {
-        companyInfo = { name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '', ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '', bizType: defaultCompany.bizType || '', bizItem: defaultCompany.bizCategory || '' }
-      }
-    } catch { /* use defaults */ }
+    const ci = getCompanyInfo()
     const pdfData: TaxInvoicePDFData = {
       invoiceNo: orderDetail.orderNo,
       invoiceDate: formatDate(orderDetail.orderDate),
-      supplier: companyInfo,
+      supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, bizType: ci.bizType, bizItem: ci.bizItem },
       buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '' },
       items: (orderDetail.details || []).map((d: any) => ({
         month: String(orderDate.getMonth() + 1), day: String(orderDate.getDate()),
@@ -105,19 +111,11 @@ export default function OrdersPage() {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
       return
     }
-    // 기본 회사 정보 조회
-    let companyInfo = { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', tel: '' }
-    try {
-      const compRes = await api.get('/admin/company') as any
-      const defaultCompany = (compRes?.data || []).find((c: any) => c.isDefault) || (compRes?.data || [])[0]
-      if (defaultCompany) {
-        companyInfo = { name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '', ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '', tel: defaultCompany.phone || '' }
-      }
-    } catch { /* use defaults */ }
+    const ci = getCompanyInfo()
     const pdfData: TransactionStatementPDFData = {
       statementNo: orderDetail.orderNo,
       statementDate: formatDate(orderDetail.orderDate),
-      supplier: companyInfo,
+      supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, tel: ci.tel },
       buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '', tel: orderDetail.partner?.phone || '' },
       items: (orderDetail.details || []).map((d: any, idx: number) => ({
         no: idx + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
@@ -307,7 +305,12 @@ export default function OrdersPage() {
       if (start) qp.set('startDate', start)
       if (end) qp.set('endDate', end)
     }
-    if (dateFilter === 'monthly' && filterMonth) { qp.set('startDate', `${filterMonth}-01`); qp.set('endDate', `${filterMonth}-31`) }
+    if (dateFilter === 'monthly' && filterMonth) {
+      qp.set('startDate', `${filterMonth}-01`)
+      const [fy, fm] = filterMonth.split('-').map(Number)
+      const lastDay = new Date(fy, fm, 0).getDate()
+      qp.set('endDate', `${filterMonth}-${String(lastDay).padStart(2, '0')}`)
+    }
     if (dateFilter === 'daily' && filterDate) { qp.set('startDate', filterDate); qp.set('endDate', filterDate) }
     if (partnerFilter && partnerFilter !== 'all') qp.set('partnerId', partnerFilter)
     if (searchKeyword) qp.set('search', searchKeyword)
@@ -321,6 +324,7 @@ export default function OrdersPage() {
   const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter, filterMonth, filterDate, dateFilter, datePreset, partnerFilter, searchKeyword], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
   const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
   const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
+  const { data: companyData } = useQuery({ queryKey: ['admin-company'], queryFn: () => api.get('/admin/company') as Promise<any>, staleTime: 30 * 60 * 1000 })
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/orders', body),

@@ -32,23 +32,21 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     if (action === 'cancel') {
-      for (const order of orders) {
-        if (order.status === 'CANCELLED') {
-          errors.push(`${order.orderNo}: 이미 취소된 발주입니다.`)
-          failed++
-          continue
-        }
-        if (order.status === 'COMPLETED') {
-          errors.push(`${order.orderNo}: 완료된 발주는 취소할 수 없습니다.`)
-          failed++
-          continue
-        }
+      // 취소 가능한 발주 필터 후 일괄 업데이트 (N번 쿼리 → 1번)
+      const cancellable = orders.filter(o => {
+        if (o.status === 'CANCELLED') { errors.push(`${o.orderNo}: 이미 취소된 발주입니다.`); failed++; return false }
+        if (o.status === 'COMPLETED') { errors.push(`${o.orderNo}: 완료된 발주는 취소할 수 없습니다.`); failed++; return false }
+        return true
+      })
+      if (cancellable.length > 0) {
         try {
-          await prisma.salesOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } })
-          success++
+          const result = await prisma.salesOrder.updateMany({
+            where: { id: { in: cancellable.map(o => o.id) } },
+            data: { status: 'CANCELLED' },
+          })
+          success += result.count
         } catch {
-          errors.push(`${order.orderNo}: 취소 처리 중 오류 발생`)
-          failed++
+          cancellable.forEach(o => { errors.push(`${o.orderNo}: 취소 처리 중 오류 발생`); failed++ })
         }
       }
     } else if (action === 'complete') {
@@ -57,26 +55,20 @@ export async function POST(request: NextRequest) {
       if (!dispatchInfo || !receivedBy) {
         return errorResponse('일괄 완료 처리를 위해 배차정보와 담당자를 입력해주세요.', 'MISSING_FIELDS')
       }
-      for (const order of orders) {
-        if (order.status === 'COMPLETED') {
-          errors.push(`${order.orderNo}: 이미 완료된 발주입니다.`)
-          failed++
-          continue
-        }
-        if (order.status === 'CANCELLED') {
-          errors.push(`${order.orderNo}: 취소된 발주는 완료 처리할 수 없습니다.`)
-          failed++
-          continue
-        }
+      const completable = orders.filter(o => {
+        if (o.status === 'COMPLETED') { errors.push(`${o.orderNo}: 이미 완료된 발주입니다.`); failed++; return false }
+        if (o.status === 'CANCELLED') { errors.push(`${o.orderNo}: 취소된 발주는 완료 처리할 수 없습니다.`); failed++; return false }
+        return true
+      })
+      if (completable.length > 0) {
         try {
-          await prisma.salesOrder.update({
-            where: { id: order.id },
+          const result = await prisma.salesOrder.updateMany({
+            where: { id: { in: completable.map(o => o.id) } },
             data: { status: 'COMPLETED', dispatchInfo, receivedBy },
           })
-          success++
+          success += result.count
         } catch {
-          errors.push(`${order.orderNo}: 완료 처리 중 오류 발생`)
-          failed++
+          completable.forEach(o => { errors.push(`${o.orderNo}: 완료 처리 중 오류 발생`); failed++ })
         }
       }
     } else if (action === 'delete') {

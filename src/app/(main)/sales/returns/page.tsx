@@ -126,11 +126,11 @@ export default function ReturnsPage() {
       header: '',
       cell: ({ row }) => row.original.status === 'REQUESTED' ? (
         <div className="flex gap-1">
-          <Button variant="outline" size="sm" onClick={() => updateStatusMutation.mutate({ id: row.original.id, status: 'APPROVED' })}>승인</Button>
-          <Button variant="outline" size="sm" className="text-destructive" onClick={() => updateStatusMutation.mutate({ id: row.original.id, status: 'REJECTED' })}>반려</Button>
+          <Button variant="outline" size="sm" disabled={updateStatusMutation.isPending} onClick={() => updateStatusMutation.mutate({ id: row.original.id, status: 'APPROVED' })}>승인</Button>
+          <Button variant="outline" size="sm" className="text-destructive" disabled={updateStatusMutation.isPending} onClick={() => updateStatusMutation.mutate({ id: row.original.id, status: 'REJECTED' })}>반려</Button>
         </div>
       ) : row.original.status === 'APPROVED' ? (
-        <Button variant="outline" size="sm" onClick={() => updateStatusMutation.mutate({ id: row.original.id, status: 'COMPLETED' })}>완료</Button>
+        <Button variant="outline" size="sm" disabled={updateStatusMutation.isPending} onClick={() => updateStatusMutation.mutate({ id: row.original.id, status: 'COMPLETED' })}>완료</Button>
       ) : null,
     },
   ]

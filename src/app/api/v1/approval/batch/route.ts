@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
         if (!currentStepData) { failCount++; errors.push(`문서 ${doc.documentNo}: 결재 권한 없음`); continue }
 
-        // 결재 단계 + 문서 상태 + 감사로그 + 알림을 병렬 실행
+        // 결재 단계 + 문서 상태를 트랜잭션으로 원자적 처리
         const docStatus = action === 'reject'
           ? 'REJECTED' as const
           : doc.currentStep >= doc.totalSteps
@@ -58,33 +58,40 @@ export async function POST(req: NextRequest) {
 
         const actionLabel = action === 'approve' ? '승인' : '반려'
 
-        await Promise.all([
-          prisma.approvalStep.update({
+        await prisma.$transaction(async (tx) => {
+          await tx.approvalStep.update({
             where: { id: currentStepData.id },
             data: {
               status: action === 'approve' ? 'APPROVED' : 'REJECTED',
               comment: comment || null,
               actionDate: new Date(),
             },
-          }),
-          docStatus
-            ? prisma.approvalDocument.update({ where: { id: docId }, data: { status: docStatus } })
-            : prisma.approvalDocument.update({ where: { id: docId }, data: { currentStep: doc.currentStep + 1 } }),
+          })
+          if (docStatus) {
+            await tx.approvalDocument.update({ where: { id: docId }, data: { status: docStatus } })
+          } else {
+            await tx.approvalDocument.update({ where: { id: docId }, data: { currentStep: doc.currentStep + 1 } })
+          }
+        })
+
+        // 감사로그 + 알림은 트랜잭션 외부에서 병렬 실행
+        const bgTasks: Promise<any>[] = [
           writeAuditLog({
             action: action === 'approve' ? 'APPROVE' : 'REJECT',
             tableName: 'approval_documents',
             recordId: docId,
           }),
-          doc.drafter?.user
-            ? createNotification({
-                userId: doc.drafter.user.id,
-                type: 'APPROVAL',
-                title: `결재 ${actionLabel}`,
-                message: `"${doc.title}" 문서가 ${actionLabel}되었습니다.`,
-                relatedUrl: `/approval/${action === 'approve' ? 'completed' : 'rejected'}`,
-              })
-            : Promise.resolve(),
-        ])
+        ]
+        if (doc.drafter?.user) {
+          bgTasks.push(createNotification({
+            userId: doc.drafter.user.id,
+            type: 'APPROVAL',
+            title: `결재 ${actionLabel}`,
+            message: `"${doc.title}" 문서가 ${actionLabel}되었습니다.`,
+            relatedUrl: `/approval/${action === 'approve' ? 'completed' : 'rejected'}`,
+          }))
+        }
+        await Promise.all(bgTasks)
 
         successCount++
       } catch (err) {

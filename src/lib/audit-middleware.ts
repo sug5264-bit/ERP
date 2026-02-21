@@ -90,7 +90,7 @@ export function withAuditLog(
         oldValue: oldValue ? JSON.stringify(oldValue) : undefined,
         newValue: newValue ? JSON.stringify(newValue) : undefined,
         ipAddress,
-      }).catch(() => {})
+      }).catch((e) => console.error('Audit log failed:', e))
     }
 
     return response
