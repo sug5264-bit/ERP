@@ -93,7 +93,7 @@ export default function ApprovalPendingPage() {
         pageSize={50}
         onRowClick={handleRowClick}
         selectable
-        onBulkDelete={(rows: any[]) => setSelectedRows(rows)}
+        onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
       />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

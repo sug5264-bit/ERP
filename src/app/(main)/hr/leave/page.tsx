@@ -121,8 +121,16 @@ export default function LeavePage() {
     const form = new FormData(e.currentTarget)
     const startDate = form.get('startDate') as string
     const endDate = form.get('endDate') as string
+    if (!startDate || !endDate) {
+      toast.error('시작일과 종료일을 입력하세요.')
+      return
+    }
+    if (new Date(endDate) < new Date(startDate)) {
+      toast.error('종료일은 시작일 이후여야 합니다.')
+      return
+    }
     const diffTime = new Date(endDate).getTime() - new Date(startDate).getTime()
-    const days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1)
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
     createMutation.mutate({
       employeeId: form.get('employeeId'),
       leaveType: form.get('leaveType'),

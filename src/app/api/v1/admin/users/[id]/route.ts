@@ -86,9 +86,11 @@ export async function PUT(
     }
 
     if (validated.roleIds) {
-      await prisma.userRole.deleteMany({ where: { userId: id } })
-      await prisma.userRole.createMany({
-        data: validated.roleIds.map((roleId) => ({ userId: id, roleId })),
+      await prisma.$transaction(async (tx) => {
+        await tx.userRole.deleteMany({ where: { userId: id } })
+        await tx.userRole.createMany({
+          data: validated.roleIds!.map((roleId) => ({ userId: id, roleId })),
+        })
       })
     }
 
@@ -108,11 +110,17 @@ export async function DELETE(
 
     const { id } = await params
 
-    // 연관 데이터 삭제 후 사용자 삭제
-    await prisma.userRole.deleteMany({ where: { userId: id } })
-    await prisma.user.delete({ where: { id } })
+    if (id === session.user!.id!) {
+      return errorResponse('자기 자신을 삭제할 수 없습니다.', 'SELF_DELETE', 400)
+    }
 
-    return successResponse({ message: '사용자가 삭제되었습니다.' })
+    // 비활성화로 처리 (연관 데이터 보존)
+    await prisma.$transaction(async (tx) => {
+      await tx.userRole.deleteMany({ where: { userId: id } })
+      await tx.user.update({ where: { id }, data: { isActive: false } })
+    })
+
+    return successResponse({ message: '사용자가 비활성화되었습니다.' })
   } catch (error) {
     return handleApiError(error)
   }
