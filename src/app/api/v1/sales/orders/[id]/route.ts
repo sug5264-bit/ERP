@@ -49,6 +49,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
       if (order.status === 'CANCELLED') return errorResponse('이미 취소된 발주입니다.', 'INVALID_STATUS')
       if (order.status === 'COMPLETED') return errorResponse('완료된 발주는 취소할 수 없습니다.', 'INVALID_STATUS')
+      // 납품 진행된 발주는 취소 불가
+      const hasDelivered = await prisma.salesOrderDetail.findFirst({
+        where: { salesOrderId: id, deliveredQty: { gt: 0 } },
+      })
+      if (hasDelivered) return errorResponse('납품이 진행된 발주는 취소할 수 없습니다.', 'CANNOT_CANCEL')
       const o = await prisma.salesOrder.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(o)
     }

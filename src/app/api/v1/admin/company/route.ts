@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const company = await prisma.$transaction(async (tx) => {
+      if (body.isDefault) {
+        await tx.company.updateMany({
+          where: { isDefault: true },
+          data: { isDefault: false },
+        })
+      }
       const created = await tx.company.create({
         data: {
           companyName: body.companyName,
@@ -45,12 +51,6 @@ export async function POST(req: NextRequest) {
           isDefault: body.isDefault || false,
         },
       })
-      if (body.isDefault) {
-        await tx.company.updateMany({
-          where: { id: { not: created.id } },
-          data: { isDefault: false },
-        })
-      }
       return created
     })
 

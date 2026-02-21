@@ -16,6 +16,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
 
     const company = await prisma.$transaction(async (tx) => {
+      if (body.isDefault) {
+        await tx.company.updateMany({
+          where: { id: { not: id }, isDefault: true },
+          data: { isDefault: false },
+        })
+      }
       const updated = await tx.company.update({
         where: { id },
         data: {
@@ -34,12 +40,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           isDefault: body.isDefault || false,
         },
       })
-      if (body.isDefault) {
-        await tx.company.updateMany({
-          where: { id: { not: updated.id } },
-          data: { isDefault: false },
-        })
-      }
       return updated
     })
 
