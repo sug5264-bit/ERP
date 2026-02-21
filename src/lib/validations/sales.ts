@@ -39,3 +39,21 @@ export const createDeliverySchema = z.object({
     unitPrice: z.number().min(0).max(999_999_999_999),
   })).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
 })
+
+// ─── 반품 ──────────────────────────────────
+export const createSalesReturnSchema = z.object({
+  returnDate: z.string().min(1, '반품일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
+  partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
+  reason: z.enum(['DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER']).optional().default('OTHER'),
+  reasonDetail: z.string().max(1000).optional().nullable(),
+  totalAmount: z.number().min(0).max(999_999_999_999).optional().default(0),
+})
+
+// ─── 상계 ──────────────────────────────────
+export const createNettingSchema = z.object({
+  partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
+  amount: z.coerce.number().min(0.01, '금액은 0보다 커야 합니다').max(999_999_999_999),
+  nettingDate: z.string().min(1, '상계일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  description: z.string().max(1000).optional().nullable(),
+})

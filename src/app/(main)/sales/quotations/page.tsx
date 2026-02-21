@@ -185,7 +185,9 @@ export default function QuotationsPage() {
                 </div>
                 <div className="space-y-3">
                   {details.map((d, idx) => {
-                    const supply = d.quantity * d.unitPrice; const tax = Math.round(supply * 0.1)
+                    const supply = d.quantity * d.unitPrice
+                    const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const tax = itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
                       <div key={idx} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -207,7 +209,7 @@ export default function QuotationsPage() {
                     )
                   })}
                 </div>
-                <div className="text-right font-medium text-sm">합계: {formatCurrency(details.reduce((s, d) => { const sup = d.quantity * d.unitPrice; return s + sup + Math.round(sup * 0.1) }, 0))}</div>
+                <div className="text-right font-medium text-sm">합계: {formatCurrency(details.reduce((s, d) => { const sup = d.quantity * d.unitPrice; const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'; return s + sup + (tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0) }, 0))}</div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '등록 중...' : '견적 등록'}</Button>
             </form>

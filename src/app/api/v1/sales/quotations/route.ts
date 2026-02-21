@@ -41,9 +41,18 @@ export async function POST(request: NextRequest) {
     const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } }, select: { id: true } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
+    // 품목별 세금유형 조회
+    const itemIds = data.details.map(d => d.itemId)
+    const itemsInfo = await prisma.item.findMany({
+      where: { id: { in: itemIds } },
+      select: { id: true, taxType: true },
+    })
+    const taxTypeMap = new Map(itemsInfo.map(i => [i.id, i.taxType]))
+
     const details = data.details.map((d, idx) => {
       const supplyAmount = d.quantity * d.unitPrice
-      const taxAmount = Math.round(supplyAmount * 0.1)
+      const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
+      const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
       return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, remark: d.remark || null }
     })
     const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)

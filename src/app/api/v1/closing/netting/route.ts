@@ -7,6 +7,7 @@ import {
   getSession,
 } from '@/lib/api-helpers'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { createNettingSchema } from '@/lib/validations/sales'
 
 export async function GET(req: NextRequest) {
   try {
@@ -103,11 +104,8 @@ export async function POST(req: NextRequest) {
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const body = await req.json()
-    const { partnerId, amount, nettingDate, description } = body
-
-    if (!partnerId || !amount || !nettingDate) {
-      return errorResponse('거래처, 금액, 상계일을 입력하세요.', 'VALIDATION_ERROR')
-    }
+    const data = createNettingSchema.parse(body)
+    const { partnerId, amount, nettingDate, description } = data
 
     // 상계 전표 생성
     const voucherNo = await generateDocumentNumber('VOU', new Date(nettingDate))
@@ -141,7 +139,7 @@ export async function POST(req: NextRequest) {
       return errorResponse('계정과목을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
-    const parsedAmount = parseFloat(amount)
+    const parsedAmount = amount
     const voucher = await prisma.voucher.create({
       data: {
         voucherNo,

@@ -8,6 +8,7 @@ import {
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
+import { createSalesReturnSchema } from '@/lib/validations/sales'
 import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(req: NextRequest) {
@@ -47,17 +48,18 @@ export async function POST(req: NextRequest) {
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const body = await req.json()
-    const returnNo = await generateDocumentNumber('RT', new Date(body.returnDate))
+    const data = createSalesReturnSchema.parse(body)
+    const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate))
 
     const salesReturn = await prisma.salesReturn.create({
       data: {
         returnNo,
-        returnDate: new Date(body.returnDate),
-        salesOrderId: body.salesOrderId,
-        partnerId: body.partnerId,
-        reason: body.reason || 'OTHER',
-        reasonDetail: body.reasonDetail || null,
-        totalAmount: body.totalAmount || 0,
+        returnDate: new Date(data.returnDate),
+        salesOrderId: data.salesOrderId,
+        partnerId: data.partnerId,
+        reason: data.reason,
+        reasonDetail: data.reasonDetail || null,
+        totalAmount: data.totalAmount,
       },
       include: {
         salesOrder: { select: { id: true, orderNo: true } },
