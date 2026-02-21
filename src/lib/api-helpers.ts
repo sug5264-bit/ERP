@@ -72,8 +72,8 @@ export async function getSession() {
 }
 
 export function getPaginationParams(searchParams: URLSearchParams) {
-  const rawPage = parseInt(searchParams.get('page') || '1')
-  const rawSize = parseInt(searchParams.get('pageSize') || '20')
+  const rawPage = parseInt(searchParams.get('page') || '1', 10)
+  const rawSize = parseInt(searchParams.get('pageSize') || '20', 10)
   const page = Math.max(1, Number.isFinite(rawPage) ? rawPage : 1)
   const pageSize = Math.min(100, Math.max(1, Number.isFinite(rawSize) ? rawSize : 20))
   const skip = (page - 1) * pageSize

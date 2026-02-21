@@ -58,6 +58,16 @@ export async function POST(request: NextRequest) {
 
     const movementNo = await generateDocumentNumber('STK', new Date(data.movementDate))
 
+    // 이체 시 출발/도착 창고가 같으면 거부
+    if (data.movementType === 'TRANSFER') {
+      if (!data.sourceWarehouseId || !data.targetWarehouseId) {
+        return errorResponse('이체에는 출발 창고와 도착 창고가 모두 필요합니다.', 'INVALID_WAREHOUSE')
+      }
+      if (data.sourceWarehouseId === data.targetWarehouseId) {
+        return errorResponse('출발 창고와 도착 창고가 동일할 수 없습니다.', 'SAME_WAREHOUSE')
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const movement = await tx.stockMovement.create({
         data: {
@@ -113,6 +123,16 @@ export async function POST(request: NextRequest) {
         }
         if (data.movementType === 'OUTBOUND' || data.movementType === 'TRANSFER') {
           if (data.sourceWarehouseId) {
+            // 재고 부족 검증
+            const balance = await tx.stockBalance.findFirst({
+              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
+              select: { quantity: true },
+            })
+            const currentQty = Number(balance?.quantity ?? 0)
+            if (currentQty < detail.quantity) {
+              const item = await tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } })
+              throw new Error(`품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`)
+            }
             await tx.stockBalance.updateMany({
               where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
               data: {
@@ -138,7 +158,7 @@ export async function POST(request: NextRequest) {
             create: {
               itemId: detail.itemId,
               warehouseId: data.targetWarehouseId,
-              zoneId: null,
+              zoneId: '',
               quantity: detail.quantity,
               averageCost: detail.unitPrice || 0,
               lastMovementDate: movementDate,

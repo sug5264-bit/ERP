@@ -85,8 +85,17 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // 재고 잔량 차감
+      // 재고 잔량 차감 (음수 방지 검증)
       for (const d of data.details) {
+        const balances = await tx.stockBalance.findMany({
+          where: { itemId: d.itemId },
+          select: { quantity: true },
+        })
+        const totalStock = balances.reduce((sum, b) => sum + Number(b.quantity), 0)
+        if (totalStock < d.quantity) {
+          const item = await tx.item.findUnique({ where: { id: d.itemId }, select: { itemName: true } })
+          throw new Error(`품목 "${item?.itemName || d.itemId}"의 재고가 부족합니다. (현재고: ${totalStock}, 출고량: ${d.quantity})`)
+        }
         await tx.stockBalance.updateMany({
           where: { itemId: d.itemId },
           data: { quantity: { decrement: d.quantity } },
