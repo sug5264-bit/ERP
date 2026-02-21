@@ -28,6 +28,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
     if (body.status) {
+      const validStatuses = ['DRAFT', 'CONFIRMED', 'PAID', 'CANCELLED']
+      if (!validStatuses.includes(body.status)) {
+        return errorResponse('유효하지 않은 상태값입니다.', 'INVALID_STATUS', 400)
+      }
+      const existing = await prisma.payrollHeader.findUnique({ where: { id } })
+      if (!existing) return errorResponse('급여 데이터를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (existing.status === 'PAID') {
+        return errorResponse('이미 지급 완료된 급여는 상태를 변경할 수 없습니다.', 'INVALID_STATUS', 400)
+      }
       const payroll = await prisma.payrollHeader.update({ where: { id }, data: { status: body.status } })
       return successResponse(payroll)
     }

@@ -118,7 +118,7 @@ export default function PartnersPage() {
       email: form.get('email') || undefined,
       address: form.get('address') || undefined,
       contactPerson: form.get('contactPerson') || undefined,
-      creditLimit: parseFloat(form.get('creditLimit') as string) || undefined,
+      creditLimit: form.get('creditLimit') ? parseFloat(form.get('creditLimit') as string) : undefined,
       paymentTerms: form.get('paymentTerms') || undefined,
       isActive: form.get('isActive') === 'true',
     })
@@ -189,7 +189,7 @@ export default function PartnersPage() {
       email: form.get('email') || undefined,
       address: form.get('address') || undefined,
       contactPerson: form.get('contactPerson') || undefined,
-      creditLimit: parseFloat(form.get('creditLimit') as string) || undefined,
+      creditLimit: form.get('creditLimit') ? parseFloat(form.get('creditLimit') as string) : undefined,
       paymentTerms: form.get('paymentTerms') || undefined,
     })
   }

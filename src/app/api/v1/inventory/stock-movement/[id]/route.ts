@@ -17,6 +17,14 @@ export async function DELETE(
     })
     if (!movement) return errorResponse('입출고 내역을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
+    if (movement.movementType === 'ADJUSTMENT') {
+      return errorResponse(
+        '재고조정 내역은 삭제할 수 없습니다. 새로운 조정으로 보정하세요.',
+        'CANNOT_DELETE_ADJUSTMENT',
+        400
+      )
+    }
+
     // 재고 원복 처리
     await prisma.$transaction(async (tx) => {
       for (const detail of movement.details) {

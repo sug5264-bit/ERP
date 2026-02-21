@@ -52,6 +52,8 @@ export default function OrdersPage() {
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false)
   const [batchCompleteOpen, setBatchCompleteOpen] = useState(false)
   const [batchCompleteIds, setBatchCompleteIds] = useState<string[]>([])
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; orderNo: string } | null>(null)
+  const [batchCancelConfirm, setBatchCancelConfirm] = useState<string[] | null>(null)
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
@@ -266,7 +268,7 @@ export default function OrdersPage() {
                 </DropdownMenuItem>
               )}
               {canCancel && (
-                <DropdownMenuItem onClick={() => cancelMutation.mutate(row.original.id)} disabled={cancelMutation.isPending}>
+                <DropdownMenuItem onClick={() => setCancelTarget({ id: row.original.id, orderNo: row.original.orderNo })} disabled={cancelMutation.isPending}>
                   <XCircle className="mr-2 h-4 w-4" />
                   취소 처리
                 </DropdownMenuItem>
@@ -658,7 +660,7 @@ export default function OrdersPage() {
             </div>
             <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
               { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
-              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => { if (confirm(`선택한 ${rows.length}건을 취소하시겠습니까?`)) batchMutation.mutate({ ids: rows.map((r: any) => r.id), action: 'cancel' }) } },
+              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)) },
               { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
             ]} />
           </div>
@@ -671,7 +673,7 @@ export default function OrdersPage() {
             </div>
             <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
               { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
-              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => { if (confirm(`선택한 ${rows.length}건을 취소하시겠습니까?`)) batchMutation.mutate({ ids: rows.map((r: any) => r.id), action: 'cancel' }) } },
+              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)) },
               { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
             ]} />
           </div>
@@ -799,6 +801,28 @@ export default function OrdersPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!cancelTarget}
+        onOpenChange={(open) => !open && setCancelTarget(null)}
+        title="발주 취소"
+        description={`[${cancelTarget?.orderNo}]을(를) 취소하시겠습니까?`}
+        confirmLabel="취소 처리"
+        variant="destructive"
+        onConfirm={() => cancelTarget && cancelMutation.mutate(cancelTarget.id)}
+        isPending={cancelMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!batchCancelConfirm}
+        onOpenChange={(open) => !open && setBatchCancelConfirm(null)}
+        title="일괄 취소"
+        description={`선택한 ${batchCancelConfirm?.length || 0}건을 취소하시겠습니까?`}
+        confirmLabel="일괄 취소"
+        variant="destructive"
+        onConfirm={() => batchCancelConfirm && batchMutation.mutate({ ids: batchCancelConfirm, action: 'cancel' })}
+        isPending={batchMutation.isPending}
+      />
     </div>
   )
 }

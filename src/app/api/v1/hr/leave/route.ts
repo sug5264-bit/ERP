@@ -97,10 +97,21 @@ export async function PUT(req: NextRequest) {
       if (leave.status !== 'REQUESTED') {
         return errorResponse('대기 상태의 휴가만 승인할 수 있습니다.', 'BAD_REQUEST', 400)
       }
-      const updated = await prisma.leave.update({
-        where: { id },
-        data: { status: 'APPROVED' },
-        include: { employee: { select: { nameKo: true } } },
+      const year = new Date(leave.startDate).getFullYear()
+      const updated = await prisma.$transaction(async (tx) => {
+        const result = await tx.leave.update({
+          where: { id },
+          data: { status: 'APPROVED' },
+          include: { employee: { select: { nameKo: true } } },
+        })
+        await tx.leaveBalance.updateMany({
+          where: { employeeId: leave.employeeId, year },
+          data: {
+            usedDays: { increment: Number(leave.days) },
+            remainingDays: { decrement: Number(leave.days) },
+          },
+        })
+        return result
       })
       return successResponse(updated)
     }
@@ -121,10 +132,24 @@ export async function PUT(req: NextRequest) {
       if (!['REQUESTED', 'APPROVED'].includes(leave.status)) {
         return errorResponse('취소할 수 없는 상태입니다.', 'BAD_REQUEST', 400)
       }
-      const updated = await prisma.leave.update({
-        where: { id },
-        data: { status: 'CANCELLED' },
-        include: { employee: { select: { nameKo: true } } },
+      const wasApproved = leave.status === 'APPROVED'
+      const year = new Date(leave.startDate).getFullYear()
+      const updated = await prisma.$transaction(async (tx) => {
+        const result = await tx.leave.update({
+          where: { id },
+          data: { status: 'CANCELLED' },
+          include: { employee: { select: { nameKo: true } } },
+        })
+        if (wasApproved) {
+          await tx.leaveBalance.updateMany({
+            where: { employeeId: leave.employeeId, year },
+            data: {
+              usedDays: { decrement: Number(leave.days) },
+              remainingDays: { increment: Number(leave.days) },
+            },
+          })
+        }
+        return result
       })
       return successResponse(updated)
     }

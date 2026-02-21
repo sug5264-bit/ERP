@@ -23,10 +23,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
     if (body.action === 'submit') {
+      const existing = await prisma.quotation.findUnique({ where: { id }, select: { status: true } })
+      if (!existing) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (existing.status !== 'DRAFT') {
+        return errorResponse('작성 상태의 견적만 제출할 수 있습니다.', 'INVALID_STATUS', 400)
+      }
       const q = await prisma.quotation.update({ where: { id }, data: { status: 'SUBMITTED' } })
       return successResponse(q)
     }
     if (body.action === 'cancel') {
+      const existing = await prisma.quotation.findUnique({ where: { id }, select: { status: true } })
+      if (!existing) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (existing.status === 'ORDERED') {
+        return errorResponse('발주 전환된 견적은 취소할 수 없습니다.', 'INVALID_STATUS', 400)
+      }
       const q = await prisma.quotation.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(q)
     }
@@ -129,18 +139,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const quotation = await prisma.quotation.findUnique({ where: { id } })
     if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
+    if (quotation.status === 'ORDERED') {
+      return errorResponse('발주 전환된 견적은 삭제할 수 없습니다. 먼저 발주를 삭제하세요.', 'HAS_ORDERS', 400)
+    }
+
     await prisma.$transaction(async (tx) => {
-      const salesOrders = await tx.salesOrder.findMany({ where: { quotationId: id }, select: { id: true } })
-      if (salesOrders.length > 0) {
-        const orderIds = salesOrders.map(o => o.id)
-        const deliveries = await tx.delivery.findMany({ where: { salesOrderId: { in: orderIds } }, select: { id: true } })
-        if (deliveries.length > 0) {
-          await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map(d => d.id) } } })
-          await tx.delivery.deleteMany({ where: { salesOrderId: { in: orderIds } } })
-        }
-        await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: { in: orderIds } } })
-        await tx.salesOrder.deleteMany({ where: { quotationId: id } })
-      }
       await tx.quotationDetail.deleteMany({ where: { quotationId: id } })
       await tx.quotation.delete({ where: { id } })
     })

@@ -32,21 +32,38 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     if (action === 'cancel') {
-      // 취소 가능한 발주 필터 후 일괄 업데이트 (N번 쿼리 → 1번)
+      // 취소 가능한 발주 필터
       const cancellable = orders.filter(o => {
         if (o.status === 'CANCELLED') { errors.push(`${o.orderNo}: 이미 취소된 발주입니다.`); failed++; return false }
         if (o.status === 'COMPLETED') { errors.push(`${o.orderNo}: 완료된 발주는 취소할 수 없습니다.`); failed++; return false }
         return true
       })
+      // 납품 진행된 발주 제외
       if (cancellable.length > 0) {
-        try {
-          const result = await prisma.salesOrder.updateMany({
-            where: { id: { in: cancellable.map(o => o.id) } },
-            data: { status: 'CANCELLED' },
-          })
-          success += result.count
-        } catch {
-          cancellable.forEach(o => { errors.push(`${o.orderNo}: 취소 처리 중 오류 발생`); failed++ })
+        const delivered = await prisma.salesOrderDetail.findMany({
+          where: { salesOrderId: { in: cancellable.map(o => o.id) }, deliveredQty: { gt: 0 } },
+          select: { salesOrderId: true },
+        })
+        const deliveredIds = new Set(delivered.map(d => d.salesOrderId))
+        const orderNoMap = new Map(cancellable.map(o => [o.id, o.orderNo]))
+        const actualCancellable = cancellable.filter(o => {
+          if (deliveredIds.has(o.id)) {
+            errors.push(`${o.orderNo}: 납품이 진행된 발주는 취소할 수 없습니다.`)
+            failed++
+            return false
+          }
+          return true
+        })
+        if (actualCancellable.length > 0) {
+          try {
+            const result = await prisma.salesOrder.updateMany({
+              where: { id: { in: actualCancellable.map(o => o.id) } },
+              data: { status: 'CANCELLED' },
+            })
+            success += result.count
+          } catch {
+            actualCancellable.forEach(o => { errors.push(`${o.orderNo}: 취소 처리 중 오류 발생`); failed++ })
+          }
         }
       }
     } else if (action === 'complete') {

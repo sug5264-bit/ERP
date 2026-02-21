@@ -25,6 +25,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     if (body.action === 'submit') {
+      const existing = await prisma.approvalDocument.findUnique({ where: { id }, select: { status: true, drafterId: true } })
+      if (!existing) return errorResponse('결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (existing.status !== 'DRAFTED') {
+        return errorResponse('작성 상태의 문서만 상신할 수 있습니다.', 'INVALID_STATUS', 400)
+      }
       const doc = await prisma.approvalDocument.update({
         where: { id }, data: { status: 'IN_PROGRESS', currentStep: 1 },
       })
@@ -34,6 +39,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.action === 'approve' || body.action === 'reject') {
       const doc = await prisma.approvalDocument.findUnique({ where: { id }, include: { steps: { orderBy: { stepOrder: 'asc' } } } })
       if (!doc) return errorResponse('결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (doc.status !== 'IN_PROGRESS') {
+        return errorResponse('진행 중인 문서만 결재할 수 있습니다.', 'INVALID_STATUS', 400)
+      }
 
       const currentStepData = doc.steps.find(s => s.stepOrder === doc.currentStep && s.approverId === employee.id)
       if (!currentStepData) return errorResponse('현재 결재 권한이 없습니다.', 'FORBIDDEN', 403)
@@ -54,6 +62,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (body.action === 'cancel') {
+      const existing = await prisma.approvalDocument.findUnique({ where: { id }, select: { status: true, drafterId: true } })
+      if (!existing) return errorResponse('결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (!['DRAFTED', 'IN_PROGRESS'].includes(existing.status)) {
+        return errorResponse('완료되거나 이미 취소된 문서는 취소할 수 없습니다.', 'INVALID_STATUS', 400)
+      }
+      if (existing.drafterId !== employee.id) {
+        return errorResponse('작성자만 문서를 취소할 수 있습니다.', 'FORBIDDEN', 403)
+      }
       await prisma.approvalDocument.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse({ cancelled: true })
     }

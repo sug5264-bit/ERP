@@ -184,6 +184,7 @@ export default function CodesPage() {
         searchColumn="name"
         searchPlaceholder="코드명으로 검색..."
         isLoading={isLoading}
+        pageSize={50}
       />
     </div>
   )

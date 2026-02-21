@@ -39,6 +39,22 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const { id } = await params
+
+    const partner = await prisma.partner.findUnique({ where: { id } })
+    if (!partner) return errorResponse('거래처를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+    const [orders, quotations] = await Promise.all([
+      prisma.salesOrder.count({ where: { partnerId: id } }),
+      prisma.quotation.count({ where: { partnerId: id } }),
+    ])
+    if (orders > 0 || quotations > 0) {
+      return errorResponse(
+        '연결된 수주 또는 견적이 있어 삭제할 수 없습니다.',
+        'HAS_DEPENDENCIES',
+        400
+      )
+    }
+
     await prisma.partner.delete({ where: { id } })
     return successResponse({ deleted: true })
   } catch (error) {

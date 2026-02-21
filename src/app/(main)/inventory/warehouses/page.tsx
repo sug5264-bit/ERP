@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Plus, MapPin, Trash2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface WarehouseRow {
   id: string; code: string; name: string; location: string | null; isActive: boolean
@@ -24,6 +25,7 @@ interface WarehouseRow {
 export default function WarehousesPage() {
   const [open, setOpen] = useState(false)
   const [zoneDialogId, setZoneDialogId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<WarehouseRow | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -62,8 +64,7 @@ export default function WarehousesPage() {
   })
 
   const handleDelete = (wh: WarehouseRow) => {
-    if (!confirm(`"${wh.name}" 창고를 삭제하시겠습니까?`)) return
-    deleteMutation.mutate(wh.id)
+    setDeleteTarget(wh)
   }
 
   const warehouses: WarehouseRow[] = data?.data || []
@@ -181,6 +182,17 @@ export default function WarehousesPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="창고 삭제"
+        description={`"${deleteTarget?.name}" 창고를 삭제하시겠습니까?`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

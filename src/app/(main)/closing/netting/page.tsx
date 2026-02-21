@@ -80,6 +80,7 @@ export default function NettingPage() {
       queryClient.invalidateQueries({ queryKey: ['closing-netting'] })
       setCreateOpen(false)
       setFormPartnerId(''); setFormAmount(''); setFormDescription('')
+      setFormDate(new Date().toISOString().slice(0, 10))
       toast.success('상계 내역이 등록되었습니다.')
     },
     onError: (err: any) => toast.error(err?.message || '등록에 실패했습니다.'),
@@ -90,9 +91,14 @@ export default function NettingPage() {
       toast.error('거래처, 금액, 상계일을 입력하세요.')
       return
     }
+    const amount = parseFloat(formAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast.error('올바른 금액을 입력하세요.')
+      return
+    }
     createMutation.mutate({
       partnerId: formPartnerId,
-      amount: formAmount,
+      amount,
       nettingDate: formDate,
       description: formDescription,
     })

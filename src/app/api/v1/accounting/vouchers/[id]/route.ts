@@ -86,35 +86,36 @@ export async function PUT(
         return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
       }
 
-      await prisma.voucherDetail.deleteMany({ where: { voucherId: id } })
-
-      const voucher = await prisma.voucher.update({
-        where: { id },
-        data: {
-          voucherDate: body.voucherDate ? new Date(body.voucherDate) : undefined,
-          voucherType: body.voucherType,
-          description: body.description,
-          totalDebit,
-          totalCredit,
-          details: {
-            create: body.details.map((d: any, idx: number) => ({
-              lineNo: idx + 1,
-              accountSubjectId: d.accountSubjectId,
-              debitAmount: d.debitAmount || 0,
-              creditAmount: d.creditAmount || 0,
-              partnerId: d.partnerId || null,
-              description: d.description,
-              costCenterId: d.costCenterId || null,
-            })),
-          },
-        },
-        include: {
-          details: {
-            include: {
-              accountSubject: { select: { code: true, nameKo: true } },
+      const voucher = await prisma.$transaction(async (tx) => {
+        await tx.voucherDetail.deleteMany({ where: { voucherId: id } })
+        return tx.voucher.update({
+          where: { id },
+          data: {
+            voucherDate: body.voucherDate ? new Date(body.voucherDate) : undefined,
+            voucherType: body.voucherType,
+            description: body.description,
+            totalDebit,
+            totalCredit,
+            details: {
+              create: body.details.map((d: any, idx: number) => ({
+                lineNo: idx + 1,
+                accountSubjectId: d.accountSubjectId,
+                debitAmount: d.debitAmount || 0,
+                creditAmount: d.creditAmount || 0,
+                partnerId: d.partnerId || null,
+                description: d.description,
+                costCenterId: d.costCenterId || null,
+              })),
             },
           },
-        },
+          include: {
+            details: {
+              include: {
+                accountSubject: { select: { code: true, nameKo: true } },
+              },
+            },
+          },
+        })
       })
       return successResponse(voucher)
     }
@@ -137,6 +138,9 @@ export async function DELETE(
 
     const existing = await prisma.voucher.findUnique({ where: { id } })
     if (!existing) return errorResponse('전표를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (existing.status !== 'DRAFT') {
+      return errorResponse('작성 상태의 전표만 삭제할 수 있습니다.', 'INVALID_STATUS', 400)
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.taxInvoice.deleteMany({ where: { voucherId: id } })
