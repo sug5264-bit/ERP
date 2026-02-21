@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const columns: ColumnDef<any>[] = [
   { accessorKey: 'payPeriod', header: '급여기간' },
@@ -26,6 +27,7 @@ export default function PayrollPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedPayroll, setSelectedPayroll] = useState<any>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['payroll'], queryFn: () => api.get('/payroll?pageSize=50') as Promise<any> })
@@ -105,12 +107,22 @@ export default function PayrollPage() {
               </div>
               <DataTable columns={detailColumns} data={details} searchColumn="name" searchPlaceholder="이름 검색..." pageSize={20} />
               {selectedPayroll.status !== 'CONFIRMED' && (
-                <Button className="w-full" onClick={() => confirmMutation.mutate(selectedPayroll.id)} disabled={confirmMutation.isPending}>급여 확정</Button>
+                <Button className="w-full" onClick={() => setConfirmOpen(true)} disabled={confirmMutation.isPending}>급여 확정</Button>
               )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="급여 확정"
+        description={`${selectedPayroll?.payPeriod} 급여를 확정하시겠습니까? 확정 후에는 수정할 수 없습니다.`}
+        confirmLabel="확정"
+        onConfirm={() => selectedPayroll && confirmMutation.mutate(selectedPayroll.id)}
+        isPending={confirmMutation.isPending}
+      />
     </div>
   )
 }

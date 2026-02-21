@@ -20,6 +20,7 @@ import {
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, CheckCheck, ArrowRight, Plus, Trash2, Send } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface LeaveRow {
   id: string
@@ -61,6 +62,8 @@ export default function LeavePage() {
   const [approvalComment, setApprovalComment] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [selectedRows, setSelectedRows] = useState<LeaveRow[]>([])
+  const [actionConfirm, setActionConfirm] = useState<{ id: string; action: string; label: string; name: string } | null>(null)
+  const [batchConfirm, setBatchConfirm] = useState<{ action: string; label: string; ids: string[] } | null>(null)
   const [approvalSteps, setApprovalSteps] = useState<ApprovalStep[]>(
     DEFAULT_APPROVAL_LINE.map(label => ({ approverId: '', approvalType: 'APPROVE', lineLabel: label }))
   )
@@ -141,9 +144,7 @@ export default function LeavePage() {
 
   const handleAction = (id: string, action: string, name: string) => {
     const actionLabel = action === 'approve' ? '승인' : action === 'reject' ? '반려' : '취소'
-    if (confirm(`${name}님의 휴가를 ${actionLabel}하시겠습니까?`)) {
-      actionMutation.mutate({ id, action, comment: approvalComment || undefined })
-    }
+    setActionConfirm({ id, action, label: actionLabel, name })
   }
 
   const handleBatchAction = (action: string) => {
@@ -154,9 +155,7 @@ export default function LeavePage() {
     }
     const ids = pendingRows.map((r) => r.id)
     const label = action === 'approve' ? '승인' : '반려'
-    if (confirm(`선택한 ${ids.length}건을 일괄 ${label}하시겠습니까?`)) {
-      batchMutation.mutate({ ids, action })
-    }
+    setBatchConfirm({ action, label, ids })
   }
 
   const handleRowClick = (row: LeaveRow) => {
@@ -412,6 +411,28 @@ export default function LeavePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!actionConfirm}
+        onOpenChange={(open) => !open && setActionConfirm(null)}
+        title={`휴가 ${actionConfirm?.label || ''}`}
+        description={`${actionConfirm?.name || ''}님의 휴가를 ${actionConfirm?.label || ''}하시겠습니까?`}
+        confirmLabel={actionConfirm?.label || '확인'}
+        variant={actionConfirm?.action === 'reject' || actionConfirm?.action === 'cancel' ? 'destructive' : 'default'}
+        onConfirm={() => actionConfirm && actionMutation.mutate({ id: actionConfirm.id, action: actionConfirm.action, comment: approvalComment || undefined })}
+        isPending={actionMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!batchConfirm}
+        onOpenChange={(open) => !open && setBatchConfirm(null)}
+        title={`일괄 ${batchConfirm?.label || ''}`}
+        description={`선택한 ${batchConfirm?.ids.length || 0}건을 일괄 ${batchConfirm?.label || ''}하시겠습니까?`}
+        confirmLabel={batchConfirm?.label || '확인'}
+        variant={batchConfirm?.action === 'reject' ? 'destructive' : 'default'}
+        onConfirm={() => batchConfirm && batchMutation.mutate({ ids: batchConfirm.ids, action: batchConfirm.action })}
+        isPending={batchMutation.isPending}
+      />
     </div>
   )
 }

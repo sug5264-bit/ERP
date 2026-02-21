@@ -31,6 +31,7 @@ export default function QuotationsPage() {
   const [open, setOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [convertTarget, setConvertTarget] = useState<{ id: string; quotationNo: string } | null>(null)
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const queryClient = useQueryClient()
 
@@ -73,7 +74,7 @@ export default function QuotationsPage() {
       return (
         <div className="flex gap-1">
           {canConvert && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => convertMutation.mutate(q.id)} title="수주 전환">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setConvertTarget({ id: q.id, quotationNo: q.quotationNo })} title="수주 전환">
               <ArrowRightLeft className="h-4 w-4" />
             </Button>
           )}
@@ -226,6 +227,15 @@ export default function QuotationsPage() {
         variant="destructive"
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         isPending={deleteMutation.isPending}
+      />
+      <ConfirmDialog
+        open={!!convertTarget}
+        onOpenChange={(open) => !open && setConvertTarget(null)}
+        title="수주 전환"
+        description={`[${convertTarget?.quotationNo}] 견적을 수주로 전환하시겠습니까?`}
+        confirmLabel="수주 전환"
+        onConfirm={() => convertTarget && convertMutation.mutate(convertTarget.id)}
+        isPending={convertMutation.isPending}
       />
     </div>
   )

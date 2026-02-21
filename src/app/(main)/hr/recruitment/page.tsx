@@ -20,6 +20,7 @@ import {
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, UserPlus, Users } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface RecruitmentRow {
   id: string
@@ -54,6 +55,7 @@ export default function RecruitmentPage() {
   const [applicantOpen, setApplicantOpen] = useState(false)
   const [selected, setSelected] = useState<RecruitmentRow | null>(null)
   const [statusFilter, setStatusFilter] = useState('')
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const qp = new URLSearchParams({ pageSize: '50' })
@@ -311,11 +313,7 @@ export default function RecruitmentPage() {
                     마감 처리
                   </Button>
                 )}
-                <Button variant="destructive" size="sm" onClick={() => {
-                  if (confirm('채용공고를 삭제하시겠습니까? 지원자 데이터도 함께 삭제됩니다.')) {
-                    deleteMutation.mutate(selected.id)
-                  }
-                }}>
+                <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
                   <Trash2 className="mr-1 h-3 w-3" /> 삭제
                 </Button>
               </div>
@@ -323,6 +321,17 @@ export default function RecruitmentPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="채용공고 삭제"
+        description="채용공고를 삭제하시겠습니까? 지원자 데이터도 함께 삭제됩니다."
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={() => selected && deleteMutation.mutate(selected.id)}
+        isPending={deleteMutation.isPending}
+      />
     </div>
   )
 }

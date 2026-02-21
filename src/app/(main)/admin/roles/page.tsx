@@ -375,6 +375,7 @@ export default function RolesPage() {
         searchColumn="name"
         searchPlaceholder="역할명으로 검색..."
         isLoading={isLoading}
+        pageSize={50}
       />
 
       {/* 생성 Dialog */}

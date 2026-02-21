@@ -224,7 +224,7 @@ export default function CompanyManagementPage() {
       <div className="flex items-center gap-4">
         <Button onClick={() => setCreateOpen(true)}>회사 등록</Button>
       </div>
-      <DataTable columns={columns} data={companies} searchColumn="companyName" searchPlaceholder="회사명으로 검색..." isLoading={isLoading} />
+      <DataTable columns={columns} data={companies} searchColumn="companyName" searchPlaceholder="회사명으로 검색..." isLoading={isLoading} pageSize={50} />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>회사 등록</DialogTitle></DialogHeader>

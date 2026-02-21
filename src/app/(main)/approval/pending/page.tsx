@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { CheckCircle, XCircle, CheckCheck } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const columns: ColumnDef<any>[] = [
   { accessorKey: 'documentNo', header: '문서번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.documentNo}</span> },
@@ -30,6 +31,7 @@ export default function ApprovalPendingPage() {
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
   const [comment, setComment] = useState('')
   const [selectedRows, setSelectedRows] = useState<any[]>([])
+  const [batchConfirm, setBatchConfirm] = useState<{ action: string; label: string; ids: string[] } | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['approval-pending'], queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=50') as Promise<any> })
@@ -62,9 +64,7 @@ export default function ApprovalPendingPage() {
   const handleBatchAction = (action: string) => {
     const ids = selectedRows.map((r) => r.id)
     const label = action === 'approve' ? '승인' : '반려'
-    if (confirm(`선택한 ${ids.length}건을 일괄 ${label}하시겠습니까?`)) {
-      batchMutation.mutate({ ids, action, comment: '' })
-    }
+    setBatchConfirm({ action, label, ids })
   }
 
   return (
@@ -133,6 +133,17 @@ export default function ApprovalPendingPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!batchConfirm}
+        onOpenChange={(open) => !open && setBatchConfirm(null)}
+        title={`일괄 ${batchConfirm?.label || ''}`}
+        description={`선택한 ${batchConfirm?.ids.length || 0}건을 일괄 ${batchConfirm?.label || ''}하시겠습니까?`}
+        confirmLabel={batchConfirm?.label || '확인'}
+        variant={batchConfirm?.action === 'reject' ? 'destructive' : 'default'}
+        onConfirm={() => batchConfirm && batchMutation.mutate({ ids: batchConfirm.ids, action: batchConfirm.action, comment: '' })}
+        isPending={batchMutation.isPending}
+      />
     </div>
   )
 }
