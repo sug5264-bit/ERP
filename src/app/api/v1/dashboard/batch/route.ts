@@ -16,6 +16,10 @@ export async function GET() {
     const yearStart = new Date(now.getFullYear(), 0, 1)
     const sixMonthsAgo = new Date()
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    // 이번 달 / 지난 달 기간 계산 (트렌드용)
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
 
     const employee = await prisma.employee.findFirst({
       where: { user: { id: session.user!.id! } },
@@ -28,6 +32,9 @@ export async function GET() {
       recentOrders, notices,
       deptStats, departments, stockBalances, approvalAggs, leaveStats,
       onlineOrders, offlineOrders, monthlyAggs,
+      thisMonthSales, lastMonthSales,
+      thisMonthNewEmp, lastMonthNewEmp,
+      todayOrderCount,
     ] = await Promise.all([
       // KPI
       prisma.employee.count({ where: { status: 'ACTIVE' } }),
@@ -113,6 +120,29 @@ export async function GET() {
         GROUP BY to_char("orderDate", 'YYYY-MM'), "salesChannel"
         ORDER BY month
       `,
+      // 트렌드: 이번 달 매출
+      prisma.salesOrder.aggregate({
+        where: { orderDate: { gte: thisMonthStart }, status: { not: 'CANCELLED' } },
+        _count: true,
+        _sum: { totalAmount: true },
+      }),
+      // 트렌드: 지난 달 매출
+      prisma.salesOrder.aggregate({
+        where: { orderDate: { gte: lastMonthStart, lte: lastMonthEnd }, status: { not: 'CANCELLED' } },
+        _count: true,
+        _sum: { totalAmount: true },
+      }),
+      // 트렌드: 이번 달 신규 사원
+      prisma.employee.count({ where: { joinDate: { gte: thisMonthStart }, status: 'ACTIVE' } }),
+      // 트렌드: 지난 달 신규 사원
+      prisma.employee.count({ where: { joinDate: { gte: lastMonthStart, lte: lastMonthEnd }, status: 'ACTIVE' } }),
+      // 오늘 발주 건수
+      prisma.salesOrder.count({
+        where: {
+          createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()) },
+          status: { not: 'CANCELLED' },
+        },
+      }),
     ])
 
     // 안전재고 이하 품목 수
@@ -174,8 +204,24 @@ export async function GET() {
     }
     const monthly = Array.from(monthlyMap.entries()).map(([month, data]) => ({ month, ...data }))
 
+    // 트렌드 계산
+    const thisMonthAmount = Number(thisMonthSales._sum.totalAmount || 0)
+    const lastMonthAmount = Number(lastMonthSales._sum.totalAmount || 0)
+    const salesTrend = lastMonthAmount > 0
+      ? Math.round(((thisMonthAmount - lastMonthAmount) / lastMonthAmount) * 100)
+      : thisMonthAmount > 0 ? 100 : 0
+    const orderTrend = lastMonthSales._count > 0
+      ? Math.round(((thisMonthSales._count - lastMonthSales._count) / lastMonthSales._count) * 100)
+      : thisMonthSales._count > 0 ? 100 : 0
+
     return successResponse({
       kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount },
+      trends: {
+        salesAmount: { current: thisMonthAmount, previous: lastMonthAmount, change: salesTrend },
+        orderCount: { current: thisMonthSales._count, previous: lastMonthSales._count, change: orderTrend },
+        newEmployees: { current: thisMonthNewEmp, previous: lastMonthNewEmp },
+        todayOrders: todayOrderCount,
+      },
       recentOrders,
       notices,
       stats: { deptData, stockData, approvalData, leaveData },

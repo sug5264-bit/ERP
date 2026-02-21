@@ -119,13 +119,21 @@ export default function EmployeesPage() {
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [deptFilter, setDeptFilter] = useState<string>('')
+  const [typeFilter, setTypeFilter] = useState<string>('')
+  const [joinDateFrom, setJoinDateFrom] = useState('')
+  const [joinDateTo, setJoinDateTo] = useState('')
   const queryClient = useQueryClient()
 
   const queryParams = new URLSearchParams({ pageSize: '100' })
   if (statusFilter && statusFilter !== 'all') queryParams.set('status', statusFilter)
+  if (deptFilter && deptFilter !== 'all') queryParams.set('departmentId', deptFilter)
+  if (typeFilter && typeFilter !== 'all') queryParams.set('employeeType', typeFilter)
+  if (joinDateFrom) queryParams.set('joinDateFrom', joinDateFrom)
+  if (joinDateTo) queryParams.set('joinDateTo', joinDateTo)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['hr-employees', statusFilter],
+    queryKey: ['hr-employees', statusFilter, deptFilter, typeFilter, joinDateFrom, joinDateTo],
     queryFn: () => api.get(`/hr/employees?${queryParams.toString()}`) as Promise<any>,
   })
 
@@ -252,24 +260,76 @@ export default function EmployeesPage() {
     })
   }
 
+  // 요약 통계
+  const empSummary = {
+    total: employees.length,
+    active: employees.filter((e: EmployeeRow) => e.status === 'ACTIVE').length,
+    onLeave: employees.filter((e: EmployeeRow) => e.status === 'ON_LEAVE').length,
+    resigned: employees.filter((e: EmployeeRow) => e.status === 'RESIGNED').length,
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="사원관리"
         description="사원 정보를 등록하고 관리합니다"
       />
-      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+
+      {/* 요약 통계 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="rounded-lg border bg-muted/30 p-2 sm:p-3 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">전체</p>
+          <p className="text-sm sm:text-lg font-bold">{empSummary.total}명</p>
+        </div>
+        <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-2 sm:p-3 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">재직</p>
+          <p className="text-sm sm:text-lg font-bold text-green-600">{empSummary.active}명</p>
+        </div>
+        <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/20 p-2 sm:p-3 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">휴직</p>
+          <p className="text-sm sm:text-lg font-bold text-yellow-600">{empSummary.onLeave}명</p>
+        </div>
+        <div className="rounded-lg border bg-red-50 dark:bg-red-950/20 p-2 sm:p-3 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">퇴직</p>
+          <p className="text-sm sm:text-lg font-bold text-red-600">{empSummary.resigned}명</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-36">
+          <SelectTrigger className="w-full sm:w-28">
             <SelectValue placeholder="전체 상태" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="all">전체 상태</SelectItem>
             <SelectItem value="ACTIVE">재직</SelectItem>
             <SelectItem value="ON_LEAVE">휴직</SelectItem>
             <SelectItem value="RESIGNED">퇴직</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={deptFilter} onValueChange={setDeptFilter}>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="전체 부서" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 부서</SelectItem>
+            {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-28">
+            <SelectValue placeholder="전체 유형" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 유형</SelectItem>
+            {Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-1.5">
+          <Input type="date" className="w-full sm:w-36" value={joinDateFrom} onChange={e => setJoinDateFrom(e.target.value)} placeholder="입사일 시작" />
+          <span className="text-xs text-muted-foreground">~</span>
+          <Input type="date" className="w-full sm:w-36" value={joinDateTo} onChange={e => setJoinDateTo(e.target.value)} placeholder="입사일 종료" />
+        </div>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <Upload className="mr-1 h-4 w-4" /> 업로드
         </Button>

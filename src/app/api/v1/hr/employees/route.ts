@@ -31,6 +31,15 @@ export async function GET(req: NextRequest) {
     }
     if (departmentId) where.departmentId = departmentId
     if (status) where.status = status
+    const employeeType = searchParams.get('employeeType')
+    if (employeeType) where.employeeType = employeeType
+    const joinDateFrom = searchParams.get('joinDateFrom')
+    const joinDateTo = searchParams.get('joinDateTo')
+    if (joinDateFrom || joinDateTo) {
+      where.joinDate = {}
+      if (joinDateFrom) where.joinDate.gte = new Date(joinDateFrom)
+      if (joinDateTo) where.joinDate.lte = new Date(joinDateTo)
+    }
 
     const [employees, totalCount] = await Promise.all([
       prisma.employee.findMany({

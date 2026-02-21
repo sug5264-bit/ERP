@@ -22,6 +22,25 @@ export async function GET(request: NextRequest) {
       if (startDate) where.orderDate.gte = new Date(startDate)
       if (endDate) where.orderDate.lte = new Date(endDate)
     }
+    // 거래처 필터
+    const partnerId = sp.get('partnerId')
+    if (partnerId) where.partnerId = partnerId
+    // 금액 범위 필터
+    const minAmount = sp.get('minAmount')
+    const maxAmount = sp.get('maxAmount')
+    if (minAmount || maxAmount) {
+      where.totalAmount = {}
+      if (minAmount) where.totalAmount.gte = Number(minAmount)
+      if (maxAmount) where.totalAmount.lte = Number(maxAmount)
+    }
+    // 통합 검색 (발주번호 또는 거래처명)
+    const search = sp.get('search')
+    if (search) {
+      where.OR = [
+        { orderNo: { contains: search, mode: 'insensitive' } },
+        { partner: { partnerName: { contains: search, mode: 'insensitive' } } },
+      ]
+    }
     const [items, totalCount] = await Promise.all([
       prisma.salesOrder.findMany({
         where,
