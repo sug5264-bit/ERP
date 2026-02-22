@@ -95,7 +95,7 @@ export default function WarehousesPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>창고 등록</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>창고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2"><Label>창고코드 <span className="text-destructive">*</span></Label><Input name="code" required aria-required="true" placeholder="WH-01" /></div>
@@ -169,7 +169,7 @@ export default function WarehousesPage() {
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="sm"><Plus className="mr-1 h-3 w-3" /> 구역추가</Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{wh.name} - 구역 추가</DialogTitle></DialogHeader>
                         <form onSubmit={handleCreateZone} className="space-y-4">
                           <div className="space-y-2"><Label>구역코드 <span className="text-destructive">*</span></Label><Input name="zoneCode" required aria-required="true" placeholder="A-01" /></div>

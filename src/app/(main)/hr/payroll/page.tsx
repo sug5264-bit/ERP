@@ -70,8 +70,8 @@ export default function PayrollPage() {
     { id: 'name', header: '이름', cell: ({ row }) => row.original.employee?.nameKo || '-' },
     { id: 'dept', header: '부서', cell: ({ row }) => row.original.employee?.department?.name || '-' },
     { id: 'baseSalary', header: '기본급', cell: ({ row }) => formatCurrency(Number(row.original.baseSalary)) },
-    { id: 'totalEarnings', header: '총지급액', cell: ({ row }) => <span className="font-medium text-blue-600">{formatCurrency(Number(row.original.totalEarnings))}</span> },
-    { id: 'totalDeductions', header: '총공제액', cell: ({ row }) => <span className="text-red-600">{formatCurrency(Number(row.original.totalDeductions))}</span> },
+    { id: 'totalEarnings', header: '총지급액', cell: ({ row }) => <span className="font-medium text-blue-600 dark:text-blue-500">{formatCurrency(Number(row.original.totalEarnings))}</span> },
+    { id: 'totalDeductions', header: '총공제액', cell: ({ row }) => <span className="text-red-600 dark:text-red-500">{formatCurrency(Number(row.original.totalDeductions))}</span> },
     { id: 'netPay', header: '실수령액', cell: ({ row }) => <span className="font-bold">{formatCurrency(Number(row.original.netPay))}</span> },
   ]
 
@@ -81,7 +81,7 @@ export default function PayrollPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>급여 생성</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>급여 생성</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2"><Label>급여기간 <span className="text-destructive">*</span></Label><Input name="payPeriod" type="month" required aria-required="true" /></div>
@@ -101,8 +101,8 @@ export default function PayrollPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">대상인원</CardTitle></CardHeader><CardContent><span className="text-xl font-bold">{details.length}명</span></CardContent></Card>
-                <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총지급액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold text-blue-600">{formatCurrency(totals.totalEarnings)}</span></CardContent></Card>
-                <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총공제액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold text-red-600">{formatCurrency(totals.totalDeductions)}</span></CardContent></Card>
+                <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총지급액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold text-blue-600 dark:text-blue-500">{formatCurrency(totals.totalEarnings)}</span></CardContent></Card>
+                <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총공제액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold text-red-600 dark:text-red-500">{formatCurrency(totals.totalDeductions)}</span></CardContent></Card>
                 <Card><CardHeader className="pb-2"><CardTitle className="text-xs text-muted-foreground">총실수령액</CardTitle></CardHeader><CardContent><span className="text-lg font-bold">{formatCurrency(totals.netPay)}</span></CardContent></Card>
               </div>
               <DataTable columns={detailColumns} data={details} searchColumn="name" searchPlaceholder="이름 검색..." pageSize={20} />

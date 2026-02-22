@@ -144,7 +144,7 @@ export default function CodesPage() {
           <DialogTrigger asChild>
             <Button>코드 등록</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>공통코드 등록</DialogTitle>
             </DialogHeader>

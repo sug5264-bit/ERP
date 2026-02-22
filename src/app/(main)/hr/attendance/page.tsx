@@ -154,7 +154,7 @@ export default function AttendancePage() {
           <DialogTrigger asChild>
             <Button>근태 등록</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>근태 등록</DialogTitle>
             </DialogHeader>

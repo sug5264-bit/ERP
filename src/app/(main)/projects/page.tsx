@@ -196,7 +196,7 @@ export default function ProjectsPage() {
       </Dialog>
 
       <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-        <DialogContent><DialogHeader><DialogTitle>작업 추가</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>작업 추가</DialogTitle></DialogHeader>
           <form onSubmit={handleAddTask} className="space-y-4">
             <div className="space-y-2"><Label>작업명 <span className="text-destructive">*</span></Label><Input name="taskName" required aria-required="true" /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -212,7 +212,7 @@ export default function ProjectsPage() {
       </Dialog>
 
       <Dialog open={memberOpen} onOpenChange={setMemberOpen}>
-        <DialogContent><DialogHeader><DialogTitle>멤버 추가</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>멤버 추가</DialogTitle></DialogHeader>
           <form onSubmit={handleAddMember} className="space-y-4">
             <div className="space-y-2"><Label>사원 <span className="text-destructive">*</span></Label><Select name="employeeId"><SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-2"><Label>역할</Label><Select name="role" defaultValue="MEMBER"><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PM">PM</SelectItem><SelectItem value="MEMBER">멤버</SelectItem><SelectItem value="REVIEWER">검토자</SelectItem></SelectContent></Select></div>

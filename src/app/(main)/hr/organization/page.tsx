@@ -160,7 +160,7 @@ export default function OrganizationPage() {
               <DialogTrigger asChild>
                 <Button size="sm">부서 추가</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>부서 등록</DialogTitle>
                 </DialogHeader>
@@ -273,7 +273,7 @@ export default function OrganizationPage() {
               <DialogTrigger asChild>
                 <Button size="sm">직급 추가</Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>직급 등록</DialogTitle>
                 </DialogHeader>
