@@ -5,9 +5,13 @@ function getValue(row: any, accessor: string | ((row: any) => any)): string {
   if (typeof accessor === 'function') val = accessor(row)
   else val = accessor.split('.').reduce((obj, key) => obj?.[key], row)
   if (val == null) return ''
-  const str = String(val)
+  let str = String(val)
+  // CSV 수식 인젝션 방지: 셀이 =, +, -, @, \t, \r 로 시작하면 앞에 작은따옴표 추가
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`
+  }
   // CSV 이스케이프: 쉼표, 줄바꿈, 따옴표가 포함된 경우
-  if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+  if (str.includes(',') || str.includes('\n') || str.includes('"') || str.includes("'")) {
     return `"${str.replace(/"/g, '""')}"`
   }
   return str

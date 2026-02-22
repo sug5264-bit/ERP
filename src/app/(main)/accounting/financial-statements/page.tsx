@@ -36,8 +36,8 @@ export default function FinancialStatementsPage() {
 
   const getByType = (type: string) => accounts.filter((a) => a.accountType === type)
   const getBalance = (row: AccountRow) => {
-    if (['ASSET', 'EXPENSE'].includes(row.accountType)) return Number(row.totalDebit) - Number(row.totalCredit)
-    return Number(row.totalCredit) - Number(row.totalDebit)
+    if (['ASSET', 'EXPENSE'].includes(row.accountType)) return Math.round((Number(row.totalDebit) - Number(row.totalCredit)) * 100) / 100
+    return Math.round((Number(row.totalCredit) - Number(row.totalDebit)) * 100) / 100
   }
   const sumBalance = (type: string) => getByType(type).reduce((s, r) => s + getBalance(r), 0)
 

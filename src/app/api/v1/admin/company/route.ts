@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
 
     const body = await req.json()
+    if (!body.companyName || typeof body.companyName !== 'string' || body.companyName.trim().length === 0) {
+      return errorResponse('회사명은 필수입니다.', 'VALIDATION_ERROR', 400)
+    }
     const company = await prisma.$transaction(async (tx) => {
       if (body.isDefault) {
         await tx.company.updateMany({

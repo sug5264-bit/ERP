@@ -11,6 +11,9 @@ export async function POST(req: NextRequest) {
     if (!Array.isArray(rows) || rows.length === 0) {
       return errorResponse('업로드할 데이터가 없습니다.', 'EMPTY_DATA')
     }
+    if (rows.length > 500) {
+      return errorResponse('한 번에 최대 500건까지 업로드할 수 있습니다.', 'TOO_LARGE', 413)
+    }
 
     // Preload departments and positions for name-based matching
     const departments = await prisma.department.findMany()

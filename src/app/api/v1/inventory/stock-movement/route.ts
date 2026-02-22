@@ -93,9 +93,31 @@ export async function POST(request: NextRequest) {
         include: { details: { include: { item: true } }, sourceWarehouse: true, targetWarehouse: true },
       })
 
-      // Update stock balances - 병렬 실행으로 성능 개선
+      // 재고 업데이트 - 순차 처리로 동일 품목 레이스 컨디션 방지
       const movementDate = new Date(data.movementDate)
-      await Promise.all(data.details.map(async (detail) => {
+      for (const detail of data.details) {
+        // 출고 먼저 처리 (재고 부족 검증이 정확하도록)
+        if (data.movementType === 'OUTBOUND' || data.movementType === 'TRANSFER') {
+          if (data.sourceWarehouseId) {
+            const balance = await tx.stockBalance.findFirst({
+              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
+              select: { quantity: true },
+            })
+            const currentQty = Number(balance?.quantity ?? 0)
+            if (currentQty < detail.quantity) {
+              const item = await tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } })
+              throw new Error(`품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`)
+            }
+            await tx.stockBalance.updateMany({
+              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
+              data: {
+                quantity: { decrement: detail.quantity },
+                lastMovementDate: movementDate,
+              },
+            })
+          }
+        }
+        // 입고 처리
         if (data.movementType === 'INBOUND' || data.movementType === 'TRANSFER') {
           if (data.targetWarehouseId) {
             await tx.stockBalance.upsert({
@@ -116,27 +138,6 @@ export async function POST(request: NextRequest) {
                 zoneId: '',
                 quantity: detail.quantity,
                 averageCost: detail.unitPrice || 0,
-                lastMovementDate: movementDate,
-              },
-            })
-          }
-        }
-        if (data.movementType === 'OUTBOUND' || data.movementType === 'TRANSFER') {
-          if (data.sourceWarehouseId) {
-            // 재고 부족 검증
-            const balance = await tx.stockBalance.findFirst({
-              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
-              select: { quantity: true },
-            })
-            const currentQty = Number(balance?.quantity ?? 0)
-            if (currentQty < detail.quantity) {
-              const item = await tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } })
-              throw new Error(`품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`)
-            }
-            await tx.stockBalance.updateMany({
-              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
-              data: {
-                quantity: { decrement: detail.quantity },
                 lastMovementDate: movementDate,
               },
             })
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
             },
           })
         }
-      }))
+      }
 
       return movement
     })

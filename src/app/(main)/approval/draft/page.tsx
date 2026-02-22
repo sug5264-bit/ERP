@@ -341,7 +341,7 @@ export default function ApprovalDraftPage() {
       />
 
       {/* 상세 다이얼로그 */}
-      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+      <Dialog open={detailOpen} onOpenChange={(v) => { setDetailOpen(v); if (!v) setSelectedDoc(null) }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selectedDoc?.title}</DialogTitle></DialogHeader>
           {selectedDoc && (

@@ -107,9 +107,7 @@ export async function POST(req: NextRequest) {
     const data = createNettingSchema.parse(body)
     const { partnerId, amount, nettingDate, description } = data
 
-    // 상계 전표 생성
-    const voucherNo = await generateDocumentNumber('VOU', new Date(nettingDate))
-
+    // 사전 검증
     const voucherDate = new Date(nettingDate)
     const fiscalYear = await prisma.fiscalYear.findFirst({
       where: {
@@ -140,40 +138,44 @@ export async function POST(req: NextRequest) {
     }
 
     const parsedAmount = amount
-    const voucher = await prisma.voucher.create({
-      data: {
-        voucherNo,
-        voucherDate,
-        voucherType: 'TRANSFER',
-        description: description || '상계 처리',
-        totalDebit: parsedAmount,
-        totalCredit: parsedAmount,
-        fiscalYearId: fiscalYear.id,
-        createdById: user.employeeId,
-        details: {
-          create: [
-            {
-              lineNo: 1,
-              accountSubjectId: accPayable.id,
-              debitAmount: parsedAmount,
-              creditAmount: 0,
-              partnerId,
-              description: '매입채무 상계',
-            },
-            {
-              lineNo: 2,
-              accountSubjectId: accReceivable.id,
-              debitAmount: 0,
-              creditAmount: parsedAmount,
-              partnerId,
-              description: '매출채권 상계',
-            },
-          ],
+    // 상계 전표를 트랜잭션으로 원자적 처리
+    const voucher = await prisma.$transaction(async (tx) => {
+      const voucherNo = await generateDocumentNumber('VOU', voucherDate)
+      return tx.voucher.create({
+        data: {
+          voucherNo,
+          voucherDate,
+          voucherType: 'TRANSFER',
+          description: description || '상계 처리',
+          totalDebit: parsedAmount,
+          totalCredit: parsedAmount,
+          fiscalYearId: fiscalYear.id,
+          createdById: user!.employeeId!,
+          details: {
+            create: [
+              {
+                lineNo: 1,
+                accountSubjectId: accPayable.id,
+                debitAmount: parsedAmount,
+                creditAmount: 0,
+                partnerId,
+                description: '매입채무 상계',
+              },
+              {
+                lineNo: 2,
+                accountSubjectId: accReceivable.id,
+                debitAmount: 0,
+                creditAmount: parsedAmount,
+                partnerId,
+                description: '매출채권 상계',
+              },
+            ],
+          },
         },
-      },
-      include: {
-        details: { include: { accountSubject: true, partner: true } },
-      },
+        include: {
+          details: { include: { accountSubject: true, partner: true } },
+        },
+      })
     })
 
     return successResponse(voucher)

@@ -20,6 +20,9 @@ export async function POST(req: NextRequest) {
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return errorResponse('처리할 문서를 선택하세요.', 'BAD_REQUEST', 400)
     }
+    if (ids.length > 50) {
+      return errorResponse('한 번에 최대 50건까지 처리할 수 있습니다.', 'TOO_LARGE', 413)
+    }
     if (!['approve', 'reject'].includes(action)) {
       return errorResponse('유효하지 않은 작업입니다.', 'BAD_REQUEST', 400)
     }

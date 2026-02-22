@@ -1,4 +1,10 @@
+const MAX_EXCEL_SIZE_MB = 10
+
 export async function readExcelFile(file: File, keyMap: Record<string, string>): Promise<any[]> {
+  if (file.size > MAX_EXCEL_SIZE_MB * 1024 * 1024) {
+    throw new Error(`파일 크기가 ${MAX_EXCEL_SIZE_MB}MB를 초과합니다.`)
+  }
+
   const { default: ExcelJS } = await import('exceljs')
 
   const buffer = await file.arrayBuffer()

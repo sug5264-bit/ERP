@@ -89,7 +89,14 @@ export async function requirePermission(module: string, action: Action) {
  */
 export async function checkRoutePermission(pathname: string, method: string) {
   const module = getModuleFromPath(pathname)
-  if (!module) return { error: null, status: 200, session: await auth() }
+  if (!module) {
+    // 매핑되지 않은 경로는 인증만 확인 (공용 API: dashboard, search, notifications 등)
+    const session = await auth()
+    if (!session?.user) {
+      return { error: 'UNAUTHORIZED' as const, status: 401, session: null }
+    }
+    return { error: null, status: 200, session }
+  }
 
   const action = METHOD_ACTION_MAP[method] || 'read'
   return requirePermission(module, action)
