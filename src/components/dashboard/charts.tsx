@@ -14,8 +14,8 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div className="rounded-lg border bg-background p-2 shadow-sm text-xs sm:text-sm">
       <p className="font-medium mb-1">{label}</p>
-      {payload.map((entry: any, idx: number) => (
-        <p key={idx} style={{ color: entry.color }}>
+      {payload.map((entry: any) => (
+        <p key={entry.name || entry.dataKey} style={{ color: entry.color }}>
           {entry.name}: {typeof entry.value === 'number' && entry.value > 1000 ? formatCurrency(entry.value) : entry.value}
         </p>
       ))}
@@ -79,8 +79,8 @@ export default function DashboardCharts({ salesSummary, dashStats }: DashboardCh
                     labelLine={{ strokeWidth: 1 }}
                     fontSize={10}
                   >
-                    {deptData.map((_: any, idx: number) => (
-                      <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                    {deptData.map((d: any, idx: number) => (
+                      <Cell key={d.name || `dept-${idx}`} fill={COLORS[idx % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip />

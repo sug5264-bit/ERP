@@ -252,7 +252,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
   doc.text('위와 같이 견적합니다.', pageWidth / 2, y, { align: 'center' })
 
   // --- Page numbers ---
-  addPageNumbers(doc)
+  addPageNumbers(doc, fontName)
 
   doc.save(`견적서_${data.quotationNo}.pdf`)
 }
@@ -401,7 +401,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   doc.text('이 금액을 청구함', pageWidth / 2, y, { align: 'center' })
 
   // --- Page numbers ---
-  addPageNumbers(doc)
+  addPageNumbers(doc, fontName)
 
   doc.save(`세금계산서_${data.invoiceNo}.pdf`)
 }
@@ -530,7 +530,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
   }
 
   // --- Page numbers ---
-  addPageNumbers(doc)
+  addPageNumbers(doc, fontName)
 
   doc.save(`거래명세표_${data.statementNo}.pdf`)
 }
@@ -539,11 +539,12 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
 // Shared: page numbers
 // ---------------------------------------------------------------------------
 
-function addPageNumbers(doc: InstanceType<typeof import('jspdf').default>) {
+function addPageNumbers(doc: InstanceType<typeof import('jspdf').default>, fontName?: string) {
   const pageCount = doc.getNumberOfPages()
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)
+    if (fontName && fontName !== 'helvetica') doc.setFont(fontName)
     doc.text(
       `${i} / ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,

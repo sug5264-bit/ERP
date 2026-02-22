@@ -425,7 +425,7 @@ export default function EmployeesPage() {
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '등록 중...' : '등록'}
+                {createMutation.isPending ? '등록 중...' : '사원 등록'}
               </Button>
             </form>
           </DialogContent>

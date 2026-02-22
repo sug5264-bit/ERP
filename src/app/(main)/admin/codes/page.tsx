@@ -172,7 +172,7 @@ export default function CodesPage() {
                 <Input name="sortOrder" type="number" defaultValue={0} />
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '등록 중...' : '등록'}
+                {createMutation.isPending ? '등록 중...' : '코드 등록'}
               </Button>
             </form>
           </DialogContent>

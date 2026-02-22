@@ -49,6 +49,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/sales/quotations': '견적관리',
   '/sales/orders': '발주관리',
   '/sales/deliveries': '납품관리',
+  '/sales/returns': '반품관리',
+  '/closing/netting': '상계내역',
+  '/closing/payments': '대금지급',
   '/approval/draft': '기안하기',
   '/approval/pending': '결재대기',
   '/approval/completed': '결재완료',
@@ -60,6 +63,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/roles': '권한관리',
   '/admin/codes': '코드관리',
   '/admin/logs': '감사로그',
+  '/admin/company': '회사관리',
   '/mypage': '마이페이지',
   '/projects': '프로젝트',
 }
@@ -137,8 +141,8 @@ export function Header() {
         const res = await api.get(`/search?q=${encodeURIComponent(searchQuery)}&limit=3`)
         if (res.data?.results) {
           const all: any[] = []
-          for (const items of Object.values(res.data.results) as any[][]) {
-            all.push(...items)
+          for (const items of Object.values(res.data.results)) {
+            if (Array.isArray(items)) all.push(...items)
           }
           setDataResults(all.slice(0, 8))
         }

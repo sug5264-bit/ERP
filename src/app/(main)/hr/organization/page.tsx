@@ -196,7 +196,7 @@ export default function OrganizationPage() {
                     <Input name="sortOrder" type="number" defaultValue={0} />
                   </div>
                   <Button type="submit" className="w-full" disabled={createDeptMutation.isPending}>
-                    {createDeptMutation.isPending ? '등록 중...' : '등록'}
+                    {createDeptMutation.isPending ? '등록 중...' : '부서 등록'}
                   </Button>
                 </form>
               </DialogContent>
@@ -298,7 +298,7 @@ export default function OrganizationPage() {
                     </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={createPosMutation.isPending}>
-                    {createPosMutation.isPending ? '등록 중...' : '등록'}
+                    {createPosMutation.isPending ? '등록 중...' : '직급 등록'}
                   </Button>
                 </form>
               </DialogContent>

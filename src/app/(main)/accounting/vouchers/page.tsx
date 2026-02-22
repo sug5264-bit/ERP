@@ -198,7 +198,7 @@ export default function VouchersPage() {
                 </div>
                 <div className="space-y-3">
                   {details.map((line, idx) => (
-                    <div key={idx} className="rounded-md border p-3 space-y-2">
+                    <div key={`line-${idx}-${line.accountSubjectId}`} className="rounded-md border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground font-medium">분개 #{idx + 1}</span>
                         <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)} disabled={details.length <= 2}><Trash2 className="h-3 w-3" /></Button>

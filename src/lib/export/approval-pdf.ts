@@ -38,6 +38,31 @@ const URGENCY_MAP: Record<string, string> = {
   EMERGENCY: '초긴급',
 }
 
+// 한글 폰트 로드 헬퍼
+async function loadKoreanFont(pdf: InstanceType<typeof import('jspdf').default>): Promise<string> {
+  let fontName = 'helvetica'
+  try {
+    const fontUrl = 'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf'
+    const response = await fetch(fontUrl)
+    if (response.ok) {
+      const arrayBuffer = await response.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+      pdf.addFileToVFS('malgun.ttf', base64)
+      pdf.addFont('malgun.ttf', 'malgun', 'normal')
+      pdf.setFont('malgun')
+      fontName = 'malgun'
+    }
+  } catch {
+    // 폰트 로드 실패 시 기본 폰트 사용
+  }
+  return fontName
+}
+
 export async function exportApprovalPdf(doc: ApprovalDocExport) {
   const { default: jsPDF } = await import('jspdf')
   await import('jspdf-autotable')
@@ -45,17 +70,15 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   const pdf = new jsPDF('p', 'mm', 'a4')
   const pageWidth = pdf.internal.pageSize.getWidth()
 
-  // 폰트 설정 (기본 폰트 - 한글 지원을 위해 간결하게 처리)
-  pdf.setFont('helvetica')
+  // 한글 폰트 로드
+  const fontName = await loadKoreanFont(pdf)
 
   // 제목 영역
-  pdf.setFontSize(18)
-  pdf.setFont('helvetica', 'bold')
-  pdf.text('APPROVAL DOCUMENT', pageWidth / 2, 20, { align: 'center' })
+  pdf.setFontSize(20)
+  pdf.text('결 재 문 서', pageWidth / 2, 20, { align: 'center' })
 
   pdf.setFontSize(10)
-  pdf.setFont('helvetica', 'normal')
-  pdf.text(`Document No: ${doc.documentNo}`, pageWidth / 2, 28, { align: 'center' })
+  pdf.text(`문서번호: ${doc.documentNo}`, pageWidth / 2, 28, { align: 'center' })
 
   // 구분선
   pdf.setLineWidth(0.5)
@@ -66,18 +89,18 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   pdf.setFontSize(10)
 
   const infoData = [
-    ['Title', doc.title],
-    ['Drafter', `${doc.drafter.nameKo} / ${doc.drafter.department?.name || '-'} / ${doc.drafter.position?.name || '-'}`],
-    ['Draft Date', doc.draftDate],
-    ['Urgency', URGENCY_MAP[doc.urgency] || doc.urgency],
-    ['Status', STATUS_MAP[doc.status] || doc.status],
+    ['제목', doc.title],
+    ['기안자', `${doc.drafter.nameKo} / ${doc.drafter.department?.name || '-'} / ${doc.drafter.position?.name || '-'}`],
+    ['기안일', doc.draftDate],
+    ['긴급도', URGENCY_MAP[doc.urgency] || doc.urgency],
+    ['상태', STATUS_MAP[doc.status] || doc.status],
   ]
 
   ;(pdf as any).autoTable({
     startY: y,
     body: infoData,
     theme: 'plain',
-    styles: { fontSize: 10, cellPadding: 3 },
+    styles: { fontSize: 10, cellPadding: 3, font: fontName },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 35 },
       1: { cellWidth: 'auto' },
@@ -89,8 +112,7 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
 
   // 결재선
   pdf.setFontSize(11)
-  pdf.setFont('helvetica', 'bold')
-  pdf.text('Approval Line', 15, y)
+  pdf.text('결재선', 15, y)
   y += 3
 
   const stepData = doc.steps.map((s) => [
@@ -100,16 +122,16 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
     s.approver.department?.name || '-',
     STATUS_MAP[s.status] || s.status,
     s.comment || '-',
-    s.actionDate ? new Date(s.actionDate).toLocaleDateString() : '-',
+    s.actionDate ? new Date(s.actionDate).toLocaleDateString('ko-KR') : '-',
   ])
 
   ;(pdf as any).autoTable({
     startY: y,
-    head: [['No', 'Name', 'Position', 'Dept', 'Status', 'Comment', 'Date']],
+    head: [['순번', '결재자', '직급', '부서', '상태', '의견', '처리일']],
     body: stepData,
     theme: 'striped',
-    styles: { fontSize: 9, cellPadding: 2 },
-    headStyles: { fillColor: [59, 130, 246], textColor: 255 },
+    styles: { fontSize: 9, cellPadding: 2, font: fontName },
+    headStyles: { fillColor: [68, 114, 196], textColor: 255, halign: 'center' },
     margin: { left: 15, right: 15 },
   })
 
@@ -118,12 +140,10 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   // 본문
   if (doc.content?.body) {
     pdf.setFontSize(11)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('Content', 15, y)
+    pdf.text('내용', 15, y)
     y += 5
 
     pdf.setFontSize(10)
-    pdf.setFont('helvetica', 'normal')
 
     // 텍스트를 줄바꿈 처리
     const lines = pdf.splitTextToSize(doc.content.body, pageWidth - 30)
@@ -135,36 +155,36 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   if (doc.content?.amount || doc.content?.period || doc.content?.destination) {
     y += 5
     pdf.setFontSize(11)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('Details', 15, y)
+    pdf.text('상세 정보', 15, y)
     y += 3
 
     const detailData: string[][] = []
-    if (doc.content.amount) detailData.push(['Amount', doc.content.amount])
-    if (doc.content.period) detailData.push(['Period', doc.content.period])
-    if (doc.content.destination) detailData.push(['Destination', doc.content.destination])
-    if (doc.content.purpose) detailData.push(['Purpose', doc.content.purpose])
+    if (doc.content.amount) detailData.push(['금액', doc.content.amount])
+    if (doc.content.period) detailData.push(['기간', doc.content.period])
+    if (doc.content.destination) detailData.push(['목적지', doc.content.destination])
+    if (doc.content.purpose) detailData.push(['목적', doc.content.purpose])
 
     if (detailData.length > 0) {
       ;(pdf as any).autoTable({
         startY: y,
         body: detailData,
         theme: 'plain',
-        styles: { fontSize: 10, cellPadding: 2 },
+        styles: { fontSize: 10, cellPadding: 2, font: fontName },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 } },
         margin: { left: 15, right: 15 },
       })
     }
   }
 
-  // 푸터
+  // 푸터 (페이지 번호)
   const pageCount = (pdf as any).getNumberOfPages?.() || pdf.internal.pages.length - 1
   for (let i = 1; i <= pageCount; i++) {
     pdf.setPage(i)
     pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'normal')
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     pdf.text(
-      `Generated: ${new Date().toLocaleDateString()} | Page ${i}/${pageCount}`,
+      `출력일: ${dateStr} | ${i} / ${pageCount}`,
       pageWidth / 2,
       pdf.internal.pageSize.getHeight() - 10,
       { align: 'center' }

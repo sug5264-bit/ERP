@@ -321,7 +321,7 @@ export default function PaymentsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {createMutation.isPending ? '등록 중...' : '등록'}
+              {createMutation.isPending ? '등록 중...' : '지급 등록'}
             </Button>
           </DialogFooter>
         </DialogContent>
