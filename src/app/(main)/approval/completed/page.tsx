@@ -66,7 +66,7 @@ export default function ApprovalCompletedPage() {
       <DataTable columns={columns} data={completedData} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selectedDoc?.title}</DialogTitle></DialogHeader>
           {selectedDoc && (
             <div className="space-y-4">

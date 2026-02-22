@@ -160,8 +160,8 @@ export default function CompanyManagementPage() {
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>회사명 *</Label>
-          <Input name="companyName" required defaultValue={defaults?.companyName || ''} />
+          <Label>회사명 <span className="text-destructive">*</span></Label>
+          <Input name="companyName" required aria-required="true" defaultValue={defaults?.companyName || ''} />
         </div>
         <div className="space-y-2">
           <Label>사업자등록번호</Label>

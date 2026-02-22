@@ -337,7 +337,7 @@ export default function EmployeesPage() {
           <DialogTrigger asChild>
             <Button>사원 등록</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>신규 사원 등록</DialogTitle>
             </DialogHeader>

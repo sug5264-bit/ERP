@@ -332,41 +332,45 @@ export default function UsersPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>아이디 *</Label>
+              <Label>아이디 <span className="text-destructive">*</span></Label>
               <Input
                 placeholder="영문, 숫자, 점, 밑줄"
                 value={formUsername}
                 onChange={(e) => setFormUsername(e.target.value)}
+                aria-required="true"
               />
             </div>
             <div className="space-y-2">
-              <Label>이름 *</Label>
+              <Label>이름 <span className="text-destructive">*</span></Label>
               <Input
                 placeholder="이름"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
+                aria-required="true"
               />
             </div>
             <div className="space-y-2">
-              <Label>이메일 *</Label>
+              <Label>이메일 <span className="text-destructive">*</span></Label>
               <Input
                 type="email"
                 placeholder="user@erp.com"
                 value={formEmail}
                 onChange={(e) => setFormEmail(e.target.value)}
+                aria-required="true"
               />
             </div>
             <div className="space-y-2">
-              <Label>비밀번호 *</Label>
+              <Label>비밀번호 <span className="text-destructive">*</span></Label>
               <Input
                 type="password"
                 placeholder="6자 이상"
                 value={formPassword}
                 onChange={(e) => setFormPassword(e.target.value)}
+                aria-required="true"
               />
             </div>
             <div className="space-y-2">
-              <Label>역할 *</Label>
+              <Label>역할 <span className="text-destructive">*</span></Label>
               <div className="space-y-2 rounded-md border p-3 max-h-48 overflow-y-auto">
                 {roles.map((role) => (
                   <div key={role.id} className="flex items-center gap-2">

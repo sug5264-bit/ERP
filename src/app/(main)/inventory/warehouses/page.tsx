@@ -98,8 +98,8 @@ export default function WarehousesPage() {
           <DialogContent>
             <DialogHeader><DialogTitle>창고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>창고코드 *</Label><Input name="code" required placeholder="WH-01" /></div>
-              <div className="space-y-2"><Label>창고명 *</Label><Input name="name" required /></div>
+              <div className="space-y-2"><Label>창고코드 <span className="text-destructive">*</span></Label><Input name="code" required aria-required="true" placeholder="WH-01" /></div>
+              <div className="space-y-2"><Label>창고명 <span className="text-destructive">*</span></Label><Input name="name" required aria-required="true" /></div>
               <div className="space-y-2"><Label>위치</Label><Input name="location" /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? '등록 중...' : '창고 등록'}
@@ -172,8 +172,8 @@ export default function WarehousesPage() {
                       <DialogContent>
                         <DialogHeader><DialogTitle>{wh.name} - 구역 추가</DialogTitle></DialogHeader>
                         <form onSubmit={handleCreateZone} className="space-y-4">
-                          <div className="space-y-2"><Label>구역코드 *</Label><Input name="zoneCode" required placeholder="A-01" /></div>
-                          <div className="space-y-2"><Label>구역명 *</Label><Input name="zoneName" required /></div>
+                          <div className="space-y-2"><Label>구역코드 <span className="text-destructive">*</span></Label><Input name="zoneCode" required aria-required="true" placeholder="A-01" /></div>
+                          <div className="space-y-2"><Label>구역명 <span className="text-destructive">*</span></Label><Input name="zoneName" required aria-required="true" /></div>
                           <Button type="submit" className="w-full" disabled={createZoneMutation.isPending}>
                             {createZoneMutation.isPending ? '등록 중...' : '구역 추가'}
                           </Button>

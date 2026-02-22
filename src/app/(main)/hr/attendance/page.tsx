@@ -160,7 +160,7 @@ export default function AttendancePage() {
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label>사원 *</Label>
+                <Label>사원 <span className="text-destructive">*</span></Label>
                 <Select name="employeeId" required>
                   <SelectTrigger>
                     <SelectValue placeholder="사원 선택" />
@@ -176,11 +176,11 @@ export default function AttendancePage() {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>근무일 *</Label>
-                  <Input name="workDate" type="date" required />
+                  <Label>근무일 <span className="text-destructive">*</span></Label>
+                  <Input name="workDate" type="date" required aria-required="true" />
                 </div>
                 <div className="space-y-2">
-                  <Label>근태유형 *</Label>
+                  <Label>근태유형 <span className="text-destructive">*</span></Label>
                   <Select name="attendanceType" required>
                     <SelectTrigger>
                       <SelectValue placeholder="선택" />
