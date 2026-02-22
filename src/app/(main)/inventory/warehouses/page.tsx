@@ -110,9 +110,23 @@ export default function WarehousesPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-muted-foreground py-8">로딩 중...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={`skeleton-${i}`}>
+              <CardContent className="p-6 space-y-3">
+                <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-full animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : warehouses.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">등록된 창고가 없습니다.</div>
+        <div className="rounded-lg border p-8 text-center">
+          <MapPin className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+          <p className="text-muted-foreground">등록된 창고가 없습니다.</p>
+          <p className="text-xs text-muted-foreground mt-1">위의 '창고 등록' 버튼으로 첫 창고를 등록하세요.</p>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {warehouses.map((wh) => (

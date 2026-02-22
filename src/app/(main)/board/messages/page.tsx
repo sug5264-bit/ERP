@@ -64,7 +64,9 @@ export default function MessagesPage() {
       try {
         await api.put('/board/messages', { messageId: row.id })
         queryClient.invalidateQueries({ queryKey: ['messages-received'] })
-      } catch {}
+      } catch {
+        // 읽음 처리 실패 시 무시 (UX에 영향 없음)
+      }
     }
   }
 

@@ -62,7 +62,7 @@ export default function DeliveriesPage() {
     { id: 'trackingNo', header: '운송장번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span> },
     { id: 'carrier', header: '택배사', cell: ({ row }) => row.original.carrier || '-' },
     { id: 'pdf', header: '', cell: ({ row }) => (
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatementPDF(row.original)} title="거래명세표 PDF">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatementPDF(row.original)} title="거래명세표 PDF" aria-label="거래명세표 PDF 다운로드">
         <FileDown className="h-4 w-4" />
       </Button>
     )},
@@ -98,7 +98,7 @@ export default function DeliveriesPage() {
     queryFn: () => api.get('/sales/deliveries?pageSize=50&salesChannel=OFFLINE') as Promise<any>,
   })
 
-  const { data: ordersData } = useQuery({ queryKey: ['sales-orders-active'], queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any> })
+  const { data: ordersData } = useQuery({ queryKey: ['sales-orders-active'], queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any>, staleTime: 5 * 60 * 1000 })
   const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
   const createMutation = useMutation({

@@ -80,6 +80,7 @@ export default function LeavePage() {
   const { data: empData } = useQuery({
     queryKey: ['hr-employees-list'],
     queryFn: () => api.get('/hr/employees?pageSize=500&status=ACTIVE') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const createMutation = useMutation({
@@ -261,7 +262,7 @@ export default function LeavePage() {
                 {/* 결재선 시각화 */}
                 <div className="flex items-center gap-1 flex-wrap">
                   {approvalSteps.map((s, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
+                    <div key={`step-vis-${idx}-${s.lineLabel}`} className="flex items-center gap-1">
                       <div className={`rounded-md border px-3 py-1.5 text-xs text-center min-w-[60px] ${s.approverId ? 'bg-primary/10 border-primary/30' : 'bg-muted'}`}>
                         <div className="font-medium">{s.lineLabel || `${idx + 1}차`}</div>
                         <div className="text-muted-foreground truncate max-w-[80px]">
@@ -275,7 +276,7 @@ export default function LeavePage() {
                 {/* 상세 설정 */}
                 <div className="space-y-2">
                   {approvalSteps.map((s, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div key={`step-cfg-${idx}-${s.lineLabel}`} className="flex items-center gap-2">
                       <span className="text-xs font-medium text-muted-foreground w-16 shrink-0">
                         {s.lineLabel || `${idx + 1}차`}
                       </span>
@@ -297,7 +298,7 @@ export default function LeavePage() {
                           <SelectItem value="NOTIFY">통보</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(idx)} disabled={approvalSteps.length <= 1}>
+                      <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeStep(idx)} disabled={approvalSteps.length <= 1} aria-label="결재자 삭제">
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -368,7 +369,7 @@ export default function LeavePage() {
                 <h4 className="text-sm font-semibold">결재선</h4>
                 <div className="flex items-center gap-1 flex-wrap">
                   {DEFAULT_APPROVAL_LINE.map((label, idx) => (
-                    <div key={idx} className="flex items-center gap-1">
+                    <div key={`detail-${label}`} className="flex items-center gap-1">
                       <div className={`rounded-md border px-3 py-1.5 text-xs text-center min-w-[60px] ${
                         selectedLeave.status === 'APPROVED' ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' :
                         selectedLeave.status === 'REJECTED' ? 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800' :

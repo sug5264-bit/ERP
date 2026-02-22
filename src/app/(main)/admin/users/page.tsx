@@ -95,11 +95,13 @@ export default function UsersPage() {
   const { data: departmentsData } = useQuery({
     queryKey: ['hr-departments'],
     queryFn: () => api.get('/hr/departments?pageSize=100') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: positionsData } = useQuery({
     queryKey: ['hr-positions'],
     queryFn: () => api.get('/hr/positions?pageSize=100') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const roles: RoleItem[] = rolesData?.data || []
@@ -281,6 +283,7 @@ export default function UsersPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="수정"
             onClick={(e) => {
               e.stopPropagation()
               openEdit(row.original)
@@ -291,6 +294,7 @@ export default function UsersPage() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label="삭제"
             onClick={(e) => {
               e.stopPropagation()
               openDelete(row.original)

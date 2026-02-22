@@ -174,6 +174,7 @@ export function DataTable<TData, TValue>({
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               value={
                 (table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''
               }
@@ -332,6 +333,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
+            aria-label="첫 페이지"
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -341,6 +343,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            aria-label="이전 페이지"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -353,6 +356,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            aria-label="다음 페이지"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -362,6 +366,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
+            aria-label="마지막 페이지"
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>

@@ -230,6 +230,7 @@ export function Header() {
             size="icon"
             onClick={() => setSearchOpen(true)}
             title="통합 검색 (Ctrl+K)"
+            aria-label="통합 검색"
             className="lg:hidden shrink-0"
           >
             <Search className="h-5 w-5" />
@@ -243,6 +244,7 @@ export function Header() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="통합 검색... (Ctrl+K)"
+              aria-label="통합 검색"
               className="w-64 pl-8 pr-8 h-8 text-sm"
               onFocus={() => setSearchOpen(true)}
             />
@@ -319,7 +321,7 @@ export function Header() {
           )}
 
           {/* Dark mode toggle */}
-          <Button variant="ghost" size="icon" onClick={toggleTheme} title={theme === 'dark' ? '라이트 모드' : '다크 모드'} className="shrink-0">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} title={theme === 'dark' ? '라이트 모드' : '다크 모드'} aria-label={theme === 'dark' ? '라이트 모드' : '다크 모드'} className="shrink-0">
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 

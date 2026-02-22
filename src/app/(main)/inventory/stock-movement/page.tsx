@@ -66,11 +66,13 @@ export default function StockMovementPage() {
   const { data: itemsData } = useQuery({
     queryKey: ['inventory-items-all'],
     queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: warehousesData } = useQuery({
     queryKey: ['inventory-warehouses'],
     queryFn: () => api.get('/inventory/warehouses') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const createMutation = useMutation({
@@ -198,7 +200,7 @@ export default function StockMovementPage() {
                 </div>
                 <div className="space-y-3">
                   {details.map((d, idx) => (
-                    <div key={idx} className="rounded-md border p-3 space-y-2">
+                    <div key={`detail-${idx}-${d.itemId}`} className="rounded-md border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
                         <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}>
@@ -238,7 +240,7 @@ export default function StockMovementPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.movementNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={movements} searchColumn="movementNo" searchPlaceholder="이동번호로 검색..." isLoading={isLoading} pageSize={50} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.movementNo)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={movements} searchColumn="movementNo" searchPlaceholder="이동번호로 검색..." isLoading={isLoading} pageSize={50} />
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}

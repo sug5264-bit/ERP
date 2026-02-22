@@ -63,11 +63,13 @@ export default function ReturnsPage() {
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-for-return'],
     queryFn: () => api.get('/sales/orders?pageSize=200') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const { data: partnersData } = useQuery({
     queryKey: ['partners-all'],
     queryFn: () => api.get('/partners?pageSize=200') as Promise<any>,
+    staleTime: 5 * 60 * 1000,
   })
 
   const createMutation = useMutation({

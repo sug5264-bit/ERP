@@ -111,8 +111,8 @@ export default function GeneralBoardPage() {
                 />
                 {attachments.length > 0 && (
                   <div className="text-xs text-muted-foreground">
-                    {attachments.map((f, i) => (
-                      <div key={i} className="flex items-center gap-1">
+                    {attachments.map((f) => (
+                      <div key={`${f.name}-${f.size}`} className="flex items-center gap-1">
                         <span>{f.name}</span>
                         <span>({(f.size / 1024).toFixed(1)}KB)</span>
                       </div>
@@ -128,7 +128,7 @@ export default function GeneralBoardPage() {
       <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selectedPost?.title}</DialogTitle></DialogHeader>
           {selectedPost && (
             <div className="space-y-4">
@@ -142,8 +142,8 @@ export default function GeneralBoardPage() {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">첨부파일</Label>
                   <div className="space-y-1">
-                    {selectedPost.attachments.map((a: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
+                    {selectedPost.attachments.map((a: any) => (
+                      <div key={a.id || a.fileName || a} className="flex items-center gap-2 text-sm text-blue-600 hover:underline cursor-pointer">
                         <FileText className="h-4 w-4" />
                         <span>{a.fileName || a}</span>
                       </div>

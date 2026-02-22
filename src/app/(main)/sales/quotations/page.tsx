@@ -64,7 +64,7 @@ export default function QuotationsPage() {
     { id: 'totalAmount', header: '합계', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
     { id: 'status', header: '상태', cell: ({ row }) => { const s = STATUS_MAP[row.original.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status } },
     { id: 'pdf', header: '', cell: ({ row }) => (
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePDF(row.original)} title="견적서 PDF">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePDF(row.original)} title="견적서 PDF" aria-label="견적서 PDF 다운로드">
         <FileDown className="h-4 w-4" />
       </Button>
     )},
@@ -74,11 +74,11 @@ export default function QuotationsPage() {
       return (
         <div className="flex gap-1">
           {canConvert && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setConvertTarget({ id: q.id, quotationNo: q.quotationNo })} title="수주 전환">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setConvertTarget({ id: q.id, quotationNo: q.quotationNo })} title="수주 전환" aria-label="수주 전환">
               <ArrowRightLeft className="h-4 w-4" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(q.id, q.quotationNo)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(q.id, q.quotationNo)} aria-label="삭제">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -190,7 +190,7 @@ export default function QuotationsPage() {
                     const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
                     const tax = itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
-                      <div key={idx} className="rounded-md border p-3 space-y-2">
+                      <div key={`detail-${idx}-${d.itemId}`} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
                           <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}><Trash2 className="h-3 w-3" /></Button>

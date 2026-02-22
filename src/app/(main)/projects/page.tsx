@@ -50,8 +50,8 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => api.get('/projects?pageSize=50') as Promise<any> })
-  const { data: deptData } = useQuery({ queryKey: ['departments'], queryFn: () => api.get('/hr/departments') as Promise<any> })
-  const { data: empData } = useQuery({ queryKey: ['employees-all'], queryFn: () => api.get('/hr/employees?pageSize=500') as Promise<any> })
+  const { data: deptData } = useQuery({ queryKey: ['departments'], queryFn: () => api.get('/hr/departments') as Promise<any>, staleTime: 5 * 60 * 1000 })
+  const { data: empData } = useQuery({ queryKey: ['employees-all'], queryFn: () => api.get('/hr/employees?pageSize=500') as Promise<any>, staleTime: 5 * 60 * 1000 })
 
   const departments = deptData?.data || []
   const employees = empData?.data || []
@@ -137,7 +137,7 @@ export default function ProjectsPage() {
                 <div className="space-y-2"><Label>종료일</Label><Input name="endDate" type="date" /></div>
                 <div className="space-y-2"><Label>예산</Label><Input name="budget" type="number" placeholder="0" /></div>
               </div>
-              <div className="space-y-2"><Label>설명</Label><Textarea name="description" rows={3} /></div>
+              <div className="space-y-2"><Label>프로젝트 설명</Label><Textarea name="description" rows={3} /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '생성 중...' : '프로젝트 생성'}</Button>
             </form>
           </DialogContent>

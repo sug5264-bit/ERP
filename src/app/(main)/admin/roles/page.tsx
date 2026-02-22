@@ -113,6 +113,7 @@ export default function RolesPage() {
   const { data: permissionsData } = useQuery({
     queryKey: ['admin-permissions'],
     queryFn: () => api.get('/admin/permissions') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
   })
 
   const roles: RoleRow[] = rolesData?.data || []
@@ -297,11 +298,11 @@ export default function RolesPage() {
       header: '관리',
       cell: ({ row }) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => openEdit(row.original)}>
+          <Button variant="ghost" size="icon" aria-label="수정" onClick={() => openEdit(row.original)}>
             <Pencil className="h-4 w-4" />
           </Button>
           {!row.original.isSystem && (
-            <Button variant="ghost" size="icon" onClick={() => openDelete(row.original)}>
+            <Button variant="ghost" size="icon" aria-label="삭제" onClick={() => openDelete(row.original)}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           )}

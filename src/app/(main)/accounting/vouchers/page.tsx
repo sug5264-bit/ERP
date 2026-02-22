@@ -91,6 +91,7 @@ export default function VouchersPage() {
   const { data: accountsData } = useQuery({
     queryKey: ['accounting-accounts'],
     queryFn: () => api.get('/accounting/accounts') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
   })
 
   const createMutation = useMutation({
@@ -231,7 +232,7 @@ export default function VouchersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
