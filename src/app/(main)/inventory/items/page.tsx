@@ -207,16 +207,16 @@ export default function ItemsPage() {
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>품목 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>품목 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>품목코드 *</Label><Input name="itemCode" required placeholder="ITM-001" /></div>
-                <div className="space-y-2"><Label>품목명 *</Label><Input name="itemName" required /></div>
+                <div className="space-y-2"><Label>품목코드 <span className="text-destructive">*</span></Label><Input name="itemCode" required aria-required="true" placeholder="ITM-001" /></div>
+                <div className="space-y-2"><Label>품목명 <span className="text-destructive">*</span></Label><Input name="itemName" required aria-required="true" /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label>구분 *</Label>
+                  <Label>구분 <span className="text-destructive">*</span></Label>
                   <Select name="itemType" defaultValue="GOODS">
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -265,8 +265,8 @@ export default function ItemsPage() {
       </div>
       <DataTable columns={[...columns, { id: 'actions', header: '', cell: ({ row }: any) => (
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)}><Pencil className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.itemName)}><Trash2 className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정"><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.itemName)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>
         </div>
       ), size: 80 }]} data={items} isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
       <ExcelImportDialog
@@ -280,13 +280,13 @@ export default function ItemsPage() {
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['inventory-items'] })}
       />
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>품목 수정</DialogTitle></DialogHeader>
           {editTarget && (
             <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>품목코드</Label><Input value={editTarget.itemCode} disabled className="bg-muted" /></div>
-                <div className="space-y-2"><Label>품목명 *</Label><Input name="itemName" required defaultValue={editTarget.itemName} /></div>
+                <div className="space-y-2"><Label>품목명 <span className="text-destructive">*</span></Label><Input name="itemName" required aria-required="true" defaultValue={editTarget.itemName} /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">

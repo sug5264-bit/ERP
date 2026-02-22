@@ -145,6 +145,7 @@ export default function WarehousesPage() {
                       onClick={() => handleDelete(wh)}
                       disabled={deleteMutation.isPending}
                       title="창고 삭제"
+                      aria-label="삭제"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>

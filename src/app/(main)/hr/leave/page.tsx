@@ -228,7 +228,7 @@ export default function LeavePage() {
                 <h3 className="text-sm font-semibold text-muted-foreground">신청정보</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>사원 *</Label>
+                    <Label>사원 <span className="text-destructive">*</span></Label>
                     <Select name="employeeId" required>
                       <SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger>
                       <SelectContent>
@@ -237,7 +237,7 @@ export default function LeavePage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>휴가유형 *</Label>
+                    <Label>휴가유형 <span className="text-destructive">*</span></Label>
                     <Select name="leaveType" required>
                       <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>{Object.entries(LEAVE_TYPE_MAP).map(([k, v]) => (<SelectItem key={k} value={k}>{v}</SelectItem>))}</SelectContent>
@@ -245,8 +245,8 @@ export default function LeavePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>시작일 *</Label><Input name="startDate" type="date" required /></div>
-                  <div className="space-y-2"><Label>종료일 *</Label><Input name="endDate" type="date" required /></div>
+                  <div className="space-y-2"><Label>시작일 <span className="text-destructive">*</span></Label><Input name="startDate" type="date" required aria-required="true" /></div>
+                  <div className="space-y-2"><Label>종료일 <span className="text-destructive">*</span></Label><Input name="endDate" type="date" required aria-required="true" /></div>
                 </div>
                 <div className="space-y-2"><Label>사유</Label><Textarea name="reason" placeholder="휴가 사유를 입력하세요" rows={3} /></div>
               </div>

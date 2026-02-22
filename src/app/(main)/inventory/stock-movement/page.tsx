@@ -150,13 +150,13 @@ export default function StockMovementPage() {
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>입출고 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>입출고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>이동일자 *</Label><Input name="movementDate" type="date" required /></div>
+                <div className="space-y-2"><Label>이동일자 <span className="text-destructive">*</span></Label><Input name="movementDate" type="date" required aria-required="true" /></div>
                 <div className="space-y-2">
-                  <Label>유형 *</Label>
+                  <Label>유형 <span className="text-destructive">*</span></Label>
                   <Select value={movementType} onValueChange={setMovementType}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -170,7 +170,7 @@ export default function StockMovementPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(movementType === 'OUTBOUND' || movementType === 'TRANSFER') && (
                   <div className="space-y-2">
-                    <Label>출고창고 *</Label>
+                    <Label>출고창고 <span className="text-destructive">*</span></Label>
                     <Select name="sourceWarehouseId">
                       <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>
@@ -181,7 +181,7 @@ export default function StockMovementPage() {
                 )}
                 {(movementType === 'INBOUND' || movementType === 'TRANSFER' || movementType === 'ADJUSTMENT') && (
                   <div className="space-y-2">
-                    <Label>입고창고 *</Label>
+                    <Label>입고창고 <span className="text-destructive">*</span></Label>
                     <Select name="targetWarehouseId">
                       <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                       <SelectContent>

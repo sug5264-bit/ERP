@@ -456,7 +456,7 @@ export default function OrdersPage() {
                   <div key={idx} className="rounded-md border p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
                     </div>
                     <Select value={d.itemId} onValueChange={v => updateDetail(idx, 'itemId', v)}>
                       <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
@@ -604,10 +604,10 @@ export default function OrdersPage() {
                 onKeyDown={e => e.key === 'Enter' && queryClient.invalidateQueries({ queryKey: ['sales-orders'] })}
               />
             </div>
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setShowAdvancedFilter(!showAdvancedFilter)} aria-label="필터">
               <Filter className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters}>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters} aria-label="초기화">
               <RotateCcw className="h-4 w-4" />
             </Button>
           </div>
@@ -725,7 +725,7 @@ export default function OrdersPage() {
                       <div key={idx} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))} disabled={editDetails.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))} disabled={editDetails.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
                         </div>
                         <Select value={d.itemId} onValueChange={v => { const nd = [...editDetails]; nd[idx].itemId = v; setEditDetails(nd) }}>
                           <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>

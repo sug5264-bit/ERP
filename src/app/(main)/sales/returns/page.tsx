@@ -154,12 +154,12 @@ export default function ReturnsPage() {
       </div>
       <DataTable columns={columns} data={returns} searchColumn="returnNo" searchPlaceholder="반품번호로 검색..." isLoading={isLoading} />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>반품 등록</DialogTitle></DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>수주 선택 *</Label>
+                <Label>수주 선택 <span className="text-destructive">*</span></Label>
                 <Select name="salesOrderId" required>
                   <SelectTrigger><SelectValue placeholder="수주 선택" /></SelectTrigger>
                   <SelectContent>
@@ -170,7 +170,7 @@ export default function ReturnsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>거래처 *</Label>
+                <Label>거래처 <span className="text-destructive">*</span></Label>
                 <Select name="partnerId" required>
                   <SelectTrigger><SelectValue placeholder="거래처 선택" /></SelectTrigger>
                   <SelectContent>
@@ -181,11 +181,11 @@ export default function ReturnsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>반품일 *</Label>
-                <Input name="returnDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+                <Label>반품일 <span className="text-destructive">*</span></Label>
+                <Input name="returnDate" type="date" required aria-required="true" defaultValue={new Date().toISOString().slice(0, 10)} />
               </div>
               <div className="space-y-2">
-                <Label>반품사유 *</Label>
+                <Label>반품사유 <span className="text-destructive">*</span></Label>
                 <Select name="reason" required>
                   <SelectTrigger><SelectValue placeholder="사유 선택" /></SelectTrigger>
                   <SelectContent>

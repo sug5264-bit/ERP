@@ -381,14 +381,14 @@ export default function RolesPage() {
 
       {/* 생성 Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>역할 추가</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>역할명 *</Label>
+                <Label>역할명 <span className="text-destructive">*</span></Label>
                 <Input
                   placeholder="예: 회계담당자"
                   value={formName}
@@ -423,7 +423,7 @@ export default function RolesPage() {
 
       {/* 수정 Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>역할 수정 - {selectedRole?.name}</DialogTitle>
           </DialogHeader>

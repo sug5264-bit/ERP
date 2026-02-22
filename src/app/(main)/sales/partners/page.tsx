@@ -216,8 +216,8 @@ export default function PartnersPage() {
             <DialogHeader><DialogTitle>거래처 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>거래처코드 *</Label><Input name="partnerCode" required placeholder="PTN-001" /></div>
-                <div className="space-y-2"><Label>거래처명 *</Label><Input name="partnerName" required /></div>
+                <div className="space-y-2"><Label>거래처코드 <span className="text-destructive">*</span></Label><Input name="partnerCode" required aria-required="true" placeholder="PTN-001" /></div>
+                <div className="space-y-2"><Label>거래처명 <span className="text-destructive">*</span></Label><Input name="partnerName" required aria-required="true" /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -291,7 +291,7 @@ export default function PartnersPage() {
             <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>거래처코드</Label><Input value={editTarget.partnerCode} disabled className="bg-muted" /></div>
-                <div className="space-y-2"><Label>거래처명 *</Label><Input name="partnerName" required defaultValue={editTarget.partnerName} /></div>
+                <div className="space-y-2"><Label>거래처명 <span className="text-destructive">*</span></Label><Input name="partnerName" required aria-required="true" defaultValue={editTarget.partnerName} /></div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="space-y-2">

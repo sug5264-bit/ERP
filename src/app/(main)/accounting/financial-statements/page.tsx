@@ -55,7 +55,9 @@ export default function FinancialStatementsPage() {
       <div className="space-y-2">
         <h3 className="font-semibold text-lg border-b pb-1">{label}</h3>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2">해당 데이터가 없습니다.</p>
+          <div className="flex items-center justify-center py-6">
+            <p className="text-sm text-muted-foreground">해당 데이터가 없습니다.</p>
+          </div>
         ) : items.map((row) => (
           <div key={row.id} className="flex justify-between text-sm py-1">
             <span>{row.code} {row.nameKo}</span>

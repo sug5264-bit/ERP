@@ -144,10 +144,10 @@ export default function CompanyManagementPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정">
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget({ id: row.original.id, name: row.original.companyName })}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget({ id: row.original.id, name: row.original.companyName })} aria-label="삭제">
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -226,13 +226,13 @@ export default function CompanyManagementPage() {
       </div>
       <DataTable columns={columns} data={companies} searchColumn="companyName" searchPlaceholder="회사명으로 검색..." isLoading={isLoading} pageSize={50} />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>회사 등록</DialogTitle></DialogHeader>
           <CompanyForm onSubmit={handleCreate} isPending={createMutation.isPending} submitLabel="등록" />
         </DialogContent>
       </Dialog>
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>회사 정보 수정</DialogTitle></DialogHeader>
           {editTarget && <CompanyForm key={editTarget.id} onSubmit={handleUpdate} defaults={editTarget} isPending={updateMutation.isPending} submitLabel="수정" />}
         </DialogContent>

@@ -166,13 +166,13 @@ export default function QuotationsPage() {
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>견적 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>견적 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>견적일 *</Label><Input name="quotationDate" type="date" required /></div>
+                <div className="space-y-2"><Label>견적일 <span className="text-destructive">*</span></Label><Input name="quotationDate" type="date" required aria-required="true" /></div>
                 <div className="space-y-2">
-                  <Label>거래처 *</Label>
+                  <Label>거래처 <span className="text-destructive">*</span></Label>
                   <Select name="partnerId"><SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                     <SelectContent>{partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}</SelectContent>
                   </Select>

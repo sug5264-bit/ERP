@@ -194,13 +194,13 @@ export default function DeliveriesPage() {
   const createDialog = (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button>납품 등록</Button></DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>납품 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle></DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>납품일 *</Label><Input name="deliveryDate" type="date" required /></div>
+            <div className="space-y-2"><Label>납품일 <span className="text-destructive">*</span></Label><Input name="deliveryDate" type="date" required aria-required="true" /></div>
             <div className="space-y-2">
-              <Label>발주 *</Label>
+              <Label>발주 <span className="text-destructive">*</span></Label>
               <Select name="salesOrderId"><SelectTrigger><SelectValue placeholder="발주 선택" /></SelectTrigger>
                 <SelectContent>{orders.map((o: any) => <SelectItem key={o.id} value={o.id}>{o.orderNo} - {o.partner?.partnerName}</SelectItem>)}</SelectContent>
               </Select>
@@ -249,7 +249,7 @@ export default function DeliveriesPage() {
       <DialogTrigger asChild>
         <Button variant="outline"><Upload className="mr-2 h-4 w-4" />운송장 업로드</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>운송장 일괄 업로드</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">

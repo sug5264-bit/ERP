@@ -167,12 +167,12 @@ export default function OrganizationPage() {
                 <form onSubmit={handleCreateDept} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>부서코드 *</Label>
-                      <Input name="code" required placeholder="DIV-001" />
+                      <Label>부서코드 <span className="text-destructive">*</span></Label>
+                      <Input name="code" required aria-required="true" placeholder="DIV-001" />
                     </div>
                     <div className="space-y-2">
-                      <Label>부서명 *</Label>
-                      <Input name="name" required />
+                      <Label>부서명 <span className="text-destructive">*</span></Label>
+                      <Input name="name" required aria-required="true" />
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -243,6 +243,7 @@ export default function OrganizationPage() {
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => setDeleteDeptTarget({ id: dept.id, name: dept.name })}
+                          aria-label="삭제"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -279,18 +280,18 @@ export default function OrganizationPage() {
                 <form onSubmit={handleCreatePos} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>직급코드 *</Label>
-                      <Input name="code" required placeholder="POS-001" />
+                      <Label>직급코드 <span className="text-destructive">*</span></Label>
+                      <Input name="code" required aria-required="true" placeholder="POS-001" />
                     </div>
                     <div className="space-y-2">
-                      <Label>직급명 *</Label>
-                      <Input name="name" required />
+                      <Label>직급명 <span className="text-destructive">*</span></Label>
+                      <Input name="name" required aria-required="true" />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>레벨 *</Label>
-                      <Input name="level" type="number" required defaultValue={1} min={1} />
+                      <Label>레벨 <span className="text-destructive">*</span></Label>
+                      <Input name="level" type="number" required aria-required="true" defaultValue={1} min={1} />
                     </div>
                     <div className="space-y-2">
                       <Label>정렬순서</Label>
@@ -337,6 +338,7 @@ export default function OrganizationPage() {
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => setDeletePosTarget({ id: pos.id, name: pos.name })}
+                          aria-label="삭제"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

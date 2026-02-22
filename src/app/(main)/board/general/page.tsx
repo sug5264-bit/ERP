@@ -96,11 +96,11 @@ export default function GeneralBoardPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>글 작성</Button></DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>게시글 작성</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>제목 *</Label><Input name="title" required /></div>
-              <div className="space-y-2"><Label>내용 *</Label><Textarea name="content" rows={8} required /></div>
+              <div className="space-y-2"><Label>제목 <span className="text-destructive">*</span></Label><Input name="title" required aria-required="true" /></div>
+              <div className="space-y-2"><Label>내용 <span className="text-destructive">*</span></Label><Textarea name="content" rows={8} required /></div>
               <div className="space-y-2">
                 <Label>첨부파일</Label>
                 <Input
@@ -125,10 +125,10 @@ export default function GeneralBoardPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={data?.data || []} searchColumn="title" searchPlaceholder="제목으로 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[85dvh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selectedPost?.title}</DialogTitle></DialogHeader>
           {selectedPost && (
             <div className="space-y-4">

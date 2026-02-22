@@ -269,13 +269,13 @@ export default function PaymentsPage() {
 
       {/* 대금지급 등록 Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>대금지급 등록</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>거래처 *</Label>
+              <Label>거래처 <span className="text-destructive">*</span></Label>
               <Select value={formPartnerId} onValueChange={setFormPartnerId}>
                 <SelectTrigger>
                   <SelectValue placeholder="거래처 선택" />
@@ -290,11 +290,12 @@ export default function PaymentsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>지급금액 *</Label>
+              <Label>지급금액 <span className="text-destructive">*</span></Label>
               <Input
                 type="number"
                 placeholder="0"
                 required
+                aria-required="true"
                 min="1"
                 step="1"
                 value={formAmount}
@@ -302,7 +303,7 @@ export default function PaymentsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>지급일 *</Label>
+              <Label>지급일 <span className="text-destructive">*</span></Label>
               <Input
                 type="date"
                 value={formDate}
@@ -329,7 +330,7 @@ export default function PaymentsPage() {
 
       {/* 상세 Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>지급 상세 - {selectedPayment?.voucherNo}</DialogTitle>
           </DialogHeader>
