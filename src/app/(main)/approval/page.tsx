@@ -21,17 +21,21 @@ export default function ApprovalPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">내 기안문서</CardTitle><FileText className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{draftCount}</div></CardContent></Card>
         <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">결재 대기</CardTitle><Clock className="h-4 w-4 text-orange-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-orange-600">{pendingCount}</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">결재 완료</CardTitle><CheckCircle className="h-4 w-4 text-green-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-green-600">-</div></CardContent></Card>
-        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">반려</CardTitle><XCircle className="h-4 w-4 text-red-500" /></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">-</div></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">결재 완료</CardTitle><CheckCircle className="h-4 w-4 text-green-500 dark:text-green-400" /></CardHeader><CardContent><div className="text-2xl font-bold text-green-600 dark:text-green-500">-</div></CardContent></Card>
+        <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">반려</CardTitle><XCircle className="h-4 w-4 text-red-500 dark:text-red-400" /></CardHeader><CardContent><div className="text-2xl font-bold text-red-600 dark:text-red-500">-</div></CardContent></Card>
       </div>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">내 기안문서</CardTitle>
             <Link href="/approval/draft"><Button variant="ghost" size="sm">더보기</Button></Link>
           </CardHeader>
           <CardContent>
-            {(drafts?.data || []).length === 0 ? <p className="text-muted-foreground text-sm">기안 문서가 없습니다.</p> :
+            {(drafts?.data || []).length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-muted-foreground">기안 문서가 없습니다.</p>
+              </div>
+            ) :
               <ul className="space-y-2">{(drafts?.data || []).map((d: any) => (
                 <li key={d.id} className="flex items-center justify-between text-sm border-b pb-2">
                   <span>{d.title}</span>
@@ -47,7 +51,11 @@ export default function ApprovalPage() {
             <Link href="/approval/pending"><Button variant="ghost" size="sm">더보기</Button></Link>
           </CardHeader>
           <CardContent>
-            {(pending?.data || []).length === 0 ? <p className="text-muted-foreground text-sm">결재 대기 문서가 없습니다.</p> :
+            {(pending?.data || []).length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-muted-foreground">결재 대기 문서가 없습니다.</p>
+              </div>
+            ) :
               <ul className="space-y-2">{(pending?.data || []).map((d: any) => (
                 <li key={d.id} className="flex items-center justify-between text-sm border-b pb-2">
                   <span>{d.title}</span>

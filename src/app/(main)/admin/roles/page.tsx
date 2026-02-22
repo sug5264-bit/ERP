@@ -113,6 +113,7 @@ export default function RolesPage() {
   const { data: permissionsData } = useQuery({
     queryKey: ['admin-permissions'],
     queryFn: () => api.get('/admin/permissions') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
   })
 
   const roles: RoleRow[] = rolesData?.data || []
@@ -297,11 +298,11 @@ export default function RolesPage() {
       header: '관리',
       cell: ({ row }) => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => openEdit(row.original)}>
+          <Button variant="ghost" size="icon" aria-label="수정" onClick={() => openEdit(row.original)}>
             <Pencil className="h-4 w-4" />
           </Button>
           {!row.original.isSystem && (
-            <Button variant="ghost" size="icon" onClick={() => openDelete(row.original)}>
+            <Button variant="ghost" size="icon" aria-label="삭제" onClick={() => openDelete(row.original)}>
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           )}
@@ -380,14 +381,14 @@ export default function RolesPage() {
 
       {/* 생성 Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>역할 추가</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>역할명 *</Label>
+                <Label>역할명 <span className="text-destructive">*</span></Label>
                 <Input
                   placeholder="예: 회계담당자"
                   value={formName}
@@ -422,7 +423,7 @@ export default function RolesPage() {
 
       {/* 수정 Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>역할 수정 - {selectedRole?.name}</DialogTitle>
           </DialogHeader>

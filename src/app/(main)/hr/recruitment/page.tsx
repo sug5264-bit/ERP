@@ -197,20 +197,20 @@ export default function RecruitmentPage() {
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" /> 채용공고 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>채용공고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>공고명 *</Label><Input name="title" required placeholder="채용공고 제목" /></div>
+              <div className="space-y-2"><Label>공고명 <span className="text-destructive">*</span></Label><Input name="title" required aria-required="true" placeholder="채용공고 제목" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>부서 *</Label>
+                  <Label>부서 <span className="text-destructive">*</span></Label>
                   <Select name="departmentId" required>
                     <SelectTrigger><SelectValue placeholder="부서 선택" /></SelectTrigger>
                     <SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>직급 *</Label>
+                  <Label>직급 <span className="text-destructive">*</span></Label>
                   <Select name="positionId" required>
                     <SelectTrigger><SelectValue placeholder="직급 선택" /></SelectTrigger>
                     <SelectContent>{positions.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
@@ -219,8 +219,8 @@ export default function RecruitmentPage() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>모집인원</Label><Input name="requiredCount" type="number" defaultValue={1} min={1} /></div>
-                <div className="space-y-2"><Label>시작일 *</Label><Input name="startDate" type="date" required /></div>
-                <div className="space-y-2"><Label>종료일 *</Label><Input name="endDate" type="date" required /></div>
+                <div className="space-y-2"><Label>시작일 <span className="text-destructive">*</span></Label><Input name="startDate" type="date" required aria-required="true" /></div>
+                <div className="space-y-2"><Label>종료일 <span className="text-destructive">*</span></Label><Input name="endDate" type="date" required aria-required="true" /></div>
               </div>
               <div className="space-y-2"><Label>상세내용</Label><Textarea name="description" rows={4} placeholder="채용 상세 내용" /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
@@ -243,7 +243,7 @@ export default function RecruitmentPage() {
 
       {/* 상세 다이얼로그 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selected?.title}</DialogTitle></DialogHeader>
           {selected && (
             <div className="space-y-4">
@@ -271,8 +271,8 @@ export default function RecruitmentPage() {
                       <DialogContent>
                         <DialogHeader><DialogTitle>지원자 추가</DialogTitle></DialogHeader>
                         <form onSubmit={handleAddApplicant} className="space-y-4">
-                          <div className="space-y-2"><Label>이름 *</Label><Input name="name" required /></div>
-                          <div className="space-y-2"><Label>이메일 *</Label><Input name="email" type="email" required /></div>
+                          <div className="space-y-2"><Label>이름 <span className="text-destructive">*</span></Label><Input name="name" required aria-required="true" /></div>
+                          <div className="space-y-2"><Label>이메일 <span className="text-destructive">*</span></Label><Input name="email" type="email" required aria-required="true" /></div>
                           <div className="space-y-2"><Label>연락처</Label><Input name="phone" placeholder="010-0000-0000" /></div>
                           <div className="space-y-2"><Label>비고</Label><Input name="note" placeholder="메모" /></div>
                           <Button type="submit" className="w-full" disabled={actionMutation.isPending}>

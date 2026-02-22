@@ -91,6 +91,7 @@ export default function VouchersPage() {
   const { data: accountsData } = useQuery({
     queryKey: ['accounting-accounts'],
     queryFn: () => api.get('/accounting/accounts') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
   })
 
   const createMutation = useMutation({
@@ -177,13 +178,13 @@ export default function VouchersPage() {
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>전표 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>전표 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>전표일자 *</Label><Input name="voucherDate" type="date" required /></div>
+                <div className="space-y-2"><Label>전표일자 <span className="text-destructive">*</span></Label><Input name="voucherDate" type="date" required aria-required="true" /></div>
                 <div className="space-y-2">
-                  <Label>전표유형 *</Label>
+                  <Label>전표유형 <span className="text-destructive">*</span></Label>
                   <Select name="voucherType" required>
                     <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                     <SelectContent>{Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
@@ -201,7 +202,7 @@ export default function VouchersPage() {
                     <div key={`line-${idx}-${line.accountSubjectId}`} className="rounded-md border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground font-medium">분개 #{idx + 1}</span>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)} disabled={details.length <= 2}><Trash2 className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)} disabled={details.length <= 2} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
                       </div>
                       <select className="w-full rounded border p-2 text-xs bg-background" value={line.accountSubjectId} onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}>
                         <option value="">계정과목 선택</option>
@@ -231,7 +232,7 @@ export default function VouchersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)}><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}

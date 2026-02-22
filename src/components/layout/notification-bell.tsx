@@ -62,6 +62,13 @@ export function NotificationBell() {
             meta: old.meta ? { ...old.meta, totalCount: 0 } : old.meta,
           }
         }
+        if (body.action === 'deleteAll') {
+          return {
+            ...old,
+            data: old.data?.filter((n: any) => !n.isRead),
+            meta: old.meta ? { ...old.meta, totalCount: old.meta.totalCount } : old.meta,
+          }
+        }
         return old
       })
 
@@ -93,7 +100,7 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative" aria-label={unreadCount > 0 ? `알림 ${unreadCount}건` : '알림'}>
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">

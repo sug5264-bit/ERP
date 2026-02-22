@@ -253,7 +253,7 @@ export default function NettingPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>거래처 *</Label>
+              <Label>거래처 <span className="text-destructive">*</span></Label>
               <Select value={formPartnerId} onValueChange={setFormPartnerId}>
                 <SelectTrigger><SelectValue placeholder="거래처 선택" /></SelectTrigger>
                 <SelectContent>
@@ -264,12 +264,12 @@ export default function NettingPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>상계금액 *</Label>
-              <Input type="number" placeholder="0" required min="1" step="1" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
+              <Label>상계금액 <span className="text-destructive">*</span></Label>
+              <Input type="number" placeholder="0" required aria-required="true" min="1" step="1" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label>상계일 *</Label>
-              <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
+              <Label>상계일 <span className="text-destructive">*</span></Label>
+              <Input type="date" aria-required="true" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>적요</Label>
@@ -287,7 +287,7 @@ export default function NettingPage() {
 
       {/* 상세 Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedPartner?.partnerName} - 상계 상세내역 ({year}년 {month}월)

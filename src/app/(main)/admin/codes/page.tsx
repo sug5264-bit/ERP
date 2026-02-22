@@ -144,23 +144,23 @@ export default function CodesPage() {
           <DialogTrigger asChild>
             <Button>코드 등록</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>공통코드 등록</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label>그룹코드 *</Label>
-                <Input name="groupCode" required placeholder="BANK" />
+                <Label>그룹코드 <span className="text-destructive">*</span></Label>
+                <Input name="groupCode" required aria-required="true" placeholder="BANK" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>코드 *</Label>
-                  <Input name="code" required />
+                  <Label>코드 <span className="text-destructive">*</span></Label>
+                  <Input name="code" required aria-required="true" />
                 </div>
                 <div className="space-y-2">
-                  <Label>코드명 *</Label>
-                  <Input name="name" required />
+                  <Label>코드명 <span className="text-destructive">*</span></Label>
+                  <Input name="name" required aria-required="true" />
                 </div>
               </div>
               <div className="space-y-2">

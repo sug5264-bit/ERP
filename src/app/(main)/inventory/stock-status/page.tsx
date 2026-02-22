@@ -53,7 +53,7 @@ export default function StockStatusPage() {
       <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">품목수</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{totalItems}종</p></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총 현재고</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{totalCurrentQty.toLocaleString()}</p></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총 가용재고</CardTitle></CardHeader><CardContent><p className={`text-xl font-bold ${totalAvailableQty < totalCurrentQty ? 'text-orange-600' : ''}`}>{totalAvailableQty.toLocaleString()}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총 가용재고</CardTitle></CardHeader><CardContent><p className={`text-xl font-bold ${totalAvailableQty < totalCurrentQty ? 'text-orange-600 dark:text-orange-500' : ''}`}>{totalAvailableQty.toLocaleString()}</p></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총재고가치</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalValue)}</p></CardContent></Card>
       </div>
 
@@ -102,8 +102,8 @@ export default function StockStatusPage() {
                     <td className="p-3">{b.warehouse.name}</td>
                     <td className="p-3">{b.zone?.zoneName || '-'}</td>
                     <td className="p-3 text-right font-mono">{currentQty.toLocaleString()} {b.item.unit}</td>
-                    <td className="p-3 text-right font-mono text-orange-600">{orderedQty > 0 ? `-${orderedQty.toLocaleString()}` : '-'}</td>
-                    <td className={`p-3 text-right font-mono font-medium ${isShort ? 'text-orange-600' : ''}`}>
+                    <td className="p-3 text-right font-mono text-orange-600 dark:text-orange-500">{orderedQty > 0 ? `-${orderedQty.toLocaleString()}` : '-'}</td>
+                    <td className={`p-3 text-right font-mono font-medium ${isShort ? 'text-orange-600 dark:text-orange-500' : ''}`}>
                       {availableQty.toLocaleString()} {b.item.unit}
                     </td>
                     <td className="p-3 text-right font-mono">{formatCurrency(b.averageCost)}</td>

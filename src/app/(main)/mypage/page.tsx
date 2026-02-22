@@ -58,6 +58,7 @@ export default function MyPage() {
     const form = new FormData(e.currentTarget)
     const newPw = form.get('newPassword') as string
     const confirmPw = form.get('confirmPassword') as string
+    if (newPw.length < 8) { toast.error('비밀번호는 8자 이상이어야 합니다.'); return }
     if (newPw !== confirmPw) { toast.error('새 비밀번호가 일치하지 않습니다.'); return }
     pwMutation.mutate({
       action: 'changePassword',
@@ -66,7 +67,22 @@ export default function MyPage() {
     })
   }
 
-  if (isLoading) return <div className="p-6 text-center text-muted-foreground">로딩 중...</div>
+  if (isLoading) return (
+    <div className="space-y-4 sm:space-y-6 p-6">
+      <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {[1, 2].map((i) => (
+          <Card key={`skeleton-${i}`}>
+            <CardContent className="p-6 space-y-3">
+              {[1, 2, 3, 4].map((j) => (
+                <div key={`skel-${i}-${j}`} className="h-4 animate-pulse rounded bg-muted" />
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
 
   const { user, leaveBalances, myApprovals, myLeaves, loginHistory } = data?.data || {}
   const emp = user?.employee
@@ -179,7 +195,7 @@ export default function MyPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm sm:text-base">올해 휴가 내역</CardTitle>
-                  <Link href="/hr/leave"><Badge variant="outline" className="cursor-pointer text-xs">전체보기</Badge></Link>
+                  <Link href="/hr/leave"><Button variant="ghost" size="sm" className="text-xs">전체보기</Button></Link>
                 </div>
               </CardHeader>
               <CardContent>
@@ -212,7 +228,7 @@ export default function MyPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm sm:text-base">내 결재 문서</CardTitle>
-                <Link href="/approval/draft"><Badge variant="outline" className="cursor-pointer text-xs">기안하기</Badge></Link>
+                <Link href="/approval/draft"><Button variant="ghost" size="sm" className="text-xs">기안하기</Button></Link>
               </div>
             </CardHeader>
             <CardContent>

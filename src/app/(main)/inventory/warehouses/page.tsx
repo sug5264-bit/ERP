@@ -95,11 +95,11 @@ export default function WarehousesPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>창고 등록</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>창고 등록</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>창고코드 *</Label><Input name="code" required placeholder="WH-01" /></div>
-              <div className="space-y-2"><Label>창고명 *</Label><Input name="name" required /></div>
+              <div className="space-y-2"><Label>창고코드 <span className="text-destructive">*</span></Label><Input name="code" required aria-required="true" placeholder="WH-01" /></div>
+              <div className="space-y-2"><Label>창고명 <span className="text-destructive">*</span></Label><Input name="name" required aria-required="true" /></div>
               <div className="space-y-2"><Label>위치</Label><Input name="location" /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? '등록 중...' : '창고 등록'}
@@ -110,9 +110,23 @@ export default function WarehousesPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-muted-foreground py-8">로딩 중...</p>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={`skeleton-${i}`}>
+              <CardContent className="p-6 space-y-3">
+                <div className="h-5 w-32 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-4 w-full animate-pulse rounded bg-muted" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : warehouses.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">등록된 창고가 없습니다.</div>
+        <div className="rounded-lg border p-8 text-center">
+          <MapPin className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+          <p className="text-muted-foreground">등록된 창고가 없습니다.</p>
+          <p className="text-xs text-muted-foreground mt-1">위의 '창고 등록' 버튼으로 첫 창고를 등록하세요.</p>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {warehouses.map((wh) => (
@@ -131,6 +145,7 @@ export default function WarehousesPage() {
                       onClick={() => handleDelete(wh)}
                       disabled={deleteMutation.isPending}
                       title="창고 삭제"
+                      aria-label="삭제"
                     >
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
                     </Button>
@@ -154,11 +169,11 @@ export default function WarehousesPage() {
                       <DialogTrigger asChild>
                         <Button variant="ghost" size="sm"><Plus className="mr-1 h-3 w-3" /> 구역추가</Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader><DialogTitle>{wh.name} - 구역 추가</DialogTitle></DialogHeader>
                         <form onSubmit={handleCreateZone} className="space-y-4">
-                          <div className="space-y-2"><Label>구역코드 *</Label><Input name="zoneCode" required placeholder="A-01" /></div>
-                          <div className="space-y-2"><Label>구역명 *</Label><Input name="zoneName" required /></div>
+                          <div className="space-y-2"><Label>구역코드 <span className="text-destructive">*</span></Label><Input name="zoneCode" required aria-required="true" placeholder="A-01" /></div>
+                          <div className="space-y-2"><Label>구역명 <span className="text-destructive">*</span></Label><Input name="zoneName" required aria-required="true" /></div>
                           <Button type="submit" className="w-full" disabled={createZoneMutation.isPending}>
                             {createZoneMutation.isPending ? '등록 중...' : '구역 추가'}
                           </Button>

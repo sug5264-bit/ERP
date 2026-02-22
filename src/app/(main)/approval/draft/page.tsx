@@ -148,7 +148,7 @@ export default function ApprovalDraftPage() {
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>지출목적 *</Label><Input name="purpose" required placeholder="지출 목적을 입력하세요" /></div>
+              <div className="space-y-2"><Label>지출목적 <span className="text-destructive">*</span></Label><Input name="purpose" required aria-required="true" placeholder="지출 목적을 입력하세요" /></div>
               <div className="space-y-2"><Label>지출금액 (원)</Label><Input name="amount" type="number" placeholder="0" /></div>
             </div>
             <div className="space-y-2"><Label>상세내용</Label><Textarea name="content" rows={6} placeholder="지출 상세 내용을 기재해주세요" /></div>
@@ -158,7 +158,7 @@ export default function ApprovalDraftPage() {
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>출장목적 *</Label><Input name="purpose" required placeholder="출장 목적" /></div>
+              <div className="space-y-2"><Label>출장목적 <span className="text-destructive">*</span></Label><Input name="purpose" required aria-required="true" placeholder="출장 목적" /></div>
               <div className="space-y-2"><Label>출장기간</Label><Input name="period" placeholder="2025-01-01 ~ 2025-01-03" /></div>
             </div>
             <div className="space-y-2"><Label>상세내용</Label><Textarea name="content" rows={6} placeholder="출장 일정 및 방문처 등을 기재해주세요" /></div>
@@ -168,7 +168,7 @@ export default function ApprovalDraftPage() {
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>근무사유 *</Label><Input name="purpose" required placeholder="시간외 근무 사유" /></div>
+              <div className="space-y-2"><Label>근무사유 <span className="text-destructive">*</span></Label><Input name="purpose" required aria-required="true" placeholder="시간외 근무 사유" /></div>
               <div className="space-y-2"><Label>근무시간</Label><Input name="period" placeholder="18:00 ~ 22:00" /></div>
             </div>
             <div className="space-y-2"><Label>상세내용</Label><Textarea name="content" rows={4} placeholder="업무 내용을 기재해주세요" /></div>
@@ -178,7 +178,7 @@ export default function ApprovalDraftPage() {
         return (
           <>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>구매목적 *</Label><Input name="purpose" required placeholder="구매 목적" /></div>
+              <div className="space-y-2"><Label>구매목적 <span className="text-destructive">*</span></Label><Input name="purpose" required aria-required="true" placeholder="구매 목적" /></div>
               <div className="space-y-2"><Label>예상금액 (원)</Label><Input name="amount" type="number" placeholder="0" /></div>
             </div>
             <div className="space-y-2"><Label>상세내용</Label><Textarea name="content" rows={6} placeholder="구매 품목 및 수량, 납품일정 등을 기재해주세요" /></div>
@@ -187,7 +187,7 @@ export default function ApprovalDraftPage() {
       case 'REPORT':
         return (
           <>
-            <div className="space-y-2"><Label>보고목적 *</Label><Input name="purpose" required placeholder="보고 주제" /></div>
+            <div className="space-y-2"><Label>보고목적 <span className="text-destructive">*</span></Label><Input name="purpose" required aria-required="true" placeholder="보고 주제" /></div>
             <div className="space-y-2"><Label>보고내용</Label><Textarea name="content" rows={8} placeholder="보고 내용을 상세히 기재해주세요" /></div>
           </>
         )
@@ -196,7 +196,7 @@ export default function ApprovalDraftPage() {
           <>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2"><Label>협조요청부서</Label><Input name="department" placeholder="요청 부서명" /></div>
-              <div className="space-y-2"><Label>협조사항 *</Label><Input name="purpose" required placeholder="협조 요청 사항" /></div>
+              <div className="space-y-2"><Label>협조사항 <span className="text-destructive">*</span></Label><Input name="purpose" required aria-required="true" placeholder="협조 요청 사항" /></div>
             </div>
             <div className="space-y-2"><Label>상세내용</Label><Textarea name="content" rows={6} placeholder="협조 내용을 기재해주세요" /></div>
           </>
@@ -234,7 +234,7 @@ export default function ApprovalDraftPage() {
                 <h3 className="text-sm font-semibold text-muted-foreground">기본정보</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>문서유형 *</Label>
+                    <Label>문서유형 <span className="text-destructive">*</span></Label>
                     <Select value={docType} onValueChange={setDocType}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -242,7 +242,7 @@ export default function ApprovalDraftPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label>기안일 *</Label><Input name="draftDate" type="date" required defaultValue={new Date().toISOString().split('T')[0]} /></div>
+                  <div className="space-y-2"><Label>기안일 <span className="text-destructive">*</span></Label><Input name="draftDate" type="date" required aria-required="true" defaultValue={new Date().toISOString().split('T')[0]} /></div>
                   <div className="space-y-2">
                     <Label>긴급도</Label>
                     <Select name="urgency" defaultValue="NORMAL">
@@ -255,7 +255,7 @@ export default function ApprovalDraftPage() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2"><Label>제목 *</Label><Input name="title" required placeholder="기안서 제목을 입력하세요" /></div>
+                <div className="space-y-2"><Label>제목 <span className="text-destructive">*</span></Label><Input name="title" required aria-required="true" placeholder="기안서 제목을 입력하세요" /></div>
               </div>
 
               {/* 기안내용 - 문서유형별 */}

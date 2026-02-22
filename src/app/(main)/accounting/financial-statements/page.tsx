@@ -55,7 +55,9 @@ export default function FinancialStatementsPage() {
       <div className="space-y-2">
         <h3 className="font-semibold text-lg border-b pb-1">{label}</h3>
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-2">해당 데이터가 없습니다.</p>
+          <div className="flex items-center justify-center py-6">
+            <p className="text-sm text-muted-foreground">해당 데이터가 없습니다.</p>
+          </div>
         ) : items.map((row) => (
           <div key={row.id} className="flex justify-between text-sm py-1">
             <span>{row.code} {row.nameKo}</span>
@@ -96,7 +98,17 @@ export default function FinancialStatementsPage() {
         </TabsList>
         <TabsContent value="bs">
           {isLoading ? (
-            <p className="text-center text-muted-foreground py-8">로딩 중...</p>
+            <div className="space-y-4">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <Card key={`skeleton-bs-${i}`}>
+                  <CardContent className="p-6 space-y-3">
+                    {Array.from({ length: 3 }).map((_, j) => (
+                      <div key={`skel-${i}-${j}`} className="h-4 animate-pulse rounded bg-muted" />
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <Card>
@@ -119,7 +131,13 @@ export default function FinancialStatementsPage() {
         </TabsContent>
         <TabsContent value="is">
           {isLoading ? (
-            <p className="text-center text-muted-foreground py-8">로딩 중...</p>
+            <Card>
+              <CardContent className="p-6 space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`skel-is-${i}`} className="h-4 animate-pulse rounded bg-muted" />
+                ))}
+              </CardContent>
+            </Card>
           ) : (
             <Card>
               <CardHeader><CardTitle>손익계산서</CardTitle></CardHeader>

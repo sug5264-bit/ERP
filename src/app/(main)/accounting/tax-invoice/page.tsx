@@ -118,13 +118,13 @@ export default function TaxInvoicePage() {
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>계산서 발행</Button></DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>세금계산서 발행</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>발행일 *</Label><Input name="issueDate" type="date" required /></div>
+                <div className="space-y-2"><Label>발행일 <span className="text-destructive">*</span></Label><Input name="issueDate" type="date" required aria-required="true" /></div>
                 <div className="space-y-2">
-                  <Label>구분 *</Label>
+                  <Label>구분 <span className="text-destructive">*</span></Label>
                   <Select name="invoiceType" required>
                     <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                     <SelectContent><SelectItem value="SALES">매출</SelectItem><SelectItem value="PURCHASE">매입</SelectItem></SelectContent>
@@ -134,14 +134,14 @@ export default function TaxInvoicePage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-3 rounded border p-3">
                   <h4 className="text-sm font-medium">공급자</h4>
-                  <div className="space-y-2"><Label>사업자번호 *</Label><Input name="supplierBizNo" required placeholder="000-00-00000" /></div>
-                  <div className="space-y-2"><Label>상호 *</Label><Input name="supplierName" required /></div>
+                  <div className="space-y-2"><Label>사업자번호 <span className="text-destructive">*</span></Label><Input name="supplierBizNo" required aria-required="true" placeholder="000-00-00000" /></div>
+                  <div className="space-y-2"><Label>상호 <span className="text-destructive">*</span></Label><Input name="supplierName" required aria-required="true" /></div>
                   <div className="space-y-2"><Label>대표자</Label><Input name="supplierCeo" /></div>
                 </div>
                 <div className="space-y-3 rounded border p-3">
                   <h4 className="text-sm font-medium">공급받는자</h4>
-                  <div className="space-y-2"><Label>사업자번호 *</Label><Input name="buyerBizNo" required placeholder="000-00-00000" /></div>
-                  <div className="space-y-2"><Label>상호 *</Label><Input name="buyerName" required /></div>
+                  <div className="space-y-2"><Label>사업자번호 <span className="text-destructive">*</span></Label><Input name="buyerBizNo" required aria-required="true" placeholder="000-00-00000" /></div>
+                  <div className="space-y-2"><Label>상호 <span className="text-destructive">*</span></Label><Input name="buyerName" required aria-required="true" /></div>
                   <div className="space-y-2"><Label>대표자</Label><Input name="buyerCeo" /></div>
                 </div>
               </div>
@@ -157,7 +157,7 @@ export default function TaxInvoicePage() {
                     <div key={idx} className="rounded-md border p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => items.length > 1 && setItems(items.filter((_, i) => i !== idx))} disabled={items.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => items.length > 1 && setItems(items.filter((_, i) => i !== idx))} disabled={items.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1"><Label className="text-xs">일자</Label><Input type="date" className="text-xs" value={item.itemDate} onChange={(e) => updateItem(idx, 'itemDate', e.target.value)} /></div>

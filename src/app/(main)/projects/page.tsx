@@ -50,8 +50,8 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => api.get('/projects?pageSize=50') as Promise<any> })
-  const { data: deptData } = useQuery({ queryKey: ['departments'], queryFn: () => api.get('/hr/departments') as Promise<any> })
-  const { data: empData } = useQuery({ queryKey: ['employees-all'], queryFn: () => api.get('/hr/employees?pageSize=500') as Promise<any> })
+  const { data: deptData } = useQuery({ queryKey: ['departments'], queryFn: () => api.get('/hr/departments') as Promise<any>, staleTime: 5 * 60 * 1000 })
+  const { data: empData } = useQuery({ queryKey: ['employees-all'], queryFn: () => api.get('/hr/employees?pageSize=500') as Promise<any>, staleTime: 5 * 60 * 1000 })
 
   const departments = deptData?.data || []
   const employees = empData?.data || []
@@ -125,19 +125,19 @@ export default function ProjectsPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>프로젝트 생성</Button></DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>프로젝트 생성</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>프로젝트 코드 *</Label><Input name="projectCode" required placeholder="PRJ-001" /></div>
-                <div className="space-y-2"><Label>프로젝트명 *</Label><Input name="projectName" required /></div>
-                <div className="space-y-2"><Label>담당부서 *</Label><Select name="departmentId"><SelectTrigger><SelectValue placeholder="부서 선택" /></SelectTrigger><SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>PM *</Label><Select name="managerId"><SelectTrigger><SelectValue placeholder="PM 선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
-                <div className="space-y-2"><Label>시작일 *</Label><Input name="startDate" type="date" required /></div>
+                <div className="space-y-2"><Label>프로젝트 코드 <span className="text-destructive">*</span></Label><Input name="projectCode" required aria-required="true" placeholder="PRJ-001" /></div>
+                <div className="space-y-2"><Label>프로젝트명 <span className="text-destructive">*</span></Label><Input name="projectName" required aria-required="true" /></div>
+                <div className="space-y-2"><Label>담당부서 <span className="text-destructive">*</span></Label><Select name="departmentId"><SelectTrigger><SelectValue placeholder="부서 선택" /></SelectTrigger><SelectContent>{departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>PM <span className="text-destructive">*</span></Label><Select name="managerId"><SelectTrigger><SelectValue placeholder="PM 선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
+                <div className="space-y-2"><Label>시작일 <span className="text-destructive">*</span></Label><Input name="startDate" type="date" required aria-required="true" /></div>
                 <div className="space-y-2"><Label>종료일</Label><Input name="endDate" type="date" /></div>
                 <div className="space-y-2"><Label>예산</Label><Input name="budget" type="number" placeholder="0" /></div>
               </div>
-              <div className="space-y-2"><Label>설명</Label><Textarea name="description" rows={3} /></div>
+              <div className="space-y-2"><Label>프로젝트 설명</Label><Textarea name="description" rows={3} /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '생성 중...' : '프로젝트 생성'}</Button>
             </form>
           </DialogContent>
@@ -146,7 +146,7 @@ export default function ProjectsPage() {
       <DataTable columns={columns} data={data?.data || []} searchColumn="projectName" searchPlaceholder="프로젝트명 검색..." isLoading={isLoading} pageSize={50} onRowClick={handleRowClick} />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{selectedProject?.projectName}</DialogTitle></DialogHeader>
           {selectedProject && (
             <div className="space-y-4">
@@ -196,9 +196,9 @@ export default function ProjectsPage() {
       </Dialog>
 
       <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
-        <DialogContent><DialogHeader><DialogTitle>작업 추가</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>작업 추가</DialogTitle></DialogHeader>
           <form onSubmit={handleAddTask} className="space-y-4">
-            <div className="space-y-2"><Label>작업명 *</Label><Input name="taskName" required /></div>
+            <div className="space-y-2"><Label>작업명 <span className="text-destructive">*</span></Label><Input name="taskName" required aria-required="true" /></div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2"><Label>담당자</Label><Select name="assigneeId"><SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
               <div className="space-y-2"><Label>우선순위</Label><Select name="priority" defaultValue="NORMAL"><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="URGENT">긴급</SelectItem><SelectItem value="HIGH">높음</SelectItem><SelectItem value="NORMAL">보통</SelectItem><SelectItem value="LOW">낮음</SelectItem></SelectContent></Select></div>
@@ -212,9 +212,9 @@ export default function ProjectsPage() {
       </Dialog>
 
       <Dialog open={memberOpen} onOpenChange={setMemberOpen}>
-        <DialogContent><DialogHeader><DialogTitle>멤버 추가</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>멤버 추가</DialogTitle></DialogHeader>
           <form onSubmit={handleAddMember} className="space-y-4">
-            <div className="space-y-2"><Label>사원 *</Label><Select name="employeeId"><SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>사원 <span className="text-destructive">*</span></Label><Select name="employeeId"><SelectTrigger><SelectValue placeholder="사원 선택" /></SelectTrigger><SelectContent>{employees.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nameKo}</SelectItem>)}</SelectContent></Select></div>
             <div className="space-y-2"><Label>역할</Label><Select name="role" defaultValue="MEMBER"><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PM">PM</SelectItem><SelectItem value="MEMBER">멤버</SelectItem><SelectItem value="REVIEWER">검토자</SelectItem></SelectContent></Select></div>
             <Button type="submit" className="w-full" disabled={memberMutation.isPending}>멤버 추가</Button>
           </form>

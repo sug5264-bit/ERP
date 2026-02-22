@@ -62,7 +62,7 @@ export default function DeliveriesPage() {
     { id: 'trackingNo', header: '운송장번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span> },
     { id: 'carrier', header: '택배사', cell: ({ row }) => row.original.carrier || '-' },
     { id: 'pdf', header: '', cell: ({ row }) => (
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatementPDF(row.original)} title="거래명세표 PDF">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStatementPDF(row.original)} title="거래명세표 PDF" aria-label="거래명세표 PDF 다운로드">
         <FileDown className="h-4 w-4" />
       </Button>
     )},
@@ -98,7 +98,7 @@ export default function DeliveriesPage() {
     queryFn: () => api.get('/sales/deliveries?pageSize=50&salesChannel=OFFLINE') as Promise<any>,
   })
 
-  const { data: ordersData } = useQuery({ queryKey: ['sales-orders-active'], queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any> })
+  const { data: ordersData } = useQuery({ queryKey: ['sales-orders-active'], queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any>, staleTime: 5 * 60 * 1000 })
   const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
 
   const createMutation = useMutation({
@@ -194,13 +194,13 @@ export default function DeliveriesPage() {
   const createDialog = (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button>납품 등록</Button></DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>납품 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle></DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>납품일 *</Label><Input name="deliveryDate" type="date" required /></div>
+            <div className="space-y-2"><Label>납품일 <span className="text-destructive">*</span></Label><Input name="deliveryDate" type="date" required aria-required="true" /></div>
             <div className="space-y-2">
-              <Label>발주 *</Label>
+              <Label>발주 <span className="text-destructive">*</span></Label>
               <Select name="salesOrderId"><SelectTrigger><SelectValue placeholder="발주 선택" /></SelectTrigger>
                 <SelectContent>{orders.map((o: any) => <SelectItem key={o.id} value={o.id}>{o.orderNo} - {o.partner?.partnerName}</SelectItem>)}</SelectContent>
               </Select>
@@ -249,7 +249,7 @@ export default function DeliveriesPage() {
       <DialogTrigger asChild>
         <Button variant="outline"><Upload className="mr-2 h-4 w-4" />운송장 업로드</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>운송장 일괄 업로드</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">

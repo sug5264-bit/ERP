@@ -64,7 +64,9 @@ export default function MessagesPage() {
       try {
         await api.put('/board/messages', { messageId: row.id })
         queryClient.invalidateQueries({ queryKey: ['messages-received'] })
-      } catch {}
+      } catch {
+        // 읽음 처리 실패 시 무시 (UX에 영향 없음)
+      }
     }
   }
 
@@ -74,17 +76,17 @@ export default function MessagesPage() {
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Send className="mr-1 h-4 w-4" /> 메시지 보내기</Button></DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>메시지 보내기</DialogTitle></DialogHeader>
             <form onSubmit={handleSend} className="space-y-4">
               <div className="space-y-2">
-                <Label>받는사람 *</Label>
+                <Label>받는사람 <span className="text-destructive">*</span></Label>
                 <Select name="receiverId"><SelectTrigger><SelectValue placeholder="수신자 선택" /></SelectTrigger>
                   <SelectContent>{users.map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>제목 *</Label><Input name="subject" required /></div>
-              <div className="space-y-2"><Label>내용 *</Label><Textarea name="content" rows={6} required /></div>
+              <div className="space-y-2"><Label>제목 <span className="text-destructive">*</span></Label><Input name="subject" required aria-required="true" /></div>
+              <div className="space-y-2"><Label>내용 <span className="text-destructive">*</span></Label><Textarea name="content" rows={6} required /></div>
               <Button type="submit" className="w-full" disabled={sendMutation.isPending}>{sendMutation.isPending ? '전송 중...' : '메시지 보내기'}</Button>
             </form>
           </DialogContent>
@@ -105,7 +107,7 @@ export default function MessagesPage() {
       </Tabs>
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-sm sm:max-w-lg">
           <DialogHeader><DialogTitle>{selectedMsg?.subject}</DialogTitle></DialogHeader>
           {selectedMsg && (
             <div className="space-y-3">

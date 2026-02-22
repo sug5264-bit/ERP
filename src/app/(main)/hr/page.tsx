@@ -59,7 +59,7 @@ export default function HRPage() {
             <CalendarOff className="h-4 w-4 text-muted-foreground hidden sm:block" />
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <p className={`text-lg sm:text-2xl font-bold ${pendingLeaves > 0 ? 'text-orange-600' : ''}`}>{pendingLeaves}건</p>
+            <p className={`text-lg sm:text-2xl font-bold ${pendingLeaves > 0 ? 'text-orange-600 dark:text-orange-500' : ''}`}>{pendingLeaves}건</p>
           </CardContent>
         </Card>
         <Card>

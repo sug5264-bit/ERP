@@ -242,7 +242,7 @@ export default function OrdersPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -413,13 +413,13 @@ export default function OrdersPage() {
   const createDialog = (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button>발주 등록</Button></DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>발주 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle></DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-2"><Label>발주일 *</Label><Input name="orderDate" type="date" required /></div>
+            <div className="space-y-2"><Label>발주일 <span className="text-destructive">*</span></Label><Input name="orderDate" type="date" required aria-required="true" /></div>
             <div className="space-y-2">
-              <Label>거래처 *</Label>
+              <Label>거래처 <span className="text-destructive">*</span></Label>
               <Select name="partnerId"><SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                 <SelectContent>{partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}</SelectContent>
               </Select>
@@ -456,7 +456,7 @@ export default function OrdersPage() {
                   <div key={idx} className="rounded-md border p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
                     </div>
                     <Select value={d.itemId} onValueChange={v => updateDetail(idx, 'itemId', v)}>
                       <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
@@ -552,25 +552,25 @@ export default function OrdersPage() {
         <div className="space-y-3">
           {/* 요약 통계 바 */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <div className="rounded-lg border bg-muted/30 p-2 sm:p-3 text-center">
+            <div className="rounded-lg border bg-muted/30 p-3 sm:p-4 text-center">
               <p className="text-[10px] sm:text-xs text-muted-foreground">전체</p>
               <p className="text-sm sm:text-lg font-bold">{summaryStats.totalCount}건</p>
             </div>
-            <div className="rounded-lg border bg-muted/30 p-2 sm:p-3 text-center">
+            <div className="rounded-lg border bg-muted/30 p-3 sm:p-4 text-center">
               <p className="text-[10px] sm:text-xs text-muted-foreground">합계 금액</p>
               <p className="text-sm sm:text-lg font-bold">{formatCurrency(summaryStats.totalAmount)}</p>
             </div>
-            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-2 sm:p-3 text-center">
+            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 p-3 sm:p-4 text-center">
               <p className="text-[10px] sm:text-xs text-muted-foreground">발주</p>
-              <p className="text-sm sm:text-lg font-bold text-blue-600">{summaryStats.orderedCount}건</p>
+              <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-500">{summaryStats.orderedCount}건</p>
             </div>
-            <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/20 p-2 sm:p-3 text-center">
+            <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/30 p-3 sm:p-4 text-center">
               <p className="text-[10px] sm:text-xs text-muted-foreground">진행중</p>
-              <p className="text-sm sm:text-lg font-bold text-yellow-600">{summaryStats.inProgressCount}건</p>
+              <p className="text-sm sm:text-lg font-bold text-yellow-600 dark:text-yellow-500">{summaryStats.inProgressCount}건</p>
             </div>
-            <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-2 sm:p-3 text-center col-span-2 sm:col-span-1">
+            <div className="rounded-lg border bg-green-50 dark:bg-green-950/30 p-3 sm:p-4 text-center col-span-2 sm:col-span-1">
               <p className="text-[10px] sm:text-xs text-muted-foreground">완료</p>
-              <p className="text-sm sm:text-lg font-bold text-green-600">{summaryStats.completedCount}건</p>
+              <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-500">{summaryStats.completedCount}건</p>
             </div>
           </div>
 
@@ -604,10 +604,10 @@ export default function OrdersPage() {
                 onKeyDown={e => e.key === 'Enter' && queryClient.invalidateQueries({ queryKey: ['sales-orders'] })}
               />
             </div>
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}>
+            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setShowAdvancedFilter(!showAdvancedFilter)} aria-label="필터">
               <Filter className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters}>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters} aria-label="초기화">
               <RotateCcw className="h-4 w-4" />
             </Button>
           </div>
@@ -692,14 +692,14 @@ export default function OrdersPage() {
 
       {/* 발주 수정 Dialog */}
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>발주 수정 - {editTarget?.orderNo}</DialogTitle></DialogHeader>
           {editTarget && (
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>발주일 *</Label><Input name="orderDate" type="date" required defaultValue={editTarget.orderDate?.split('T')[0]} /></div>
+                <div className="space-y-2"><Label>발주일 <span className="text-destructive">*</span></Label><Input name="orderDate" type="date" required aria-required="true" defaultValue={editTarget.orderDate?.split('T')[0]} /></div>
                 <div className="space-y-2">
-                  <Label>거래처 *</Label>
+                  <Label>거래처 <span className="text-destructive">*</span></Label>
                   <Select name="partnerId" defaultValue={editTarget.partnerId}>
                     <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
                     <SelectContent>{partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}</SelectContent>
@@ -725,7 +725,7 @@ export default function OrdersPage() {
                       <div key={idx} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))} disabled={editDetails.length <= 1}><Trash2 className="h-3 w-3" /></Button>
+                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))} disabled={editDetails.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
                         </div>
                         <Select value={d.itemId} onValueChange={v => { const nd = [...editDetails]; nd[idx].itemId = v; setEditDetails(nd) }}>
                           <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
@@ -760,11 +760,11 @@ export default function OrdersPage() {
             completeMutation.mutate({ id: completeTarget.id, dispatchInfo, receivedBy })
           }} className="space-y-4">
             <div className="space-y-2">
-              <Label>배차정보 *</Label>
-              <Input name="dispatchInfo" required placeholder="차량번호, 운송업체 등" defaultValue={completeTarget?.dispatchInfo || ''} />
+              <Label>배차정보 <span className="text-destructive">*</span></Label>
+              <Input name="dispatchInfo" required aria-required="true" placeholder="차량번호, 운송업체 등" defaultValue={completeTarget?.dispatchInfo || ''} />
             </div>
             <div className="space-y-2">
-              <Label>발주 담당자 *</Label>
+              <Label>발주 담당자 <span className="text-destructive">*</span></Label>
               <Input name="receivedBy" required placeholder="담당자 이름" defaultValue={completeTarget?.receivedBy || ''} />
             </div>
             <Button type="submit" className="w-full" disabled={completeMutation.isPending}>
@@ -788,12 +788,12 @@ export default function OrdersPage() {
           }} className="space-y-4">
             <p className="text-sm text-muted-foreground">선택한 {batchCompleteIds.length}건의 발주를 일괄 완료 처리합니다.</p>
             <div className="space-y-2">
-              <Label>배차정보 *</Label>
-              <Input name="dispatchInfo" required placeholder="차량번호, 운송업체 등" />
+              <Label>배차정보 <span className="text-destructive">*</span></Label>
+              <Input name="dispatchInfo" required aria-required="true" placeholder="차량번호, 운송업체 등" />
             </div>
             <div className="space-y-2">
-              <Label>발주 담당자 *</Label>
-              <Input name="receivedBy" required placeholder="담당자 이름" />
+              <Label>발주 담당자 <span className="text-destructive">*</span></Label>
+              <Input name="receivedBy" required aria-required="true" placeholder="담당자 이름" />
             </div>
             <Button type="submit" className="w-full" disabled={batchMutation.isPending}>
               {batchMutation.isPending ? '처리 중...' : `${batchCompleteIds.length}건 완료 처리`}
