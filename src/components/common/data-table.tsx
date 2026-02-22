@@ -279,7 +279,7 @@ export function DataTable<TData, TValue>({
                   <TableRow key={`skeleton-${i}`}>
                     {allColumns.map((_, j) => (
                       <TableCell key={j} className="py-2.5 sm:py-3">
-                        <div className="h-4 animate-pulse rounded bg-muted" />
+                        <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -306,9 +306,14 @@ export function DataTable<TData, TValue>({
                 <TableRow>
                   <TableCell
                     colSpan={allColumns.length}
-                    className="h-24 text-center text-muted-foreground"
+                    className="h-32 sm:h-40"
                   >
-                    데이터가 없습니다.
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-muted-foreground">데이터가 없습니다.</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">조건을 변경하여 다시 검색해주세요.</p>
+                      </div>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}

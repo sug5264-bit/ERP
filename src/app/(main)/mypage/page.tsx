@@ -195,7 +195,7 @@ export default function MyPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm sm:text-base">올해 휴가 내역</CardTitle>
-                  <Link href="/hr/leave"><Badge variant="outline" className="cursor-pointer text-xs">전체보기</Badge></Link>
+                  <Link href="/hr/leave"><Button variant="ghost" size="sm" className="text-xs">전체보기</Button></Link>
                 </div>
               </CardHeader>
               <CardContent>
@@ -228,7 +228,7 @@ export default function MyPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm sm:text-base">내 결재 문서</CardTitle>
-                <Link href="/approval/draft"><Badge variant="outline" className="cursor-pointer text-xs">기안하기</Badge></Link>
+                <Link href="/approval/draft"><Button variant="ghost" size="sm" className="text-xs">기안하기</Button></Link>
               </div>
             </CardHeader>
             <CardContent>

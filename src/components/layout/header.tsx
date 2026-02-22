@@ -199,7 +199,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4">
-        <Button variant="ghost" size="icon" onClick={toggle} className="lg:hidden shrink-0">
+        <Button variant="ghost" size="icon" onClick={toggle} className="lg:hidden shrink-0" aria-label="메뉴 토글">
           <Menu className="h-5 w-5" />
         </Button>
 
@@ -261,7 +261,7 @@ export function Header() {
                     <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">메뉴</div>
                     {menuResults.map((r) => (
                       <button key={r.href} onClick={() => handleSearchNavigate(r.href)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2">
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none transition-colors flex items-center gap-2">
                         <Search className="h-3 w-3 text-muted-foreground shrink-0" />
                         <span className="font-medium">{r.title}</span>
                         <span className="text-xs text-muted-foreground ml-auto">{r.href}</span>
@@ -276,11 +276,11 @@ export function Header() {
                       const Icon = TYPE_ICON_MAP[r.type] || Search
                       return (
                         <button key={`${r.type}-${r.id}`} onClick={() => handleSearchNavigate(r.url)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center gap-2">
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none transition-colors flex items-center gap-2">
                           <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <span className="font-medium">{r.title}</span>
-                            {r.subtitle && <span className="text-xs text-muted-foreground ml-2">{r.subtitle}</span>}
+                            <span className="font-medium truncate block">{r.title}</span>
+                            {r.subtitle && <span className="text-xs text-muted-foreground truncate block">{r.subtitle}</span>}
                           </div>
                           <Badge variant="outline" className="text-[10px] shrink-0">
                             {TYPE_LABEL_MAP[r.type] || r.type}
