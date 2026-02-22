@@ -84,6 +84,7 @@ export async function exportToPDF(config: ExportConfig) {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i)
     doc.setFontSize(8)
+    if (fontName !== 'helvetica') doc.setFont(fontName)
     doc.text(
       `${i} / ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,

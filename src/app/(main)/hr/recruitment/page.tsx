@@ -224,7 +224,7 @@ export default function RecruitmentPage() {
               </div>
               <div className="space-y-2"><Label>상세내용</Label><Textarea name="description" rows={4} placeholder="채용 상세 내용" /></div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-                {createMutation.isPending ? '등록 중...' : '등록'}
+                {createMutation.isPending ? '등록 중...' : '공고 등록'}
               </Button>
             </form>
           </DialogContent>
