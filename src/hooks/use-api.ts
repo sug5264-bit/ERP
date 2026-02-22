@@ -2,6 +2,7 @@ const BASE_URL = '/api/v1'
 
 const MAX_RETRIES = 2
 const RETRY_DELAY_MS = 1000
+const REQUEST_TIMEOUT_MS = 30000
 
 function isRetryableError(error: unknown): boolean {
   if (error instanceof TypeError && error.message.includes('fetch')) return true
@@ -18,7 +19,9 @@ async function request(method: string, url: string, data?: any) {
     'X-Requested-With': 'XMLHttpRequest',
   }
 
-  const options: RequestInit = { method, headers }
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const options: RequestInit = { method, headers, signal: controller.signal }
   if (data !== undefined) {
     options.body = JSON.stringify(data)
   }
@@ -46,6 +49,7 @@ async function request(method: string, url: string, data?: any) {
       }
 
       const json = await res.json()
+      clearTimeout(timeoutId)
 
       if (!res.ok) {
         const message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'
@@ -54,6 +58,11 @@ async function request(method: string, url: string, data?: any) {
 
       return json
     } catch (error) {
+      clearTimeout(timeoutId)
+      // AbortError → 타임아웃
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('요청 시간이 초과되었습니다. 다시 시도해주세요.')
+      }
       lastError = error
 
       // 권한 에러나 비즈니스 에러는 재시도 불필요

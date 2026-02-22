@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     const details = data.details.map((d, idx) => {
-      const supplyAmount = d.quantity * d.unitPrice
+      const supplyAmount = Math.round(d.quantity * d.unitPrice)
       const taxType = itemInfoMap.get(d.itemId)?.taxType || 'TAXABLE'
       const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
       return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty: 0, remainingQty: d.quantity, remark: d.remark || null }

@@ -33,7 +33,7 @@ export function checkRateLimit(
   entry.count += 1
 
   if (entry.count > maxAttempts) {
-    const retryAfterSeconds = Math.ceil((entry.resetAt - now) / 1000)
+    const retryAfterSeconds = Math.max(1, Math.ceil((entry.resetAt - now) / 1000))
     return { allowed: false, remaining: 0, retryAfterSeconds }
   }
 

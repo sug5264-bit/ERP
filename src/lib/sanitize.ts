@@ -67,12 +67,19 @@ export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
 /**
  * 파일명 살균 (업로드 시)
  */
+const RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i
+
 export function sanitizeFileName(name: string): string {
-  return name
+  let sanitized = name
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '') // 금지 문자 제거
     .replace(/\.\./g, '')                    // 경로 순회 방지
     .trim()
     .slice(0, 255)
+  // OS 예약 파일명 방지
+  if (RESERVED_NAMES.test(sanitized)) {
+    sanitized = `_${sanitized}`
+  }
+  return sanitized
 }
 
 /**

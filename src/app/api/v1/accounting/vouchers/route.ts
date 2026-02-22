@@ -81,10 +81,10 @@ export async function POST(request: NextRequest) {
       })
     )
 
-    // 차/대변 합계 검증
-    const totalDebit = resolvedDetails.reduce((sum, d) => sum + d.debitAmount, 0)
-    const totalCredit = resolvedDetails.reduce((sum, d) => sum + d.creditAmount, 0)
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+    // 차/대변 합계 검증 (정수 연산으로 부동소수점 오차 제거)
+    const totalDebit = resolvedDetails.reduce((sum, d) => sum + Math.round(d.debitAmount * 100), 0) / 100
+    const totalCredit = resolvedDetails.reduce((sum, d) => sum + Math.round(d.creditAmount * 100), 0) / 100
+    if (totalDebit !== totalCredit) {
       return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
     }
 
@@ -110,37 +110,39 @@ export async function POST(request: NextRequest) {
       return errorResponse('사원 정보가 연결되어 있지 않습니다.', 'NO_EMPLOYEE')
     }
 
-    const voucherNo = await generateDocumentNumber('VOU', voucherDate)
-
-    const voucher = await prisma.voucher.create({
-      data: {
-        voucherNo,
-        voucherDate,
-        voucherType: data.voucherType,
-        description: data.description,
-        totalDebit,
-        totalCredit,
-        fiscalYearId: fiscalYear.id,
-        createdById: user.employeeId,
-        details: {
-          create: resolvedDetails.map((d, idx) => ({
-            lineNo: idx + 1,
-            accountSubjectId: d.accountSubjectId,
-            debitAmount: d.debitAmount,
-            creditAmount: d.creditAmount,
-            partnerId: d.partnerId || null,
-            description: d.description,
-            costCenterId: d.costCenterId || null,
-          })),
-        },
-      },
-      include: {
-        details: {
-          include: {
-            accountSubject: { select: { code: true, nameKo: true } },
+    // 전표번호 생성 + 전표 저장을 트랜잭션으로 원자적 처리
+    const voucher = await prisma.$transaction(async (tx) => {
+      const voucherNo = await generateDocumentNumber('VOU', voucherDate)
+      return tx.voucher.create({
+        data: {
+          voucherNo,
+          voucherDate,
+          voucherType: data.voucherType,
+          description: data.description,
+          totalDebit,
+          totalCredit,
+          fiscalYearId: fiscalYear.id,
+          createdById: user!.employeeId!,
+          details: {
+            create: resolvedDetails.map((d, idx) => ({
+              lineNo: idx + 1,
+              accountSubjectId: d.accountSubjectId,
+              debitAmount: d.debitAmount,
+              creditAmount: d.creditAmount,
+              partnerId: d.partnerId || null,
+              description: d.description,
+              costCenterId: d.costCenterId || null,
+            })),
           },
         },
-      },
+        include: {
+          details: {
+            include: {
+              accountSubject: { select: { code: true, nameKo: true } },
+            },
+          },
+        },
+      })
     })
 
     return successResponse(voucher)

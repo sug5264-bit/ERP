@@ -133,8 +133,10 @@ export default function LeavePage() {
       toast.error('종료일은 시작일 이후여야 합니다.')
       return
     }
-    const diffTime = new Date(endDate).getTime() - new Date(startDate).getTime()
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+    const [sy, sm, sd] = startDate.split('-').map(Number)
+    const [ey, em, ed] = endDate.split('-').map(Number)
+    const diffTime = Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)
+    const days = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1
     createMutation.mutate({
       employeeId: form.get('employeeId'),
       leaveType: form.get('leaveType'),

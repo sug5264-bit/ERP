@@ -41,9 +41,10 @@ export async function PUT(request: NextRequest) {
     const session = await getSession()
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
     const body = await request.json()
-    if (body.messageId) {
-      await prisma.message.update({ where: { id: body.messageId, receiverId: session.user!.id! }, data: { isRead: true, readAt: new Date() } })
+    if (!body.messageId || typeof body.messageId !== 'string' || body.messageId.trim() === '') {
+      return errorResponse('유효한 메시지 ID가 필요합니다.', 'INVALID_INPUT', 400)
     }
+    await prisma.message.update({ where: { id: body.messageId, receiverId: session.user!.id! }, data: { isRead: true, readAt: new Date() } })
     return successResponse({ updated: true })
   } catch (error) { return handleApiError(error) }
 }

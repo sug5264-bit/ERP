@@ -80,9 +80,9 @@ export async function PUT(
 
     // 일반 수정
     if (body.details) {
-      const totalDebit = body.details.reduce((s: number, d: any) => s + (d.debitAmount || 0), 0)
-      const totalCredit = body.details.reduce((s: number, d: any) => s + (d.creditAmount || 0), 0)
-      if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      const totalDebit = body.details.reduce((s: number, d: any) => s + Math.round((d.debitAmount || 0) * 100), 0) / 100
+      const totalCredit = body.details.reduce((s: number, d: any) => s + Math.round((d.creditAmount || 0) * 100), 0) / 100
+      if (totalDebit !== totalCredit) {
         return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
       }
 

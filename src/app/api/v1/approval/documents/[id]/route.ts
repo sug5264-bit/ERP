@@ -21,6 +21,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
     const { id } = await params
     const body = await request.json()
+    const allowedActions = ['submit', 'approve', 'reject', 'cancel']
+    if (!body.action || !allowedActions.includes(body.action)) {
+      return errorResponse('유효하지 않은 작업입니다. 허용된 작업: submit, approve, reject, cancel', 'INVALID_ACTION', 400)
+    }
     const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
@@ -37,28 +41,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (body.action === 'approve' || body.action === 'reject') {
-      const doc = await prisma.approvalDocument.findUnique({ where: { id }, include: { steps: { orderBy: { stepOrder: 'asc' } } } })
-      if (!doc) return errorResponse('결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (doc.status !== 'IN_PROGRESS') {
-        return errorResponse('진행 중인 문서만 결재할 수 있습니다.', 'INVALID_STATUS', 400)
-      }
+      // 트랜잭션으로 원자적 처리 + 낙관적 잠금
+      const result = await prisma.$transaction(async (tx) => {
+        const doc = await tx.approvalDocument.findUnique({ where: { id }, include: { steps: { orderBy: { stepOrder: 'asc' } } } })
+        if (!doc) throw new Error('NOT_FOUND')
+        if (doc.status !== 'IN_PROGRESS') throw new Error('INVALID_STATUS')
 
-      const currentStepData = doc.steps.find(s => s.stepOrder === doc.currentStep && s.approverId === employee.id)
-      if (!currentStepData) return errorResponse('현재 결재 권한이 없습니다.', 'FORBIDDEN', 403)
+        const currentStepData = doc.steps.find(s => s.stepOrder === doc.currentStep && s.approverId === employee.id)
+        if (!currentStepData) throw new Error('FORBIDDEN')
+        if (currentStepData.status !== 'PENDING') throw new Error('ALREADY_PROCESSED')
 
-      await prisma.approvalStep.update({
-        where: { id: currentStepData.id },
-        data: { status: body.action === 'approve' ? 'APPROVED' : 'REJECTED', comment: body.comment || null, actionDate: new Date() },
+        await tx.approvalStep.update({
+          where: { id: currentStepData.id },
+          data: { status: body.action === 'approve' ? 'APPROVED' : 'REJECTED', comment: body.comment || null, actionDate: new Date() },
+        })
+
+        if (body.action === 'reject') {
+          await tx.approvalDocument.update({ where: { id }, data: { status: 'REJECTED' } })
+        } else if (doc.currentStep >= doc.totalSteps) {
+          await tx.approvalDocument.update({ where: { id }, data: { status: 'APPROVED' } })
+        } else {
+          await tx.approvalDocument.update({ where: { id }, data: { currentStep: doc.currentStep + 1 } })
+        }
+        return { updated: true }
       })
-
-      if (body.action === 'reject') {
-        await prisma.approvalDocument.update({ where: { id }, data: { status: 'REJECTED' } })
-      } else if (doc.currentStep >= doc.totalSteps) {
-        await prisma.approvalDocument.update({ where: { id }, data: { status: 'APPROVED' } })
-      } else {
-        await prisma.approvalDocument.update({ where: { id }, data: { currentStep: doc.currentStep + 1 } })
-      }
-      return successResponse({ updated: true })
+      return successResponse(result)
     }
 
     if (body.action === 'cancel') {
@@ -75,5 +82,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    // 트랜잭션 내 비즈니스 로직 에러 처리
+    if (error instanceof Error) {
+      const errMap: Record<string, [string, string, number]> = {
+        'NOT_FOUND': ['결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404],
+        'INVALID_STATUS': ['진행 중인 문서만 결재할 수 있습니다.', 'INVALID_STATUS', 400],
+        'FORBIDDEN': ['현재 결재 권한이 없습니다.', 'FORBIDDEN', 403],
+        'ALREADY_PROCESSED': ['이미 처리된 결재 단계입니다.', 'ALREADY_PROCESSED', 409],
+      }
+      const mapped = errMap[error.message]
+      if (mapped) return errorResponse(mapped[0], mapped[1], mapped[2])
+    }
+    return handleApiError(error)
+  }
 }

@@ -44,7 +44,14 @@ export default function MyPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['mypage'],
-    queryFn: () => api.get('/mypage') as Promise<any>,
+    queryFn: async () => {
+      try {
+        return await api.get('/mypage') as any
+      } catch (err) {
+        toast.error('마이페이지 정보를 불러올 수 없습니다.')
+        return null
+      }
+    },
   })
 
   const pwMutation = useMutation({

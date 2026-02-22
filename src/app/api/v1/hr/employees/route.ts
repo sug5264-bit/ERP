@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
       prisma.employee.count({ where }),
     ])
 
-    return successResponse(employees, buildMeta(page, pageSize, totalCount))
+    return successResponse(employees, buildMeta(page, pageSize, totalCount), { cache: 's-maxage=60, stale-while-revalidate=120' })
   } catch (error) {
     return handleApiError(error)
   }
