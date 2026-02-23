@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 
 interface AttendanceRow {
@@ -51,6 +52,9 @@ const TYPE_MAP: Record<string, { label: string; variant: 'default' | 'secondary'
   BUSINESS: { label: '출장', variant: 'outline' },
   REMOTE: { label: '재택', variant: 'outline' },
 }
+
+const currentYear = new Date().getFullYear()
+const currentMonth = new Date().getMonth() + 1
 
 const columns: ColumnDef<AttendanceRow>[] = [
   {
@@ -99,8 +103,22 @@ const columns: ColumnDef<AttendanceRow>[] = [
   },
 ]
 
+const exportColumns: ExportColumn[] = [
+  { header: '근무일', accessor: (r) => r.workDate ? formatDate(r.workDate) : '' },
+  { header: '사번', accessor: (r) => r.employee?.employeeNo || '' },
+  { header: '이름', accessor: (r) => r.employee?.nameKo || '' },
+  { header: '부서', accessor: (r) => r.employee?.department?.name || '' },
+  { header: '유형', accessor: (r) => TYPE_MAP[r.attendanceType]?.label || r.attendanceType },
+  { header: '출근', accessor: (r) => r.checkInTime?.slice(11, 16) || '' },
+  { header: '퇴근', accessor: (r) => r.checkOutTime?.slice(11, 16) || '' },
+  { header: '근무시간', accessor: (r) => r.workHours != null ? `${r.workHours}h` : '' },
+  { header: '초과근무', accessor: (r) => r.overtimeHours ? `${r.overtimeHours}h` : '' },
+]
+
 export default function AttendancePage() {
   const [open, setOpen] = useState(false)
+  const [filterYear, setFilterYear] = useState(currentYear.toString())
+  const [filterMonth, setFilterMonth] = useState(currentMonth.toString())
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
@@ -123,8 +141,29 @@ export default function AttendancePage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const records: AttendanceRow[] = data?.data || []
+  const allRecords: AttendanceRow[] = data?.data || []
   const employees = empData?.data || []
+
+  // 월 단위 필터 적용
+  const records = useMemo(() => {
+    return allRecords.filter((r) => {
+      if (!r.workDate) return false
+      const date = new Date(r.workDate)
+      return (
+        date.getFullYear() === Number(filterYear) &&
+        date.getMonth() + 1 === Number(filterMonth)
+      )
+    })
+  }, [allRecords, filterYear, filterMonth])
+
+  // 근태 통계
+  const stats = useMemo(() => {
+    const normal = records.filter((r) => r.attendanceType === 'NORMAL').length
+    const late = records.filter((r) => r.attendanceType === 'LATE').length
+    const absent = records.filter((r) => r.attendanceType === 'ABSENT').length
+    const remote = records.filter((r) => r.attendanceType === 'REMOTE').length
+    return { normal, late, absent, remote }
+  }, [records])
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -143,6 +182,13 @@ export default function AttendancePage() {
     })
   }
 
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '근태목록', title: '근태관리 목록', columns: exportColumns, data: records }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -150,6 +196,32 @@ export default function AttendancePage() {
         description="사원들의 출퇴근 기록을 관리합니다"
       />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+        <div className="space-y-2">
+          <Label>연도</Label>
+          <Select value={filterYear} onValueChange={setFilterYear}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+                <SelectItem key={y} value={y.toString()}>{y}년</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>월</Label>
+          <Select value={filterMonth} onValueChange={setFilterMonth}>
+            <SelectTrigger className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                <SelectItem key={m} value={m.toString()}>{m}월</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button>근태 등록</Button>
@@ -214,11 +286,35 @@ export default function AttendancePage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 근태 통계 요약 바 */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="rounded-lg border p-4">
+          <p className="text-sm text-muted-foreground">정상</p>
+          <p className="text-2xl font-bold text-green-600">{stats.normal}건</p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <p className="text-sm text-muted-foreground">지각</p>
+          <p className="text-2xl font-bold text-red-600">{stats.late}건</p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <p className="text-sm text-muted-foreground">결근</p>
+          <p className="text-2xl font-bold text-red-600">{stats.absent}건</p>
+        </div>
+        <div className="rounded-lg border p-4">
+          <p className="text-sm text-muted-foreground">재택</p>
+          <p className="text-2xl font-bold text-blue-600">{stats.remote}건</p>
+        </div>
+      </div>
+
       <DataTable
         columns={columns}
         data={records}
         isLoading={isLoading}
         pageSize={50}
+        searchColumn="workDate"
+        searchPlaceholder="근무일로 검색..."
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )
