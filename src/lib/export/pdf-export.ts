@@ -1,4 +1,5 @@
 import type { ExportConfig } from './types'
+import { loadKoreanFont } from '@/lib/pdf-font'
 
 function getValue(row: any, accessor: string | ((row: any) => any)): string {
   let val: any
@@ -7,59 +8,8 @@ function getValue(row: any, accessor: string | ((row: any) => any)): string {
   return val != null ? String(val) : ''
 }
 
-// 폰트 캐시 (메모리)
-let cachedFontBase64: string | null = null
-
-async function loadKoreanFontForExport(doc: InstanceType<typeof import('jspdf').default>): Promise<string> {
-  if (cachedFontBase64) {
-    doc.addFileToVFS('korean.ttf', cachedFontBase64)
-    doc.addFont('korean.ttf', 'korean', 'normal')
-    doc.setFont('korean')
-    return 'korean'
-  }
-
-  const fontUrls = [
-    '/fonts/ipag.ttf',
-    'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
-    'https://fastly.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
-  ]
-
-  for (const fontUrl of fontUrls) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-      const response = await fetch(fontUrl, { signal: controller.signal })
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        const chunkSize = 8192
-        let binary = ''
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
-          binary += String.fromCharCode.apply(null, Array.from(chunk))
-        }
-        const base64 = btoa(binary)
-        cachedFontBase64 = base64
-        doc.addFileToVFS('korean.ttf', base64)
-        doc.addFont('korean.ttf', 'korean', 'normal')
-        doc.setFont('korean')
-        return 'korean'
-      }
-    } catch {
-      continue
-    }
-  }
-
-  return 'helvetica'
-}
-
 export async function exportToPDF(config: ExportConfig) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ])
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
 
   const { fileName, title, columns, data } = config
 
@@ -68,7 +18,7 @@ export async function exportToPDF(config: ExportConfig) {
     putOnlyUsedFonts: true,
   })
 
-  const fontName = await loadKoreanFontForExport(doc)
+  const fontName = await loadKoreanFont(doc)
 
   // 제목
   if (title) {
@@ -113,12 +63,9 @@ export async function exportToPDF(config: ExportConfig) {
     doc.setPage(i)
     doc.setFontSize(8)
     if (fontName !== 'helvetica') doc.setFont(fontName)
-    doc.text(
-      `${i} / ${pageCount}`,
-      doc.internal.pageSize.getWidth() / 2,
-      doc.internal.pageSize.getHeight() - 8,
-      { align: 'center' }
-    )
+    doc.text(`${i} / ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, {
+      align: 'center',
+    })
   }
 
   doc.save(`${fileName}.pdf`)

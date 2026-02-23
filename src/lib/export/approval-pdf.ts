@@ -1,3 +1,5 @@
+import { loadKoreanFont } from '@/lib/pdf-font'
+
 interface ApprovalDocExport {
   documentNo: string
   title: string
@@ -36,55 +38,6 @@ const URGENCY_MAP: Record<string, string> = {
   NORMAL: '일반',
   URGENT: '긴급',
   EMERGENCY: '초긴급',
-}
-
-// 폰트 캐시 (메모리)
-let cachedFontBase64: string | null = null
-
-// 한글 폰트 로드 헬퍼 - 로컬 우선, CDN 폴백
-async function loadKoreanFont(pdf: InstanceType<typeof import('jspdf').default>): Promise<string> {
-  if (cachedFontBase64) {
-    pdf.addFileToVFS('korean.ttf', cachedFontBase64)
-    pdf.addFont('korean.ttf', 'korean', 'normal')
-    pdf.setFont('korean')
-    return 'korean'
-  }
-
-  const fontUrls = [
-    '/fonts/ipag.ttf',
-    'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
-    'https://fastly.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
-  ]
-
-  for (const fontUrl of fontUrls) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-      const response = await fetch(fontUrl, { signal: controller.signal })
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        const chunkSize = 8192
-        let binary = ''
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
-          binary += String.fromCharCode.apply(null, Array.from(chunk))
-        }
-        const base64 = btoa(binary)
-        cachedFontBase64 = base64
-        pdf.addFileToVFS('korean.ttf', base64)
-        pdf.addFont('korean.ttf', 'korean', 'normal')
-        pdf.setFont('korean')
-        return 'korean'
-      }
-    } catch {
-      continue
-    }
-  }
-
-  return 'helvetica'
 }
 
 export async function exportApprovalPdf(doc: ApprovalDocExport) {
@@ -207,12 +160,9 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
     pdf.setFontSize(8)
     const now = new Date()
     const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    pdf.text(
-      `출력일: ${dateStr} | ${i} / ${pageCount}`,
-      pageWidth / 2,
-      pdf.internal.pageSize.getHeight() - 10,
-      { align: 'center' }
-    )
+    pdf.text(`출력일: ${dateStr} | ${i} / ${pageCount}`, pageWidth / 2, pdf.internal.pageSize.getHeight() - 10, {
+      align: 'center',
+    })
   }
 
   // 다운로드
