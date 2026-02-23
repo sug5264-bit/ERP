@@ -13,6 +13,7 @@ export async function loadKoreanFont(doc: InstanceType<typeof jsPDF>): Promise<s
   if (cachedFontBase64) {
     doc.addFileToVFS(FONT_FILE, cachedFontBase64)
     doc.addFont(FONT_FILE, FONT_NAME, 'normal')
+    doc.addFont(FONT_FILE, FONT_NAME, 'bold')
     doc.setFont(FONT_NAME)
     return FONT_NAME
   }
@@ -43,6 +44,7 @@ export async function loadKoreanFont(doc: InstanceType<typeof jsPDF>): Promise<s
         cachedFontBase64 = base64
         doc.addFileToVFS(FONT_FILE, base64)
         doc.addFont(FONT_FILE, FONT_NAME, 'normal')
+        doc.addFont(FONT_FILE, FONT_NAME, 'bold')
         doc.setFont(FONT_NAME)
         return FONT_NAME
       }
