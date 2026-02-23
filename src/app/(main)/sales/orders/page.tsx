@@ -15,21 +15,50 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
-import { generateTaxInvoicePDF, generateTransactionStatementPDF, type TaxInvoicePDFData, type TransactionStatementPDFData } from '@/lib/pdf-reports'
+import {
+  generateTaxInvoicePDF,
+  generateTransactionStatementPDF,
+  type TaxInvoicePDFData,
+  type TransactionStatementPDFData,
+} from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, MoreHorizontal, CheckCircle, XCircle, FileDown, Upload, Pencil, Download, FileText, Search, Filter, RotateCcw } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  MoreHorizontal,
+  CheckCircle,
+  XCircle,
+  FileDown,
+  Upload,
+  Pencil,
+  Download,
+  FileText,
+  Search,
+  Filter,
+  RotateCcw,
+} from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { Textarea } from '@/components/ui/textarea'
+import { RecordSubTabs, savePendingData } from '@/components/common/record-sub-tabs'
+import { Paperclip } from 'lucide-react'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  ORDERED: { label: '발주', variant: 'default' }, IN_PROGRESS: { label: '진행중', variant: 'secondary' },
-  COMPLETED: { label: '완료', variant: 'outline' }, CANCELLED: { label: '취소', variant: 'destructive' },
-  COMPLAINT: { label: '컨플레인', variant: 'destructive' }, EXCHANGE: { label: '교환', variant: 'secondary' },
+  ORDERED: { label: '발주', variant: 'default' },
+  IN_PROGRESS: { label: '진행중', variant: 'secondary' },
+  COMPLETED: { label: '완료', variant: 'outline' },
+  CANCELLED: { label: '취소', variant: 'destructive' },
+  COMPLAINT: { label: '컨플레인', variant: 'destructive' },
+  EXCHANGE: { label: '교환', variant: 'secondary' },
   RETURN: { label: '반품', variant: 'destructive' },
 }
 
-interface Detail { itemId: string; quantity: number; unitPrice: number }
+interface Detail {
+  itemId: string
+  quantity: number
+  unitPrice: number
+}
 
 interface TrackingRow {
   deliveryNo: string
@@ -58,7 +87,14 @@ export default function OrdersPage() {
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const [createPartnerSearch, setCreatePartnerSearch] = useState('')
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
-  const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
+  const [trackingResult, setTrackingResult] = useState<{
+    total: number
+    success: number
+    failed: number
+    errors: string[]
+  } | null>(null)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingNote, setPendingNote] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -68,9 +104,12 @@ export default function OrdersPage() {
     const defaultCompany = companies.find((c: any) => c.isDefault) || companies[0]
     if (defaultCompany) {
       return {
-        name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '',
-        ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '',
-        bizType: defaultCompany.bizType || '', bizItem: defaultCompany.bizCategory || '',
+        name: defaultCompany.companyName,
+        bizNo: defaultCompany.bizNo || '',
+        ceo: defaultCompany.ceoName || '',
+        address: defaultCompany.address || '',
+        bizType: defaultCompany.bizType || '',
+        bizItem: defaultCompany.bizCategory || '',
         tel: defaultCompany.phone || '',
       }
     }
@@ -80,7 +119,7 @@ export default function OrdersPage() {
   const handleTaxInvoicePDF = async (order: any) => {
     let orderDetail = order
     try {
-      const res = await api.get(`/sales/orders/${order.id}`) as any
+      const res = (await api.get(`/sales/orders/${order.id}`)) as any
       orderDetail = res.data || res
     } catch {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
@@ -91,15 +130,33 @@ export default function OrdersPage() {
     const pdfData: TaxInvoicePDFData = {
       invoiceNo: orderDetail.orderNo,
       invoiceDate: formatDate(orderDetail.orderDate),
-      supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, bizType: ci.bizType, bizItem: ci.bizItem },
-      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '' },
+      supplier: {
+        name: ci.name,
+        bizNo: ci.bizNo,
+        ceo: ci.ceo,
+        address: ci.address,
+        bizType: ci.bizType,
+        bizItem: ci.bizItem,
+      },
+      buyer: {
+        name: orderDetail.partner?.partnerName || '',
+        bizNo: orderDetail.partner?.bizNo || '',
+        ceo: orderDetail.partner?.ceoName || '',
+        address: orderDetail.partner?.address || '',
+      },
       items: (orderDetail.details || []).map((d: any) => ({
-        month: String(orderDate.getMonth() + 1), day: String(orderDate.getDate()),
-        itemName: d.item?.itemName || '', spec: d.item?.specification || '',
-        qty: Number(d.quantity), unitPrice: Number(d.unitPrice),
-        supplyAmount: Number(d.supplyAmount), taxAmount: Number(d.taxAmount),
+        month: String(orderDate.getMonth() + 1),
+        day: String(orderDate.getDate()),
+        itemName: d.item?.itemName || '',
+        spec: d.item?.specification || '',
+        qty: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        supplyAmount: Number(d.supplyAmount),
+        taxAmount: Number(d.taxAmount),
       })),
-      totalSupply: Number(orderDetail.totalSupply), totalTax: Number(orderDetail.totalTax), totalAmount: Number(orderDetail.totalAmount),
+      totalSupply: Number(orderDetail.totalSupply),
+      totalTax: Number(orderDetail.totalTax),
+      totalAmount: Number(orderDetail.totalAmount),
     }
     generateTaxInvoicePDF(pdfData)
     toast.success('세금계산서 PDF가 다운로드되었습니다.')
@@ -109,7 +166,7 @@ export default function OrdersPage() {
   const handleTransactionStatementPDF = async (order: any) => {
     let orderDetail = order
     try {
-      const res = await api.get(`/sales/orders/${order.id}`) as any
+      const res = (await api.get(`/sales/orders/${order.id}`)) as any
       orderDetail = res.data || res
     } catch {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
@@ -120,10 +177,21 @@ export default function OrdersPage() {
       statementNo: orderDetail.orderNo,
       statementDate: formatDate(orderDetail.orderDate),
       supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, tel: ci.tel },
-      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '', tel: orderDetail.partner?.phone || '' },
+      buyer: {
+        name: orderDetail.partner?.partnerName || '',
+        bizNo: orderDetail.partner?.bizNo || '',
+        ceo: orderDetail.partner?.ceoName || '',
+        address: orderDetail.partner?.address || '',
+        tel: orderDetail.partner?.phone || '',
+      },
       items: (orderDetail.details || []).map((d: any, idx: number) => ({
-        no: idx + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
-        qty: Number(d.quantity), unitPrice: Number(d.unitPrice), amount: Number(d.supplyAmount), remark: d.remark || '',
+        no: idx + 1,
+        itemName: d.item?.itemName || '',
+        spec: d.item?.specification || '',
+        qty: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        amount: Number(d.supplyAmount),
+        remark: d.remark || '',
       })),
       totalAmount: Number(orderDetail.totalAmount),
     }
@@ -136,16 +204,28 @@ export default function OrdersPage() {
   const [editDetails, setEditDetails] = useState<Detail[]>([])
   const editMutation = useMutation({
     mutationFn: ({ id, ...body }: any) => api.put(`/sales/orders/${id}`, { action: 'update', ...body }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setEditTarget(null); toast.success('발주가 수정되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setEditTarget(null)
+      toast.success('발주가 수정되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
   const handleEdit = async (order: any) => {
     try {
-      const res = await api.get(`/sales/orders/${order.id}`) as any
+      const res = (await api.get(`/sales/orders/${order.id}`)) as any
       const detail = res.data || res
       setEditTarget(detail)
-      setEditDetails((detail.details || []).map((d: any) => ({ itemId: d.itemId || d.item?.id, quantity: Number(d.quantity), unitPrice: Number(d.unitPrice) })))
-    } catch { toast.error('주문 상세를 불러올 수 없습니다.') }
+      setEditDetails(
+        (detail.details || []).map((d: any) => ({
+          itemId: d.itemId || d.item?.id,
+          quantity: Number(d.quantity),
+          unitPrice: Number(d.unitPrice),
+        }))
+      )
+    } catch {
+      toast.error('주문 상세를 불러올 수 없습니다.')
+    }
   }
   const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -159,7 +239,7 @@ export default function OrdersPage() {
       description: form.get('description') || undefined,
       dispatchInfo: form.get('dispatchInfo') || undefined,
       receivedBy: form.get('receivedBy') || undefined,
-      details: editDetails.filter(d => d.itemId),
+      details: editDetails.filter((d) => d.itemId),
     })
   }
 
@@ -168,19 +248,29 @@ export default function OrdersPage() {
   const completeMutation = useMutation({
     mutationFn: ({ id, dispatchInfo, receivedBy }: { id: string; dispatchInfo: string; receivedBy: string }) =>
       api.put(`/sales/orders/${id}`, { action: 'complete', dispatchInfo, receivedBy }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setCompleteTarget(null); toast.success('발주가 완료 처리되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setCompleteTarget(null)
+      toast.success('발주가 완료 처리되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => api.put(`/sales/orders/${id}`, { action: 'cancel' }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('발주가 취소 처리되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      toast.success('발주가 취소 처리되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/sales/orders/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('발주가 삭제되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      toast.success('발주가 삭제되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -228,12 +318,31 @@ export default function OrdersPage() {
   }
 
   const columns: ColumnDef<any>[] = [
-    { accessorKey: 'orderNo', header: '발주번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span> },
+    {
+      accessorKey: 'orderNo',
+      header: '발주번호',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
+    },
     { id: 'orderDate', header: '발주일', cell: ({ row }) => formatDate(row.original.orderDate) },
     { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
-    { id: 'deliveryDate', header: '납기일', cell: ({ row }) => row.original.deliveryDate ? formatDate(row.original.deliveryDate) : '-' },
-    { id: 'totalAmount', header: '합계금액', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
-    { id: 'status', header: '상태', cell: ({ row }) => { const s = STATUS_MAP[row.original.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status } },
+    {
+      id: 'deliveryDate',
+      header: '납기일',
+      cell: ({ row }) => (row.original.deliveryDate ? formatDate(row.original.deliveryDate) : '-'),
+    },
+    {
+      id: 'totalAmount',
+      header: '합계금액',
+      cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span>,
+    },
+    {
+      id: 'status',
+      header: '상태',
+      cell: ({ row }) => {
+        const s = STATUS_MAP[row.original.status]
+        return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
+      },
+    },
     {
       id: 'actions',
       header: '',
@@ -270,12 +379,19 @@ export default function OrdersPage() {
                 </DropdownMenuItem>
               )}
               {canCancel && (
-                <DropdownMenuItem onClick={() => setCancelTarget({ id: row.original.id, orderNo: row.original.orderNo })} disabled={cancelMutation.isPending}>
+                <DropdownMenuItem
+                  onClick={() => setCancelTarget({ id: row.original.id, orderNo: row.original.orderNo })}
+                  disabled={cancelMutation.isPending}
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   취소 처리
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(row.original.id, row.original.orderNo)} disabled={deleteMutation.isPending}>
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => handleDelete(row.original.id, row.original.orderNo)}
+                disabled={deleteMutation.isPending}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 삭제
               </DropdownMenuItem>
@@ -289,15 +405,42 @@ export default function OrdersPage() {
   // 날짜 프리셋 계산
   const getPresetDates = (preset: string) => {
     const now = new Date()
-    const y = now.getFullYear(), m = now.getMonth(), d = now.getDate()
+    const y = now.getFullYear(),
+      m = now.getMonth(),
+      d = now.getDate()
     switch (preset) {
-      case 'today': return { start: new Date(y, m, d).toISOString().split('T')[0], end: new Date(y, m, d).toISOString().split('T')[0] }
-      case 'thisWeek': { const dow = now.getDay(); const s = new Date(y, m, d - dow); return { start: s.toISOString().split('T')[0], end: now.toISOString().split('T')[0] } }
-      case 'thisMonth': return { start: new Date(y, m, 1).toISOString().split('T')[0], end: new Date(y, m + 1, 0).toISOString().split('T')[0] }
-      case 'lastMonth': return { start: new Date(y, m - 1, 1).toISOString().split('T')[0], end: new Date(y, m, 0).toISOString().split('T')[0] }
-      case 'last3Months': return { start: new Date(y, m - 2, 1).toISOString().split('T')[0], end: new Date(y, m + 1, 0).toISOString().split('T')[0] }
-      case 'thisYear': return { start: new Date(y, 0, 1).toISOString().split('T')[0], end: new Date(y, 11, 31).toISOString().split('T')[0] }
-      default: return { start: '', end: '' }
+      case 'today':
+        return {
+          start: new Date(y, m, d).toISOString().split('T')[0],
+          end: new Date(y, m, d).toISOString().split('T')[0],
+        }
+      case 'thisWeek': {
+        const dow = now.getDay()
+        const s = new Date(y, m, d - dow)
+        return { start: s.toISOString().split('T')[0], end: now.toISOString().split('T')[0] }
+      }
+      case 'thisMonth':
+        return {
+          start: new Date(y, m, 1).toISOString().split('T')[0],
+          end: new Date(y, m + 1, 0).toISOString().split('T')[0],
+        }
+      case 'lastMonth':
+        return {
+          start: new Date(y, m - 1, 1).toISOString().split('T')[0],
+          end: new Date(y, m, 0).toISOString().split('T')[0],
+        }
+      case 'last3Months':
+        return {
+          start: new Date(y, m - 2, 1).toISOString().split('T')[0],
+          end: new Date(y, m + 1, 0).toISOString().split('T')[0],
+        }
+      case 'thisYear':
+        return {
+          start: new Date(y, 0, 1).toISOString().split('T')[0],
+          end: new Date(y, 11, 31).toISOString().split('T')[0],
+        }
+      default:
+        return { start: '', end: '' }
     }
   }
 
@@ -315,7 +458,10 @@ export default function OrdersPage() {
       const lastDay = new Date(fy, fm, 0).getDate()
       qp.set('endDate', `${filterMonth}-${String(lastDay).padStart(2, '0')}`)
     }
-    if (dateFilter === 'daily' && filterDate) { qp.set('startDate', filterDate); qp.set('endDate', filterDate) }
+    if (dateFilter === 'daily' && filterDate) {
+      qp.set('startDate', filterDate)
+      qp.set('endDate', filterDate)
+    }
     if (partnerFilter && partnerFilter !== 'all') qp.set('partnerId', partnerFilter)
     if (searchKeyword) qp.set('search', searchKeyword)
     return qp
@@ -324,15 +470,65 @@ export default function OrdersPage() {
   const qpOnline = buildQueryParams('ONLINE')
   const qpOffline = buildQueryParams('OFFLINE')
 
-  const { data: onlineData, isLoading: onlineLoading } = useQuery({ queryKey: ['sales-orders', 'ONLINE', statusFilter, filterMonth, filterDate, dateFilter, datePreset, partnerFilter, searchKeyword], queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any> })
-  const { data: offlineData, isLoading: offlineLoading } = useQuery({ queryKey: ['sales-orders', 'OFFLINE', statusFilter, filterMonth, filterDate, dateFilter, datePreset, partnerFilter, searchKeyword], queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any> })
-  const { data: partnersData } = useQuery({ queryKey: ['partners-sales'], queryFn: () => api.get('/partners?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
-  const { data: itemsData } = useQuery({ queryKey: ['items-all'], queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>, staleTime: 10 * 60 * 1000 })
-  const { data: companyData } = useQuery({ queryKey: ['admin-company'], queryFn: () => api.get('/admin/company') as Promise<any>, staleTime: 30 * 60 * 1000 })
+  const { data: onlineData, isLoading: onlineLoading } = useQuery({
+    queryKey: [
+      'sales-orders',
+      'ONLINE',
+      statusFilter,
+      filterMonth,
+      filterDate,
+      dateFilter,
+      datePreset,
+      partnerFilter,
+      searchKeyword,
+    ],
+    queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any>,
+  })
+  const { data: offlineData, isLoading: offlineLoading } = useQuery({
+    queryKey: [
+      'sales-orders',
+      'OFFLINE',
+      statusFilter,
+      filterMonth,
+      filterDate,
+      dateFilter,
+      datePreset,
+      partnerFilter,
+      searchKeyword,
+    ],
+    queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any>,
+  })
+  const { data: partnersData } = useQuery({
+    queryKey: ['partners-sales'],
+    queryFn: () => api.get('/partners?pageSize=500') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
+  })
+  const { data: itemsData } = useQuery({
+    queryKey: ['items-all'],
+    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
+  })
+  const { data: companyData } = useQuery({
+    queryKey: ['admin-company'],
+    queryFn: () => api.get('/admin/company') as Promise<any>,
+    staleTime: 30 * 60 * 1000,
+  })
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/orders', body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setOpen(false); setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }]); setVatIncluded(true); toast.success('발주가 등록되었습니다.') },
+    onSuccess: async (res: any) => {
+      const record = res.data || res
+      if (record?.id && (pendingFiles.length > 0 || pendingNote.trim())) {
+        await savePendingData('SalesOrder', record.id, pendingFiles, pendingNote)
+      }
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setOpen(false)
+      setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
+      setVatIncluded(true)
+      setPendingFiles([])
+      setPendingNote('')
+      toast.success('발주가 등록되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -353,34 +549,46 @@ export default function OrdersPage() {
 
   const exportColumns: ExportColumn[] = [
     { header: '발주번호', accessor: 'orderNo' },
-    { header: '발주일', accessor: (r) => r.orderDate ? formatDate(r.orderDate) : '' },
+    { header: '발주일', accessor: (r) => (r.orderDate ? formatDate(r.orderDate) : '') },
     { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
-    { header: '납기일', accessor: (r) => r.deliveryDate ? formatDate(r.deliveryDate) : '' },
-    { header: '합계(부가세 포함)', accessor: (r) => r.totalAmount ? formatCurrency(r.totalAmount) : '' },
+    { header: '납기일', accessor: (r) => (r.deliveryDate ? formatDate(r.deliveryDate) : '') },
+    { header: '합계(부가세 포함)', accessor: (r) => (r.totalAmount ? formatCurrency(r.totalAmount) : '') },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
   ]
 
   const handleExport = (type: 'excel' | 'pdf') => {
     const currentOrders = activeTab === 'ONLINE' ? onlineOrders : offlineOrders
     const tabLabel = activeTab === 'ONLINE' ? '온라인' : '오프라인'
-    const cfg = { fileName: `발주목록_${tabLabel}`, title: `발주관리 목록 (${tabLabel})`, columns: exportColumns, data: currentOrders }
+    const cfg = {
+      fileName: `발주목록_${tabLabel}`,
+      title: `발주관리 목록 (${tabLabel})`,
+      columns: exportColumns,
+      data: currentOrders,
+    }
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
-  const updateDetail = (idx: number, field: string, value: any) => { const d = [...details]; (d[idx] as any)[field] = value; setDetails(d) }
+  const updateDetail = (idx: number, field: string, value: any) => {
+    const d = [...details]
+    ;(d[idx] as any)[field] = value
+    setDetails(d)
+  }
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     createMutation.mutate({
-      orderDate: form.get('orderDate'), partnerId: form.get('partnerId'),
+      orderDate: form.get('orderDate'),
+      partnerId: form.get('partnerId'),
       salesChannel: activeTab,
       vatIncluded,
-      deliveryDate: form.get('deliveryDate') || undefined, description: form.get('description') || undefined,
-      carrier: form.get('carrier') || undefined, trackingNo: form.get('trackingNo') || undefined,
-      details: details.filter(d => d.itemId),
+      deliveryDate: form.get('deliveryDate') || undefined,
+      description: form.get('description') || undefined,
+      carrier: form.get('carrier') || undefined,
+      trackingNo: form.get('trackingNo') || undefined,
+      details: details.filter((d) => d.itemId),
     })
   }
 
@@ -400,101 +608,227 @@ export default function OrdersPage() {
     const file = e.target.files?.[0]
     if (!file) return
     try {
-      const rows = await readExcelFile(file, { '납품번호': 'deliveryNo', '택배사': 'carrier', '운송장번호': 'trackingNo' })
+      const rows = await readExcelFile(file, { 납품번호: 'deliveryNo', 택배사: 'carrier', 운송장번호: 'trackingNo' })
       setTrackingRows(rows as TrackingRow[])
       setTrackingResult(null)
-    } catch (err) { toast.error('엑셀 파일을 읽을 수 없습니다.') }
+    } catch (err) {
+      toast.error('엑셀 파일을 읽을 수 없습니다.')
+    }
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const handleTrackingUpload = () => {
-    if (trackingRows.length === 0) { toast.error('업로드할 데이터가 없습니다.'); return }
+    if (trackingRows.length === 0) {
+      toast.error('업로드할 데이터가 없습니다.')
+      return
+    }
     trackingMutation.mutate({ trackings: trackingRows })
   }
 
   // Create dialog (shared)
   const createDialog = (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button>발주 등록</Button></DialogTrigger>
-      <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>발주 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle></DialogHeader>
+      <DialogTrigger asChild>
+        <Button>발주 등록</Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl lg:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>발주 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-2"><Label>발주일 <span className="text-destructive">*</span></Label><Input name="orderDate" type="date" required aria-required="true" /></div>
-            <div className="space-y-2">
-              <Label>거래처 <span className="text-destructive">*</span></Label>
-              <Select name="partnerId" onValueChange={() => setCreatePartnerSearch('')}>
-                <SelectTrigger><SelectValue placeholder="거래처 검색/선택" /></SelectTrigger>
-                <SelectContent>
-                  <div className="p-2">
-                    <Input
-                      placeholder="거래처명 검색..."
-                      value={createPartnerSearch}
-                      onChange={e => setCreatePartnerSearch(e.target.value)}
-                      className="h-8 text-xs"
-                      onClick={e => e.stopPropagation()}
-                      onKeyDown={e => e.stopPropagation()}
-                    />
+          <Tabs defaultValue="info">
+            <TabsList variant="line">
+              <TabsTrigger value="info">기본 정보</TabsTrigger>
+              <TabsTrigger value="files">
+                <Paperclip className="mr-1 h-3.5 w-3.5" />
+                특이사항{pendingFiles.length > 0 && <span className="ml-1 text-xs">({pendingFiles.length})</span>}
+              </TabsTrigger>
+              <TabsTrigger value="notes">
+                <FileText className="mr-1 h-3.5 w-3.5" />
+                게시글
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="info" className="space-y-4 pt-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>
+                    발주일 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input name="orderDate" type="date" required aria-required="true" />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    거래처 <span className="text-destructive">*</span>
+                  </Label>
+                  <Select name="partnerId" onValueChange={() => setCreatePartnerSearch('')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="거래처 검색/선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="거래처명 검색..."
+                          value={createPartnerSearch}
+                          onChange={(e) => setCreatePartnerSearch(e.target.value)}
+                          className="h-8 text-xs"
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      {partners
+                        .filter(
+                          (p: any) =>
+                            !createPartnerSearch ||
+                            p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())
+                        )
+                        .map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.partnerName}
+                          </SelectItem>
+                        ))}
+                      {partners.filter(
+                        (p: any) =>
+                          !createPartnerSearch ||
+                          p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())
+                      ).length === 0 && (
+                        <div className="text-muted-foreground p-2 text-center text-xs">검색 결과가 없습니다</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>납기일</Label>
+                  <Input name="deliveryDate" type="date" />
+                </div>
+              </div>
+              {activeTab === 'ONLINE' && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>택배사</Label>
+                    <Input name="carrier" placeholder="CJ대한통운, 한진택배 등" />
                   </div>
-                  {partners
-                    .filter((p: any) => !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase()))
-                    .map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}
-                  {partners.filter((p: any) => !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())).length === 0 && (
-                    <div className="p-2 text-xs text-muted-foreground text-center">검색 결과가 없습니다</div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2"><Label>납기일</Label><Input name="deliveryDate" type="date" /></div>
-          </div>
-          {activeTab === 'ONLINE' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>택배사</Label><Input name="carrier" placeholder="CJ대한통운, 한진택배 등" /></div>
-              <div className="space-y-2"><Label>운송장번호</Label><Input name="trackingNo" placeholder="운송장번호 입력" /></div>
-            </div>
-          )}
-          <div className="space-y-2"><Label>비고</Label><Input name="description" /></div>
-          <div className="space-y-2">
-            <Label>부가세</Label>
-            <Select name="vatIncluded" value={vatIncluded ? 'true' : 'false'} onValueChange={v => setVatIncluded(v === 'true')}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="true">부가세 포함</SelectItem>
-                <SelectItem value="false">부가세 미포함</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between"><Label>품목</Label>
-              <Button type="button" variant="outline" size="sm" onClick={() => setDetails([...details, { itemId: '', quantity: 1, unitPrice: 0 }])}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
-            </div>
-            <div className="space-y-3">
-              {details.map((d, idx) => {
-                const supply = d.quantity * d.unitPrice
-                const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
-                const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
-                return (
-                  <div key={idx} className="rounded-md border p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                      <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))} disabled={details.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
-                    </div>
-                    <Select value={d.itemId} onValueChange={v => updateDetail(idx, 'itemId', v)}>
-                      <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
-                      <SelectContent className="max-w-[calc(100vw-4rem)]">{items.map((it: any) => <SelectItem key={it.id} value={it.id}><span className="truncate">{it.itemCode} - {it.itemName}</span></SelectItem>)}</SelectContent>
-                    </Select>
-                    <div className="grid grid-cols-4 gap-2 min-w-0">
-                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></div>
-                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
-                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">공급가</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(supply)}</div></div>
-                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">{vatIncluded ? '합계(VAT포함)' : '합계'}</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + tax)}</div></div>
-                    </div>
+                  <div className="space-y-2">
+                    <Label>운송장번호</Label>
+                    <Input name="trackingNo" placeholder="운송장번호 입력" />
                   </div>
-                )
-              })}
-            </div>
-          </div>
-          <Button type="submit" className="w-full" disabled={createMutation.isPending}>{createMutation.isPending ? '등록 중...' : '발주 등록'}</Button>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>비고</Label>
+                <Input name="description" />
+              </div>
+              <div className="space-y-2">
+                <Label>부가세</Label>
+                <Select
+                  name="vatIncluded"
+                  value={vatIncluded ? 'true' : 'false'}
+                  onValueChange={(v) => setVatIncluded(v === 'true')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">부가세 포함</SelectItem>
+                    <SelectItem value="false">부가세 미포함</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>품목</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDetails([...details, { itemId: '', quantity: 1, unitPrice: 0 }])}
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> 행 추가
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {details.map((d, idx) => {
+                    const supply = d.quantity * d.unitPrice
+                    const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
+                    return (
+                      <div key={idx} className="space-y-2 rounded-md border p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground text-xs font-medium">품목 #{idx + 1}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
+                            disabled={details.length <= 1}
+                            aria-label="삭제"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                          <SelectTrigger className="truncate text-xs">
+                            <SelectValue placeholder="품목 선택" />
+                          </SelectTrigger>
+                          <SelectContent className="max-w-[calc(100vw-4rem)]">
+                            {items.map((it: any) => (
+                              <SelectItem key={it.id} value={it.id}>
+                                <span className="truncate">
+                                  {it.itemCode} - {it.itemName}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="grid min-w-0 grid-cols-4 gap-2">
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-[11px]">수량</Label>
+                            <Input
+                              type="number"
+                              className="text-xs"
+                              value={d.quantity || ''}
+                              onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-[11px]">단가</Label>
+                            <Input
+                              type="number"
+                              className="text-xs"
+                              value={d.unitPrice || ''}
+                              onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                            />
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-[11px]">공급가</Label>
+                            <div className="bg-muted/50 flex h-9 items-center justify-end rounded-md border px-2 font-mono text-xs">
+                              {formatCurrency(supply)}
+                            </div>
+                          </div>
+                          <div className="min-w-0 space-y-1">
+                            <Label className="text-[11px]">{vatIncluded ? '합계(VAT포함)' : '합계'}</Label>
+                            <div className="bg-muted/50 flex h-9 items-center justify-end rounded-md border px-2 font-mono text-xs font-medium">
+                              {formatCurrency(supply + tax)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+            <RecordSubTabs
+              relatedTable="SalesOrder"
+              pendingFiles={pendingFiles}
+              onPendingFilesChange={setPendingFiles}
+              pendingNote={pendingNote}
+              onPendingNoteChange={setPendingNote}
+            />
+          </Tabs>
+          <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+            {createMutation.isPending ? '등록 중...' : '발주 등록'}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>
@@ -502,16 +836,34 @@ export default function OrdersPage() {
 
   // Tracking upload dialog (online only)
   const trackingDialog = (
-    <Dialog open={trackingOpen} onOpenChange={(v) => { setTrackingOpen(v); if (!v) { setTrackingRows([]); setTrackingResult(null) } }}>
+    <Dialog
+      open={trackingOpen}
+      onOpenChange={(v) => {
+        setTrackingOpen(v)
+        if (!v) {
+          setTrackingRows([])
+          setTrackingResult(null)
+        }
+      }}
+    >
       <DialogTrigger asChild>
-        <Button variant="outline"><Upload className="mr-2 h-4 w-4" />운송장 업로드</Button>
+        <Button variant="outline">
+          <Upload className="mr-2 h-4 w-4" />
+          운송장 업로드
+        </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>운송장 일괄 업로드</DialogTitle></DialogHeader>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>운송장 일괄 업로드</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <Button variant="outline" size="sm" onClick={handleTemplateDownload}>템플릿 다운로드</Button>
-            <div className="flex-1"><Input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} /></div>
+            <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
+              템플릿 다운로드
+            </Button>
+            <div className="flex-1">
+              <Input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} />
+            </div>
           </div>
 
           {trackingRows.length > 0 && (
@@ -519,7 +871,13 @@ export default function OrdersPage() {
               <Label>미리보기 (최대 5건)</Label>
               <div className="rounded-md border">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-muted/50"><th className="p-2 text-left">납품번호</th><th className="p-2 text-left">택배사</th><th className="p-2 text-left">운송장번호</th></tr></thead>
+                  <thead>
+                    <tr className="bg-muted/50 border-b">
+                      <th className="p-2 text-left">납품번호</th>
+                      <th className="p-2 text-left">택배사</th>
+                      <th className="p-2 text-left">운송장번호</th>
+                    </tr>
+                  </thead>
                   <tbody>
                     {trackingRows.slice(0, 5).map((row, idx) => (
                       <tr key={idx} className="border-b">
@@ -531,7 +889,9 @@ export default function OrdersPage() {
                   </tbody>
                 </table>
               </div>
-              {trackingRows.length > 5 && <p className="text-sm text-muted-foreground">외 {trackingRows.length - 5}건</p>}
+              {trackingRows.length > 5 && (
+                <p className="text-muted-foreground text-sm">외 {trackingRows.length - 5}건</p>
+              )}
               <Button className="w-full" onClick={handleTrackingUpload} disabled={trackingMutation.isPending}>
                 {trackingMutation.isPending ? '업로드 중...' : `업로드 (${trackingRows.length}건)`}
               </Button>
@@ -539,17 +899,25 @@ export default function OrdersPage() {
           )}
 
           {trackingResult && (
-            <div className="rounded-md border p-4 space-y-2">
+            <div className="space-y-2 rounded-md border p-4">
               <div className="flex items-center gap-4 text-sm">
-                <span>전체: <strong>{trackingResult.total}건</strong></span>
-                <span className="text-green-600">성공: <strong>{trackingResult.success}건</strong></span>
-                <span className="text-red-600">실패: <strong>{trackingResult.failed}건</strong></span>
+                <span>
+                  전체: <strong>{trackingResult.total}건</strong>
+                </span>
+                <span className="text-green-600">
+                  성공: <strong>{trackingResult.success}건</strong>
+                </span>
+                <span className="text-red-600">
+                  실패: <strong>{trackingResult.failed}건</strong>
+                </span>
               </div>
               {trackingResult.errors.length > 0 && (
                 <div className="space-y-1">
                   <Label className="text-red-600">오류 목록</Label>
-                  <div className="max-h-32 overflow-y-auto text-xs text-red-600 space-y-1">
-                    {trackingResult.errors.map((err, idx) => <p key={idx}>{err}</p>)}
+                  <div className="max-h-32 space-y-1 overflow-y-auto text-xs text-red-600">
+                    {trackingResult.errors.map((err, idx) => (
+                      <p key={idx}>{err}</p>
+                    ))}
                   </div>
                 </div>
               )}
@@ -572,40 +940,60 @@ export default function OrdersPage() {
         {/* 공통 필터 영역 */}
         <div className="space-y-3">
           {/* 요약 통계 바 */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <div className="rounded-lg border bg-muted/30 p-3 sm:p-4 text-center">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">전체</p>
-              <p className="text-sm sm:text-lg font-bold">{summaryStats.totalCount}건</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <div className="bg-muted/30 rounded-lg border p-3 text-center sm:p-4">
+              <p className="text-muted-foreground text-[10px] sm:text-xs">전체</p>
+              <p className="text-sm font-bold sm:text-lg">{summaryStats.totalCount}건</p>
             </div>
-            <div className="rounded-lg border bg-muted/30 p-3 sm:p-4 text-center">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">합계 금액</p>
-              <p className="text-sm sm:text-lg font-bold">{formatCurrency(summaryStats.totalAmount)}</p>
+            <div className="bg-muted/30 rounded-lg border p-3 text-center sm:p-4">
+              <p className="text-muted-foreground text-[10px] sm:text-xs">합계 금액</p>
+              <p className="text-sm font-bold sm:text-lg">{formatCurrency(summaryStats.totalAmount)}</p>
             </div>
-            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 p-3 sm:p-4 text-center">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">발주</p>
-              <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-500">{summaryStats.orderedCount}건</p>
+            <div className="rounded-lg border bg-blue-50 p-3 text-center sm:p-4 dark:bg-blue-950/30">
+              <p className="text-muted-foreground text-[10px] sm:text-xs">발주</p>
+              <p className="text-sm font-bold text-blue-600 sm:text-lg dark:text-blue-500">
+                {summaryStats.orderedCount}건
+              </p>
             </div>
-            <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/30 p-3 sm:p-4 text-center">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">진행중</p>
-              <p className="text-sm sm:text-lg font-bold text-yellow-600 dark:text-yellow-500">{summaryStats.inProgressCount}건</p>
+            <div className="rounded-lg border bg-yellow-50 p-3 text-center sm:p-4 dark:bg-yellow-950/30">
+              <p className="text-muted-foreground text-[10px] sm:text-xs">진행중</p>
+              <p className="text-sm font-bold text-yellow-600 sm:text-lg dark:text-yellow-500">
+                {summaryStats.inProgressCount}건
+              </p>
             </div>
-            <div className="rounded-lg border bg-green-50 dark:bg-green-950/30 p-3 sm:p-4 text-center col-span-2 sm:col-span-1">
-              <p className="text-[10px] sm:text-xs text-muted-foreground">완료</p>
-              <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-500">{summaryStats.completedCount}건</p>
+            <div className="col-span-2 rounded-lg border bg-green-50 p-3 text-center sm:col-span-1 sm:p-4 dark:bg-green-950/30">
+              <p className="text-muted-foreground text-[10px] sm:text-xs">완료</p>
+              <p className="text-sm font-bold text-green-600 sm:text-lg dark:text-green-500">
+                {summaryStats.completedCount}건
+              </p>
             </div>
           </div>
 
           {/* 필터 바 1행 */}
           <div className="flex flex-wrap items-center gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-32">
+                <SelectValue placeholder="전체 상태" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">전체</SelectItem>
-                {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                {Object.entries(STATUS_MAP).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Select value={datePreset} onValueChange={(v) => { setDatePreset(v); setDateFilter('preset') }}>
-              <SelectTrigger className="w-full sm:w-32"><SelectValue placeholder="기간" /></SelectTrigger>
+            <Select
+              value={datePreset}
+              onValueChange={(v) => {
+                setDatePreset(v)
+                setDateFilter('preset')
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-32">
+                <SelectValue placeholder="기간" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="today">오늘</SelectItem>
                 <SelectItem value="thisWeek">이번 주</SelectItem>
@@ -615,17 +1003,23 @@ export default function OrdersPage() {
                 <SelectItem value="thisYear">올해</SelectItem>
               </SelectContent>
             </Select>
-            <div className="relative flex-1 min-w-[140px] sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 className="pl-9"
                 placeholder="발주번호 / 거래처 검색..."
                 value={searchKeyword}
-                onChange={e => setSearchKeyword(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && queryClient.invalidateQueries({ queryKey: ['sales-orders'] })}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && queryClient.invalidateQueries({ queryKey: ['sales-orders'] })}
               />
             </div>
-            <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setShowAdvancedFilter(!showAdvancedFilter)} aria-label="필터">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => setShowAdvancedFilter(!showAdvancedFilter)}
+              aria-label="필터"
+            >
               <Filter className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters} aria-label="초기화">
@@ -635,21 +1029,29 @@ export default function OrdersPage() {
 
           {/* 고급 필터 (토글) */}
           {showAdvancedFilter && (
-            <div className="flex flex-wrap items-end gap-2 rounded-lg border p-3 bg-muted/20">
+            <div className="bg-muted/20 flex flex-wrap items-end gap-2 rounded-lg border p-3">
               <div className="space-y-1">
                 <Label className="text-xs">거래처</Label>
                 <Select value={partnerFilter} onValueChange={setPartnerFilter}>
-                  <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="전체 거래처" /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-44">
+                    <SelectValue placeholder="전체 거래처" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">전체</SelectItem>
-                    {partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}
+                    {partners.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.partnerName}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">기간 유형</Label>
                 <Select value={dateFilter} onValueChange={(v: 'monthly' | 'daily' | 'preset') => setDateFilter(v)}>
-                  <SelectTrigger className="w-full sm:w-28"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full sm:w-28">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="preset">프리셋</SelectItem>
                     <SelectItem value="monthly">월별</SelectItem>
@@ -660,13 +1062,23 @@ export default function OrdersPage() {
               {dateFilter === 'monthly' && (
                 <div className="space-y-1">
                   <Label className="text-xs">월</Label>
-                  <Input type="month" className="w-full sm:w-44" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} />
+                  <Input
+                    type="month"
+                    className="w-full sm:w-44"
+                    value={filterMonth}
+                    onChange={(e) => setFilterMonth(e.target.value)}
+                  />
                 </div>
               )}
               {dateFilter === 'daily' && (
                 <div className="space-y-1">
                   <Label className="text-xs">일자</Label>
-                  <Input type="date" className="w-full sm:w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+                  <Input
+                    type="date"
+                    className="w-full sm:w-44"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                  />
                 </div>
               )}
             </div>
@@ -679,24 +1091,110 @@ export default function OrdersPage() {
               {createDialog}
               {trackingDialog}
             </div>
-            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} onBulkDelete={(rows) => { if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) { Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`))).then(() => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('삭제되었습니다.') }).catch(() => toast.error('일부 삭제 실패')) } }} bulkActions={[
-              { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
-              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)) },
-              { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
-            ]} />
+            <DataTable
+              columns={columns}
+              data={onlineOrders}
+              searchColumn="orderNo"
+              searchPlaceholder="발주번호로 검색..."
+              isLoading={onlineLoading}
+              pageSize={50}
+              selectable
+              onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
+              onBulkDelete={(rows) => {
+                if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) {
+                  Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`)))
+                    .then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+                      toast.success('삭제되었습니다.')
+                    })
+                    .catch(() => toast.error('일부 삭제 실패'))
+                }
+              }}
+              bulkActions={[
+                {
+                  label: '일괄 다운로드',
+                  icon: <Download className="mr-1.5 h-4 w-4" />,
+                  action: (rows) => {
+                    exportToExcel({
+                      fileName: '선택_발주목록',
+                      title: '발주관리 선택 목록',
+                      columns: exportColumns,
+                      data: rows,
+                    })
+                    toast.success('선택한 항목이 다운로드되었습니다.')
+                  },
+                },
+                {
+                  label: '일괄 취소',
+                  icon: <XCircle className="mr-1.5 h-4 w-4" />,
+                  variant: 'destructive',
+                  action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)),
+                },
+                {
+                  label: '일괄 완료',
+                  icon: <CheckCircle className="mr-1.5 h-4 w-4" />,
+                  action: (rows) => {
+                    setBatchCompleteIds(rows.map((r: any) => r.id))
+                    setBatchCompleteOpen(true)
+                  },
+                },
+              ]}
+            />
           </div>
         </TabsContent>
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {createDialog}
-            </div>
-            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} onBulkDelete={(rows) => { if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) { Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`))).then(() => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('삭제되었습니다.') }).catch(() => toast.error('일부 삭제 실패')) } }} bulkActions={[
-              { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
-              { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)) },
-              { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
-            ]} />
+            <div className="flex flex-wrap items-center gap-2">{createDialog}</div>
+            <DataTable
+              columns={columns}
+              data={offlineOrders}
+              searchColumn="orderNo"
+              searchPlaceholder="발주번호로 검색..."
+              isLoading={offlineLoading}
+              pageSize={50}
+              selectable
+              onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
+              onBulkDelete={(rows) => {
+                if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) {
+                  Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`)))
+                    .then(() => {
+                      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+                      toast.success('삭제되었습니다.')
+                    })
+                    .catch(() => toast.error('일부 삭제 실패'))
+                }
+              }}
+              bulkActions={[
+                {
+                  label: '일괄 다운로드',
+                  icon: <Download className="mr-1.5 h-4 w-4" />,
+                  action: (rows) => {
+                    exportToExcel({
+                      fileName: '선택_발주목록',
+                      title: '발주관리 선택 목록',
+                      columns: exportColumns,
+                      data: rows,
+                    })
+                    toast.success('선택한 항목이 다운로드되었습니다.')
+                  },
+                },
+                {
+                  label: '일괄 취소',
+                  icon: <XCircle className="mr-1.5 h-4 w-4" />,
+                  variant: 'destructive',
+                  action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)),
+                },
+                {
+                  label: '일괄 완료',
+                  icon: <CheckCircle className="mr-1.5 h-4 w-4" />,
+                  action: (rows) => {
+                    setBatchCompleteIds(rows.map((r: any) => r.id))
+                    setBatchCompleteOpen(true)
+                  },
+                },
+              ]}
+            />
           </div>
         </TabsContent>
       </Tabs>
@@ -713,58 +1211,185 @@ export default function OrdersPage() {
 
       {/* 발주 수정 Dialog */}
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>발주 수정 - {editTarget?.orderNo}</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl lg:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>발주 수정 - {editTarget?.orderNo}</DialogTitle>
+          </DialogHeader>
           {editTarget && (
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>발주일 <span className="text-destructive">*</span></Label><Input name="orderDate" type="date" required aria-required="true" defaultValue={editTarget.orderDate?.split('T')[0]} /></div>
-                <div className="space-y-2">
-                  <Label>거래처 <span className="text-destructive">*</span></Label>
-                  <Select name="partnerId" defaultValue={editTarget.partnerId}>
-                    <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>{partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>납기일</Label><Input name="deliveryDate" type="date" defaultValue={editTarget.deliveryDate?.split('T')[0] || ''} /></div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>배차정보</Label><Input name="dispatchInfo" defaultValue={editTarget.dispatchInfo || ''} placeholder="차량번호, 운송업체 등" /></div>
-                <div className="space-y-2"><Label>발주 담당자</Label><Input name="receivedBy" defaultValue={editTarget.receivedBy || ''} placeholder="담당자 이름" /></div>
-              </div>
-              <div className="space-y-2"><Label>비고</Label><Input name="description" defaultValue={editTarget.description || ''} /></div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between"><Label>품목</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setEditDetails([...editDetails, { itemId: '', quantity: 1, unitPrice: 0 }])}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
-                </div>
-                <div className="space-y-3">
-                  {editDetails.map((d, idx) => {
-                    const supply = d.quantity * d.unitPrice
-                    const editItemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
-                    const editVat = editTarget?.vatIncluded !== false
-                    const editTax = editVat && editItemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
-                    return (
-                      <div key={idx} className="rounded-md border p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground font-medium">품목 #{idx + 1}</span>
-                          <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))} disabled={editDetails.length <= 1} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
-                        </div>
-                        <Select value={d.itemId} onValueChange={v => { const nd = [...editDetails]; nd[idx].itemId = v; setEditDetails(nd) }}>
-                          <SelectTrigger className="text-xs truncate"><SelectValue placeholder="품목 선택" /></SelectTrigger>
-                          <SelectContent className="max-w-[calc(100vw-4rem)]">{items.map((it: any) => <SelectItem key={it.id} value={it.id}><span className="truncate">{it.itemCode} - {it.itemName}</span></SelectItem>)}</SelectContent>
-                        </Select>
-                        <div className="grid grid-cols-3 gap-2 min-w-0">
-                          <div className="space-y-1"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => { const nd = [...editDetails]; nd[idx].quantity = parseFloat(e.target.value) || 0; setEditDetails(nd) }} /></div>
-                          <div className="space-y-1"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => { const nd = [...editDetails]; nd[idx].unitPrice = parseFloat(e.target.value) || 0; setEditDetails(nd) }} /></div>
-                          <div className="space-y-1"><Label className="text-[11px]">합계(부가세 포함)</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + editTax)}</div></div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-              <Button type="submit" className="w-full" disabled={editMutation.isPending}>{editMutation.isPending ? '수정 중...' : '발주 수정'}</Button>
-            </form>
+            <Tabs defaultValue="info">
+              <TabsList variant="line">
+                <TabsTrigger value="info">기본 정보</TabsTrigger>
+                <TabsTrigger value="files">
+                  <Paperclip className="mr-1 h-3.5 w-3.5" />
+                  특이사항
+                </TabsTrigger>
+                <TabsTrigger value="notes">
+                  <FileText className="mr-1 h-3.5 w-3.5" />
+                  게시글
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="info" className="pt-3">
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label>
+                        발주일 <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        name="orderDate"
+                        type="date"
+                        required
+                        aria-required="true"
+                        defaultValue={editTarget.orderDate?.split('T')[0]}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        거래처 <span className="text-destructive">*</span>
+                      </Label>
+                      <Select name="partnerId" defaultValue={editTarget.partnerId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {partners.map((p: any) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.partnerName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>납기일</Label>
+                      <Input
+                        name="deliveryDate"
+                        type="date"
+                        defaultValue={editTarget.deliveryDate?.split('T')[0] || ''}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>배차정보</Label>
+                      <Input
+                        name="dispatchInfo"
+                        defaultValue={editTarget.dispatchInfo || ''}
+                        placeholder="차량번호, 운송업체 등"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>발주 담당자</Label>
+                      <Input name="receivedBy" defaultValue={editTarget.receivedBy || ''} placeholder="담당자 이름" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>비고</Label>
+                    <Input name="description" defaultValue={editTarget.description || ''} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>품목</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditDetails([...editDetails, { itemId: '', quantity: 1, unitPrice: 0 }])}
+                      >
+                        <Plus className="mr-1 h-3 w-3" /> 행 추가
+                      </Button>
+                    </div>
+                    <div className="space-y-3">
+                      {editDetails.map((d, idx) => {
+                        const supply = d.quantity * d.unitPrice
+                        const editItemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                        const editVat = editTarget?.vatIncluded !== false
+                        const editTax = editVat && editItemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
+                        return (
+                          <div key={idx} className="space-y-2 rounded-md border p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground text-xs font-medium">품목 #{idx + 1}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() =>
+                                  editDetails.length > 1 && setEditDetails(editDetails.filter((_, i) => i !== idx))
+                                }
+                                disabled={editDetails.length <= 1}
+                                aria-label="삭제"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Select
+                              value={d.itemId}
+                              onValueChange={(v) => {
+                                const nd = [...editDetails]
+                                nd[idx].itemId = v
+                                setEditDetails(nd)
+                              }}
+                            >
+                              <SelectTrigger className="truncate text-xs">
+                                <SelectValue placeholder="품목 선택" />
+                              </SelectTrigger>
+                              <SelectContent className="max-w-[calc(100vw-4rem)]">
+                                {items.map((it: any) => (
+                                  <SelectItem key={it.id} value={it.id}>
+                                    <span className="truncate">
+                                      {it.itemCode} - {it.itemName}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <div className="grid min-w-0 grid-cols-3 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">수량</Label>
+                                <Input
+                                  type="number"
+                                  className="text-xs"
+                                  value={d.quantity || ''}
+                                  onChange={(e) => {
+                                    const nd = [...editDetails]
+                                    nd[idx].quantity = parseFloat(e.target.value) || 0
+                                    setEditDetails(nd)
+                                  }}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">단가</Label>
+                                <Input
+                                  type="number"
+                                  className="text-xs"
+                                  value={d.unitPrice || ''}
+                                  onChange={(e) => {
+                                    const nd = [...editDetails]
+                                    nd[idx].unitPrice = parseFloat(e.target.value) || 0
+                                    setEditDetails(nd)
+                                  }}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">합계(부가세 포함)</Label>
+                                <div className="bg-muted/50 flex h-9 items-center justify-end rounded-md border px-2 font-mono text-xs font-medium">
+                                  {formatCurrency(supply + editTax)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={editMutation.isPending}>
+                    {editMutation.isPending ? '수정 중...' : '발주 수정'}
+                  </Button>
+                </form>
+              </TabsContent>
+              <RecordSubTabs relatedTable="SalesOrder" relatedId={editTarget.id} />
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
@@ -772,22 +1397,45 @@ export default function OrdersPage() {
       {/* 완료 처리 Dialog (배차정보/담당자 입력) */}
       <Dialog open={!!completeTarget} onOpenChange={(v) => !v && setCompleteTarget(null)}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>발주 완료 처리 - {completeTarget?.orderNo}</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => {
-            e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            const dispatchInfo = form.get('dispatchInfo') as string
-            const receivedBy = form.get('receivedBy') as string
-            if (!dispatchInfo || !receivedBy) { toast.error('배차정보와 담당자를 입력해주세요.'); return }
-            completeMutation.mutate({ id: completeTarget.id, dispatchInfo, receivedBy })
-          }} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>발주 완료 처리 - {completeTarget?.orderNo}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const form = new FormData(e.currentTarget)
+              const dispatchInfo = form.get('dispatchInfo') as string
+              const receivedBy = form.get('receivedBy') as string
+              if (!dispatchInfo || !receivedBy) {
+                toast.error('배차정보와 담당자를 입력해주세요.')
+                return
+              }
+              completeMutation.mutate({ id: completeTarget.id, dispatchInfo, receivedBy })
+            }}
+            className="space-y-4"
+          >
             <div className="space-y-2">
-              <Label>배차정보 <span className="text-destructive">*</span></Label>
-              <Input name="dispatchInfo" required aria-required="true" placeholder="차량번호, 운송업체 등" defaultValue={completeTarget?.dispatchInfo || ''} />
+              <Label>
+                배차정보 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                name="dispatchInfo"
+                required
+                aria-required="true"
+                placeholder="차량번호, 운송업체 등"
+                defaultValue={completeTarget?.dispatchInfo || ''}
+              />
             </div>
             <div className="space-y-2">
-              <Label>발주 담당자 <span className="text-destructive">*</span></Label>
-              <Input name="receivedBy" required placeholder="담당자 이름" defaultValue={completeTarget?.receivedBy || ''} />
+              <Label>
+                발주 담당자 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                name="receivedBy"
+                required
+                placeholder="담당자 이름"
+                defaultValue={completeTarget?.receivedBy || ''}
+              />
             </div>
             <Button type="submit" className="w-full" disabled={completeMutation.isPending}>
               {completeMutation.isPending ? '처리 중...' : '완료 처리'}
@@ -797,24 +1445,46 @@ export default function OrdersPage() {
       </Dialog>
 
       {/* 일괄 완료 처리 Dialog */}
-      <Dialog open={batchCompleteOpen} onOpenChange={(v) => { if (!v) { setBatchCompleteOpen(false); setBatchCompleteIds([]) } }}>
+      <Dialog
+        open={batchCompleteOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            setBatchCompleteOpen(false)
+            setBatchCompleteIds([])
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>일괄 완료 처리 ({batchCompleteIds.length}건)</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => {
-            e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            const dispatchInfo = form.get('dispatchInfo') as string
-            const receivedBy = form.get('receivedBy') as string
-            if (!dispatchInfo || !receivedBy) { toast.error('배차정보와 담당자를 입력해주세요.'); return }
-            batchMutation.mutate({ ids: batchCompleteIds, action: 'complete', dispatchInfo, receivedBy })
-          }} className="space-y-4">
-            <p className="text-sm text-muted-foreground">선택한 {batchCompleteIds.length}건의 발주를 일괄 완료 처리합니다.</p>
+          <DialogHeader>
+            <DialogTitle>일괄 완료 처리 ({batchCompleteIds.length}건)</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const form = new FormData(e.currentTarget)
+              const dispatchInfo = form.get('dispatchInfo') as string
+              const receivedBy = form.get('receivedBy') as string
+              if (!dispatchInfo || !receivedBy) {
+                toast.error('배차정보와 담당자를 입력해주세요.')
+                return
+              }
+              batchMutation.mutate({ ids: batchCompleteIds, action: 'complete', dispatchInfo, receivedBy })
+            }}
+            className="space-y-4"
+          >
+            <p className="text-muted-foreground text-sm">
+              선택한 {batchCompleteIds.length}건의 발주를 일괄 완료 처리합니다.
+            </p>
             <div className="space-y-2">
-              <Label>배차정보 <span className="text-destructive">*</span></Label>
+              <Label>
+                배차정보 <span className="text-destructive">*</span>
+              </Label>
               <Input name="dispatchInfo" required aria-required="true" placeholder="차량번호, 운송업체 등" />
             </div>
             <div className="space-y-2">
-              <Label>발주 담당자 <span className="text-destructive">*</span></Label>
+              <Label>
+                발주 담당자 <span className="text-destructive">*</span>
+              </Label>
               <Input name="receivedBy" required aria-required="true" placeholder="담당자 이름" />
             </div>
             <Button type="submit" className="w-full" disabled={batchMutation.isPending}>
