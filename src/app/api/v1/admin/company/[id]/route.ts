@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const body = await req.json()
@@ -51,8 +46,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     await prisma.company.delete({ where: { id } })

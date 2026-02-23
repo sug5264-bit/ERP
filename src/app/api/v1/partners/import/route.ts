@@ -1,15 +1,24 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const { rows } = await req.json()
     if (!Array.isArray(rows) || rows.length === 0) {
       return errorResponse('업로드할 데이터가 없습니다.', 'EMPTY_DATA')
+    }
+    if (rows.length > 500) {
+      return errorResponse('한 번에 최대 500건까지 업로드할 수 있습니다.', 'TOO_LARGE', 413)
     }
 
     let success = 0
@@ -17,8 +26,14 @@ export async function POST(req: NextRequest) {
     const errors: { row: number; message: string }[] = []
 
     const typeMap: Record<string, string> = {
-      '매출': 'SALES', '매입': 'PURCHASE', '매출/매입': 'BOTH',
+      매출: 'SALES',
+      매입: 'PURCHASE',
+      '매출/매입': 'BOTH',
     }
+    const VALID_TYPES = new Set(['SALES', 'PURCHASE', 'BOTH'])
+    const PARTNER_CODE_RE = /^[A-Za-z0-9-]{1,50}$/
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const BIZ_NO_RE = /^[\d-]{0,20}$/
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
@@ -28,33 +43,63 @@ export async function POST(req: NextRequest) {
           throw new Error('거래처코드와 거래처명은 필수입니다.')
         }
 
-        const existing = await prisma.partner.findUnique({ where: { partnerCode: row.partnerCode } })
+        const partnerCode = String(row.partnerCode).trim()
+        if (!PARTNER_CODE_RE.test(partnerCode)) {
+          throw new Error('거래처코드는 영문, 숫자, 하이픈만 사용 가능합니다 (최대 50자).')
+        }
+
+        const partnerName = String(row.partnerName).trim()
+        if (partnerName.length > 200) {
+          throw new Error('거래처명은 200자 이내여야 합니다.')
+        }
+
+        const mappedType = typeMap[row.partnerType] || row.partnerType || 'BOTH'
+        if (!VALID_TYPES.has(mappedType)) {
+          throw new Error(`유효하지 않은 거래처유형입니다: ${row.partnerType}`)
+        }
+
+        if (row.bizNo && !BIZ_NO_RE.test(String(row.bizNo))) {
+          throw new Error('사업자번호 형식이 올바르지 않습니다.')
+        }
+
+        if (row.email && !EMAIL_RE.test(String(row.email))) {
+          throw new Error('유효한 이메일 형식이 아닙니다.')
+        }
+
+        if (row.creditLimit !== undefined) {
+          const limit = parseFloat(row.creditLimit)
+          if (isNaN(limit) || limit < 0) {
+            throw new Error('신용한도는 0 이상의 숫자여야 합니다.')
+          }
+        }
+
+        const existing = await prisma.partner.findUnique({ where: { partnerCode } })
         if (existing) {
-          throw new Error(`거래처코드 '${row.partnerCode}'가 이미 존재합니다.`)
+          throw new Error(`거래처코드 '${partnerCode}'가 이미 존재합니다.`)
         }
 
         await prisma.partner.create({
           data: {
-            partnerCode: String(row.partnerCode),
-            partnerName: String(row.partnerName),
-            partnerType: typeMap[row.partnerType] || row.partnerType || 'BOTH',
-            bizNo: row.bizNo ? String(row.bizNo) : undefined,
-            ceoName: row.ceoName ? String(row.ceoName) : undefined,
-            bizType: row.bizType ? String(row.bizType) : undefined,
-            bizCategory: row.bizCategory ? String(row.bizCategory) : undefined,
-            phone: row.phone ? String(row.phone) : undefined,
-            fax: row.fax ? String(row.fax) : undefined,
-            email: row.email ? String(row.email) : undefined,
-            address: row.address ? String(row.address) : undefined,
-            contactPerson: row.contactPerson ? String(row.contactPerson) : undefined,
+            partnerCode,
+            partnerName,
+            partnerType: mappedType,
+            bizNo: row.bizNo ? String(row.bizNo).trim() : undefined,
+            ceoName: row.ceoName ? String(row.ceoName).trim().slice(0, 100) : undefined,
+            bizType: row.bizType ? String(row.bizType).trim().slice(0, 100) : undefined,
+            bizCategory: row.bizCategory ? String(row.bizCategory).trim().slice(0, 100) : undefined,
+            phone: row.phone ? String(row.phone).trim().slice(0, 20) : undefined,
+            fax: row.fax ? String(row.fax).trim().slice(0, 20) : undefined,
+            email: row.email ? String(row.email).trim() : undefined,
+            address: row.address ? String(row.address).trim().slice(0, 500) : undefined,
+            contactPerson: row.contactPerson ? String(row.contactPerson).trim().slice(0, 100) : undefined,
             creditLimit: row.creditLimit ? parseFloat(row.creditLimit) : undefined,
-            paymentTerms: row.paymentTerms ? String(row.paymentTerms) : undefined,
+            paymentTerms: row.paymentTerms ? String(row.paymentTerms).trim().slice(0, 100) : undefined,
           },
         })
         success++
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++
-        errors.push({ row: rowNum, message: err.message || '알 수 없는 오류' })
+        errors.push({ row: rowNum, message: err instanceof Error ? err.message : '알 수 없는 오류' })
       }
     }
 

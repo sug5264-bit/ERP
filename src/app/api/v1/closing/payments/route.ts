@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = new URL(req.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())

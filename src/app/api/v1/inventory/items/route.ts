@@ -1,12 +1,20 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession, getPaginationParams, buildMeta } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+  getPaginationParams,
+  buildMeta,
+} from '@/lib/api-helpers'
 import { createItemSchema } from '@/lib/validations/inventory'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
@@ -38,7 +46,9 @@ export async function GET(request: NextRequest) {
       prisma.item.count({ where }),
     ])
 
-    return successResponse(items, buildMeta(page, pageSize, totalCount), { cache: 's-maxage=60, stale-while-revalidate=120' })
+    return successResponse(items, buildMeta(page, pageSize, totalCount), {
+      cache: 's-maxage=60, stale-while-revalidate=120',
+    })
   } catch (error) {
     return handleApiError(error)
   }
@@ -46,8 +56,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const data = createItemSchema.parse(body)

@@ -4,17 +4,17 @@ import { hash } from 'bcryptjs'
 import { createUserSchema } from '@/lib/validations/admin'
 import {
   successResponse,
-  errorResponse,
   handleApiError,
-  getSession,
+  requireAdmin,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = req.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
@@ -33,12 +33,19 @@ export async function GET(req: NextRequest) {
       prisma.user.findMany({
         where,
         select: {
-          id: true, username: true, email: true, name: true,
-          isActive: true, lastLoginAt: true, createdAt: true,
+          id: true,
+          username: true,
+          email: true,
+          name: true,
+          isActive: true,
+          lastLoginAt: true,
+          createdAt: true,
           userRoles: { select: { role: { select: { id: true, name: true, description: true } } } },
           employee: {
             select: {
-              id: true, employeeNo: true, nameKo: true,
+              id: true,
+              employeeNo: true,
+              nameKo: true,
               department: { select: { name: true } },
               position: { select: { name: true } },
             },
@@ -79,8 +86,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const validated = createUserSchema.parse(body)

@@ -1,11 +1,17 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const { trackings } = body as {
@@ -21,12 +27,12 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     // 배치 조회로 존재하는 납품번호 확인 (N+1 → 1번 쿼리)
-    const deliveryNos = trackings.map(t => t.deliveryNo)
+    const deliveryNos = trackings.map((t) => t.deliveryNo)
     const existingDeliveries = await prisma.delivery.findMany({
       where: { deliveryNo: { in: deliveryNos } },
       select: { deliveryNo: true, status: true },
     })
-    const existingMap = new Map(existingDeliveries.map(d => [d.deliveryNo, d.status]))
+    const existingMap = new Map(existingDeliveries.map((d) => [d.deliveryNo, d.status]))
 
     // 사전 유효성 검증
     const validTrackings: typeof trackings = []
@@ -53,7 +59,7 @@ export async function POST(request: NextRequest) {
     if (validTrackings.length > 0) {
       try {
         await prisma.$transaction(
-          validTrackings.map(tracking =>
+          validTrackings.map((tracking) =>
             prisma.delivery.updateMany({
               where: { deliveryNo: tracking.deliveryNo },
               data: {
@@ -66,7 +72,7 @@ export async function POST(request: NextRequest) {
         )
         success = validTrackings.length
       } catch {
-        validTrackings.forEach(t => {
+        validTrackings.forEach((t) => {
           errors.push(`${t.deliveryNo}: 업데이트 중 오류가 발생했습니다.`)
           failed++
         })

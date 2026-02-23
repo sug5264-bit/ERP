@@ -1,11 +1,17 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const { rows } = await req.json()
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -26,20 +32,65 @@ export async function POST(req: NextRequest) {
     const errors: { row: number; message: string }[] = []
 
     const typeMap: Record<string, string> = {
-      '정규직': 'REGULAR', '계약직': 'CONTRACT', '파견직': 'DISPATCH', '인턴': 'INTERN',
+      정규직: 'REGULAR',
+      계약직: 'CONTRACT',
+      파견직: 'DISPATCH',
+      인턴: 'INTERN',
     }
+
+    const EMPLOYEE_NO_RE = /^[A-Za-z0-9-]{1,20}$/
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const PHONE_RE = /^[\d\s()+-]{0,20}$/
+    const VALID_TYPES = new Set(['REGULAR', 'CONTRACT', 'DISPATCH', 'INTERN'])
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       const rowNum = i + 2
       try {
+        // 필수 필드 검증
         if (!row.employeeNo || !row.nameKo) {
           throw new Error('사번과 이름은 필수입니다.')
         }
 
-        const existing = await prisma.employee.findUnique({ where: { employeeNo: row.employeeNo } })
+        // 사번 형식 검증
+        const empNo = String(row.employeeNo).trim()
+        if (!EMPLOYEE_NO_RE.test(empNo)) {
+          throw new Error('사번은 영문, 숫자, 하이픈만 사용 가능합니다 (최대 20자).')
+        }
+
+        // 이름 길이 검증
+        const nameKo = String(row.nameKo).trim()
+        if (nameKo.length > 50) {
+          throw new Error('이름은 50자 이내여야 합니다.')
+        }
+
+        // 이메일 형식 검증
+        if (row.email && !EMAIL_RE.test(String(row.email))) {
+          throw new Error('유효한 이메일 형식이 아닙니다.')
+        }
+
+        // 전화번호 형식 검증
+        if (row.phone && !PHONE_RE.test(String(row.phone))) {
+          throw new Error('유효한 전화번호 형식이 아닙니다.')
+        }
+
+        // 고용유형 검증
+        const mappedType = typeMap[row.employeeType] || row.employeeType || 'REGULAR'
+        if (!VALID_TYPES.has(mappedType)) {
+          throw new Error(`유효하지 않은 고용유형입니다: ${row.employeeType}`)
+        }
+
+        // 날짜 검증
+        if (row.joinDate && isNaN(new Date(row.joinDate).getTime())) {
+          throw new Error('유효하지 않은 입사일입니다.')
+        }
+        if (row.birthDate && isNaN(new Date(row.birthDate).getTime())) {
+          throw new Error('유효하지 않은 생년월일입니다.')
+        }
+
+        const existing = await prisma.employee.findUnique({ where: { employeeNo: empNo } })
         if (existing) {
-          throw new Error(`사번 '${row.employeeNo}'가 이미 존재합니다.`)
+          throw new Error(`사번 '${empNo}'가 이미 존재합니다.`)
         }
 
         const departmentId = row.departmentId || deptMap.get(row.department)
@@ -50,23 +101,23 @@ export async function POST(req: NextRequest) {
 
         await prisma.employee.create({
           data: {
-            employeeNo: String(row.employeeNo),
-            nameKo: String(row.nameKo),
-            nameEn: row.nameEn ? String(row.nameEn) : undefined,
+            employeeNo: empNo,
+            nameKo,
+            nameEn: row.nameEn ? String(row.nameEn).trim().slice(0, 100) : undefined,
             departmentId,
             positionId,
             joinDate: row.joinDate ? new Date(row.joinDate) : new Date(),
-            employeeType: typeMap[row.employeeType] || row.employeeType || 'REGULAR',
-            phone: row.phone ? String(row.phone) : undefined,
-            email: row.email ? String(row.email) : undefined,
+            employeeType: mappedType,
+            phone: row.phone ? String(row.phone).trim() : undefined,
+            email: row.email ? String(row.email).trim() : undefined,
             gender: row.gender || undefined,
             birthDate: row.birthDate ? new Date(row.birthDate) : undefined,
           },
         })
         success++
-      } catch (err: any) {
+      } catch (err: unknown) {
         failed++
-        errors.push({ row: rowNum, message: err.message || '알 수 없는 오류' })
+        errors.push({ row: rowNum, message: err instanceof Error ? err.message : '알 수 없는 오류' })
       }
     }
 

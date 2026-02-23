@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
-  errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
@@ -13,8 +13,8 @@ import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = request.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const data = createTaxInvoiceSchema.parse(body)

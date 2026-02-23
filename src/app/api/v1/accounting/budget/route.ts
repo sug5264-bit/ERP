@@ -4,14 +4,15 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 import { createBudgetSchema } from '@/lib/validations/accounting'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = request.nextUrl
     const fiscalYearId = searchParams.get('fiscalYearId')
@@ -43,8 +44,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const data = createBudgetSchema.parse(body)
@@ -68,9 +69,18 @@ export async function POST(request: NextRequest) {
         details: {
           create: data.details.map((d) => {
             const total =
-              d.month01 + d.month02 + d.month03 + d.month04 +
-              d.month05 + d.month06 + d.month07 + d.month08 +
-              d.month09 + d.month10 + d.month11 + d.month12
+              d.month01 +
+              d.month02 +
+              d.month03 +
+              d.month04 +
+              d.month05 +
+              d.month06 +
+              d.month07 +
+              d.month08 +
+              d.month09 +
+              d.month10 +
+              d.month11 +
+              d.month12
             return {
               accountSubjectId: d.accountSubjectId,
               month01: d.month01,

@@ -1,12 +1,18 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 import { updatePartnerSchema } from '@/lib/validations/inventory'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const partner = await prisma.partner.findUnique({ where: { id } })
@@ -19,8 +25,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const body = await request.json()
@@ -35,8 +41,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'delete')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 
@@ -48,11 +54,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       prisma.quotation.count({ where: { partnerId: id } }),
     ])
     if (orders > 0 || quotations > 0) {
-      return errorResponse(
-        '연결된 수주 또는 견적이 있어 삭제할 수 없습니다.',
-        'HAS_DEPENDENCIES',
-        400
-      )
+      return errorResponse('연결된 수주 또는 견적이 있어 삭제할 수 없습니다.', 'HAS_DEPENDENCIES', 400)
     }
 
     await prisma.partner.delete({ where: { id } })

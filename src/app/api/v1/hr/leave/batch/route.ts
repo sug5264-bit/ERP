@@ -4,15 +4,16 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 import { writeAuditLog, createNotification } from '@/lib/audit-log'
 
 // POST: 일괄 휴가 승인/반려
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { ids, action } = body
@@ -34,12 +35,15 @@ export async function POST(req: NextRequest) {
       where: { id: { in: ids }, status: 'REQUESTED' },
       include: { employee: { include: { user: true } } },
     })
-    const leaveMap = new Map(leaves.map(l => [l.id, l]))
+    const leaveMap = new Map(leaves.map((l) => [l.id, l]))
 
     for (const leaveId of ids) {
       try {
         const leave = leaveMap.get(leaveId)
-        if (!leave) { failCount++; continue }
+        if (!leave) {
+          failCount++
+          continue
+        }
 
         await prisma.leave.update({
           where: { id: leaveId },
@@ -55,13 +59,15 @@ export async function POST(req: NextRequest) {
           }),
         ]
         if (leave.employee?.user) {
-          tasks.push(createNotification({
-            userId: leave.employee.user.id,
-            type: 'LEAVE',
-            title: `휴가 ${actionLabel}`,
-            message: `신청하신 휴가가 ${actionLabel}되었습니다.`,
-            relatedUrl: '/hr/leave',
-          }))
+          tasks.push(
+            createNotification({
+              userId: leave.employee.user.id,
+              type: 'LEAVE',
+              title: `휴가 ${actionLabel}`,
+              message: `신청하신 휴가가 ${actionLabel}되었습니다.`,
+              relatedUrl: '/hr/leave',
+            })
+          )
         }
         await Promise.all(tasks)
 

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
+import { hasPermission } from '@/lib/rbac'
+import { logger } from '@/lib/logger'
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   meta?: {
@@ -14,8 +16,31 @@ export interface ApiResponse<T = any> {
   error?: {
     code: string
     message: string
-    details?: any
+    details?: unknown
   }
+}
+
+type Action = 'read' | 'create' | 'update' | 'delete' | 'export' | 'import' | 'approve'
+
+interface Permission {
+  module: string
+  action: string
+}
+
+interface SessionUser {
+  id: string
+  email?: string | null
+  name?: string | null
+  roles: string[]
+  permissions: Permission[]
+  employeeId?: string | null
+  employeeName?: string | null
+  departmentName?: string | null
+  positionName?: string | null
+}
+
+export interface AuthResult {
+  session: { user: SessionUser }
 }
 
 export function successResponse<T>(data: T, meta?: ApiResponse['meta'], options?: { cache?: string }) {
@@ -26,40 +51,26 @@ export function successResponse<T>(data: T, meta?: ApiResponse['meta'], options?
   return NextResponse.json({ success: true, data, meta }, { headers })
 }
 
-export function errorResponse(
-  message: string,
-  code: string = 'ERROR',
-  status: number = 400,
-  details?: any
-) {
-  return NextResponse.json(
-    { success: false, error: { code, message, details } },
-    { status }
-  )
+export function errorResponse(message: string, code: string = 'ERROR', status: number = 400, details?: unknown) {
+  return NextResponse.json({ success: false, error: { code, message, details } }, { status })
 }
 
 export function handleApiError(error: unknown) {
   if (error instanceof z.ZodError) {
-    // 검증 에러: 안전한 필드 정보만 노출
     const safeIssues = error.issues.map((issue) => ({
       path: issue.path,
       message: issue.message,
     }))
-    return errorResponse(
-      '입력값이 올바르지 않습니다.',
-      'VALIDATION_ERROR',
-      400,
-      safeIssues
-    )
+    return errorResponse('입력값이 올바르지 않습니다.', 'VALIDATION_ERROR', 400, safeIssues)
   }
 
-  // 프로덕션에서는 내부 에러 메시지 숨김
   const isDev = process.env.NODE_ENV === 'development'
-  const message = isDev && error instanceof Error
-    ? error.message
-    : '서버 오류가 발생했습니다.'
+  const message = isDev && error instanceof Error ? error.message : '서버 오류가 발생했습니다.'
 
-  console.error('API Error:', error)
+  logger.error('API Error', {
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  })
   return errorResponse(message, 'INTERNAL_ERROR', 500)
 }
 
@@ -69,6 +80,79 @@ export async function getSession() {
     return null
   }
   return session
+}
+
+/**
+ * 인증 검증 헬퍼
+ * 실패 시 NextResponse(401) 반환, 성공 시 { session } 반환
+ */
+export async function requireAuth(): Promise<AuthResult | NextResponse> {
+  const session = await auth()
+  if (!session?.user) {
+    return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+  }
+  const user = session.user as Record<string, unknown>
+  return {
+    session: {
+      user: {
+        id: user.id as string,
+        email: user.email as string | null,
+        name: user.name as string | null,
+        roles: (user.roles as string[]) || [],
+        permissions: (user.permissions as Permission[]) || [],
+        employeeId: user.employeeId as string | null,
+        employeeName: user.employeeName as string | null,
+        departmentName: user.departmentName as string | null,
+        positionName: user.positionName as string | null,
+      },
+    },
+  }
+}
+
+/**
+ * 특정 모듈의 특정 액션에 대한 권한 검증
+ */
+export async function requirePermissionCheck(module: string, action: Action): Promise<AuthResult | NextResponse> {
+  const result = await requireAuth()
+  if (result instanceof NextResponse) return result
+
+  const { session } = result
+  if (!hasPermission(session.user.permissions, session.user.roles, module, action)) {
+    logger.warn('Permission denied', {
+      userId: session.user.id,
+      module,
+      action,
+      roles: session.user.roles,
+    })
+    return errorResponse('권한이 없습니다.', 'FORBIDDEN', 403)
+  }
+
+  return result
+}
+
+/**
+ * 관리자 전용 엔드포인트 권한 검증
+ */
+export async function requireAdmin(): Promise<AuthResult | NextResponse> {
+  const result = await requireAuth()
+  if (result instanceof NextResponse) return result
+
+  const { session } = result
+  const isAdmin = session.user.roles.includes('SYSTEM_ADMIN') || session.user.roles.includes('관리자')
+  if (!isAdmin) {
+    logger.warn('Admin access denied', {
+      userId: session.user.id,
+      roles: session.user.roles,
+    })
+    return errorResponse('관리자 권한이 필요합니다.', 'FORBIDDEN', 403)
+  }
+
+  return result
+}
+
+/** NextResponse인지 확인하는 타입 가드 */
+export function isErrorResponse(result: AuthResult | NextResponse): result is NextResponse {
+  return result instanceof NextResponse
 }
 
 export function getPaginationParams(searchParams: URLSearchParams) {

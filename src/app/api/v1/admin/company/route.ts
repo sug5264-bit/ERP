@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const companies = await prisma.company.findMany({
       orderBy: { createdAt: 'desc' },
@@ -23,8 +18,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     if (!body.companyName || typeof body.companyName !== 'string' || body.companyName.trim().length === 0) {

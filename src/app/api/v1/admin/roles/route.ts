@@ -1,16 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const roles = await prisma.role.findMany({
       include: {
@@ -41,8 +36,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { name, description, permissionIds } = body
@@ -56,9 +51,10 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         description: description || null,
-        rolePermissions: Array.isArray(permissionIds) && permissionIds.length > 0
-          ? { create: permissionIds.map((permissionId: string) => ({ permissionId })) }
-          : undefined,
+        rolePermissions:
+          Array.isArray(permissionIds) && permissionIds.length > 0
+            ? { create: permissionIds.map((permissionId: string) => ({ permissionId })) }
+            : undefined,
       },
       include: {
         rolePermissions: {

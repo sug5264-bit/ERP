@@ -4,7 +4,8 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
@@ -13,8 +14,8 @@ import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = request.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
@@ -33,10 +34,7 @@ export async function GET(request: NextRequest) {
       if (endDate) where.voucherDate.lte = new Date(endDate)
     }
     if (search) {
-      where.OR = [
-        { voucherNo: { contains: search } },
-        { description: { contains: search, mode: 'insensitive' } },
-      ]
+      where.OR = [{ voucherNo: { contains: search } }, { description: { contains: search, mode: 'insensitive' } }]
     }
 
     const [vouchers, totalCount] = await Promise.all([
@@ -62,8 +60,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const data = createVoucherSchema.parse(body)
@@ -103,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // 작성자 Employee 조회
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authResult.user.id },
       select: { employeeId: true },
     })
     if (!user?.employeeId) {

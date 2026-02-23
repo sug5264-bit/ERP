@@ -4,13 +4,14 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const body = await req.json()
@@ -31,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data: {
         status: body.status,
         ...(body.status === 'COMPLETED' || body.status === 'APPROVED'
-          ? { processedAt: new Date(), processedBy: session.user?.id || null }
+          ? { processedAt: new Date(), processedBy: authResult.user?.id || null }
           : {}),
       },
     })

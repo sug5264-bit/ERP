@@ -1,16 +1,11 @@
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
 
 // GET: 대시보드 전체 데이터를 단일 요청으로 통합 (5개 HTTP 요청 → 1개)
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAuth()
+    if (isErrorResponse(authResult)) return authResult
 
     const now = new Date()
     const yearStart = new Date(now.getFullYear(), 0, 1)
@@ -22,18 +17,30 @@ export async function GET() {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
 
     const employee = await prisma.employee.findFirst({
-      where: { user: { id: session.user!.id! } },
+      where: { user: { id: authResult.user!.id! } },
       select: { id: true },
     })
 
     // 모든 대시보드 데이터를 병렬 조회
     const [
-      empCount, itemCount, approvalCount, leaveCount,
-      recentOrders, notices,
-      deptStats, departments, stockBalances, approvalAggs, leaveStats,
-      onlineOrders, offlineOrders, monthlyAggs,
-      thisMonthSales, lastMonthSales,
-      thisMonthNewEmp, lastMonthNewEmp,
+      empCount,
+      itemCount,
+      approvalCount,
+      leaveCount,
+      recentOrders,
+      notices,
+      deptStats,
+      departments,
+      stockBalances,
+      approvalAggs,
+      leaveStats,
+      onlineOrders,
+      offlineOrders,
+      monthlyAggs,
+      thisMonthSales,
+      lastMonthSales,
+      thisMonthNewEmp,
+      lastMonthNewEmp,
       todayOrderCount,
     ] = await Promise.all([
       // KPI
@@ -48,7 +55,9 @@ export async function GET() {
       // Recent orders (5건)
       prisma.salesOrder.findMany({
         select: {
-          id: true, orderNo: true, totalAmount: true,
+          id: true,
+          orderNo: true,
+          totalAmount: true,
           partner: { select: { partnerName: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -160,10 +169,12 @@ export async function GET() {
     }
 
     // Stats 가공
-    const deptData = deptStats.map((d) => ({
-      name: departments.find((dept) => dept.id === d.departmentId)?.name || '미정',
-      count: d._count.id,
-    })).sort((a, b) => b.count - a.count)
+    const deptData = deptStats
+      .map((d) => ({
+        name: departments.find((dept) => dept.id === d.departmentId)?.name || '미정',
+        count: d._count.id,
+      }))
+      .sort((a, b) => b.count - a.count)
 
     const stockData = stockBalances.map((sb) => ({
       name: sb.item?.itemName || '-',
@@ -184,7 +195,12 @@ export async function GET() {
       .map(([month, data]) => ({ month, ...data }))
 
     const leaveTypeMap: Record<string, string> = {
-      ANNUAL: '연차', SICK: '병가', FAMILY: '경조사', MATERNITY: '출산', PARENTAL: '육아', OFFICIAL: '공가',
+      ANNUAL: '연차',
+      SICK: '병가',
+      FAMILY: '경조사',
+      MATERNITY: '출산',
+      PARENTAL: '육아',
+      OFFICIAL: '공가',
     }
     const leaveData = leaveStats.map((l) => ({
       type: leaveTypeMap[l.leaveType] || l.leaveType,
@@ -207,35 +223,45 @@ export async function GET() {
     // 트렌드 계산
     const thisMonthAmount = Number(thisMonthSales._sum.totalAmount || 0)
     const lastMonthAmount = Number(lastMonthSales._sum.totalAmount || 0)
-    const salesTrend = lastMonthAmount > 0
-      ? Math.round(((thisMonthAmount - lastMonthAmount) / lastMonthAmount) * 100)
-      : thisMonthAmount > 0 ? 100 : 0
-    const orderTrend = lastMonthSales._count > 0
-      ? Math.round(((thisMonthSales._count - lastMonthSales._count) / lastMonthSales._count) * 100)
-      : thisMonthSales._count > 0 ? 100 : 0
+    const salesTrend =
+      lastMonthAmount > 0
+        ? Math.round(((thisMonthAmount - lastMonthAmount) / lastMonthAmount) * 100)
+        : thisMonthAmount > 0
+          ? 100
+          : 0
+    const orderTrend =
+      lastMonthSales._count > 0
+        ? Math.round(((thisMonthSales._count - lastMonthSales._count) / lastMonthSales._count) * 100)
+        : thisMonthSales._count > 0
+          ? 100
+          : 0
 
-    return successResponse({
-      kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount },
-      trends: {
-        salesAmount: { current: thisMonthAmount, previous: lastMonthAmount, change: salesTrend },
-        orderCount: { current: thisMonthSales._count, previous: lastMonthSales._count, change: orderTrend },
-        newEmployees: { current: thisMonthNewEmp, previous: lastMonthNewEmp },
-        todayOrders: todayOrderCount,
-      },
-      recentOrders,
-      notices,
-      stats: { deptData, stockData, approvalData, leaveData },
-      salesSummary: {
-        period: { year: now.getFullYear() },
-        online: { count: onlineOrders._count, totalAmount: Number(onlineOrders._sum.totalAmount || 0) },
-        offline: { count: offlineOrders._count, totalAmount: Number(offlineOrders._sum.totalAmount || 0) },
-        total: {
-          count: onlineOrders._count + offlineOrders._count,
-          totalAmount: Number(onlineOrders._sum.totalAmount || 0) + Number(offlineOrders._sum.totalAmount || 0),
+    return successResponse(
+      {
+        kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount },
+        trends: {
+          salesAmount: { current: thisMonthAmount, previous: lastMonthAmount, change: salesTrend },
+          orderCount: { current: thisMonthSales._count, previous: lastMonthSales._count, change: orderTrend },
+          newEmployees: { current: thisMonthNewEmp, previous: lastMonthNewEmp },
+          todayOrders: todayOrderCount,
         },
-        monthly,
+        recentOrders,
+        notices,
+        stats: { deptData, stockData, approvalData, leaveData },
+        salesSummary: {
+          period: { year: now.getFullYear() },
+          online: { count: onlineOrders._count, totalAmount: Number(onlineOrders._sum.totalAmount || 0) },
+          offline: { count: offlineOrders._count, totalAmount: Number(offlineOrders._sum.totalAmount || 0) },
+          total: {
+            count: onlineOrders._count + offlineOrders._count,
+            totalAmount: Number(onlineOrders._sum.totalAmount || 0) + Number(offlineOrders._sum.totalAmount || 0),
+          },
+          monthly,
+        },
       },
-    }, undefined, { cache: 's-maxage=60, stale-while-revalidate=120' })
+      undefined,
+      { cache: 's-maxage=60, stale-while-revalidate=120' }
+    )
   } catch (error) {
     return handleApiError(error)
   }

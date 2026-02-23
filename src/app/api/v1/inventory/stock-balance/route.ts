@@ -1,11 +1,18 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession, getPaginationParams, buildMeta } from '@/lib/api-helpers'
+import {
+  successResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+  getPaginationParams,
+  buildMeta,
+} from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
@@ -21,7 +28,16 @@ export async function GET(request: NextRequest) {
       prisma.stockBalance.findMany({
         where,
         include: {
-          item: { select: { id: true, itemCode: true, itemName: true, unit: true, itemType: true, category: { select: { name: true } } } },
+          item: {
+            select: {
+              id: true,
+              itemCode: true,
+              itemName: true,
+              unit: true,
+              itemType: true,
+              category: { select: { name: true } },
+            },
+          },
           warehouse: { select: { id: true, code: true, name: true } },
           zone: { select: { zoneCode: true, zoneName: true } },
         },

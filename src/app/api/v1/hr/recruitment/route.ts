@@ -4,15 +4,16 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = req.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
@@ -42,8 +43,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { title, departmentId, positionId, description, requiredCount, startDate, endDate } = body
@@ -72,8 +73,8 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { id, action, ...updateData } = body
@@ -118,8 +119,8 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'delete')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = req.nextUrl
     const id = searchParams.get('id')

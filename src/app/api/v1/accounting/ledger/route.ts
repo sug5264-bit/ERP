@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
-  errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
@@ -12,8 +12,8 @@ import {
 // 총계정원장: 계정과목별 집계 + 거래내역
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = request.nextUrl
     const accountSubjectId = searchParams.get('accountSubjectId')
@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
         }),
       ])
 
-      const aggMap = new Map(aggs.map(a => [a.accountSubjectId, a._sum]))
+      const aggMap = new Map(aggs.map((a) => [a.accountSubjectId, a._sum]))
 
       const filtered = accounts
-        .map(account => {
+        .map((account) => {
           const sums = aggMap.get(account.id)
           return {
             ...account,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
             totalCredit: sums?.creditAmount || 0,
           }
         })
-        .filter(r => Number(r.totalDebit) !== 0 || Number(r.totalCredit) !== 0)
+        .filter((r) => Number(r.totalDebit) !== 0 || Number(r.totalCredit) !== 0)
 
       return successResponse(filtered)
     }

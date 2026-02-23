@@ -1,17 +1,12 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createDepartmentSchema } from '@/lib/validations/hr'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const departments = await prisma.department.findMany({
       where: { isActive: true },
@@ -30,8 +25,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const validated = createDepartmentSchema.parse(body)

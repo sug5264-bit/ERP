@@ -4,16 +4,14 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 
@@ -45,13 +43,10 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const body = await request.json()
@@ -65,7 +60,7 @@ export async function PUT(
     // 승인 처리
     if (body.action === 'approve') {
       const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: authResult.user.id },
         select: { employeeId: true },
       })
       const voucher = await prisma.voucher.update({
@@ -81,7 +76,8 @@ export async function PUT(
     // 일반 수정
     if (body.details) {
       const totalDebit = body.details.reduce((s: number, d: any) => s + Math.round((d.debitAmount || 0) * 100), 0) / 100
-      const totalCredit = body.details.reduce((s: number, d: any) => s + Math.round((d.creditAmount || 0) * 100), 0) / 100
+      const totalCredit =
+        body.details.reduce((s: number, d: any) => s + Math.round((d.creditAmount || 0) * 100), 0) / 100
       if (totalDebit !== totalCredit) {
         return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
       }
@@ -126,13 +122,10 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'delete')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 
