@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { readExcelFile, downloadImportTemplate, type TemplateColumn } from '@/lib/export'
@@ -36,20 +36,18 @@ export function ExcelImportDialog({
   onSuccess,
 }: ExcelImportDialogProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<Record<string, any>[]>([])
-  const [totalRows, setTotalRows] = useState(0)
+  const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([])
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setFile(null)
-    setPreview([])
-    setTotalRows(0)
+    setParsedRows([])
     setImporting(false)
     setResult(null)
     if (inputRef.current) inputRef.current.value = ''
-  }
+  }, [])
 
   const handleClose = (v: boolean) => {
     if (!v) reset()
@@ -63,8 +61,7 @@ export function ExcelImportDialog({
     setResult(null)
     try {
       const rows = await readExcelFile(f, keyMap)
-      setTotalRows(rows.length)
-      setPreview(rows.slice(0, 5))
+      setParsedRows(rows)
     } catch (err: any) {
       toast.error(err.message || '파일을 읽을 수 없습니다.')
       reset()
@@ -76,11 +73,11 @@ export function ExcelImportDialog({
   }
 
   const handleImport = async () => {
-    if (!file || totalRows === 0) return
+    if (!file || parsedRows.length === 0) return
     setImporting(true)
     try {
-      const rows = await readExcelFile(file, keyMap)
-      const res = (await api.post(apiEndpoint, { rows })) as any
+      // 이미 파싱된 데이터를 재사용 (파일을 다시 읽지 않음)
+      const res = (await api.post(apiEndpoint, { rows: parsedRows })) as any
       const body = res.data ?? res
       const importResult: ImportResult = {
         success: body.success || 0,
@@ -102,6 +99,7 @@ export function ExcelImportDialog({
     }
   }
 
+  const preview = parsedRows.slice(0, 5)
   const previewKeys = preview.length > 0 ? Object.keys(preview[0]) : []
 
   return (
@@ -128,7 +126,7 @@ export function ExcelImportDialog({
             <input ref={inputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFile} />
             {file && (
               <span className="text-muted-foreground text-sm">
-                {file.name} ({totalRows}건)
+                {file.name} ({parsedRows.length}건)
               </span>
             )}
           </div>
@@ -160,7 +158,9 @@ export function ExcelImportDialog({
                   </tbody>
                 </table>
               </div>
-              {totalRows > 5 && <p className="text-muted-foreground text-xs">... 외 {totalRows - 5}건</p>}
+              {parsedRows.length > 5 && (
+                <p className="text-muted-foreground text-xs">... 외 {parsedRows.length - 5}건</p>
+              )}
             </div>
           )}
 
@@ -194,9 +194,9 @@ export function ExcelImportDialog({
           <Button variant="outline" onClick={() => handleClose(false)}>
             닫기
           </Button>
-          <Button onClick={handleImport} disabled={!file || totalRows === 0 || importing}>
+          <Button onClick={handleImport} disabled={!file || parsedRows.length === 0 || importing}>
             <Upload className="mr-1 h-4 w-4" />
-            {importing ? '업로드 중...' : `${totalRows}건 업로드`}
+            {importing ? '업로드 중...' : `${parsedRows.length}건 업로드`}
           </Button>
         </DialogFooter>
       </DialogContent>
