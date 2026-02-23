@@ -1,3 +1,5 @@
+import { loadKoreanFont } from '@/lib/pdf-font'
+
 // ---------------------------------------------------------------------------
 // Interfaces
 // ---------------------------------------------------------------------------
@@ -89,66 +91,12 @@ const HEADER_FILL: [number, number, number] = [68, 114, 196]
 const HEADER_TEXT: [number, number, number] = [255, 255, 255]
 const LIGHT_GRAY: [number, number, number] = [240, 240, 240]
 
-// 한글 폰트 캐시 (메모리)
-let cachedFontBase64: string | null = null
-
-// 한글 폰트 로드 헬퍼 - 로컬 우선, CDN 폴백, 메모리 캐시
-async function loadKoreanFont(doc: InstanceType<typeof import('jspdf').default>): Promise<string> {
-  // 캐시된 폰트 사용
-  if (cachedFontBase64) {
-    doc.addFileToVFS('korean.ttf', cachedFontBase64)
-    doc.addFont('korean.ttf', 'korean', 'normal')
-    doc.setFont('korean')
-    return 'korean'
-  }
-
-  const fontUrls = [
-    '/fonts/ipag.ttf',  // 로컬 폰트 (가장 안정적)
-    'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
-    'https://fastly.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
-  ]
-
-  for (const fontUrl of fontUrls) {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
-      const response = await fetch(fontUrl, { signal: controller.signal })
-      clearTimeout(timeoutId)
-
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer()
-        const bytes = new Uint8Array(arrayBuffer)
-        // 효율적인 base64 변환 (청크 단위)
-        const chunkSize = 8192
-        let binary = ''
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
-          binary += String.fromCharCode.apply(null, Array.from(chunk))
-        }
-        const base64 = btoa(binary)
-        cachedFontBase64 = base64
-        doc.addFileToVFS('korean.ttf', base64)
-        doc.addFont('korean.ttf', 'korean', 'normal')
-        doc.setFont('korean')
-        return 'korean'
-      }
-    } catch {
-      continue
-    }
-  }
-
-  return 'helvetica'
-}
-
 // ---------------------------------------------------------------------------
 // 1. 견적서 (Quotation)
 // ---------------------------------------------------------------------------
 
 export async function generateQuotationPDF(data: QuotationPDFData) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ])
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -288,10 +236,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
 // ---------------------------------------------------------------------------
 
 export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ])
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -437,10 +382,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
 // ---------------------------------------------------------------------------
 
 export async function generateTransactionStatementPDF(data: TransactionStatementPDFData) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ])
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -571,11 +513,8 @@ function addPageNumbers(doc: InstanceType<typeof import('jspdf').default>, fontN
     doc.setPage(i)
     doc.setFontSize(8)
     if (fontName && fontName !== 'helvetica') doc.setFont(fontName)
-    doc.text(
-      `${i} / ${pageCount}`,
-      doc.internal.pageSize.getWidth() / 2,
-      doc.internal.pageSize.getHeight() - 8,
-      { align: 'center' }
-    )
+    doc.text(`${i} / ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, {
+      align: 'center',
+    })
   }
 }
