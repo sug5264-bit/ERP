@@ -2,13 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { readExcelFile, downloadImportTemplate, type TemplateColumn } from '@/lib/export'
 import { api } from '@/hooks/use-api'
 import { toast } from 'sonner'
@@ -86,7 +80,7 @@ export function ExcelImportDialog({
     setImporting(true)
     try {
       const rows = await readExcelFile(file, keyMap)
-      const res = await api.post(apiEndpoint, { rows }) as any
+      const res = (await api.post(apiEndpoint, { rows })) as any
       const body = res.data ?? res
       const importResult: ImportResult = {
         success: body.success || 0,
@@ -112,7 +106,7 @@ export function ExcelImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -122,28 +116,18 @@ export function ExcelImportDialog({
             <Button variant="outline" size="sm" onClick={handleTemplate}>
               <Download className="mr-1 h-4 w-4" /> 템플릿 다운로드
             </Button>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               템플릿을 다운로드하여 데이터를 입력한 후 업로드하세요.
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => inputRef.current?.click()}
-              disabled={importing}
-            >
+            <Button variant="outline" onClick={() => inputRef.current?.click()} disabled={importing}>
               <FileSpreadsheet className="mr-1 h-4 w-4" /> 파일 선택
             </Button>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              onChange={handleFile}
-            />
+            <input ref={inputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFile} />
             {file && (
-              <span className="text-sm text-muted-foreground">
+              <span className="text-muted-foreground text-sm">
                 {file.name} ({totalRows}건)
               </span>
             )}
@@ -152,12 +136,14 @@ export function ExcelImportDialog({
           {preview.length > 0 && (
             <div className="space-y-2">
               <p className="text-sm font-medium">미리보기 (상위 {preview.length}건)</p>
-              <div className="rounded-md border overflow-x-auto">
+              <div className="overflow-x-auto rounded-md border">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b bg-muted/50">
+                    <tr className="bg-muted/50 border-b">
                       {previewKeys.map((k) => (
-                        <th key={k} className="p-2 text-left whitespace-nowrap">{k}</th>
+                        <th key={k} className="p-2 text-left whitespace-nowrap">
+                          {k}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -165,7 +151,7 @@ export function ExcelImportDialog({
                     {preview.map((row, i) => (
                       <tr key={i} className="border-b">
                         {previewKeys.map((k) => (
-                          <td key={k} className="p-2 whitespace-nowrap max-w-[200px] truncate">
+                          <td key={k} className="max-w-[200px] truncate p-2 whitespace-nowrap">
                             {row[k] != null ? String(row[k]) : ''}
                           </td>
                         ))}
@@ -174,21 +160,19 @@ export function ExcelImportDialog({
                   </tbody>
                 </table>
               </div>
-              {totalRows > 5 && (
-                <p className="text-xs text-muted-foreground">... 외 {totalRows - 5}건</p>
-              )}
+              {totalRows > 5 && <p className="text-muted-foreground text-xs">... 외 {totalRows - 5}건</p>}
             </div>
           )}
 
           {result && (
             <div className="space-y-2 rounded-md border p-4">
-              <p className="font-medium text-sm">업로드 결과</p>
+              <p className="text-sm font-medium">업로드 결과</p>
               <div className="flex gap-4 text-sm">
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="h-4 w-4" /> 성공: {result.success}건
                 </span>
                 {result.failed > 0 && (
-                  <span className="flex items-center gap-1 text-destructive">
+                  <span className="text-destructive flex items-center gap-1">
                     <XCircle className="h-4 w-4" /> 실패: {result.failed}건
                   </span>
                 )}
@@ -196,7 +180,7 @@ export function ExcelImportDialog({
               {result.errors.length > 0 && (
                 <div className="mt-2 max-h-40 overflow-y-auto rounded border p-2">
                   {result.errors.map((e, i) => (
-                    <p key={i} className="text-xs text-destructive">
+                    <p key={i} className="text-destructive text-xs">
                       {e.row}행: {e.message}
                     </p>
                   ))}
@@ -210,10 +194,7 @@ export function ExcelImportDialog({
           <Button variant="outline" onClick={() => handleClose(false)}>
             닫기
           </Button>
-          <Button
-            onClick={handleImport}
-            disabled={!file || totalRows === 0 || importing}
-          >
+          <Button onClick={handleImport} disabled={!file || totalRows === 0 || importing}>
             <Upload className="mr-1 h-4 w-4" />
             {importing ? '업로드 중...' : `${totalRows}건 업로드`}
           </Button>
