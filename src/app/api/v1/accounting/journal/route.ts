@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
-  errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
@@ -12,8 +12,8 @@ import {
 // 분개장: 전표의 개별 분개 내역 조회
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = request.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
@@ -49,10 +49,7 @@ export async function GET(request: NextRequest) {
         },
         skip,
         take: pageSize,
-        orderBy: [
-          { voucher: { voucherDate: 'desc' } },
-          { lineNo: 'asc' },
-        ],
+        orderBy: [{ voucher: { voucherDate: 'desc' } }, { lineNo: 'asc' }],
       }),
       prisma.voucherDetail.count({ where }),
     ])

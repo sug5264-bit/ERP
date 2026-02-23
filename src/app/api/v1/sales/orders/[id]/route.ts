@@ -1,24 +1,39 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'read')
+    if (isErrorResponse(authResult)) return authResult
     const { id } = await params
     const order = await prisma.salesOrder.findUnique({
-      where: { id }, include: { partner: true, employee: true, quotation: true, details: { include: { item: true }, orderBy: { lineNo: 'asc' } }, deliveries: { include: { details: true } } },
+      where: { id },
+      include: {
+        partner: true,
+        employee: true,
+        quotation: true,
+        details: { include: { item: true }, orderBy: { lineNo: 'asc' } },
+        deliveries: { include: { details: true } },
+      },
     })
     if (!order) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     return successResponse(order)
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'update')
+    if (isErrorResponse(authResult)) return authResult
     const { id } = await params
     const body = await request.json()
     if (body.action === 'complete') {
@@ -40,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           status: 'COMPLETED',
           dispatchInfo: dispatchInfo,
           receivedBy: receivedBy,
-        }
+        },
       })
       return successResponse(o)
     }
@@ -68,7 +83,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const updateData: any = {}
       if (body.orderDate) updateData.orderDate = new Date(body.orderDate)
       if (body.partnerId) updateData.partnerId = body.partnerId
-      if (body.deliveryDate !== undefined) updateData.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null
+      if (body.deliveryDate !== undefined)
+        updateData.deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null
       if (body.description !== undefined) updateData.description = body.description
       if (body.vatIncluded !== undefined) updateData.vatIncluded = body.vatIncluded
       if (body.dispatchInfo !== undefined) updateData.dispatchInfo = body.dispatchInfo
@@ -76,9 +92,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
       if (body.details && Array.isArray(body.details)) {
         // 기존 납품 수량 보존을 위해 맵 생성
-        const existingDelivered = new Map(
-          order.details.map((d: any) => [d.itemId, Number(d.deliveredQty ?? 0)])
-        )
+        const existingDelivered = new Map(order.details.map((d: any) => [d.itemId, Number(d.deliveredQty ?? 0)]))
         // 품목 세금유형 조회
         const orderItemIds = body.details.map((d: any) => d.itemId)
         const itemsInfo = await prisma.item.findMany({
@@ -92,7 +106,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
           const deliveredQty = existingDelivered.get(d.itemId) || 0
           const remainingQty = Math.max(0, d.quantity - deliveredQty)
-          return { lineNo: idx + 1, itemId: d.itemId, quantity: d.quantity, unitPrice: d.unitPrice, supplyAmount, taxAmount, totalAmount: supplyAmount + taxAmount, deliveredQty, remainingQty, remark: d.remark || null }
+          return {
+            lineNo: idx + 1,
+            itemId: d.itemId,
+            quantity: d.quantity,
+            unitPrice: d.unitPrice,
+            supplyAmount,
+            taxAmount,
+            totalAmount: supplyAmount + taxAmount,
+            deliveredQty,
+            remainingQty,
+            remark: d.remark || null,
+          }
         })
         const totalSupply = details.reduce((s: number, d: any) => s + d.supplyAmount, 0)
         const totalTax = details.reduce((s: number, d: any) => s + d.taxAmount, 0)
@@ -110,18 +135,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
 
       const updated = await prisma.salesOrder.findUnique({
-        where: { id }, include: { partner: true, details: { include: { item: true } } }
+        where: { id },
+        include: { partner: true, details: { include: { item: true } } },
       })
       return successResponse(updated)
     }
     return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'delete')
+    if (isErrorResponse(authResult)) return authResult
     const { id } = await params
 
     const order = await prisma.salesOrder.findUnique({ where: { id } })
@@ -130,7 +158,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await prisma.$transaction(async (tx) => {
       const deliveries = await tx.delivery.findMany({ where: { salesOrderId: id }, select: { id: true } })
       if (deliveries.length > 0) {
-        await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map(d => d.id) } } })
+        await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map((d) => d.id) } } })
         await tx.delivery.deleteMany({ where: { salesOrderId: id } })
       }
       await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
@@ -138,5 +166,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
 
     return successResponse({ message: '발주가 삭제되었습니다.' })
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }

@@ -1,22 +1,18 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
     const year = parseInt(sp.get('year') || String(new Date().getFullYear()))
     const month = sp.get('month') ? parseInt(sp.get('month')!) : null
 
-    const startDate = month
-      ? new Date(year, month - 1, 1)
-      : new Date(year, 0, 1)
-    const endDate = month
-      ? new Date(year, month, 1)
-      : new Date(year + 1, 0, 1)
+    const startDate = month ? new Date(year, month - 1, 1) : new Date(year, 0, 1)
+    const endDate = month ? new Date(year, month, 1) : new Date(year + 1, 0, 1)
 
     const where = {
       orderDate: { gte: startDate, lt: endDate },
@@ -74,7 +70,7 @@ export async function GET(request: NextRequest) {
     }))
 
     // Top items: 상위 10개만 추가 조회 (채널별 분류)
-    const topItemIds = topItemAggs.map(a => a.itemId)
+    const topItemIds = topItemAggs.map((a) => a.itemId)
     const [itemInfos, onlineItemAggs] = await Promise.all([
       prisma.item.findMany({
         where: { id: { in: topItemIds } },
@@ -90,10 +86,10 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    const itemInfoMap = new Map(itemInfos.map(i => [i.id, i]))
-    const onlineMap = new Map(onlineItemAggs.map(a => [a.itemId, Number(a._sum.totalAmount || 0)]))
+    const itemInfoMap = new Map(itemInfos.map((i) => [i.id, i]))
+    const onlineMap = new Map(onlineItemAggs.map((a) => [a.itemId, Number(a._sum.totalAmount || 0)]))
 
-    const topItems = topItemAggs.map(agg => {
+    const topItems = topItemAggs.map((agg) => {
       const item = itemInfoMap.get(agg.itemId)
       const total = Number(agg._sum.totalAmount || 0)
       const online = onlineMap.get(agg.itemId) || 0
@@ -107,27 +103,31 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return successResponse({
-      period: { year, month },
-      online: {
-        count: onlineOrders._count,
-        totalAmount: Number(onlineOrders._sum.totalAmount || 0),
-        totalSupply: Number(onlineOrders._sum.totalSupply || 0),
-        totalTax: Number(onlineOrders._sum.totalTax || 0),
+    return successResponse(
+      {
+        period: { year, month },
+        online: {
+          count: onlineOrders._count,
+          totalAmount: Number(onlineOrders._sum.totalAmount || 0),
+          totalSupply: Number(onlineOrders._sum.totalSupply || 0),
+          totalTax: Number(onlineOrders._sum.totalTax || 0),
+        },
+        offline: {
+          count: offlineOrders._count,
+          totalAmount: Number(offlineOrders._sum.totalAmount || 0),
+          totalSupply: Number(offlineOrders._sum.totalSupply || 0),
+          totalTax: Number(offlineOrders._sum.totalTax || 0),
+        },
+        total: {
+          count: onlineOrders._count + offlineOrders._count,
+          totalAmount: Number(onlineOrders._sum.totalAmount || 0) + Number(offlineOrders._sum.totalAmount || 0),
+        },
+        monthly,
+        topItems,
       },
-      offline: {
-        count: offlineOrders._count,
-        totalAmount: Number(offlineOrders._sum.totalAmount || 0),
-        totalSupply: Number(offlineOrders._sum.totalSupply || 0),
-        totalTax: Number(offlineOrders._sum.totalTax || 0),
-      },
-      total: {
-        count: onlineOrders._count + offlineOrders._count,
-        totalAmount: Number(onlineOrders._sum.totalAmount || 0) + Number(offlineOrders._sum.totalAmount || 0),
-      },
-      monthly,
-      topItems,
-    }, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
+      undefined,
+      { cache: 's-maxage=300, stale-while-revalidate=600' }
+    )
   } catch (error) {
     return handleApiError(error)
   }

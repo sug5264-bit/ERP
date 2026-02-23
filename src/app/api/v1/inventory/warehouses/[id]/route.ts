@@ -1,14 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'delete')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 
@@ -19,7 +16,7 @@ export async function DELETE(
         select: { id: true },
       })
       if (movements.length > 0) {
-        const movementIds = movements.map(m => m.id)
+        const movementIds = movements.map((m) => m.id)
         await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: movementIds } } })
         await tx.stockMovement.deleteMany({ where: { id: { in: movementIds } } })
       }

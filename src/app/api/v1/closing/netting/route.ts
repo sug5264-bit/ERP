@@ -4,15 +4,16 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 import { generateDocumentNumber } from '@/lib/doc-number'
 import { createNettingSchema } from '@/lib/validations/sales'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = new URL(req.url)
     const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
@@ -41,15 +42,18 @@ export async function GET(req: NextRequest) {
     })
 
     // 거래처별 그룹화
-    const partnerMap: Record<string, {
-      partnerId: string
-      partnerCode: string
-      partnerName: string
-      receivable: number
-      payable: number
-      netAmount: number
-      details: any[]
-    }> = {}
+    const partnerMap: Record<
+      string,
+      {
+        partnerId: string
+        partnerCode: string
+        partnerName: string
+        receivable: number
+        payable: number
+        netAmount: number
+        details: any[]
+      }
+    > = {}
 
     for (const d of details) {
       if (!d.partner) continue
@@ -100,8 +104,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const data = createNettingSchema.parse(body)
@@ -121,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authResult.user.id },
       select: { employeeId: true },
     })
     if (!user?.employeeId) {

@@ -4,15 +4,16 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 import { writeAuditLog, createNotification } from '@/lib/audit-log'
 
 // POST: 일괄 결재 처리 (승인/반려)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('approval', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { ids, action, comment } = body
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
       return errorResponse('유효하지 않은 작업입니다.', 'BAD_REQUEST', 400)
     }
 
-    const employee = await prisma.employee.findFirst({ where: { user: { id: session.user!.id! } } })
+    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.user!.id! } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     let successCount = 0
@@ -44,20 +45,23 @@ export async function POST(req: NextRequest) {
     for (const docId of ids) {
       try {
         const doc = docMap.get(docId)
-        if (!doc) { failCount++; errors.push(`문서 ${docId}: 찾을 수 없음`); continue }
+        if (!doc) {
+          failCount++
+          errors.push(`문서 ${docId}: 찾을 수 없음`)
+          continue
+        }
 
-        const currentStepData = doc.steps.find(
-          (s) => s.stepOrder === doc.currentStep && s.approverId === employee.id
-        )
+        const currentStepData = doc.steps.find((s) => s.stepOrder === doc.currentStep && s.approverId === employee.id)
 
-        if (!currentStepData) { failCount++; errors.push(`문서 ${doc.documentNo}: 결재 권한 없음`); continue }
+        if (!currentStepData) {
+          failCount++
+          errors.push(`문서 ${doc.documentNo}: 결재 권한 없음`)
+          continue
+        }
 
         // 결재 단계 + 문서 상태를 트랜잭션으로 원자적 처리
-        const docStatus = action === 'reject'
-          ? 'REJECTED' as const
-          : doc.currentStep >= doc.totalSteps
-            ? 'APPROVED' as const
-            : null
+        const docStatus =
+          action === 'reject' ? ('REJECTED' as const) : doc.currentStep >= doc.totalSteps ? ('APPROVED' as const) : null
 
         const actionLabel = action === 'approve' ? '승인' : '반려'
 
@@ -86,13 +90,15 @@ export async function POST(req: NextRequest) {
           }),
         ]
         if (doc.drafter?.user) {
-          bgTasks.push(createNotification({
-            userId: doc.drafter.user.id,
-            type: 'APPROVAL',
-            title: `결재 ${actionLabel}`,
-            message: `"${doc.title}" 문서가 ${actionLabel}되었습니다.`,
-            relatedUrl: `/approval/${action === 'approve' ? 'completed' : 'rejected'}`,
-          }))
+          bgTasks.push(
+            createNotification({
+              userId: doc.drafter.user.id,
+              type: 'APPROVAL',
+              title: `결재 ${actionLabel}`,
+              message: `"${doc.title}" 문서가 ${actionLabel}되었습니다.`,
+              relatedUrl: `/approval/${action === 'approve' ? 'completed' : 'rejected'}`,
+            })
+          )
         }
         await Promise.all(bgTasks)
 

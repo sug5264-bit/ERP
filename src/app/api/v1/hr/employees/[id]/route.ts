@@ -1,20 +1,27 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { updateEmployeeSchema } from '@/lib/validations/hr'
+import { hasPermission } from '@/lib/rbac'
 import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+/** 민감한 개인정보 필드 제거 (HR 세부 권한이 없는 사용자 대상) */
+const SENSITIVE_FIELDS = ['phone', 'birthDate', 'bankName', 'bankAccount', 'address', 'gender'] as const
+function stripSensitiveFields(data: Record<string, unknown>) {
+  const result = { ...data }
+  for (const field of SENSITIVE_FIELDS) delete result[field]
+  return result
+}
+
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 
@@ -31,19 +38,22 @@ export async function GET(
 
     if (!employee) return errorResponse('사원을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    return successResponse(employee)
+    // HR 세부 모듈 권한이 있는 사용자만 민감 개인정보 열람 가능
+    const { session } = authResult
+    const canViewSensitive = hasPermission(session.user.permissions, session.user.roles, 'hr.employees', 'read')
+
+    const data = canViewSensitive ? employee : stripSensitiveFields(employee as unknown as Record<string, unknown>)
+
+    return successResponse(data)
   } catch (error) {
     return handleApiError(error)
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const body = await req.json()
@@ -66,13 +76,10 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'delete')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 

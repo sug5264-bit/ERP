@@ -1,12 +1,18 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 import { updateItemSchema } from '@/lib/validations/inventory'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const item = await prisma.item.findUnique({
@@ -22,8 +28,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'update')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
     const body = await request.json()
@@ -38,8 +44,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'delete')
+    if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
 

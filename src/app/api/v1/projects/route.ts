@@ -1,12 +1,19 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession, getPaginationParams, buildMeta } from '@/lib/api-helpers'
+import {
+  successResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+  getPaginationParams,
+  buildMeta,
+} from '@/lib/api-helpers'
 import { createProjectSchema } from '@/lib/validations/project'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('projects', 'read')
+    if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
     const search = sp.get('search') || ''
@@ -21,28 +28,38 @@ export async function GET(request: NextRequest) {
           department: { select: { id: true, name: true } },
           _count: { select: { tasks: true, members: true } },
         },
-        orderBy: { createdAt: 'desc' }, skip, take: pageSize,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
       }),
       prisma.project.count({ where }),
     ])
     return successResponse(items, buildMeta(page, pageSize, totalCount))
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('projects', 'create')
+    if (isErrorResponse(authResult)) return authResult
     const body = await request.json()
     const data = createProjectSchema.parse(body)
     const project = await prisma.project.create({
       data: {
-        projectCode: data.projectCode, projectName: data.projectName,
-        managerId: data.managerId, departmentId: data.departmentId,
-        startDate: new Date(data.startDate), endDate: data.endDate ? new Date(data.endDate) : null,
-        budget: data.budget || null, description: data.description || null,
+        projectCode: data.projectCode,
+        projectName: data.projectName,
+        managerId: data.managerId,
+        departmentId: data.departmentId,
+        startDate: new Date(data.startDate),
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        budget: data.budget || null,
+        description: data.description || null,
       },
     })
     return successResponse(project)
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }

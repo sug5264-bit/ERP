@@ -4,14 +4,15 @@ import {
   successResponse,
   errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
 } from '@/lib/api-helpers'
 import { createAccountSubjectSchema } from '@/lib/validations/accounting'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = request.nextUrl
     const accountType = searchParams.get('accountType')
@@ -22,10 +23,7 @@ export async function GET(request: NextRequest) {
     if (accountType) where.accountType = accountType
     if (parentId) where.parentId = parentId
     if (search) {
-      where.OR = [
-        { code: { contains: search } },
-        { nameKo: { contains: search, mode: 'insensitive' } },
-      ]
+      where.OR = [{ code: { contains: search } }, { nameKo: { contains: search, mode: 'insensitive' } }]
     }
 
     const accounts = await prisma.accountSubject.findMany({
@@ -45,8 +43,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('accounting', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const data = createAccountSubjectSchema.parse(body)

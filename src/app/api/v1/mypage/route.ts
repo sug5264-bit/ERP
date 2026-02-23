@@ -1,18 +1,13 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAuth()
+    if (isErrorResponse(authResult)) return authResult
 
-    const userId = session.user!.id!
+    const userId = authResult.user!.id!
 
     // 사용자 + 사원 정보
     const user = await prisma.user.findUnique({
@@ -60,8 +55,13 @@ export async function GET(req: NextRequest) {
             orderBy: { createdAt: 'desc' },
             take: 10,
             select: {
-              id: true, documentNo: true, title: true, status: true,
-              currentStep: true, totalSteps: true, draftDate: true,
+              id: true,
+              documentNo: true,
+              title: true,
+              status: true,
+              currentStep: true,
+              totalSteps: true,
+              draftDate: true,
             },
           })
         : [],
@@ -101,8 +101,8 @@ export async function GET(req: NextRequest) {
 // PUT: 비밀번호 변경
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAuth()
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { action } = body
@@ -116,7 +116,7 @@ export async function PUT(req: NextRequest) {
         return errorResponse('비밀번호는 8자 이상이어야 합니다.', 'BAD_REQUEST', 400)
       }
 
-      const user = await prisma.user.findUnique({ where: { id: session.user!.id! } })
+      const user = await prisma.user.findUnique({ where: { id: authResult.user!.id! } })
       if (!user) return errorResponse('사용자를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
       const bcrypt = await import('bcryptjs')

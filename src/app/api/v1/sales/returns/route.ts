@@ -2,9 +2,9 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
-  errorResponse,
   handleApiError,
-  getSession,
+  requirePermissionCheck,
+  isErrorResponse,
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
@@ -13,8 +13,8 @@ import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const sp = req.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('sales', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const data = createSalesReturnSchema.parse(body)

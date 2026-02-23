@@ -1,29 +1,40 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession, getPaginationParams, buildMeta } from '@/lib/api-helpers'
+import {
+  successResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+  getPaginationParams,
+  buildMeta,
+} from '@/lib/api-helpers'
 import { createPayrollSchema } from '@/lib/validations/project'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'read')
+    if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
     const [items, totalCount] = await Promise.all([
       prisma.payrollHeader.findMany({
         include: { _count: { select: { details: true } } },
-        orderBy: { payDate: 'desc' }, skip, take: pageSize,
+        orderBy: { payDate: 'desc' },
+        skip,
+        take: pageSize,
       }),
       prisma.payrollHeader.count(),
     ])
     return successResponse(items, buildMeta(page, pageSize, totalCount))
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('hr', 'create')
+    if (isErrorResponse(authResult)) return authResult
     const body = await request.json()
     const data = createPayrollSchema.parse(body)
 
@@ -35,8 +46,15 @@ export async function POST(request: NextRequest) {
 
     // 직급별 기본급 매핑 (level 1=대표, 9=사원)
     const salaryByLevel: Record<number, number> = {
-      1: 10000000, 2: 8000000, 3: 7000000, 4: 6000000,
-      5: 5000000, 6: 4500000, 7: 4000000, 8: 3500000, 9: 3000000,
+      1: 10000000,
+      2: 8000000,
+      3: 7000000,
+      4: 6000000,
+      5: 5000000,
+      6: 4500000,
+      7: 4000000,
+      8: 3500000,
+      9: 3000000,
     }
 
     const header = await prisma.$transaction(async (tx) => {
@@ -44,7 +62,7 @@ export async function POST(request: NextRequest) {
         data: { payPeriod: data.payPeriod, payDate: new Date(data.payDate) },
       })
 
-      const detailsData = employees.map(emp => {
+      const detailsData = employees.map((emp) => {
         const base = salaryByLevel[emp.position?.level || 9] || 3000000
         const mealAllowance = 200000
         const transportAllowance = 200000
@@ -55,13 +73,24 @@ export async function POST(request: NextRequest) {
         const employmentInsurance = Math.round(base * 0.009)
         const incomeTax = Math.round(base * 0.03)
         const localIncomeTax = Math.round(incomeTax * 0.1)
-        const totalDeductions = nationalPension + healthInsurance + longTermCare + employmentInsurance + incomeTax + localIncomeTax
+        const totalDeductions =
+          nationalPension + healthInsurance + longTermCare + employmentInsurance + incomeTax + localIncomeTax
         const netPay = totalEarnings - totalDeductions
         return {
-          payrollHeaderId: h.id, employeeId: emp.id,
-          baseSalary: base, mealAllowance, transportAllowance,
-          nationalPension, healthInsurance, longTermCare, employmentInsurance,
-          incomeTax, localIncomeTax, totalEarnings, totalDeductions, netPay,
+          payrollHeaderId: h.id,
+          employeeId: emp.id,
+          baseSalary: base,
+          mealAllowance,
+          transportAllowance,
+          nationalPension,
+          healthInsurance,
+          longTermCare,
+          employmentInsurance,
+          incomeTax,
+          localIncomeTax,
+          totalEarnings,
+          totalDeductions,
+          netPay,
         }
       })
 
@@ -70,5 +99,7 @@ export async function POST(request: NextRequest) {
     })
 
     return successResponse(header)
-  } catch (error) { return handleApiError(error) }
+  } catch (error) {
+    return handleApiError(error)
+  }
 }

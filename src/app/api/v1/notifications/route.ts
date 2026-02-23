@@ -1,23 +1,18 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
 
 // GET: 내 알림 목록
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAuth()
+    if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = req.nextUrl
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
     const pageSize = Math.min(50, parseInt(searchParams.get('pageSize') || '20'))
 
-    const where: any = { userId: session.user!.id! }
+    const where: any = { userId: authResult.user!.id! }
     if (unreadOnly) where.isRead = false
 
     const [notifications, unreadCount] = await Promise.all([
@@ -27,7 +22,7 @@ export async function GET(req: NextRequest) {
         take: pageSize,
       }),
       prisma.notification.count({
-        where: { userId: session.user!.id!, isRead: false },
+        where: { userId: authResult.user!.id!, isRead: false },
       }),
     ])
 
@@ -40,8 +35,8 @@ export async function GET(req: NextRequest) {
 // POST: 알림 생성 (시스템 내부용)
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAuth()
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { userId, type, title, message, relatedUrl } = body
@@ -63,15 +58,15 @@ export async function POST(req: NextRequest) {
 // PUT: 알림 읽음 처리
 export async function PUT(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAuth()
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
     const { action, id } = body
 
     if (action === 'readAll') {
       await prisma.notification.updateMany({
-        where: { userId: session.user!.id!, isRead: false },
+        where: { userId: authResult.user!.id!, isRead: false },
         data: { isRead: true },
       })
       return successResponse({ updated: true })
@@ -79,7 +74,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === 'read' && id) {
       await prisma.notification.update({
-        where: { id, userId: session.user!.id! },
+        where: { id, userId: authResult.user!.id! },
         data: { isRead: true },
       })
       return successResponse({ updated: true })
@@ -87,7 +82,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === 'deleteAll') {
       await prisma.notification.deleteMany({
-        where: { userId: session.user!.id!, isRead: true },
+        where: { userId: authResult.user!.id!, isRead: true },
       })
       return successResponse({ deleted: true })
     }

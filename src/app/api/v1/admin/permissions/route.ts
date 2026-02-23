@@ -1,15 +1,10 @@
 import { prisma } from '@/lib/prisma'
-import {
-  successResponse,
-  errorResponse,
-  handleApiError,
-  getSession,
-} from '@/lib/api-helpers'
+import { successResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET() {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requireAdmin()
+    if (isErrorResponse(authResult)) return authResult
 
     const permissions = await prisma.permission.findMany({
       orderBy: [{ module: 'asc' }, { action: 'asc' }],

@@ -1,13 +1,21 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, getSession, getPaginationParams, buildMeta } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+  getPaginationParams,
+  buildMeta,
+} from '@/lib/api-helpers'
 import { createStockMovementSchema } from '@/lib/validations/inventory'
 import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'read')
+    if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
@@ -50,8 +58,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
+    const authResult = await requirePermissionCheck('inventory', 'create')
+    if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
     const data = createStockMovementSchema.parse(body)
@@ -78,7 +86,7 @@ export async function POST(request: NextRequest) {
           targetWarehouseId: data.targetWarehouseId || null,
           relatedDocType: data.relatedDocType || null,
           relatedDocId: data.relatedDocId || null,
-          createdBy: session.user!.id!,
+          createdBy: authResult.user!.id!,
           details: {
             create: data.details.map((d) => ({
               itemId: d.itemId,
@@ -106,7 +114,9 @@ export async function POST(request: NextRequest) {
             const currentQty = Number(balance?.quantity ?? 0)
             if (currentQty < detail.quantity) {
               const item = await tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } })
-              throw new Error(`품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`)
+              throw new Error(
+                `품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`
+              )
             }
             await tx.stockBalance.updateMany({
               where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
