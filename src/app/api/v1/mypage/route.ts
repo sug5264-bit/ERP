@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const authResult = await requireAuth()
     if (isErrorResponse(authResult)) return authResult
 
-    const userId = authResult.user!.id!
+    const userId = authResult.session.user.id
 
     // 사용자 + 사원 정보
     const user = await prisma.user.findUnique({
@@ -116,7 +116,7 @@ export async function PUT(req: NextRequest) {
         return errorResponse('비밀번호는 8자 이상이어야 합니다.', 'BAD_REQUEST', 400)
       }
 
-      const user = await prisma.user.findUnique({ where: { id: authResult.user!.id! } })
+      const user = await prisma.user.findUnique({ where: { id: authResult.session.user.id } })
       if (!user) return errorResponse('사용자를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
       const bcrypt = await import('bcryptjs')

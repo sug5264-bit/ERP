@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
     const pageSize = Math.min(50, parseInt(searchParams.get('pageSize') || '20'))
 
-    const where: any = { userId: authResult.user!.id! }
+    const where: any = { userId: authResult.session.user.id }
     if (unreadOnly) where.isRead = false
 
     const [notifications, unreadCount] = await Promise.all([
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
         take: pageSize,
       }),
       prisma.notification.count({
-        where: { userId: authResult.user!.id!, isRead: false },
+        where: { userId: authResult.session.user.id, isRead: false },
       }),
     ])
 
@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === 'readAll') {
       await prisma.notification.updateMany({
-        where: { userId: authResult.user!.id!, isRead: false },
+        where: { userId: authResult.session.user.id, isRead: false },
         data: { isRead: true },
       })
       return successResponse({ updated: true })
@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === 'read' && id) {
       await prisma.notification.update({
-        where: { id, userId: authResult.user!.id! },
+        where: { id, userId: authResult.session.user.id },
         data: { isRead: true },
       })
       return successResponse({ updated: true })
@@ -82,7 +82,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === 'deleteAll') {
       await prisma.notification.deleteMany({
-        where: { userId: authResult.user!.id!, isRead: true },
+        where: { userId: authResult.session.user.id, isRead: true },
       })
       return successResponse({ deleted: true })
     }

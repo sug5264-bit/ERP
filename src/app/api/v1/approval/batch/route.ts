@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       return errorResponse('유효하지 않은 작업입니다.', 'BAD_REQUEST', 400)
     }
 
-    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.user!.id! } } })
+    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     let successCount = 0

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
 
     // 작성자 Employee 조회
     const user = await prisma.user.findUnique({
-      where: { id: authResult.user.id },
+      where: { id: authResult.session.user.id },
       select: { employeeId: true },
     })
     if (!user?.employeeId) {
