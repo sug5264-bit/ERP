@@ -58,15 +58,19 @@ export default function PartnersPage() {
   const [open, setOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [editTarget, setEditTarget] = useState<PartnerRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const qp = new URLSearchParams({ pageSize: '50' })
   if (typeFilter && typeFilter !== 'all') qp.set('partnerType', typeFilter)
+  if (startDate) qp.set('startDate', startDate)
+  if (endDate) qp.set('endDate', endDate)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['partners', typeFilter],
+    queryKey: ['partners', typeFilter, startDate, endDate],
     queryFn: () => api.get(`/partners?${qp.toString()}`) as Promise<any>,
   })
 
@@ -207,6 +211,11 @@ export default function PartnersPage() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1.5">
+          <Input type="date" className="w-full sm:w-36" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="시작일" />
+          <span className="text-xs text-muted-foreground">~</span>
+          <Input type="date" className="w-full sm:w-36" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="종료일" />
+        </div>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <Upload className="mr-1 h-4 w-4" /> 업로드
         </Button>

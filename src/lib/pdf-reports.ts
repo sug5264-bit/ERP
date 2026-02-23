@@ -89,29 +89,55 @@ const HEADER_FILL: [number, number, number] = [68, 114, 196]
 const HEADER_TEXT: [number, number, number] = [255, 255, 255]
 const LIGHT_GRAY: [number, number, number] = [240, 240, 240]
 
-// 한글 폰트 로드 헬퍼
+// 한글 폰트 캐시 (메모리)
+let cachedFontBase64: string | null = null
+
+// 한글 폰트 로드 헬퍼 - 로컬 우선, CDN 폴백, 메모리 캐시
 async function loadKoreanFont(doc: InstanceType<typeof import('jspdf').default>): Promise<string> {
-  let fontName = 'helvetica'
-  try {
-    const fontUrl = 'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf'
-    const response = await fetch(fontUrl)
-    if (response.ok) {
-      const arrayBuffer = await response.arrayBuffer()
-      const bytes = new Uint8Array(arrayBuffer)
-      let binary = ''
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i])
-      }
-      const base64 = btoa(binary)
-      doc.addFileToVFS('malgun.ttf', base64)
-      doc.addFont('malgun.ttf', 'malgun', 'normal')
-      doc.setFont('malgun')
-      fontName = 'malgun'
-    }
-  } catch {
-    // Use default font
+  // 캐시된 폰트 사용
+  if (cachedFontBase64) {
+    doc.addFileToVFS('korean.ttf', cachedFontBase64)
+    doc.addFont('korean.ttf', 'korean', 'normal')
+    doc.setFont('korean')
+    return 'korean'
   }
-  return fontName
+
+  const fontUrls = [
+    '/fonts/ipag.ttf',  // 로컬 폰트 (가장 안정적)
+    'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
+    'https://fastly.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
+  ]
+
+  for (const fontUrl of fontUrls) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      const response = await fetch(fontUrl, { signal: controller.signal })
+      clearTimeout(timeoutId)
+
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+        // 효율적인 base64 변환 (청크 단위)
+        const chunkSize = 8192
+        let binary = ''
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
+          binary += String.fromCharCode.apply(null, Array.from(chunk))
+        }
+        const base64 = btoa(binary)
+        cachedFontBase64 = base64
+        doc.addFileToVFS('korean.ttf', base64)
+        doc.addFont('korean.ttf', 'korean', 'normal')
+        doc.setFont('korean')
+        return 'korean'
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return 'helvetica'
 }
 
 // ---------------------------------------------------------------------------

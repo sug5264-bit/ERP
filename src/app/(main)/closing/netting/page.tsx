@@ -25,7 +25,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate } from '@/lib/format'
+import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
+import { COMPANY_NAME } from '@/lib/constants'
+import { FileText } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface NettingDetail {
@@ -103,6 +107,120 @@ export default function NettingPage() {
       description: formDescription,
     })
   }
+
+  // 거래명세표 발행 - 발주 데이터 조회
+  const ordersStartDate = `${year}-${month.padStart(2, '0')}-01`
+  const ordersEndDate = (() => {
+    const lastDay = new Date(Number(year), Number(month), 0).getDate()
+    return `${year}-${month.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  })()
+
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
+    queryKey: ['netting-orders', year, month],
+    queryFn: () => api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`) as Promise<any>,
+  })
+
+  const { data: companyData } = useQuery({
+    queryKey: ['admin-company'],
+    queryFn: () => api.get('/admin/company') as Promise<any>,
+    staleTime: 30 * 60 * 1000,
+  })
+
+  const getCompanyInfo = () => {
+    const companies = companyData?.data || []
+    const defaultCompany = companies.find((c: any) => c.isDefault) || companies[0]
+    if (defaultCompany) {
+      return {
+        name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '',
+        ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '',
+        bizType: defaultCompany.bizType || '', bizItem: defaultCompany.bizCategory || '',
+        tel: defaultCompany.phone || '',
+      }
+    }
+    return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
+  }
+
+  const handleTransactionStatementPDF = async (order: any) => {
+    let orderDetail = order
+    try {
+      const res = await api.get(`/sales/orders/${order.id}`) as any
+      orderDetail = res.data || res
+    } catch {
+      toast.error('주문 상세 정보를 불러올 수 없습니다.')
+      return
+    }
+    const ci = getCompanyInfo()
+    const pdfData: TransactionStatementPDFData = {
+      statementNo: orderDetail.orderNo,
+      statementDate: formatDate(orderDetail.orderDate),
+      supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, tel: ci.tel },
+      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '', tel: orderDetail.partner?.phone || '' },
+      items: (orderDetail.details || []).map((d: any, idx: number) => ({
+        no: idx + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
+        qty: Number(d.quantity), unitPrice: Number(d.unitPrice), amount: Number(d.supplyAmount), remark: d.remark || '',
+      })),
+      totalAmount: Number(orderDetail.totalAmount),
+    }
+    generateTransactionStatementPDF(pdfData)
+    toast.success('거래명세표 PDF가 다운로드되었습니다.')
+  }
+
+  const orders: any[] = ordersData?.data || []
+
+  const ORDER_STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+    ORDERED: { label: '발주', variant: 'default' },
+    IN_PROGRESS: { label: '진행중', variant: 'secondary' },
+    COMPLETED: { label: '완료', variant: 'outline' },
+    CANCELLED: { label: '취소', variant: 'destructive' },
+    COMPLAINT: { label: '컨플레인', variant: 'destructive' },
+    EXCHANGE: { label: '교환', variant: 'secondary' },
+    RETURN: { label: '반품', variant: 'destructive' },
+  }
+
+  const orderColumns: ColumnDef<any>[] = [
+    {
+      accessorKey: 'orderNo',
+      header: '발주번호',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
+    },
+    {
+      id: 'orderDate',
+      header: '발주일',
+      cell: ({ row }) => formatDate(row.original.orderDate),
+    },
+    {
+      id: 'partner',
+      header: '거래처',
+      cell: ({ row }) => row.original.partner?.partnerName || '-',
+    },
+    {
+      id: 'totalAmount',
+      header: '합계금액',
+      cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span>,
+    },
+    {
+      id: 'status',
+      header: '상태',
+      cell: ({ row }) => {
+        const s = ORDER_STATUS_MAP[row.original.status] || { label: row.original.status, variant: 'outline' as const }
+        return <Badge variant={s.variant}>{s.label}</Badge>
+      },
+    },
+    {
+      id: 'transactionStatement',
+      header: '거래명세표',
+      cell: ({ row }) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleTransactionStatementPDF(row.original)}
+        >
+          <FileText className="mr-1 h-4 w-4" />
+          발행
+        </Button>
+      ),
+    },
+  ]
 
   const rows: NettingRow[] = data?.data || []
 
@@ -219,31 +337,73 @@ export default function NettingPage() {
         <Button onClick={() => setCreateOpen(true)}>상계 등록</Button>
       </div>
 
-      {/* 요약 카드 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">총 매출채권</p>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalReceivable)}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">총 매입채무</p>
-          <p className="text-2xl font-bold text-red-600">{formatCurrency(totalPayable)}</p>
-        </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">순 상계금액</p>
-          <p className={`text-2xl font-bold ${totalNet >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-            {totalNet >= 0 ? '+' : ''}{formatCurrency(totalNet)}
-          </p>
-        </div>
-      </div>
+      <Tabs defaultValue="netting" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="netting">상계내역</TabsTrigger>
+          <TabsTrigger value="transactionStatement">
+            <FileText className="mr-1 h-4 w-4" />
+            거래명세표 발행
+          </TabsTrigger>
+        </TabsList>
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        searchColumn="partnerName"
-        searchPlaceholder="거래처명으로 검색..."
-        isLoading={isLoading}
-      />
+        <TabsContent value="netting" className="space-y-6">
+          {/* 요약 카드 */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">총 매출채권</p>
+              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalReceivable)}</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">총 매입채무</p>
+              <p className="text-2xl font-bold text-red-600">{formatCurrency(totalPayable)}</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">순 상계금액</p>
+              <p className={`text-2xl font-bold ${totalNet >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                {totalNet >= 0 ? '+' : ''}{formatCurrency(totalNet)}
+              </p>
+            </div>
+          </div>
+
+          <DataTable
+            columns={columns}
+            data={rows}
+            searchColumn="partnerName"
+            searchPlaceholder="거래처명으로 검색..."
+            isLoading={isLoading}
+          />
+        </TabsContent>
+
+        <TabsContent value="transactionStatement" className="space-y-6">
+          <div className="rounded-lg border p-4">
+            <h3 className="text-lg font-semibold mb-1">거래명세표 발행 (발주관리 연동)</h3>
+            <p className="text-sm text-muted-foreground">
+              {year}년 {month}월 발주 내역을 기반으로 거래명세표를 발행합니다. 발주 상세정보와 거래처 정보가 자동으로 반영됩니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">해당 기간 발주 건수</p>
+              <p className="text-2xl font-bold">{orders.length}건</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-sm text-muted-foreground">발주 합계금액</p>
+              <p className="text-2xl font-bold">
+                {formatCurrency(orders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0))}
+              </p>
+            </div>
+          </div>
+
+          <DataTable
+            columns={orderColumns}
+            data={orders}
+            searchColumn="orderNo"
+            searchPlaceholder="발주번호로 검색..."
+            isLoading={ordersLoading}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* 상계 등록 Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

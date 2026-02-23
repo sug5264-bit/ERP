@@ -94,8 +94,8 @@ const navItems: NavItem[] = [
     children: [
       { title: '매출집계', href: '/sales/summary', permission: 'sales.summary' },
       { title: '거래처관리', href: '/sales/partners', permission: 'sales.partners' },
-      { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
       { title: '발주관리', href: '/sales/orders', permission: 'sales.orders' },
+      { title: '납품관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
     ],
   },
