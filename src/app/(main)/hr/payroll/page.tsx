@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate, formatCurrency } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { exportToCSV } from '@/lib/export/csv-export'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
@@ -31,6 +33,30 @@ export default function PayrollPage() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({ queryKey: ['payroll'], queryFn: () => api.get('/payroll?pageSize=50') as Promise<any> })
+
+  const payrollList = data?.data || []
+
+  // 요약 통계
+  const summary = {
+    totalCount: payrollList.length,
+    confirmed: payrollList.filter((p: any) => p.status === 'CONFIRMED').length,
+    draft: payrollList.filter((p: any) => p.status !== 'CONFIRMED').length,
+    totalPersons: payrollList.reduce((s: number, p: any) => s + (p._count?.details || 0), 0),
+  }
+
+  const exportColumns: ExportColumn[] = [
+    { header: '급여기간', accessor: 'payPeriod' },
+    { header: '지급일', accessor: (r) => r.payDate ? formatDate(r.payDate) : '' },
+    { header: '대상인원', accessor: (r) => `${r._count?.details || 0}명` },
+    { header: '상태', accessor: (r) => r.status === 'CONFIRMED' ? '확정' : '임시' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '급여목록', title: '급여관리 목록', columns: exportColumns, data: payrollList }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/payroll', body),
@@ -78,6 +104,27 @@ export default function PayrollPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="급여 관리" description="월별 급여를 생성하고 관리합니다" />
+
+      {/* 요약 통계 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="rounded-lg border bg-muted/30 p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">전체 건수</p>
+          <p className="text-sm sm:text-lg font-bold">{summary.totalCount}건</p>
+        </div>
+        <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">총 대상인원</p>
+          <p className="text-sm sm:text-lg font-bold text-blue-600 dark:text-blue-500">{summary.totalPersons}명</p>
+        </div>
+        <div className="rounded-lg border bg-green-50 dark:bg-green-950/30 p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">확정</p>
+          <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-500">{summary.confirmed}건</p>
+        </div>
+        <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/30 p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-muted-foreground">임시</p>
+          <p className="text-sm sm:text-lg font-bold text-yellow-600 dark:text-yellow-500">{summary.draft}건</p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button>급여 생성</Button></DialogTrigger>
