@@ -1,13 +1,26 @@
 const MAX_EXCEL_SIZE_MB = 10
 
+/**
+ * 헤더 문자열을 정규화합니다.
+ * - 앞뒤 공백, *표시, 불필요한 공백 제거
+ * - NBSP(U+00A0) 등 특수 공백도 일반 공백으로 치환
+ */
+function normalizeHeader(raw: string): string {
+  return raw
+    .replace(/[\u00A0\u3000]/g, ' ') // NBSP, 전각공백 → 일반 공백
+    .replace(/\*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export async function readExcelFile(file: File, keyMap: Record<string, string>): Promise<any[]> {
   if (file.size > MAX_EXCEL_SIZE_MB * 1024 * 1024) {
     throw new Error(`파일 크기가 ${MAX_EXCEL_SIZE_MB}MB를 초과합니다.`)
   }
 
   const ext = file.name.split('.').pop()?.toLowerCase()
-  if (ext !== 'xlsx' && ext !== 'xls') {
-    throw new Error('지원하지 않는 파일 형식입니다. .xlsx 또는 .xls 파일만 업로드 가능합니다.')
+  if (ext !== 'xlsx') {
+    throw new Error('지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.')
   }
 
   const { default: ExcelJS } = await import('exceljs')
@@ -18,10 +31,11 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
   try {
     await workbook.xlsx.load(buffer)
   } catch {
-    throw new Error('엑셀 파일을 읽을 수 없습니다. 올바른 .xlsx 파일인지 확인해주세요.')
+    throw new Error('엑셀 파일을 읽을 수 없습니다. 올바른 .xlsx 파일인지 확인해주세요. (.xls 형식은 지원하지 않습니다)')
   }
 
-  const sheet = workbook.worksheets[0]
+  // 첫 번째 시트 (안내사항 시트 제외)
+  const sheet = workbook.worksheets.find((ws) => ws.name !== '안내사항') || workbook.worksheets[0]
   if (!sheet || sheet.rowCount < 2) return []
 
   // 헤더 읽기 (1행)
@@ -34,16 +48,22 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
     } else {
       headerVal = String(cv || '')
     }
-    headers[colNum - 1] = headerVal.replace(/\*/g, '').trim()
+    headers[colNum - 1] = normalizeHeader(headerVal)
   })
 
-  // 헤더 → key 매핑
-  const colKeys: (string | null)[] = headers.map((h) => keyMap[h] || null)
+  // 헤더 → key 매핑 (정규화된 keyMap으로 매칭)
+  const normalizedKeyMap = new Map<string, string>()
+  for (const [k, v] of Object.entries(keyMap)) {
+    normalizedKeyMap.set(normalizeHeader(k), v)
+  }
 
-  // 매핑된 키가 하나도 없으면 에러
+  const colKeys: (string | null)[] = headers.map((h) => normalizedKeyMap.get(h) || null)
+
+  // 매핑된 키가 하나도 없으면 에러 (기대하는 헤더 목록 안내)
   const validKeys = colKeys.filter(Boolean)
   if (validKeys.length === 0) {
-    throw new Error('헤더가 일치하지 않습니다. 템플릿 파일을 다운로드하여 사용해주세요.')
+    const expected = Object.keys(keyMap).join(', ')
+    throw new Error(`헤더가 일치하지 않습니다. 기대하는 헤더: [${expected}]. 템플릿 파일을 다운로드하여 사용해주세요.`)
   }
 
   // 데이터 읽기 (2행부터)
