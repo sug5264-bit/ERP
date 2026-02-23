@@ -62,8 +62,9 @@ export async function createPDFDocument(options: CreatePDFOptions = {}): Promise
 
   const autoTable = (opts: UserOptions) => {
     autoTableFn(doc, {
-      styles: { font: fontName },
       ...opts,
+      styles: { font: fontName, ...opts.styles },
+      headStyles: { font: fontName, ...opts.headStyles },
     })
   }
 
