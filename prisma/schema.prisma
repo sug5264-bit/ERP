@@ -135,6 +135,19 @@ model Attachment {
   @@map("attachments")
 }
 
+model Note {
+  id           String   @id @default(cuid())
+  content      String   @db.Text
+  relatedTable String
+  relatedId    String
+  createdBy    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([relatedTable, relatedId])
+  @@map("notes")
+}
+
 model Notification {
   id         String   @id @default(cuid())
   userId     String
