@@ -4,6 +4,7 @@ import { hash } from 'bcryptjs'
 import { createUserSchema } from '@/lib/validations/admin'
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   requireAdmin,
   isErrorResponse,

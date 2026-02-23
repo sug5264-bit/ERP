@@ -8,7 +8,7 @@ export async function GET() {
     if (isErrorResponse(authResult)) return authResult
 
     const employee = await prisma.employee.findFirst({
-      where: { user: { id: authResult.user!.id! } },
+      where: { user: { id: authResult.session.user.id } },
       select: { id: true },
     })
 

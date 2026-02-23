@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     let employeeId: string | null = null
     if (isMyDrafts || isMyApprovals) {
-      const emp = await prisma.employee.findFirst({ where: { user: { id: authResult.user!.id! } } })
+      const emp = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
       employeeId = emp?.id || null
     }
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createApprovalDocumentSchema.parse(body)
 
-    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.user!.id! } } })
+    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     const documentNo = await generateDocumentNumber('APR', new Date(data.draftDate))

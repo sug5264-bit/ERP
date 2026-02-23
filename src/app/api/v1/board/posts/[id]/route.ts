@@ -38,7 +38,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id } = await params
     const post = await prisma.post.findUnique({ where: { id }, select: { authorId: true } })
     if (!post) return errorResponse('게시글을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    if (post.authorId !== authResult.user!.id!) {
+    if (post.authorId !== authResult.session.user.id) {
       return errorResponse('본인의 게시글만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
     }
     await prisma.post.update({ where: { id }, data: { isActive: false } })

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createPostSchema.parse(body)
     const post = await prisma.post.create({
-      data: { ...data, authorId: authResult.user!.id! },
+      data: { ...data, authorId: authResult.session.user.id },
       include: { board: true, author: { select: { id: true, name: true } } },
     })
     return successResponse(post)

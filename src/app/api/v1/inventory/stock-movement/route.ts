@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
           targetWarehouseId: data.targetWarehouseId || null,
           relatedDocType: data.relatedDocType || null,
           relatedDocId: data.relatedDocId || null,
-          createdBy: authResult.user!.id!,
+          createdBy: authResult.session.user.id,
           details: {
             create: data.details.map((d) => ({
               itemId: d.itemId,

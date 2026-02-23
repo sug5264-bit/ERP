@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     })
     if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.user!.id! } } })
+    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate))
     const movementNo = await generateDocumentNumber('SM', new Date(data.deliveryDate))
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
           movementType: 'OUTBOUND',
           relatedDocType: 'DELIVERY',
           relatedDocId: delivery.id,
-          createdBy: employee?.id || authResult.user!.id!,
+          createdBy: employee?.id || authResult.session.user.id,
           details: {
             create: data.details.map((d) => ({
               itemId: d.itemId,

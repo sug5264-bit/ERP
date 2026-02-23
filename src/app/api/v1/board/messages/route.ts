@@ -18,7 +18,8 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
     const box = sp.get('box') || 'received'
-    const where: any = box === 'sent' ? { senderId: authResult.user!.id! } : { receiverId: authResult.user!.id! }
+    const where: any =
+      box === 'sent' ? { senderId: authResult.session.user.id } : { receiverId: authResult.session.user.id }
     const [items, totalCount] = await Promise.all([
       prisma.message.findMany({
         where,
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     const data = createMessageSchema.parse(body)
     const message = await prisma.message.create({
       data: {
-        senderId: authResult.user!.id!,
+        senderId: authResult.session.user.id,
         receiverId: data.receiverId,
         subject: data.subject,
         content: data.content,
@@ -65,7 +66,7 @@ export async function PUT(request: NextRequest) {
       return errorResponse('유효한 메시지 ID가 필요합니다.', 'INVALID_INPUT', 400)
     }
     await prisma.message.update({
-      where: { id: body.messageId, receiverId: authResult.user!.id! },
+      where: { id: body.messageId, receiverId: authResult.session.user.id },
       data: { isRead: true, readAt: new Date() },
     })
     return successResponse({ updated: true })

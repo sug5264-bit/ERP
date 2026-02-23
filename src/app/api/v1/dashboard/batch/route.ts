@@ -17,7 +17,7 @@ export async function GET() {
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
 
     const employee = await prisma.employee.findFirst({
-      where: { user: { id: authResult.user!.id! } },
+      where: { user: { id: authResult.session.user.id } },
       select: { id: true },
     })
 

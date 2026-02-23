@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     const data = createQuotationSchema.parse(body)
     const quotationNo = await generateDocumentNumber('QT', new Date(data.quotationDate))
     const employee = await prisma.employee.findFirst({
-      where: { user: { id: authResult.user!.id! } },
+      where: { user: { id: authResult.session.user.id } },
       select: { id: true },
     })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)

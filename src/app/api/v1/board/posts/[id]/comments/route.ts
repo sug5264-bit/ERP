@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const comment = await prisma.postComment.create({
       data: {
         postId: id,
-        authorId: authResult.user!.id!,
+        authorId: authResult.session.user.id,
         content: data.content,
         parentCommentId: data.parentCommentId || null,
       },

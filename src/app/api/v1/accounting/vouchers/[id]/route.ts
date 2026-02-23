@@ -60,7 +60,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     // 승인 처리
     if (body.action === 'approve') {
       const user = await prisma.user.findUnique({
-        where: { id: authResult.user.id },
+        where: { id: authResult.session.user.id },
         select: { employeeId: true },
       })
       const voucher = await prisma.voucher.update({

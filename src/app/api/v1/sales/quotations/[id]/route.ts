@@ -58,7 +58,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (quotation.status === 'ORDERED') return errorResponse('이미 발주 전환된 견적입니다.', 'ALREADY_ORDERED')
       if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 전환할 수 없습니다.', 'INVALID_STATUS')
 
-      const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.user!.id! } } })
+      const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
       if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
       const orderNo = await generateDocumentNumber('SO', new Date())
