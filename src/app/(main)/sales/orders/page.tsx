@@ -54,7 +54,9 @@ export default function OrdersPage() {
   const [batchCompleteIds, setBatchCompleteIds] = useState<string[]>([])
   const [cancelTarget, setCancelTarget] = useState<{ id: string; orderNo: string } | null>(null)
   const [batchCancelConfirm, setBatchCancelConfirm] = useState<string[] | null>(null)
+  const [vatIncluded, setVatIncluded] = useState(true)
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
+  const [createPartnerSearch, setCreatePartnerSearch] = useState('')
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -230,7 +232,7 @@ export default function OrdersPage() {
     { id: 'orderDate', header: '발주일', cell: ({ row }) => formatDate(row.original.orderDate) },
     { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
     { id: 'deliveryDate', header: '납기일', cell: ({ row }) => row.original.deliveryDate ? formatDate(row.original.deliveryDate) : '-' },
-    { id: 'totalAmount', header: '합계(부가세 포함)', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
+    { id: 'totalAmount', header: '합계금액', cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span> },
     { id: 'status', header: '상태', cell: ({ row }) => { const s = STATUS_MAP[row.original.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status } },
     {
       id: 'actions',
@@ -330,7 +332,7 @@ export default function OrdersPage() {
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/orders', body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setOpen(false); setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }]); toast.success('발주가 등록되었습니다.') },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); setOpen(false); setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }]); setVatIncluded(true); toast.success('발주가 등록되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -375,6 +377,7 @@ export default function OrdersPage() {
     createMutation.mutate({
       orderDate: form.get('orderDate'), partnerId: form.get('partnerId'),
       salesChannel: activeTab,
+      vatIncluded,
       deliveryDate: form.get('deliveryDate') || undefined, description: form.get('description') || undefined,
       carrier: form.get('carrier') || undefined, trackingNo: form.get('trackingNo') || undefined,
       details: details.filter(d => d.itemId),
@@ -420,8 +423,26 @@ export default function OrdersPage() {
             <div className="space-y-2"><Label>발주일 <span className="text-destructive">*</span></Label><Input name="orderDate" type="date" required aria-required="true" /></div>
             <div className="space-y-2">
               <Label>거래처 <span className="text-destructive">*</span></Label>
-              <Select name="partnerId"><SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                <SelectContent>{partners.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}</SelectContent>
+              <Select name="partnerId" onValueChange={() => setCreatePartnerSearch('')}>
+                <SelectTrigger><SelectValue placeholder="거래처 검색/선택" /></SelectTrigger>
+                <SelectContent>
+                  <div className="p-2">
+                    <Input
+                      placeholder="거래처명 검색..."
+                      value={createPartnerSearch}
+                      onChange={e => setCreatePartnerSearch(e.target.value)}
+                      className="h-8 text-xs"
+                      onClick={e => e.stopPropagation()}
+                      onKeyDown={e => e.stopPropagation()}
+                    />
+                  </div>
+                  {partners
+                    .filter((p: any) => !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase()))
+                    .map((p: any) => <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>)}
+                  {partners.filter((p: any) => !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())).length === 0 && (
+                    <div className="p-2 text-xs text-muted-foreground text-center">검색 결과가 없습니다</div>
+                  )}
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2"><Label>납기일</Label><Input name="deliveryDate" type="date" /></div>
@@ -435,7 +456,7 @@ export default function OrdersPage() {
           <div className="space-y-2"><Label>비고</Label><Input name="description" /></div>
           <div className="space-y-2">
             <Label>부가세</Label>
-            <Select name="vatIncluded" defaultValue="true">
+            <Select name="vatIncluded" value={vatIncluded ? 'true' : 'false'} onValueChange={v => setVatIncluded(v === 'true')}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="true">부가세 포함</SelectItem>
@@ -451,7 +472,7 @@ export default function OrdersPage() {
               {details.map((d, idx) => {
                 const supply = d.quantity * d.unitPrice
                 const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
-                const tax = itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
+                const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                 return (
                   <div key={idx} className="rounded-md border p-3 space-y-2">
                     <div className="flex items-center justify-between">
@@ -466,7 +487,7 @@ export default function OrdersPage() {
                       <div className="space-y-1 min-w-0"><Label className="text-[11px]">수량</Label><Input type="number" className="text-xs" value={d.quantity || ''} onChange={e => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)} /></div>
                       <div className="space-y-1 min-w-0"><Label className="text-[11px]">단가</Label><Input type="number" className="text-xs" value={d.unitPrice || ''} onChange={e => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)} /></div>
                       <div className="space-y-1 min-w-0"><Label className="text-[11px]">공급가</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs">{formatCurrency(supply)}</div></div>
-                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">합계</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + tax)}</div></div>
+                      <div className="space-y-1 min-w-0"><Label className="text-[11px]">{vatIncluded ? '합계(VAT포함)' : '합계'}</Label><div className="h-9 flex items-center justify-end px-2 rounded-md border bg-muted/50 font-mono text-xs font-medium">{formatCurrency(supply + tax)}</div></div>
                     </div>
                   </div>
                 )
@@ -658,7 +679,7 @@ export default function OrdersPage() {
               {createDialog}
               {trackingDialog}
             </div>
-            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
+            <DataTable columns={columns} data={onlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={onlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} onBulkDelete={(rows) => { if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) { Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`))).then(() => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('삭제되었습니다.') }).catch(() => toast.error('일부 삭제 실패')) } }} bulkActions={[
               { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
               { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)) },
               { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
@@ -671,7 +692,7 @@ export default function OrdersPage() {
             <div className="flex flex-wrap items-center gap-2">
               {createDialog}
             </div>
-            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
+            <DataTable columns={columns} data={offlineOrders} searchColumn="orderNo" searchPlaceholder="발주번호로 검색..." isLoading={offlineLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} onBulkDelete={(rows) => { if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) { Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`))).then(() => { queryClient.invalidateQueries({ queryKey: ['sales-orders'] }); toast.success('삭제되었습니다.') }).catch(() => toast.error('일부 삭제 실패')) } }} bulkActions={[
               { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_발주목록', title: '발주관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
               { label: '일괄 취소', icon: <XCircle className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)) },
               { label: '일괄 완료', icon: <CheckCircle className="mr-1.5 h-4 w-4" />, action: (rows) => { setBatchCompleteIds(rows.map((r: any) => r.id)); setBatchCompleteOpen(true) } },
@@ -720,7 +741,8 @@ export default function OrdersPage() {
                   {editDetails.map((d, idx) => {
                     const supply = d.quantity * d.unitPrice
                     const editItemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
-                    const editTax = editItemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
+                    const editVat = editTarget?.vatIncluded !== false
+                    const editTax = editVat && editItemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
                       <div key={idx} className="rounded-md border p-3 space-y-2">
                         <div className="flex items-center justify-between">

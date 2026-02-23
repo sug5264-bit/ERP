@@ -21,7 +21,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Upload, Trash2, Pencil } from 'lucide-react'
+import { Upload, Trash2, Pencil, Download } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const ITEM_TYPE_MAP: Record<string, string> = {
@@ -58,6 +58,8 @@ export default function ItemsPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
   const [search, setSearch] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [editTarget, setEditTarget] = useState<ItemRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
@@ -65,9 +67,11 @@ export default function ItemsPage() {
   const qp = new URLSearchParams({ pageSize: '50' })
   if (typeFilter && typeFilter !== 'all') qp.set('itemType', typeFilter)
   if (search) qp.set('search', search)
+  if (startDate) qp.set('startDate', startDate)
+  if (endDate) qp.set('endDate', endDate)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['inventory-items', typeFilter, search],
+    queryKey: ['inventory-items', typeFilter, search, startDate, endDate],
     queryFn: () => api.get(`/inventory/items?${qp.toString()}`) as Promise<any>,
   })
 
@@ -202,6 +206,11 @@ export default function ItemsPage() {
             ))}
           </SelectContent>
         </Select>
+        <div className="flex items-center gap-1.5">
+          <Input type="date" className="w-full sm:w-36" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="시작일" />
+          <span className="text-xs text-muted-foreground">~</span>
+          <Input type="date" className="w-full sm:w-36" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="종료일" />
+        </div>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <Upload className="mr-1 h-4 w-4" /> 업로드
         </Button>
@@ -268,7 +277,18 @@ export default function ItemsPage() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정"><Pencil className="h-4 w-4" /></Button>
           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.itemName)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>
         </div>
-      ), size: 80 }]} data={items} isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      ), size: 80 }]} data={items} isLoading={isLoading} pageSize={50} selectable onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} bulkActions={[
+        { label: '일괄 다운로드', icon: <Download className="mr-1.5 h-4 w-4" />, action: (rows) => { exportToExcel({ fileName: '선택_품목목록', title: '품목관리 선택 목록', columns: exportColumns, data: rows }); toast.success('선택한 항목이 다운로드되었습니다.') } },
+        { label: '일괄 삭제', icon: <Trash2 className="mr-1.5 h-4 w-4" />, variant: 'destructive', action: async (rows) => {
+          if (!confirm(`선택한 ${rows.length}건의 품목을 삭제하시겠습니까?`)) return
+          let success = 0
+          for (const row of rows) {
+            try { await api.delete(`/inventory/items/${(row as any).id}`); success++ } catch {}
+          }
+          queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
+          toast.success(`${success}건이 삭제되었습니다.`)
+        }},
+      ]} />
       <ExcelImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}

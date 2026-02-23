@@ -68,6 +68,8 @@ export default function PaymentsPage() {
   const queryClient = useQueryClient()
   const [year, setYear] = useState(currentYear.toString())
   const [month, setMonth] = useState(currentMonth.toString())
+  const [dateType, setDateType] = useState<'monthly' | 'daily'>('monthly')
+  const [filterDate, setFilterDate] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<PaymentRow | null>(null)
@@ -78,9 +80,18 @@ export default function PaymentsPage() {
   const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
   const [formDescription, setFormDescription] = useState('')
 
+  const qp = new URLSearchParams()
+  if (dateType === 'monthly') {
+    qp.set('year', year)
+    qp.set('month', month)
+  } else if (filterDate) {
+    qp.set('startDate', filterDate)
+    qp.set('endDate', filterDate)
+  }
+
   const { data, isLoading } = useQuery({
-    queryKey: ['closing-payments', year, month],
-    queryFn: () => api.get(`/closing/payments?year=${year}&month=${month}`) as Promise<any>,
+    queryKey: ['closing-payments', dateType, year, month, filterDate],
+    queryFn: () => api.get(`/closing/payments?${qp.toString()}`) as Promise<any>,
   })
 
   const { data: partnersData } = useQuery({
@@ -216,31 +227,51 @@ export default function PaymentsPage() {
       <div className="flex items-end justify-between">
         <div className="flex items-end gap-4">
           <div className="space-y-2">
-            <Label>연도</Label>
-            <Select value={year} onValueChange={setYear}>
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
+            <Label>조회유형</Label>
+            <Select value={dateType} onValueChange={(v: 'monthly' | 'daily') => setDateType(v)}>
+              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                  <SelectItem key={y} value={y.toString()}>{y}년</SelectItem>
-                ))}
+                <SelectItem value="monthly">월별</SelectItem>
+                <SelectItem value="daily">일자별</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>월</Label>
-            <Select value={month} onValueChange={setMonth}>
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <SelectItem key={m} value={m.toString()}>{m}월</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {dateType === 'monthly' && (
+            <>
+              <div className="space-y-2">
+                <Label>연도</Label>
+                <Select value={year} onValueChange={setYear}>
+                  <SelectTrigger className="w-28">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
+                      <SelectItem key={y} value={y.toString()}>{y}년</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>월</Label>
+                <Select value={month} onValueChange={setMonth}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={m.toString()}>{m}월</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+          {dateType === 'daily' && (
+            <div className="space-y-2">
+              <Label>일자</Label>
+              <Input type="date" className="w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+            </div>
+          )}
         </div>
         <Button onClick={() => { resetForm(); setCreateOpen(true) }}>
           대금지급 등록

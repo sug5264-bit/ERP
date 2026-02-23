@@ -38,29 +38,53 @@ const URGENCY_MAP: Record<string, string> = {
   EMERGENCY: '초긴급',
 }
 
-// 한글 폰트 로드 헬퍼
+// 폰트 캐시 (메모리)
+let cachedFontBase64: string | null = null
+
+// 한글 폰트 로드 헬퍼 - 로컬 우선, CDN 폴백
 async function loadKoreanFont(pdf: InstanceType<typeof import('jspdf').default>): Promise<string> {
-  let fontName = 'helvetica'
-  try {
-    const fontUrl = 'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf'
-    const response = await fetch(fontUrl)
-    if (response.ok) {
-      const arrayBuffer = await response.arrayBuffer()
-      const bytes = new Uint8Array(arrayBuffer)
-      let binary = ''
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i])
-      }
-      const base64 = btoa(binary)
-      pdf.addFileToVFS('malgun.ttf', base64)
-      pdf.addFont('malgun.ttf', 'malgun', 'normal')
-      pdf.setFont('malgun')
-      fontName = 'malgun'
-    }
-  } catch {
-    // 폰트 로드 실패 시 기본 폰트 사용
+  if (cachedFontBase64) {
+    pdf.addFileToVFS('korean.ttf', cachedFontBase64)
+    pdf.addFont('korean.ttf', 'korean', 'normal')
+    pdf.setFont('korean')
+    return 'korean'
   }
-  return fontName
+
+  const fontUrls = [
+    '/fonts/ipag.ttf',
+    'https://cdn.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
+    'https://fastly.jsdelivr.net/gh/psjdev/jsPDF-Korean-Fonts-Support@main/fonts/malgun.ttf',
+  ]
+
+  for (const fontUrl of fontUrls) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      const response = await fetch(fontUrl, { signal: controller.signal })
+      clearTimeout(timeoutId)
+
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer()
+        const bytes = new Uint8Array(arrayBuffer)
+        const chunkSize = 8192
+        let binary = ''
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
+          binary += String.fromCharCode.apply(null, Array.from(chunk))
+        }
+        const base64 = btoa(binary)
+        cachedFontBase64 = base64
+        pdf.addFileToVFS('korean.ttf', base64)
+        pdf.addFont('korean.ttf', 'korean', 'normal')
+        pdf.setFont('korean')
+        return 'korean'
+      }
+    } catch {
+      continue
+    }
+  }
+
+  return 'helvetica'
 }
 
 export async function exportApprovalPdf(doc: ApprovalDocExport) {
