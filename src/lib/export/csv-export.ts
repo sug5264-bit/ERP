@@ -1,9 +1,9 @@
 import type { ExportConfig } from './types'
+import { getValue, triggerDownload } from './utils'
 
-function getValue(row: any, accessor: string | ((row: any) => any)): string {
-  let val: any
-  if (typeof accessor === 'function') val = accessor(row)
-  else val = accessor.split('.').reduce((obj, key) => obj?.[key], row)
+/** CSV 셀 값 이스케이프 (수식 인젝션 방지 + 따옴표 처리) */
+function escapeCsvValue(row: any, accessor: string | ((row: any) => any)): string {
+  let val = getValue(row, accessor)
   if (val == null) return ''
   let str = String(val)
   // CSV 수식 인젝션 방지: 셀이 =, +, -, @, \t, \r 로 시작하면 앞에 작은따옴표 추가
@@ -23,17 +23,10 @@ export function exportToCSV(config: ExportConfig) {
   // BOM (UTF-8 with BOM for Excel 한글 호환)
   const BOM = '\uFEFF'
 
-  const header = columns.map((c) => getValue({}, () => c.header)).join(',')
-  const rows = data.map((row) =>
-    columns.map((col) => getValue(row, col.accessor)).join(',')
-  )
+  const header = columns.map((c) => escapeCsvValue({}, () => c.header)).join(',')
+  const rows = data.map((row) => columns.map((col) => escapeCsvValue(row, col.accessor)).join(','))
 
   const csv = BOM + [header, ...rows].join('\n')
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${fileName}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  triggerDownload(blob, `${fileName}.csv`)
 }

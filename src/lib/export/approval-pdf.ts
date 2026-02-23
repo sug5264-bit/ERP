@@ -1,4 +1,4 @@
-import { loadKoreanFont } from '@/lib/pdf-font'
+import { createPDFDocument, addPageNumbers, getLastTableY, PDF_COLORS, fmtPrintDate } from './pdf-base'
 
 interface ApprovalDocExport {
   documentNo: string
@@ -41,14 +41,7 @@ const URGENCY_MAP: Record<string, string> = {
 }
 
 export async function exportApprovalPdf(doc: ApprovalDocExport) {
-  const { default: jsPDF } = await import('jspdf')
-  await import('jspdf-autotable')
-
-  const pdf = new jsPDF('p', 'mm', 'a4')
-  const pageWidth = pdf.internal.pageSize.getWidth()
-
-  // 한글 폰트 로드
-  const fontName = await loadKoreanFont(pdf)
+  const { doc: pdf, autoTable, fontName, pageWidth } = await createPDFDocument()
 
   // 제목 영역
   pdf.setFontSize(20)
@@ -63,56 +56,54 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
 
   // 문서 정보
   let y = 40
-  pdf.setFontSize(10)
 
-  const infoData = [
-    ['제목', doc.title],
-    ['기안자', `${doc.drafter.nameKo} / ${doc.drafter.department?.name || '-'} / ${doc.drafter.position?.name || '-'}`],
-    ['기안일', doc.draftDate],
-    ['긴급도', URGENCY_MAP[doc.urgency] || doc.urgency],
-    ['상태', STATUS_MAP[doc.status] || doc.status],
-  ]
-
-  ;(pdf as any).autoTable({
+  autoTable({
     startY: y,
-    body: infoData,
+    body: [
+      ['제목', doc.title],
+      [
+        '기안자',
+        `${doc.drafter.nameKo} / ${doc.drafter.department?.name || '-'} / ${doc.drafter.position?.name || '-'}`,
+      ],
+      ['기안일', doc.draftDate],
+      ['긴급도', URGENCY_MAP[doc.urgency] || doc.urgency],
+      ['상태', STATUS_MAP[doc.status] || doc.status],
+    ],
     theme: 'plain',
-    styles: { fontSize: 10, cellPadding: 3, font: fontName },
+    styles: { fontSize: 10, cellPadding: 3 },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 35 },
-      1: { cellWidth: 'auto' },
+      1: { cellWidth: 'auto' as any },
     },
     margin: { left: 15, right: 15 },
   })
 
-  y = (pdf as any).lastAutoTable.finalY + 10
+  y = getLastTableY(pdf) + 10
 
   // 결재선
   pdf.setFontSize(11)
   pdf.text('결재선', 15, y)
   y += 3
 
-  const stepData = doc.steps.map((s) => [
-    String(s.stepOrder),
-    s.approver.nameKo,
-    s.approver.position?.name || '-',
-    s.approver.department?.name || '-',
-    STATUS_MAP[s.status] || s.status,
-    s.comment || '-',
-    s.actionDate ? new Date(s.actionDate).toLocaleDateString('ko-KR') : '-',
-  ])
-
-  ;(pdf as any).autoTable({
+  autoTable({
     startY: y,
     head: [['순번', '결재자', '직급', '부서', '상태', '의견', '처리일']],
-    body: stepData,
+    body: doc.steps.map((s) => [
+      String(s.stepOrder),
+      s.approver.nameKo,
+      s.approver.position?.name || '-',
+      s.approver.department?.name || '-',
+      STATUS_MAP[s.status] || s.status,
+      s.comment || '-',
+      s.actionDate ? new Date(s.actionDate).toLocaleDateString('ko-KR') : '-',
+    ]),
     theme: 'striped',
-    styles: { fontSize: 9, cellPadding: 2, font: fontName },
-    headStyles: { fillColor: [68, 114, 196], textColor: 255, halign: 'center' },
+    styles: { fontSize: 9, cellPadding: 2 },
+    headStyles: { fillColor: PDF_COLORS.HEADER_FILL, textColor: 255, halign: 'center' },
     margin: { left: 15, right: 15 },
   })
 
-  y = (pdf as any).lastAutoTable.finalY + 10
+  y = getLastTableY(pdf) + 10
 
   // 본문
   if (doc.content?.body) {
@@ -121,8 +112,6 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
     y += 5
 
     pdf.setFontSize(10)
-
-    // 텍스트를 줄바꿈 처리
     const lines = pdf.splitTextToSize(doc.content.body, pageWidth - 30)
     pdf.text(lines, 15, y)
     y += lines.length * 5
@@ -142,28 +131,19 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
     if (doc.content.purpose) detailData.push(['목적', doc.content.purpose])
 
     if (detailData.length > 0) {
-      ;(pdf as any).autoTable({
+      autoTable({
         startY: y,
         body: detailData,
         theme: 'plain',
-        styles: { fontSize: 10, cellPadding: 2, font: fontName },
+        styles: { fontSize: 10, cellPadding: 2 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 } },
         margin: { left: 15, right: 15 },
       })
     }
   }
 
-  // 푸터 (페이지 번호)
-  const pageCount = (pdf as any).getNumberOfPages?.() || pdf.internal.pages.length - 1
-  for (let i = 1; i <= pageCount; i++) {
-    pdf.setPage(i)
-    pdf.setFontSize(8)
-    const now = new Date()
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    pdf.text(`출력일: ${dateStr} | ${i} / ${pageCount}`, pageWidth / 2, pdf.internal.pageSize.getHeight() - 10, {
-      align: 'center',
-    })
-  }
+  // 푸터 (페이지 번호 + 출력일)
+  addPageNumbers(pdf, fontName, { prefix: `출력일: ${fmtPrintDate()}`, bottomOffset: 10 })
 
   // 다운로드
   pdf.save(`${doc.documentNo}_${doc.title}.pdf`)

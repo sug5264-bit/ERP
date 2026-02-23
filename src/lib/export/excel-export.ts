@@ -1,9 +1,5 @@
 import type { ExportConfig } from './types'
-
-function getValue(row: any, accessor: string | ((row: any) => any)): any {
-  if (typeof accessor === 'function') return accessor(row)
-  return accessor.split('.').reduce((obj, key) => obj?.[key], row) ?? ''
-}
+import { getValue, triggerDownload } from './utils'
 
 export async function exportToExcel(config: ExportConfig) {
   const { default: ExcelJS } = await import('exceljs')
@@ -64,20 +60,12 @@ export async function exportToExcel(config: ExportConfig) {
   // 열 너비 자동 조정
   columns.forEach((col, i) => {
     const column = sheet.getColumn(i + 1)
-    const maxLen = Math.max(
-      col.header.length * 2,
-      ...data.map((row) => String(getValue(row, col.accessor)).length)
-    )
+    const maxLen = Math.max(col.header.length * 2, ...data.map((row) => String(getValue(row, col.accessor)).length))
     column.width = col.width || Math.min(Math.max(maxLen + 2, 10), 40)
   })
 
   // 다운로드
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${fileName}.xlsx`
-  a.click()
-  URL.revokeObjectURL(url)
+  triggerDownload(blob, `${fileName}.xlsx`)
 }

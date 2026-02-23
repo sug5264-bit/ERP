@@ -1,4 +1,13 @@
-import { loadKoreanFont } from '@/lib/pdf-font'
+import {
+  createPDFDocument,
+  addPageNumbers,
+  getLastTableY,
+  PDF_COLORS,
+  PAGE_MARGIN,
+  defaultHeadStyles,
+  labelColumnStyle,
+  fmtNumber,
+} from '@/lib/export/pdf-base'
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -79,37 +88,45 @@ export interface TransactionStatementPDFData {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// 공통 스타일 프리셋
 // ---------------------------------------------------------------------------
 
-const fmt = (n: number) => n.toLocaleString('ko-KR')
+const infoTableStyles = {
+  theme: 'grid' as const,
+  styles: { fontSize: 8, cellPadding: 2 },
+  headStyles: defaultHeadStyles,
+  margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+}
 
-const PAGE_MARGIN = 14
+const itemTableStyles = {
+  theme: 'grid' as const,
+  styles: { fontSize: 8, cellPadding: 2 },
+  headStyles: defaultHeadStyles,
+  margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+}
 
-// Common color palette
-const HEADER_FILL: [number, number, number] = [68, 114, 196]
-const HEADER_TEXT: [number, number, number] = [255, 255, 255]
-const LIGHT_GRAY: [number, number, number] = [240, 240, 240]
+const summaryTableStyles = {
+  theme: 'grid' as const,
+  styles: { fontSize: 9, cellPadding: 2.5, halign: 'right' as const },
+  headStyles: defaultHeadStyles,
+  margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+}
 
 // ---------------------------------------------------------------------------
 // 1. 견적서 (Quotation)
 // ---------------------------------------------------------------------------
 
 export async function generateQuotationPDF(data: QuotationPDFData) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
-
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const fontName = await loadKoreanFont(doc)
+  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
 
   let y = 15
 
-  // --- Title ---
+  // --- 제목 ---
   doc.setFontSize(20)
   doc.text('견 적 서', pageWidth / 2, y, { align: 'center' })
   y += 10
 
-  // --- Quotation meta info ---
+  // --- 견적 메타정보 ---
   doc.setFontSize(9)
   doc.text(`견적번호: ${data.quotationNo}`, PAGE_MARGIN, y)
   doc.text(`견적일자: ${data.quotationDate}`, pageWidth / 2, y)
@@ -118,87 +135,58 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
     doc.text(`유효기한: ${data.validUntil}`, PAGE_MARGIN, y)
     y += 5
   }
-
   y += 2
 
-  // --- Company / Partner info boxes using autoTable ---
-  const companyRows = [
-    ['상호', data.company.name, '상호', data.partner.name],
-    ['대표자', data.company.ceo ?? '', '대표자', data.partner.ceo ?? ''],
-    ['사업자번호', data.company.bizNo ?? '', '사업자번호', data.partner.bizNo ?? ''],
-    ['주소', data.company.address ?? '', '주소', data.partner.address ?? ''],
-    ['전화', data.company.tel ?? '', '전화', data.partner.tel ?? ''],
-  ]
-
-  autoTable(doc, {
+  // --- 공급자 / 공급받는자 정보 ---
+  autoTable({
+    ...infoTableStyles,
     startY: y,
     head: [['', '공급자 (공급하는 자)', '', '공급받는자']],
-    body: companyRows,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    body: [
+      ['상호', data.company.name, '상호', data.partner.name],
+      ['대표자', data.company.ceo ?? '', '대표자', data.partner.ceo ?? ''],
+      ['사업자번호', data.company.bizNo ?? '', '사업자번호', data.partner.bizNo ?? ''],
+      ['주소', data.company.address ?? '', '주소', data.partner.address ?? ''],
+      ['전화', data.company.tel ?? '', '전화', data.partner.tel ?? ''],
+    ],
     columnStyles: {
-      0: { cellWidth: 25, fillColor: LIGHT_GRAY, fontStyle: 'bold', halign: 'center' },
+      0: { cellWidth: 25, ...labelColumnStyle },
       1: { cellWidth: 65 },
-      2: { cellWidth: 25, fillColor: LIGHT_GRAY, fontStyle: 'bold', halign: 'center' },
+      2: { cellWidth: 25, ...labelColumnStyle },
       3: { cellWidth: 65 },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 6
 
-  y = (doc as any).lastAutoTable.finalY + 6
-
-  // --- Total amount summary ---
-  autoTable(doc, {
+  // --- 합계금액 ---
+  autoTable({
+    ...summaryTableStyles,
     startY: y,
     head: [['합계금액', '공급가액', '세액', '총액']],
-    body: [[fmt(data.totalAmount), fmt(data.totalSupply), fmt(data.totalTax), fmt(data.totalAmount)]],
-    theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 2.5, halign: 'right', font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    body: [
+      [fmtNumber(data.totalAmount), fmtNumber(data.totalSupply), fmtNumber(data.totalTax), fmtNumber(data.totalAmount)],
+    ],
     columnStyles: {
-      0: { halign: 'right', fontStyle: 'bold' },
+      0: { halign: 'right' as const, fontStyle: 'bold' as const },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 4
 
-  y = (doc as any).lastAutoTable.finalY + 4
-
-  // --- Items table ---
-  const itemHead = [['No', '품명', '규격', '수량', '단가', '공급가액', '세액', '합계']]
-  const itemBody = data.items.map((item) => [
-    String(item.no),
-    item.itemName,
-    item.spec ?? '',
-    fmt(item.qty),
-    fmt(item.unitPrice),
-    fmt(item.supplyAmount),
-    fmt(item.taxAmount),
-    fmt(item.totalAmount),
-  ])
-
-  autoTable(doc, {
+  // --- 품목 테이블 ---
+  autoTable({
+    ...itemTableStyles,
     startY: y,
-    head: itemHead,
-    body: itemBody,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    head: [['No', '품명', '규격', '수량', '단가', '공급가액', '세액', '합계']],
+    body: data.items.map((item) => [
+      String(item.no),
+      item.itemName,
+      item.spec ?? '',
+      fmtNumber(item.qty),
+      fmtNumber(item.unitPrice),
+      fmtNumber(item.supplyAmount),
+      fmtNumber(item.taxAmount),
+      fmtNumber(item.totalAmount),
+    ]),
     columnStyles: {
       0: { cellWidth: 12, halign: 'center' },
       1: { cellWidth: 40 },
@@ -209,25 +197,21 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
       6: { cellWidth: 22, halign: 'right' },
       7: { cellWidth: 25, halign: 'right' },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 8
 
-  y = (doc as any).lastAutoTable.finalY + 8
-
-  // --- Description ---
+  // --- 비고 ---
   if (data.description) {
     doc.setFontSize(9)
     doc.text(`비고: ${data.description}`, PAGE_MARGIN, y)
     y += 8
   }
 
-  // --- Footer ---
+  // --- 푸터 ---
   doc.setFontSize(11)
   doc.text('위와 같이 견적합니다.', pageWidth / 2, y, { align: 'center' })
 
-  // --- Page numbers ---
   addPageNumbers(doc, fontName)
-
   doc.save(`견적서_${data.quotationNo}.pdf`)
 }
 
@@ -236,101 +220,67 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
 // ---------------------------------------------------------------------------
 
 export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
-
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const fontName = await loadKoreanFont(doc)
+  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
 
   let y = 15
 
-  // --- Title ---
+  // --- 제목 ---
   doc.setFontSize(20)
   doc.text('세 금 계 산 서', pageWidth / 2, y, { align: 'center' })
   y += 8
 
-  // --- Invoice meta ---
+  // --- 발행 메타정보 ---
   doc.setFontSize(9)
   doc.text(`발행번호: ${data.invoiceNo}`, PAGE_MARGIN, y)
   doc.text(`작성일자: ${data.invoiceDate}`, pageWidth - PAGE_MARGIN, y, { align: 'right' })
   y += 6
 
-  // --- Supplier / Buyer info (standard Korean tax invoice two-column header) ---
-  const infoRows = [
-    ['사업자등록번호', data.supplier.bizNo, '사업자등록번호', data.buyer.bizNo],
-    ['상호(법인명)', data.supplier.name, '상호(법인명)', data.buyer.name],
-    ['성명(대표자)', data.supplier.ceo, '성명(대표자)', data.buyer.ceo],
-    ['사업장주소', data.supplier.address, '사업장주소', data.buyer.address],
-    ['업태', data.supplier.bizType ?? '', '업태', data.buyer.bizType ?? ''],
-    ['종목', data.supplier.bizItem ?? '', '종목', data.buyer.bizItem ?? ''],
-  ]
-
-  autoTable(doc, {
+  // --- 공급자 / 공급받는자 정보 ---
+  autoTable({
+    ...infoTableStyles,
     startY: y,
     head: [['', '공급자', '', '공급받는자']],
-    body: infoRows,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    body: [
+      ['사업자등록번호', data.supplier.bizNo, '사업자등록번호', data.buyer.bizNo],
+      ['상호(법인명)', data.supplier.name, '상호(법인명)', data.buyer.name],
+      ['성명(대표자)', data.supplier.ceo, '성명(대표자)', data.buyer.ceo],
+      ['사업장주소', data.supplier.address, '사업장주소', data.buyer.address],
+      ['업태', data.supplier.bizType ?? '', '업태', data.buyer.bizType ?? ''],
+      ['종목', data.supplier.bizItem ?? '', '종목', data.buyer.bizItem ?? ''],
+    ],
     columnStyles: {
-      0: { cellWidth: 28, fillColor: LIGHT_GRAY, fontStyle: 'bold', halign: 'center' },
+      0: { cellWidth: 28, ...labelColumnStyle },
       1: { cellWidth: 62 },
-      2: { cellWidth: 28, fillColor: LIGHT_GRAY, fontStyle: 'bold', halign: 'center' },
+      2: { cellWidth: 28, ...labelColumnStyle },
       3: { cellWidth: 62 },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 4
 
-  y = (doc as any).lastAutoTable.finalY + 4
-
-  // --- Total summary row ---
-  autoTable(doc, {
+  // --- 합계 ---
+  autoTable({
+    ...summaryTableStyles,
     startY: y,
     head: [['공급가액', '세액', '합계금액']],
-    body: [[fmt(data.totalSupply), fmt(data.totalTax), fmt(data.totalAmount)]],
-    theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 2.5, halign: 'right', font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+    body: [[fmtNumber(data.totalSupply), fmtNumber(data.totalTax), fmtNumber(data.totalAmount)]],
   })
+  y = getLastTableY(doc) + 4
 
-  y = (doc as any).lastAutoTable.finalY + 4
-
-  // --- Items table ---
-  const itemHead = [['월', '일', '품목', '규격', '수량', '단가', '공급가액', '세액']]
-  const itemBody = data.items.map((item) => [
-    item.month,
-    item.day,
-    item.itemName,
-    item.spec ?? '',
-    fmt(item.qty),
-    fmt(item.unitPrice),
-    fmt(item.supplyAmount),
-    fmt(item.taxAmount),
-  ])
-
-  autoTable(doc, {
+  // --- 품목 테이블 ---
+  autoTable({
+    ...itemTableStyles,
     startY: y,
-    head: itemHead,
-    body: itemBody,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    head: [['월', '일', '품목', '규격', '수량', '단가', '공급가액', '세액']],
+    body: data.items.map((item) => [
+      item.month,
+      item.day,
+      item.itemName,
+      item.spec ?? '',
+      fmtNumber(item.qty),
+      fmtNumber(item.unitPrice),
+      fmtNumber(item.supplyAmount),
+      fmtNumber(item.taxAmount),
+    ]),
     columnStyles: {
       0: { cellWidth: 14, halign: 'center' },
       1: { cellWidth: 14, halign: 'center' },
@@ -341,19 +291,17 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
       6: { cellWidth: 26, halign: 'right' },
       7: { cellWidth: 24, halign: 'right' },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 4
 
-  y = (doc as any).lastAutoTable.finalY + 4
-
-  // --- Totals footer row inside table ---
-  autoTable(doc, {
+  // --- 합계 행 ---
+  autoTable({
     startY: y,
-    body: [['합계', '', '', '', '', '', fmt(data.totalSupply), fmt(data.totalTax)]],
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
+    body: [['합계', '', '', '', '', '', fmtNumber(data.totalSupply), fmtNumber(data.totalTax)]],
+    styles: { fontSize: 8, cellPadding: 2 },
     columnStyles: {
-      0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', fillColor: LIGHT_GRAY },
+      0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', fillColor: PDF_COLORS.LIGHT_GRAY },
       1: { cellWidth: 14 },
       2: { cellWidth: 40 },
       3: { cellWidth: 22 },
@@ -364,16 +312,13 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
     },
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 10
 
-  y = (doc as any).lastAutoTable.finalY + 10
-
-  // --- Footer text ---
+  // --- 푸터 ---
   doc.setFontSize(11)
   doc.text('이 금액을 청구함', pageWidth / 2, y, { align: 'center' })
 
-  // --- Page numbers ---
   addPageNumbers(doc, fontName)
-
   doc.save(`세금계산서_${data.invoiceNo}.pdf`)
 }
 
@@ -382,81 +327,56 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
 // ---------------------------------------------------------------------------
 
 export async function generateTransactionStatementPDF(data: TransactionStatementPDFData) {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
-
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  const pageWidth = doc.internal.pageSize.getWidth()
-  const fontName = await loadKoreanFont(doc)
+  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
 
   let y = 15
 
-  // --- Title ---
+  // --- 제목 ---
   doc.setFontSize(20)
   doc.text('거 래 명 세 표', pageWidth / 2, y, { align: 'center' })
   y += 8
 
-  // --- Statement meta ---
+  // --- 문서 메타정보 ---
   doc.setFontSize(9)
   doc.text(`문서번호: ${data.statementNo}`, PAGE_MARGIN, y)
   doc.text(`작성일자: ${data.statementDate}`, pageWidth - PAGE_MARGIN, y, { align: 'right' })
   y += 6
 
-  // --- Supplier / Buyer info boxes ---
-  const infoRows = [
-    ['상호', data.supplier.name, '상호', data.buyer.name],
-    ['대표자', data.supplier.ceo ?? '', '대표자', data.buyer.ceo ?? ''],
-    ['사업자번호', data.supplier.bizNo ?? '', '사업자번호', data.buyer.bizNo ?? ''],
-    ['주소', data.supplier.address ?? '', '주소', data.buyer.address ?? ''],
-    ['전화', data.supplier.tel ?? '', '전화', data.buyer.tel ?? ''],
-  ]
-
-  autoTable(doc, {
+  // --- 공급자 / 공급받는자 정보 ---
+  autoTable({
+    ...infoTableStyles,
     startY: y,
     head: [['', '공급자', '', '공급받는자']],
-    body: infoRows,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    body: [
+      ['상호', data.supplier.name, '상호', data.buyer.name],
+      ['대표자', data.supplier.ceo ?? '', '대표자', data.buyer.ceo ?? ''],
+      ['사업자번호', data.supplier.bizNo ?? '', '사업자번호', data.buyer.bizNo ?? ''],
+      ['주소', data.supplier.address ?? '', '주소', data.buyer.address ?? ''],
+      ['전화', data.supplier.tel ?? '', '전화', data.buyer.tel ?? ''],
+    ],
     columnStyles: {
-      0: { cellWidth: 25, fillColor: LIGHT_GRAY, fontStyle: 'bold', halign: 'center' },
+      0: { cellWidth: 25, ...labelColumnStyle },
       1: { cellWidth: 65 },
-      2: { cellWidth: 25, fillColor: LIGHT_GRAY, fontStyle: 'bold', halign: 'center' },
+      2: { cellWidth: 25, ...labelColumnStyle },
       3: { cellWidth: 65 },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 6
 
-  y = (doc as any).lastAutoTable.finalY + 6
-
-  // --- Items table ---
-  const itemHead = [['No', '품명', '규격', '수량', '단가', '금액', '비고']]
-  const itemBody = data.items.map((item) => [
-    String(item.no),
-    item.itemName,
-    item.spec ?? '',
-    fmt(item.qty),
-    fmt(item.unitPrice),
-    fmt(item.amount),
-    item.remark ?? '',
-  ])
-
-  autoTable(doc, {
+  // --- 품목 테이블 ---
+  autoTable({
+    ...itemTableStyles,
     startY: y,
-    head: itemHead,
-    body: itemBody,
-    theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2, font: fontName },
-    headStyles: {
-      fillColor: HEADER_FILL,
-      textColor: HEADER_TEXT,
-      halign: 'center',
-      fontStyle: 'bold',
-    },
+    head: [['No', '품명', '규격', '수량', '단가', '금액', '비고']],
+    body: data.items.map((item) => [
+      String(item.no),
+      item.itemName,
+      item.spec ?? '',
+      fmtNumber(item.qty),
+      fmtNumber(item.unitPrice),
+      fmtNumber(item.amount),
+      item.remark ?? '',
+    ]),
     columnStyles: {
       0: { cellWidth: 12, halign: 'center' },
       1: { cellWidth: 45 },
@@ -466,20 +386,18 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
       5: { cellWidth: 28, halign: 'right' },
       6: { cellWidth: 27 },
     },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 2
 
-  y = (doc as any).lastAutoTable.finalY + 2
-
-  // --- Total amount row ---
-  autoTable(doc, {
+  // --- 합계 행 ---
+  autoTable({
     startY: y,
-    body: [['', '합 계', '', '', '', fmt(data.totalAmount), '']],
     theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 2.5, font: fontName },
+    body: [['', '합 계', '', '', '', fmtNumber(data.totalAmount), '']],
+    styles: { fontSize: 9, cellPadding: 2.5 },
     columnStyles: {
       0: { cellWidth: 12 },
-      1: { cellWidth: 45, halign: 'center', fontStyle: 'bold', fillColor: LIGHT_GRAY },
+      1: { cellWidth: 45, halign: 'center', fontStyle: 'bold', fillColor: PDF_COLORS.LIGHT_GRAY },
       2: { cellWidth: 25 },
       3: { cellWidth: 20 },
       4: { cellWidth: 25 },
@@ -488,33 +406,14 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
     },
     margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
   })
+  y = getLastTableY(doc) + 6
 
-  y = (doc as any).lastAutoTable.finalY + 6
-
-  // --- Description ---
+  // --- 비고 ---
   if (data.description) {
     doc.setFontSize(9)
     doc.text(`비고: ${data.description}`, PAGE_MARGIN, y)
   }
 
-  // --- Page numbers ---
   addPageNumbers(doc, fontName)
-
   doc.save(`거래명세표_${data.statementNo}.pdf`)
-}
-
-// ---------------------------------------------------------------------------
-// Shared: page numbers
-// ---------------------------------------------------------------------------
-
-function addPageNumbers(doc: InstanceType<typeof import('jspdf').default>, fontName?: string) {
-  const pageCount = doc.getNumberOfPages()
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i)
-    doc.setFontSize(8)
-    if (fontName && fontName !== 'helvetica') doc.setFont(fontName)
-    doc.text(`${i} / ${pageCount}`, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.getHeight() - 8, {
-      align: 'center',
-    })
-  }
 }
