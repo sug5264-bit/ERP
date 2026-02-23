@@ -123,7 +123,7 @@ export function ExcelImportDialog({
             <Button variant="outline" onClick={() => inputRef.current?.click()} disabled={importing}>
               <FileSpreadsheet className="mr-1 h-4 w-4" /> 파일 선택
             </Button>
-            <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile} />
+            <input ref={inputRef} type="file" accept=".xlsx" className="hidden" onChange={handleFile} />
             {file && (
               <span className="text-muted-foreground text-sm">
                 {file.name} ({parsedRows.length}건)
