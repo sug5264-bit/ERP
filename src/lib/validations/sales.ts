@@ -9,40 +9,82 @@ const lineDetailSchema = z.object({
 
 // ─── 견적 ──────────────────────────────────
 export const createQuotationSchema = z.object({
-  quotationDate: z.string().min(1, '견적일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  quotationDate: z
+    .string()
+    .min(1, '견적일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
-  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional().nullable().or(z.literal('')),
+  validUntil: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}/)
+    .optional()
+    .nullable()
+    .or(z.literal('')),
   description: z.string().max(1000).optional().nullable(),
   details: z.array(lineDetailSchema).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
 })
 
 // ─── 수주 ──────────────────────────────────
 export const createSalesOrderSchema = z.object({
-  orderDate: z.string().min(1, '수주일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  orderDate: z
+    .string()
+    .min(1, '수주일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
   quotationId: z.string().max(50).optional().nullable(),
-  deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}/).optional().nullable().or(z.literal('')),
+  deliveryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}/)
+    .optional()
+    .nullable()
+    .or(z.literal('')),
   salesChannel: z.enum(['ONLINE', 'OFFLINE']).optional().default('OFFLINE'),
   description: z.string().max(1000).optional().nullable(),
   vatIncluded: z.boolean().optional().default(true),
+  // e-commerce order fields
+  siteName: z.string().max(100).optional().nullable(),
+  ordererName: z.string().max(100).optional().nullable(),
+  recipientName: z.string().max(100).optional().nullable(),
+  ordererContact: z.string().max(50).optional().nullable(),
+  recipientContact: z.string().max(50).optional().nullable(),
+  recipientZipCode: z.string().max(20).optional().nullable(),
+  recipientAddress: z.string().max(500).optional().nullable(),
+  requirements: z.string().max(1000).optional().nullable(),
+  senderName: z.string().max(100).optional().nullable(),
+  senderPhone: z.string().max(50).optional().nullable(),
+  senderAddress: z.string().max(500).optional().nullable(),
+  shippingCost: z.number().min(0).max(999_999_999).optional().nullable(),
+  trackingNo: z.string().max(100).optional().nullable(),
+  specialNote: z.string().max(1000).optional().nullable(),
   details: z.array(lineDetailSchema).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
 })
 
 // ─── 납품 ──────────────────────────────────
 export const createDeliverySchema = z.object({
-  deliveryDate: z.string().min(1, '납품일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  deliveryDate: z
+    .string()
+    .min(1, '납품일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
   deliveryAddress: z.string().max(500).optional().nullable(),
-  details: z.array(z.object({
-    itemId: z.string().min(1).max(50),
-    quantity: z.number().min(0.01).max(999_999_999),
-    unitPrice: z.number().min(0).max(999_999_999_999),
-  })).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
+  details: z
+    .array(
+      z.object({
+        itemId: z.string().min(1).max(50),
+        quantity: z.number().min(0.01).max(999_999_999),
+        unitPrice: z.number().min(0).max(999_999_999_999),
+      })
+    )
+    .min(1, '최소 1개 이상의 품목이 필요합니다')
+    .max(100),
 })
 
 // ─── 반품 ──────────────────────────────────
 export const createSalesReturnSchema = z.object({
-  returnDate: z.string().min(1, '반품일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  returnDate: z
+    .string()
+    .min(1, '반품일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
   reason: z.enum(['DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER']).optional().default('OTHER'),
@@ -90,6 +132,9 @@ export const createQualityStandardSchema = z.object({
 export const createNettingSchema = z.object({
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
   amount: z.coerce.number().min(0.01, '금액은 0보다 커야 합니다').max(999_999_999_999),
-  nettingDate: z.string().min(1, '상계일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  nettingDate: z
+    .string()
+    .min(1, '상계일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   description: z.string().max(1000).optional().nullable(),
 })
