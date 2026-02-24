@@ -30,7 +30,7 @@ export const createSalesOrderSchema = z.object({
     .string()
     .min(1, '수주일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
-  partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
+  partnerId: z.string().max(50).optional().nullable(),
   quotationId: z.string().max(50).optional().nullable(),
   deliveryDate: z
     .string()
