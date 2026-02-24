@@ -58,6 +58,9 @@ interface Detail {
   itemId: string
   quantity: number
   unitPrice: number
+  carrier: string
+  trackingNo: string
+  description: string
 }
 
 interface TrackingRow {
@@ -84,7 +87,9 @@ export default function OrdersPage() {
   const [cancelTarget, setCancelTarget] = useState<{ id: string; orderNo: string } | null>(null)
   const [batchCancelConfirm, setBatchCancelConfirm] = useState<string[] | null>(null)
   const [vatIncluded, setVatIncluded] = useState(true)
-  const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
+  const [details, setDetails] = useState<Detail[]>([
+    { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
+  ])
   const [createPartnerSearch, setCreatePartnerSearch] = useState('')
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{
@@ -219,6 +224,9 @@ export default function OrdersPage() {
           itemId: d.itemId || d.item?.id,
           quantity: Number(d.quantity),
           unitPrice: Number(d.unitPrice),
+          carrier: '',
+          trackingNo: '',
+          description: '',
         }))
       )
     } catch {
@@ -517,7 +525,7 @@ export default function OrdersPage() {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       setOpen(false)
-      setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
+      setDetails([{ itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' }])
       setVatIncluded(true)
       toast.success('발주가 등록되었습니다.')
     },
@@ -577,10 +585,12 @@ export default function OrdersPage() {
       salesChannel: activeTab,
       vatIncluded,
       deliveryDate: form.get('deliveryDate') || undefined,
-      description: form.get('description') || undefined,
-      carrier: form.get('carrier') || undefined,
-      trackingNo: form.get('trackingNo') || undefined,
-      details: details.filter((d) => d.itemId),
+      description: details[0]?.description || undefined,
+      carrier: details[0]?.carrier || undefined,
+      trackingNo: details[0]?.trackingNo || undefined,
+      details: details
+        .filter((d) => d.itemId)
+        .map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
     })
   }
 
@@ -594,6 +604,83 @@ export default function OrdersPage() {
         { header: '운송장번호', key: 'trackingNo', example: '1234567890', width: 20 },
       ],
     })
+  }
+
+  const handleOrderTemplateDownload = () => {
+    const cols = [
+      { header: '발주일', key: 'orderDate', example: '2026-02-23', width: 14, required: true },
+      { header: '거래처', key: 'partnerName', example: '(주)거래처명', width: 16, required: true },
+      { header: '납기일', key: 'deliveryDate', example: '2026-03-01', width: 14 },
+      { header: '품목명', key: 'itemName', example: '품목명', width: 18, required: true },
+      { header: '수량', key: 'quantity', example: '10', width: 10, required: true },
+      { header: '단가', key: 'unitPrice', example: '50000', width: 12, required: true },
+      { header: '공급가액', key: 'supplyAmount', example: '500000', width: 14 },
+      { header: '세액', key: 'tax', example: '50000', width: 12 },
+      { header: '합계금액', key: 'totalAmount', example: '550000', width: 14 },
+      { header: '택배사', key: 'carrier', example: 'CJ대한통운', width: 14 },
+      { header: '운송장번호', key: 'trackingNo', example: '1234567890', width: 16 },
+      { header: '비고', key: 'description', example: '', width: 20 },
+    ]
+    downloadImportTemplate({ fileName: '발주_등록_템플릿', sheetName: '발주', columns: cols })
+  }
+
+  const orderImportFileRef = useRef<HTMLInputElement>(null)
+  const handleOrderImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const keyMap: Record<string, string> = {
+        발주일: 'orderDate',
+        거래처: 'partnerName',
+        납기일: 'deliveryDate',
+        품목명: 'itemName',
+        수량: 'quantity',
+        단가: 'unitPrice',
+        공급가액: 'supplyAmount',
+        세액: 'tax',
+        합계금액: 'totalAmount',
+        택배사: 'carrier',
+        운송장번호: 'trackingNo',
+        비고: 'description',
+      }
+      const rows = await readExcelFile(file, keyMap)
+      if (rows.length === 0) {
+        toast.error('데이터가 없습니다.')
+        return
+      }
+
+      let successCount = 0
+      let failCount = 0
+      for (const row of rows) {
+        const partner = partners.find((p: any) => p.partnerName === row.partnerName)
+        const item = items.find((it: any) => it.itemName === row.itemName || it.itemCode === row.itemName)
+        if (!partner || !item || !row.orderDate) {
+          failCount++
+          continue
+        }
+        try {
+          await api.post('/sales/orders', {
+            orderDate: row.orderDate,
+            partnerId: partner.id,
+            salesChannel: activeTab,
+            vatIncluded: true,
+            deliveryDate: row.deliveryDate || undefined,
+            description: row.description || undefined,
+            carrier: row.carrier || undefined,
+            trackingNo: row.trackingNo || undefined,
+            details: [{ itemId: item.id, quantity: Number(row.quantity) || 1, unitPrice: Number(row.unitPrice) || 0 }],
+          })
+          successCount++
+        } catch {
+          failCount++
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      toast.success(`${successCount}건 등록 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
+    } catch (err: any) {
+      toast.error(err.message || '엑셀 파일을 읽을 수 없습니다.')
+    }
+    if (orderImportFileRef.current) orderImportFileRef.current.value = ''
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -617,93 +704,71 @@ export default function OrdersPage() {
     trackingMutation.mutate({ trackings: trackingRows })
   }
 
-  // Create dialog (shared)
+  // Create dialog (shared) — 이미지 양식 기반 테이블 형태
   const createDialog = (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) setDetails([{ itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' }])
+      }}
+    >
       <DialogTrigger asChild>
         <Button>발주 등록</Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl lg:max-w-5xl">
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-6xl">
         <DialogHeader>
           <DialogTitle>발주 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-2">
-                <Label>
-                  발주일 <span className="text-destructive">*</span>
-                </Label>
-                <Input name="orderDate" type="date" required aria-required="true" />
-              </div>
-              <div className="space-y-2">
-                <Label>
-                  거래처 <span className="text-destructive">*</span>
-                </Label>
-                <Select name="partnerId" onValueChange={() => setCreatePartnerSearch('')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="거래처 검색/선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="p-2">
-                      <Input
-                        placeholder="거래처명 검색..."
-                        value={createPartnerSearch}
-                        onChange={(e) => setCreatePartnerSearch(e.target.value)}
-                        className="h-8 text-xs"
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    {partners
-                      .filter(
-                        (p: any) =>
-                          !createPartnerSearch ||
-                          p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())
-                      )
-                      .map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.partnerName}
-                        </SelectItem>
-                      ))}
-                    {partners.filter(
+          {/* 상단 공통 필드 */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                발주일 <span className="text-destructive">*</span>
+              </Label>
+              <Input name="orderDate" type="date" required className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">
+                거래처 <span className="text-destructive">*</span>
+              </Label>
+              <Select name="partnerId" onValueChange={() => setCreatePartnerSearch('')}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="거래처 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="p-2">
+                    <Input
+                      placeholder="거래처명 검색..."
+                      value={createPartnerSearch}
+                      onChange={(e) => setCreatePartnerSearch(e.target.value)}
+                      className="h-7 text-xs"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {partners
+                    .filter(
                       (p: any) =>
                         !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())
-                    ).length === 0 && (
-                      <div className="text-muted-foreground p-2 text-center text-xs">검색 결과가 없습니다</div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>납기일</Label>
-                <Input name="deliveryDate" type="date" />
-              </div>
+                    )
+                    .map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.partnerName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
-            {activeTab === 'ONLINE' && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>택배사</Label>
-                  <Input name="carrier" placeholder="CJ대한통운, 한진택배 등" />
-                </div>
-                <div className="space-y-2">
-                  <Label>운송장번호</Label>
-                  <Input name="trackingNo" placeholder="운송장번호 입력" />
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>비고</Label>
-              <Input name="description" />
+            <div className="space-y-1">
+              <Label className="text-xs">납기일</Label>
+              <Input name="deliveryDate" type="date" className="h-8 text-xs" />
             </div>
-            <div className="space-y-2">
-              <Label>부가세</Label>
-              <Select
-                name="vatIncluded"
-                value={vatIncluded ? 'true' : 'false'}
-                onValueChange={(v) => setVatIncluded(v === 'true')}
-              >
-                <SelectTrigger>
+            <div className="space-y-1">
+              <Label className="text-xs">부가세</Label>
+              <Select value={vatIncluded ? 'true' : 'false'} onValueChange={(v) => setVatIncluded(v === 'true')}>
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -712,91 +777,171 @@ export default function OrdersPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>품목</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDetails([...details, { itemId: '', quantity: 1, unitPrice: 0 }])}
-                >
-                  <Plus className="mr-1 h-3 w-3" /> 행 추가
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {details.map((d, idx) => {
-                  const supply = d.quantity * d.unitPrice
-                  const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
-                  const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
-                  return (
-                    <div key={idx} className="space-y-2 rounded-md border p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs font-medium">품목 #{idx + 1}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
-                          disabled={details.length <= 1}
-                          aria-label="삭제"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
-                        <SelectTrigger className="truncate text-xs">
-                          <SelectValue placeholder="품목 선택" />
-                        </SelectTrigger>
-                        <SelectContent className="max-w-[calc(100vw-4rem)]">
-                          {items.map((it: any) => (
-                            <SelectItem key={it.id} value={it.id}>
-                              <span className="truncate">
-                                {it.itemCode} - {it.itemName}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="grid min-w-0 grid-cols-4 gap-2">
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">수량</Label>
+          </div>
+
+          {/* 품목 테이블 - 이미지 양식 반영 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">품목 상세</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() =>
+                  setDetails([
+                    ...details,
+                    { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
+                  ])
+                }
+              >
+                <Plus className="mr-1 h-3 w-3" /> 행 추가
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[900px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
+                      품목명 <span className="text-destructive">*</span>
+                    </th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">공급가액</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">세액</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">합계금액</th>
+                    {activeTab === 'ONLINE' && (
+                      <>
+                        <th className="px-2 py-2 text-left font-medium whitespace-nowrap">택배사</th>
+                        <th className="px-2 py-2 text-left font-medium whitespace-nowrap">운송장번호</th>
+                      </>
+                    )}
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">비고</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {details.map((d, idx) => {
+                    const supply = d.quantity * d.unitPrice
+                    const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
+                    return (
+                      <tr key={idx} className="border-b last:border-b-0">
+                        <td className="px-1 py-1.5">
+                          <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                            <SelectTrigger className="h-7 min-w-[140px] text-xs">
+                              <SelectValue placeholder="품목 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items.map((it: any) => (
+                                <SelectItem key={it.id} value={it.id}>
+                                  {it.itemCode} - {it.itemName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-1 py-1.5">
                           <Input
                             type="number"
-                            className="text-xs"
+                            className="h-7 w-[70px] text-right text-xs"
                             value={d.quantity || ''}
                             onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)}
                           />
-                        </div>
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">단가</Label>
+                        </td>
+                        <td className="px-1 py-1.5">
                           <Input
                             type="number"
-                            className="text-xs"
+                            className="h-7 w-[90px] text-right text-xs"
                             value={d.unitPrice || ''}
                             onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
                           />
-                        </div>
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">공급가</Label>
-                          <div className="bg-muted/50 flex h-9 items-center justify-end rounded-md border px-2 font-mono text-xs">
-                            {formatCurrency(supply)}
-                          </div>
-                        </div>
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">{vatIncluded ? '합계(VAT포함)' : '합계'}</Label>
-                          <div className="bg-muted/50 flex h-9 items-center justify-end rounded-md border px-2 font-mono text-xs font-medium">
-                            {formatCurrency(supply + tax)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-mono whitespace-nowrap">{formatCurrency(supply)}</td>
+                        <td className="px-2 py-1.5 text-right font-mono whitespace-nowrap">{formatCurrency(tax)}</td>
+                        <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
+                          {formatCurrency(supply + tax)}
+                        </td>
+                        {activeTab === 'ONLINE' && (
+                          <>
+                            <td className="px-1 py-1.5">
+                              <Input
+                                className="h-7 w-[100px] text-xs"
+                                placeholder="택배사"
+                                value={d.carrier}
+                                onChange={(e) => updateDetail(idx, 'carrier', e.target.value)}
+                              />
+                            </td>
+                            <td className="px-1 py-1.5">
+                              <Input
+                                className="h-7 w-[110px] text-xs"
+                                placeholder="운송장번호"
+                                value={d.trackingNo}
+                                onChange={(e) => updateDetail(idx, 'trackingNo', e.target.value)}
+                              />
+                            </td>
+                          </>
+                        )}
+                        <td className="px-1 py-1.5">
+                          <Input
+                            className="h-7 w-[120px] text-xs"
+                            placeholder="비고"
+                            value={d.description}
+                            onChange={(e) => updateDetail(idx, 'description', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
+                            disabled={details.length <= 1}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/30 border-t">
+                    <td className="px-2 py-2 text-xs font-medium">합계</td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {details.reduce((s, d) => s + d.quantity, 0)}
+                    </td>
+                    <td></td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {formatCurrency(details.reduce((s, d) => s + d.quantity * d.unitPrice, 0))}
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {formatCurrency(
+                        details.reduce((s, d) => {
+                          const sup = d.quantity * d.unitPrice
+                          const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                          return s + (vatIncluded && tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0)
+                        }, 0)
+                      )}
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono text-xs font-medium">
+                      {formatCurrency(
+                        details.reduce((s, d) => {
+                          const sup = d.quantity * d.unitPrice
+                          const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                          const tx = vatIncluded && tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0
+                          return s + sup + tx
+                        }, 0)
+                      )}
+                    </td>
+                    <td colSpan={activeTab === 'ONLINE' ? 4 : 2}></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
+
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
             {createMutation.isPending ? '등록 중...' : '발주 등록'}
           </Button>
@@ -1060,6 +1205,19 @@ export default function OrdersPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               {createDialog}
+              <Button variant="outline" size="sm" onClick={handleOrderTemplateDownload}>
+                <FileDown className="mr-1 h-3.5 w-3.5" /> 발주 템플릿
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => orderImportFileRef.current?.click()}>
+                <Upload className="mr-1 h-3.5 w-3.5" /> 엑셀 업로드
+              </Button>
+              <input
+                ref={orderImportFileRef}
+                type="file"
+                accept=".xlsx"
+                className="hidden"
+                onChange={handleOrderImport}
+              />
               {trackingDialog}
             </div>
             <DataTable
@@ -1116,7 +1274,15 @@ export default function OrdersPage() {
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">{createDialog}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {createDialog}
+              <Button variant="outline" size="sm" onClick={handleOrderTemplateDownload}>
+                <FileDown className="mr-1 h-3.5 w-3.5" /> 발주 템플릿
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => orderImportFileRef.current?.click()}>
+                <Upload className="mr-1 h-3.5 w-3.5" /> 엑셀 업로드
+              </Button>
+            </div>
             <DataTable
               columns={columns}
               data={offlineOrders}
@@ -1265,7 +1431,12 @@ export default function OrdersPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => setEditDetails([...editDetails, { itemId: '', quantity: 1, unitPrice: 0 }])}
+                        onClick={() =>
+                          setEditDetails([
+                            ...editDetails,
+                            { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
+                          ])
+                        }
                       >
                         <Plus className="mr-1 h-3 w-3" /> 행 추가
                       </Button>
