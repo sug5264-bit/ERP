@@ -6,13 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { APP_NAME } from '@/lib/constants'
 
 function LoginForm() {
@@ -38,7 +32,11 @@ function LoginForm() {
       })
 
       if (result?.error) {
-        setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        if (result.error.includes('로그인 시도가 너무 많습니다')) {
+          setError(result.error)
+        } else {
+          setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        }
       } else {
         router.push(callbackUrl)
         router.refresh()
@@ -58,11 +56,7 @@ function LoginForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+          {error && <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">{error}</div>}
           <div className="space-y-2">
             <Label htmlFor="username">아이디</Label>
             <Input
@@ -98,7 +92,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-muted-foreground">로딩 중...</div>}>
+    <Suspense
+      fallback={<div className="text-muted-foreground flex min-h-screen items-center justify-center">로딩 중...</div>}
+    >
       <LoginForm />
     </Suspense>
   )
