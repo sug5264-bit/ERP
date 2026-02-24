@@ -64,14 +64,51 @@ export function handleApiError(error: unknown) {
     return errorResponse('입력값이 올바르지 않습니다.', 'VALIDATION_ERROR', 400, safeIssues)
   }
 
-  const isDev = process.env.NODE_ENV === 'development'
-  const message = isDev && error instanceof Error ? error.message : '서버 오류가 발생했습니다.'
+  // Prisma 에러 처리 (DB 내부 정보 노출 방지)
+  if (isPrismaError(error)) {
+    const prismaMessage = getPrismaErrorMessage(error)
+    logger.error('Prisma Error', {
+      code: (error as any).code,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return errorResponse(prismaMessage, 'DATABASE_ERROR', 400)
+  }
 
-  logger.error('API Error', {
-    error: error instanceof Error ? error.message : String(error),
-    stack: error instanceof Error ? error.stack : undefined,
-  })
-  return errorResponse(message, 'INTERNAL_ERROR', 500)
+  // 비즈니스 로직 에러는 메시지를 사용자에게 그대로 전달
+  if (error instanceof Error) {
+    logger.error('API Error', {
+      error: error.message,
+      stack: error.stack,
+    })
+    return errorResponse(error.message, 'INTERNAL_ERROR', 500)
+  }
+
+  logger.error('API Error', { error: String(error) })
+  return errorResponse('서버 오류가 발생했습니다.', 'INTERNAL_ERROR', 500)
+}
+
+function isPrismaError(error: unknown): boolean {
+  return (
+    error != null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    typeof (error as any).code === 'string' &&
+    (error as any).code.startsWith('P')
+  )
+}
+
+function getPrismaErrorMessage(error: unknown): string {
+  const code = (error as any).code as string
+  switch (code) {
+    case 'P2002':
+      return '이미 존재하는 데이터입니다. 중복된 값을 확인해주세요.'
+    case 'P2003':
+      return '참조하는 데이터가 존재하지 않습니다.'
+    case 'P2025':
+      return '해당 데이터를 찾을 수 없습니다.'
+    default:
+      return '데이터 처리 중 오류가 발생했습니다.'
+  }
 }
 
 export async function getSession() {

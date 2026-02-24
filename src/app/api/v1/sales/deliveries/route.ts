@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     if (!salesOrder.partnerId) return errorResponse('수주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
+    if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate))
     const movementNo = await generateDocumentNumber('SM', new Date(data.deliveryDate))
 
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
           movementType: 'OUTBOUND',
           relatedDocType: 'DELIVERY',
           relatedDocId: delivery.id,
-          createdBy: employee?.id || authResult.session.user.id,
+          createdBy: employee.id,
           details: {
             create: data.details.map((d) => ({
               itemId: d.itemId,
