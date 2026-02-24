@@ -25,8 +25,14 @@ export async function GET(request: NextRequest) {
     if (accountSubjectId) where.accountSubjectId = accountSubjectId
     if (startDate || endDate) {
       where.voucher = { voucherDate: {} }
-      if (startDate) where.voucher.voucherDate.gte = new Date(startDate)
-      if (endDate) where.voucher.voucherDate.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) where.voucher.voucherDate.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) where.voucher.voucherDate.lte = d
+      }
     }
 
     const [details, totalCount] = await Promise.all([

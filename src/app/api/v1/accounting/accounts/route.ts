@@ -8,6 +8,7 @@ import {
   isErrorResponse,
 } from '@/lib/api-helpers'
 import { createAccountSubjectSchema } from '@/lib/validations/accounting'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,13 +18,17 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl
     const accountType = searchParams.get('accountType')
     const parentId = searchParams.get('parentId')
-    const search = searchParams.get('search')
+    const rawSearch = searchParams.get('search')
 
     const where: any = {}
     if (accountType) where.accountType = accountType
     if (parentId) where.parentId = parentId
-    if (search) {
-      where.OR = [{ code: { contains: search } }, { nameKo: { contains: search, mode: 'insensitive' } }]
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
+      where.OR = [
+        { code: { contains: search, mode: 'insensitive' } },
+        { nameKo: { contains: search, mode: 'insensitive' } },
+      ]
     }
 
     const accounts = await prisma.accountSubject.findMany({

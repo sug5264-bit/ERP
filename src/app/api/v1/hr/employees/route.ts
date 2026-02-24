@@ -53,8 +53,14 @@ export async function GET(req: NextRequest) {
     const joinDateTo = searchParams.get('joinDateTo')
     if (joinDateFrom || joinDateTo) {
       where.joinDate = {}
-      if (joinDateFrom) where.joinDate.gte = new Date(joinDateFrom)
-      if (joinDateTo) where.joinDate.lte = new Date(joinDateTo)
+      if (joinDateFrom) {
+        const d = new Date(joinDateFrom)
+        if (!isNaN(d.getTime())) where.joinDate.gte = d
+      }
+      if (joinDateTo) {
+        const d = new Date(joinDateTo)
+        if (!isNaN(d.getTime())) where.joinDate.lte = d
+      }
     }
 
     const [employees, totalCount] = await Promise.all([

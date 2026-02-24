@@ -8,8 +8,9 @@ export async function GET(req: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
 
     const { searchParams } = new URL(req.url)
-    const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString())
-    const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1).toString())
+    const now = new Date()
+    const year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
+    const month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
 
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0)

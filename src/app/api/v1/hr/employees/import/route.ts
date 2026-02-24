@@ -43,6 +43,16 @@ export async function POST(req: NextRequest) {
     const PHONE_RE = /^[\d\s()+-]{0,20}$/
     const VALID_TYPES = new Set(['REGULAR', 'CONTRACT', 'DISPATCH', 'INTERN'])
 
+    // 기존 사번 일괄 조회 (N+1 쿼리 방지)
+    const allEmpNos = rows
+      .map((r: any) => (r.employeeNo ? String(r.employeeNo).trim() : ''))
+      .filter((n: string) => n.length > 0)
+    const existingEmployees = await prisma.employee.findMany({
+      where: { employeeNo: { in: allEmpNos } },
+      select: { employeeNo: true },
+    })
+    const existingEmpNoSet = new Set(existingEmployees.map((e) => e.employeeNo))
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       const rowNum = i + 2
@@ -88,8 +98,7 @@ export async function POST(req: NextRequest) {
           throw new Error('유효하지 않은 생년월일입니다.')
         }
 
-        const existing = await prisma.employee.findUnique({ where: { employeeNo: empNo } })
-        if (existing) {
+        if (existingEmpNoSet.has(empNo)) {
           throw new Error(`사번 '${empNo}'가 이미 존재합니다.`)
         }
 

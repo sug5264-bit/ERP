@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
-    const year = parseInt(sp.get('year') || String(new Date().getFullYear()))
-    const month = sp.get('month') ? parseInt(sp.get('month')!) : null
+    const year = parseInt(sp.get('year') || String(new Date().getFullYear())) || new Date().getFullYear()
+    const month = sp.get('month') ? parseInt(sp.get('month')!) || null : null
 
     const startDate = month ? new Date(year, month - 1, 1) : new Date(year, 0, 1)
     const endDate = month ? new Date(year, month, 1) : new Date(year + 1, 0, 1)

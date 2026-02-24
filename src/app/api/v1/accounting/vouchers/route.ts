@@ -31,8 +31,14 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status
     if (startDate || endDate) {
       where.voucherDate = {}
-      if (startDate) where.voucherDate.gte = new Date(startDate)
-      if (endDate) where.voucherDate.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) where.voucherDate.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) where.voucherDate.lte = d
+      }
     }
     if (search) {
       const sanitized = sanitizeSearchQuery(search)
