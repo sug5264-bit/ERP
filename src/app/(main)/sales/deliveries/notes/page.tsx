@@ -12,7 +12,6 @@ import { toast } from 'sonner'
 import {
   Download,
   Trash2,
-  Upload,
   Paperclip,
   Search,
   FileImage,
@@ -61,31 +60,31 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
 }
 
-export default function OrderNotesPage() {
+export default function DeliveryNotesPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('all')
-  const [uploadOrderId, setUploadOrderId] = useState<string>('')
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('all')
+  const [uploadDeliveryId, setUploadDeliveryId] = useState<string>('')
   const [memo, setMemo] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
 
-  const { data: ordersData } = useQuery({
-    queryKey: ['sales-orders-all'],
+  const { data: deliveriesData } = useQuery({
+    queryKey: ['sales-deliveries-all'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/sales/orders?pageSize=9999')
+      const res = await fetch('/api/v1/sales/deliveries?pageSize=9999')
       return res.json()
     },
   })
-  const orders = ordersData?.data?.data || ordersData?.data || []
+  const deliveries = deliveriesData?.data?.data || deliveriesData?.data || []
 
   const { data: attachmentsData } = useQuery({
-    queryKey: ['attachments', 'SalesOrder', selectedOrderId],
+    queryKey: ['attachments', 'Delivery', selectedDeliveryId],
     queryFn: async () => {
       const url =
-        selectedOrderId && selectedOrderId !== 'all'
-          ? `/api/v1/attachments?relatedTable=SalesOrder&relatedId=${selectedOrderId}`
-          : `/api/v1/attachments?relatedTable=SalesOrder`
+        selectedDeliveryId && selectedDeliveryId !== 'all'
+          ? `/api/v1/attachments?relatedTable=Delivery&relatedId=${selectedDeliveryId}`
+          : `/api/v1/attachments?relatedTable=Delivery`
       const res = await fetch(url)
       return res.json()
     },
@@ -95,8 +94,8 @@ export default function OrderNotesPage() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
-    if (!uploadOrderId) {
-      toast.error('발주를 먼저 선택해 주세요.')
+    if (!uploadDeliveryId) {
+      toast.error('납품을 먼저 선택해 주세요.')
       return
     }
     setUploading(true)
@@ -110,8 +109,8 @@ export default function OrderNotesPage() {
       }
       const formData = new FormData()
       formData.append('file', file)
-      formData.append('relatedTable', 'SalesOrder')
-      formData.append('relatedId', uploadOrderId)
+      formData.append('relatedTable', 'Delivery')
+      formData.append('relatedId', uploadDeliveryId)
       try {
         const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
         if (!res.ok) throw new Error()
@@ -120,7 +119,7 @@ export default function OrderNotesPage() {
         failCount++
       }
     }
-    queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrder'] })
+    queryClient.invalidateQueries({ queryKey: ['attachments', 'Delivery'] })
     if (failCount > 0) {
       toast.error(`${successCount}건 업로드, ${failCount}건 실패`)
     } else {
@@ -131,15 +130,15 @@ export default function OrderNotesPage() {
   }
 
   const handleSaveMemo = async () => {
-    if (!memo.trim() || !uploadOrderId) {
-      toast.error('발주 선택 및 메모 내용을 입력해주세요.')
+    if (!memo.trim() || !uploadDeliveryId) {
+      toast.error('납품 선택 및 메모 내용을 입력해주세요.')
       return
     }
     try {
       const res = await fetch('/api/v1/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: memo.trim(), relatedTable: 'SalesOrder', relatedId: uploadOrderId }),
+        body: JSON.stringify({ content: memo.trim(), relatedTable: 'Delivery', relatedId: uploadDeliveryId }),
       })
       if (!res.ok) throw new Error()
       toast.success('특이사항 메모가 저장되었습니다.')
@@ -152,7 +151,7 @@ export default function OrderNotesPage() {
   const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/v1/attachments/${id}`, { method: 'DELETE' })
-      queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrder'] })
+      queryClient.invalidateQueries({ queryKey: ['attachments', 'Delivery'] })
       toast.success('파일이 삭제되었습니다.')
     } catch {
       toast.error('파일 삭제에 실패했습니다.')
@@ -160,26 +159,27 @@ export default function OrderNotesPage() {
     setDeleteTarget(null)
   }
 
-  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id.slice(-6)]))
+  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id.slice(-6)]))
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader title="특이사항" description="발주 관련 파일 첨부 및 특이사항 관리 (PDF, Excel, 이미지 등)" />
+      <PageHeader title="특이사항" description="납품 관련 파일 첨부 및 특이사항 관리 (PDF, Excel, 이미지 등)" />
 
       {/* 업로드 영역 */}
       <div className="space-y-3 rounded-lg border p-4">
         <h3 className="text-sm font-medium">파일 업로드 / 메모 추가</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-1">
-            <label className="text-muted-foreground text-xs">발주 선택</label>
-            <Select value={uploadOrderId} onValueChange={setUploadOrderId}>
+            <label className="text-muted-foreground text-xs">납품 선택</label>
+            <Select value={uploadDeliveryId} onValueChange={setUploadDeliveryId}>
               <SelectTrigger>
-                <SelectValue placeholder="발주 선택" />
+                <SelectValue placeholder="납품 선택" />
               </SelectTrigger>
               <SelectContent>
-                {orders.map((o: any) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
+                {deliveries.map((d: any) => (
+                  <SelectItem key={d.id} value={d.id}>
+                    {d.deliveryNo || d.id.slice(-6)} -{' '}
+                    {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -212,7 +212,7 @@ export default function OrderNotesPage() {
               rows={2}
             />
           </div>
-          <Button onClick={handleSaveMemo} disabled={!memo.trim() || !uploadOrderId} size="sm">
+          <Button onClick={handleSaveMemo} disabled={!memo.trim() || !uploadDeliveryId} size="sm">
             저장
           </Button>
         </div>
@@ -221,15 +221,15 @@ export default function OrderNotesPage() {
       {/* 필터 */}
       <div className="flex items-center gap-2">
         <Search className="text-muted-foreground h-4 w-4" />
-        <Select value={selectedOrderId} onValueChange={setSelectedOrderId}>
+        <Select value={selectedDeliveryId} onValueChange={setSelectedDeliveryId}>
           <SelectTrigger className="w-[260px]">
-            <SelectValue placeholder="전체 발주" />
+            <SelectValue placeholder="전체 납품" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체 발주</SelectItem>
-            {orders.map((o: any) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
+            <SelectItem value="all">전체 납품</SelectItem>
+            {deliveries.map((d: any) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.deliveryNo || d.id.slice(-6)} - {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
               </SelectItem>
             ))}
           </SelectContent>
@@ -264,7 +264,7 @@ export default function OrderNotesPage() {
                   <div className="text-muted-foreground flex items-center gap-2 text-xs">
                     <span>{formatFileSize(att.fileSize)}</span>
                     <span>·</span>
-                    <span>발주 {orderMap.get(att.relatedId) || att.relatedId?.slice(-6)}</span>
+                    <span>납품 {deliveryMap.get(att.relatedId) || att.relatedId?.slice(-6)}</span>
                     <span>·</span>
                     <span>{formatDate(att.createdAt)}</span>
                   </div>

@@ -6,7 +6,7 @@ import { join } from 'path'
 import { randomUUID } from 'crypto'
 
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 export async function GET(request: NextRequest) {
   try {
