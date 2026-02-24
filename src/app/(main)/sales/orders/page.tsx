@@ -68,6 +68,7 @@ interface OrderRow {
   barcode: string
   orderNumber: string
   siteName: string
+  itemId: string
   productName: string
   quantity: number
   orderer: string
@@ -90,6 +91,7 @@ const emptyOrderRow = (company?: any): OrderRow => ({
   barcode: '',
   orderNumber: '',
   siteName: '',
+  itemId: '',
   productName: '',
   quantity: 1,
   orderer: '',
@@ -135,6 +137,7 @@ export default function OrdersPage() {
     { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
   ])
   const [orderRows, setOrderRows] = useState<OrderRow[]>([])
+  const [onlinePartnerId, setOnlinePartnerId] = useState<string>('')
   const [createPartnerSearch, setCreatePartnerSearch] = useState('')
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{
@@ -814,29 +817,30 @@ export default function OrdersPage() {
       toast.error('등록할 데이터가 없습니다.')
       return
     }
+    if (!onlinePartnerId) {
+      toast.error('거래처를 선택해주세요.')
+      return
+    }
+    const missingItems = orderRows.filter((r) => !r.itemId)
+    if (missingItems.length > 0) {
+      toast.error('모든 행에 품목을 선택해주세요.')
+      return
+    }
     const processRows = async () => {
       let successCount = 0
       let failCount = 0
+      const failReasons: string[] = []
       for (const row of orderRows) {
-        // 품목 매칭: 바코드 → 품목명 → 품목코드
-        const item = items.find(
-          (it: any) =>
-            (row.barcode && it.barcode === String(row.barcode)) ||
-            it.itemName === row.productName ||
-            it.itemCode === row.productName
-        )
-        // 거래처 매칭: 사이트명 또는 주문자명
-        const partner = partners.find(
-          (p: any) => (row.siteName && p.partnerName === row.siteName) || (row.orderer && p.partnerName === row.orderer)
-        )
-        if (!item || !partner) {
+        const item = items.find((it: any) => it.id === row.itemId)
+        if (!item) {
           failCount++
+          failReasons.push(`품목 ID "${row.itemId}" 미매칭`)
           continue
         }
         try {
           await api.post('/sales/orders', {
             orderDate: row.orderDate || new Date().toISOString().split('T')[0],
-            partnerId: partner.id,
+            partnerId: onlinePartnerId,
             salesChannel: activeTab,
             vatIncluded: true,
             siteName: row.siteName || undefined,
@@ -865,8 +869,11 @@ export default function OrdersPage() {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       setOpen(false)
       setOrderRows([])
+      setOnlinePartnerId('')
       if (failCount > 0) {
-        toast.error(`${successCount}건 등록, ${failCount}건 실패 (품목/거래처 미매칭)`)
+        toast.error(
+          `${successCount}건 등록, ${failCount}건 실패${failReasons.length > 0 ? ': ' + failReasons.slice(0, 3).join(', ') : ''}`
+        )
       } else {
         toast.success(`${successCount}건 등록 완료`)
       }
@@ -910,7 +917,10 @@ export default function OrdersPage() {
       open={open}
       onOpenChange={(v) => {
         setOpen(v)
-        if (!v) setOrderRows([])
+        if (!v) {
+          setOrderRows([])
+          setOnlinePartnerId('')
+        }
         if (v && orderRows.length === 0) setOrderRows([emptyOrderRow(getDefaultCompany())])
       }}
     >
@@ -922,10 +932,26 @@ export default function OrdersPage() {
           <DialogTitle>발주 등록 (온라인)</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-xs">
-              이미지 양식 기준 19열 — 노란색 영역(보내는사람~특기사항)은 업체정보 자동입력
-            </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="space-y-1">
+              <label className="text-muted-foreground text-xs">
+                거래처 <span className="text-destructive">*</span>
+              </label>
+              <Select value={onlinePartnerId} onValueChange={setOnlinePartnerId}>
+                <SelectTrigger className="h-8 w-[240px] text-xs">
+                  <SelectValue placeholder="거래처 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {partners.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.partnerName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1" />
+            <p className="text-muted-foreground text-xs">노란색 영역(보내는사람~특기사항)은 업체정보 자동입력</p>
             <Button
               type="button"
               variant="outline"
@@ -960,18 +986,43 @@ export default function OrdersPage() {
                         key={col.key}
                         className={`px-0.5 py-1 ${col.highlight ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''}`}
                       >
-                        <Input
-                          type={col.type || 'text'}
-                          className={`h-7 ${col.width} text-xs`}
-                          value={(row as any)[col.key] || ''}
-                          onChange={(e) =>
-                            updateOrderRow(
-                              idx,
-                              col.key as keyof OrderRow,
-                              col.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
-                            )
-                          }
-                        />
+                        {col.key === 'productName' ? (
+                          <Select
+                            value={row.itemId || ''}
+                            onValueChange={(v) => {
+                              const selectedItem = items.find((it: any) => it.id === v)
+                              updateOrderRow(idx, 'itemId', v)
+                              updateOrderRow(idx, 'productName', selectedItem?.itemName || '')
+                              if (selectedItem?.barcode && !row.barcode) {
+                                updateOrderRow(idx, 'barcode', selectedItem.barcode)
+                              }
+                            }}
+                          >
+                            <SelectTrigger className={`h-7 ${col.width} text-xs`}>
+                              <SelectValue placeholder="품목 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items.map((it: any) => (
+                                <SelectItem key={it.id} value={it.id}>
+                                  {it.itemCode} - {it.itemName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            type={col.type || 'text'}
+                            className={`h-7 ${col.width} text-xs`}
+                            value={(row as any)[col.key] || ''}
+                            onChange={(e) =>
+                              updateOrderRow(
+                                idx,
+                                col.key as keyof OrderRow,
+                                col.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
+                              )
+                            }
+                          />
+                        )}
                       </td>
                     ))}
                     <td className="px-0.5 py-1">
@@ -1007,7 +1058,11 @@ export default function OrdersPage() {
             </table>
           </div>
 
-          <Button className="w-full" onClick={handleCreateOrder} disabled={createMutation.isPending}>
+          <Button
+            className="w-full"
+            onClick={handleCreateOrder}
+            disabled={createMutation.isPending || !onlinePartnerId}
+          >
             {createMutation.isPending ? '등록 중...' : `발주 등록 (${orderRows.length}건)`}
           </Button>
         </div>
