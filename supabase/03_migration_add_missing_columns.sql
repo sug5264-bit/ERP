@@ -1,8 +1,10 @@
 -- ============================================================
 -- Migration: Add missing columns, enums, and tables
--- Description: Prisma 스키마와 실제 DB 간의 불일치 해소
--- 이 파일은 01_schema.sql 이후에 실행 (idempotent - 재실행 안전)
--- 01_schema.sql에 이미 포함된 내용은 IF NOT EXISTS로 건너뜀
+-- Description: 기존 DB에서 업그레이드 시 누락 항목 보완
+-- 참고: 01_schema.sql에 이미 모든 테이블/ENUM이 포함되어 있으므로
+--       새로 셋업하는 경우에는 이 파일 실행이 필요 없습니다.
+--       기존 DB를 업그레이드하는 경우에만 실행하세요.
+-- 모든 명령이 idempotent하여 재실행해도 안전합니다.
 -- ============================================================
 
 -- 0. Create companies table if not exists

@@ -46,24 +46,23 @@ async function applySeedSQL() {
   }
 
   // SQL을 세미콜론 기준으로 분리하여 실행
-  // 주석 제거 후 각 문장 실행
+  // 각 블록에서 주석 줄을 제거한 후 실제 SQL만 추출
   const statements = sql
     .split(/;\s*\n/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith('--'))
+    .map((s) => {
+      // 각 블록에서 주석 줄을 제거하고 실제 SQL만 남기기
+      return s
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
+        .trim()
+    })
+    .filter((s) => s.length > 0)
 
   let applied = 0
   for (const stmt of statements) {
-    // 순수 주석만 있는 블록 스킵
-    const cleaned = stmt
-      .split('\n')
-      .filter((line) => !line.trim().startsWith('--'))
-      .join('\n')
-      .trim()
-    if (!cleaned) continue
-
     try {
-      await prisma.$executeRawUnsafe(cleaned + ';')
+      await prisma.$executeRawUnsafe(stmt + ';')
       applied++
     } catch (err) {
       // ON CONFLICT DO NOTHING이므로 중복 에러는 무시
