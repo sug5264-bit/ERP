@@ -81,12 +81,9 @@ export default function ItemsPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await api.post('/inventory/items', body)
-      await queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
-      return result
-    },
+    mutationFn: (body: any) => api.post('/inventory/items', body),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
       setOpen(false)
       toast.success('품목이 등록되었습니다.')
     },
@@ -94,12 +91,9 @@ export default function ItemsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...body }: any) => {
-      const result = await api.put(`/inventory/items/${id}`, body)
-      await queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
-      return result
-    },
+    mutationFn: ({ id, ...body }: any) => api.put(`/inventory/items/${id}`, body),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
       setEditTarget(null)
       toast.success('품목 정보가 수정되었습니다.')
     },
@@ -107,12 +101,8 @@ export default function ItemsPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const result = await api.delete(`/inventory/items/${id}`)
-      await queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
-      return result
-    },
-    onSuccess: () => { toast.success('품목이 삭제되었습니다.') },
+    mutationFn: (id: string) => api.delete(`/inventory/items/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['inventory-items'] }); toast.success('품목이 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

@@ -150,12 +150,9 @@ export default function EmployeesPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await api.post('/hr/employees', body)
-      await queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
-      return result
-    },
+    mutationFn: (body: any) => api.post('/hr/employees', body),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
       setOpen(false)
       toast.success('사원이 등록되었습니다.')
     },
@@ -163,12 +160,9 @@ export default function EmployeesPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...body }: any) => {
-      const result = await api.put(`/hr/employees/${id}`, body)
-      await queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
-      return result
-    },
+    mutationFn: ({ id, ...body }: any) => api.put(`/hr/employees/${id}`, body),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
       setEditTarget(null)
       toast.success('사원 정보가 수정되었습니다.')
     },
@@ -176,12 +170,8 @@ export default function EmployeesPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const result = await api.delete(`/hr/employees/${id}`)
-      await queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
-      return result
-    },
-    onSuccess: () => { toast.success('사원이 삭제되었습니다.') },
+    mutationFn: (id: string) => api.delete(`/hr/employees/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr-employees'] }); toast.success('사원이 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

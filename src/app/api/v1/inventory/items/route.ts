@@ -48,9 +48,7 @@ export async function GET(request: NextRequest) {
       prisma.item.count({ where }),
     ])
 
-    return successResponse(items, buildMeta(page, pageSize, totalCount), {
-      cache: 's-maxage=60, stale-while-revalidate=120',
-    })
+    return successResponse(items, buildMeta(page, pageSize, totalCount))
   } catch (error) {
     return handleApiError(error)
   }

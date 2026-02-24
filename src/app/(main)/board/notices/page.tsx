@@ -40,22 +40,14 @@ export default function NoticesPage() {
   const noticeBoard = (boardsData?.data || []).find((b: any) => b.boardCode === 'NOTICE')
 
   const createMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await api.post('/board/posts', body)
-      await queryClient.invalidateQueries({ queryKey: ['board-notices'] })
-      return result
-    },
-    onSuccess: () => { setOpen(false); setIsPinned(false); toast.success('공지사항이 등록되었습니다.') },
+    mutationFn: (body: any) => api.post('/board/posts', body),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-notices'] }); setOpen(false); setIsPinned(false); toast.success('공지사항이 등록되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const result = await api.delete(`/board/posts/${id}`)
-      await queryClient.invalidateQueries({ queryKey: ['board-notices'] })
-      return result
-    },
-    onSuccess: () => { toast.success('공지사항이 삭제되었습니다.') },
+    mutationFn: (id: string) => api.delete(`/board/posts/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-notices'] }); toast.success('공지사항이 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

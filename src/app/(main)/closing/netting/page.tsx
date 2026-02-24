@@ -79,12 +79,9 @@ export default function NettingPage() {
   const partners = (partnersData?.data || [])
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const result = await api.post('/closing/netting', data)
-      await queryClient.invalidateQueries({ queryKey: ['closing-netting'] })
-      return result
-    },
+    mutationFn: (data: any) => api.post('/closing/netting', data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['closing-netting'] })
       setCreateOpen(false)
       setFormPartnerId(''); setFormAmount(''); setFormDescription('')
       setFormDate(new Date().toISOString().slice(0, 10))

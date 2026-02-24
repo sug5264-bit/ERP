@@ -147,12 +147,9 @@ export default function RolesPage() {
   }, [permissions])
 
   const createMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const result = await api.post('/admin/roles', data)
-      await queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
-      return result
-    },
+    mutationFn: (data: any) => api.post('/admin/roles', data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
       setCreateOpen(false)
       resetForm()
       toast.success('역할이 생성되었습니다.')
@@ -161,12 +158,9 @@ export default function RolesPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const result = await api.put(`/admin/roles/${id}`, data)
-      await queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
-      return result
-    },
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/admin/roles/${id}`, data),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
       setEditOpen(false)
       setSelectedRole(null)
       resetForm()
@@ -176,12 +170,9 @@ export default function RolesPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const result = await api.delete(`/admin/roles/${id}`)
-      await queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
-      return result
-    },
+    mutationFn: (id: string) => api.delete(`/admin/roles/${id}`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
       setDeleteOpen(false)
       setSelectedRole(null)
       toast.success('역할이 삭제되었습니다.')

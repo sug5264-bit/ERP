@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       orderBy: { code: 'asc' },
     })
 
-    return successResponse(accounts, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
+    return successResponse(accounts)
   } catch (error) {
     return handleApiError(error)
   }
