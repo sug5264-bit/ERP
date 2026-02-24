@@ -621,6 +621,22 @@ export default function OrdersPage() {
     setDetails(d)
   }
 
+  const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = new FormData(e.currentTarget)
+    createMutation.mutate({
+      orderDate: form.get('orderDate'),
+      partnerId: form.get('partnerId'),
+      salesChannel: activeTab,
+      vatIncluded,
+      deliveryDate: form.get('deliveryDate') || undefined,
+      description: details[0]?.description || undefined,
+      details: details
+        .filter((d) => d.itemId)
+        .map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
+    })
+  }
+
   const handleTemplateDownload = () => {
     downloadImportTemplate({
       fileName: '운송장_업로드_템플릿',
@@ -888,8 +904,8 @@ export default function OrdersPage() {
     { key: 'specialNote', label: '특기사항', width: 'w-[120px]', highlight: true },
   ]
 
-  // Create dialog (shared) — 이미지 양식 기반 19열 테이블 형태
-  const createDialog = (
+  // ── 온라인: 19열 e-커머스 양식 ──
+  const onlineCreateDialog = (
     <Dialog
       open={open}
       onOpenChange={(v) => {
@@ -903,7 +919,7 @@ export default function OrdersPage() {
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-[98vw] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>발주 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle>
+          <DialogTitle>발주 등록 (온라인)</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -995,6 +1011,226 @@ export default function OrdersPage() {
             {createMutation.isPending ? '등록 중...' : `발주 등록 (${orderRows.length}건)`}
           </Button>
         </div>
+      </DialogContent>
+    </Dialog>
+  )
+
+  // ── 오프라인: 기존 양식 (거래처/품목 드롭다운, 수량/단가/공급가액/세액/합계) ──
+  const offlineCreateDialog = (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) setDetails([{ itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' }])
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button>발주 등록</Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>발주 등록 (오프라인)</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleCreate} className="space-y-4">
+          {/* 상단 공통 필드 */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                발주일 <span className="text-destructive">*</span>
+              </Label>
+              <Input name="orderDate" type="date" required className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">
+                거래처 <span className="text-destructive">*</span>
+              </Label>
+              <Select name="partnerId" onValueChange={() => setCreatePartnerSearch('')}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="거래처 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="p-2">
+                    <Input
+                      placeholder="거래처명 검색..."
+                      value={createPartnerSearch}
+                      onChange={(e) => setCreatePartnerSearch(e.target.value)}
+                      className="h-7 text-xs"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {partners
+                    .filter(
+                      (p: any) =>
+                        !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())
+                    )
+                    .map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.partnerName}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">납기일</Label>
+              <Input name="deliveryDate" type="date" className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">부가세</Label>
+              <Select value={vatIncluded ? 'true' : 'false'} onValueChange={(v) => setVatIncluded(v === 'true')}>
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">부가세 포함</SelectItem>
+                  <SelectItem value="false">부가세 미포함</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* 품목 테이블 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">품목 상세</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() =>
+                  setDetails([
+                    ...details,
+                    { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
+                  ])
+                }
+              >
+                <Plus className="mr-1 h-3 w-3" /> 행 추가
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[700px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
+                      품목명 <span className="text-destructive">*</span>
+                    </th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">공급가액</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">세액</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">합계금액</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">비고</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {details.map((d, idx) => {
+                    const supply = d.quantity * d.unitPrice
+                    const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
+                    return (
+                      <tr key={idx} className="border-b last:border-b-0">
+                        <td className="px-1 py-1.5">
+                          <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                            <SelectTrigger className="h-7 min-w-[140px] text-xs">
+                              <SelectValue placeholder="품목 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items.map((it: any) => (
+                                <SelectItem key={it.id} value={it.id}>
+                                  {it.itemCode} - {it.itemName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            type="number"
+                            className="h-7 w-[70px] text-right text-xs"
+                            value={d.quantity || ''}
+                            onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            type="number"
+                            className="h-7 w-[90px] text-right text-xs"
+                            value={d.unitPrice || ''}
+                            onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-mono whitespace-nowrap">{formatCurrency(supply)}</td>
+                        <td className="px-2 py-1.5 text-right font-mono whitespace-nowrap">{formatCurrency(tax)}</td>
+                        <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
+                          {formatCurrency(supply + tax)}
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            className="h-7 w-[120px] text-xs"
+                            placeholder="비고"
+                            value={d.description}
+                            onChange={(e) => updateDetail(idx, 'description', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
+                            disabled={details.length <= 1}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/30 border-t">
+                    <td className="px-2 py-2 text-xs font-medium">합계</td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {details.reduce((s, d) => s + d.quantity, 0)}
+                    </td>
+                    <td></td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {formatCurrency(details.reduce((s, d) => s + d.quantity * d.unitPrice, 0))}
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {formatCurrency(
+                        details.reduce((s, d) => {
+                          const sup = d.quantity * d.unitPrice
+                          const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                          return s + (vatIncluded && tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0)
+                        }, 0)
+                      )}
+                    </td>
+                    <td className="px-2 py-2 text-right font-mono text-xs font-medium">
+                      {formatCurrency(
+                        details.reduce((s, d) => {
+                          const sup = d.quantity * d.unitPrice
+                          const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                          const tx = vatIncluded && tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0
+                          return s + sup + tx
+                        }, 0)
+                      )}
+                    </td>
+                    <td colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+            {createMutation.isPending ? '등록 중...' : '발주 등록'}
+          </Button>
+        </form>
       </DialogContent>
     </Dialog>
   )
@@ -1253,7 +1489,7 @@ export default function OrdersPage() {
         <TabsContent value="ONLINE">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              {createDialog}
+              {onlineCreateDialog}
               <Button variant="outline" size="sm" onClick={handleOrderTemplateDownload}>
                 <FileDown className="mr-1 h-3.5 w-3.5" /> 발주 템플릿
               </Button>
@@ -1323,15 +1559,7 @@ export default function OrdersPage() {
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {createDialog}
-              <Button variant="outline" size="sm" onClick={handleOrderTemplateDownload}>
-                <FileDown className="mr-1 h-3.5 w-3.5" /> 발주 템플릿
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => orderImportFileRef.current?.click()}>
-                <Upload className="mr-1 h-3.5 w-3.5" /> 엑셀 업로드
-              </Button>
-            </div>
+            <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
             <DataTable
               columns={columns}
               data={offlineOrders}

@@ -397,8 +397,8 @@ export default function DeliveriesPage() {
     return companies.find((c: any) => c.isDefault) || companies[0] || {}
   })()
 
-  // 납품 등록 다이얼로그 — 택배 양식 기반 테이블
-  const createDialog = (
+  // ── 온라인: 택배 양식 (보내는분/받는분 + 내품 테이블) ──
+  const onlineCreateDialog = (
     <Dialog
       open={open}
       onOpenChange={(v) => {
@@ -411,7 +411,7 @@ export default function DeliveriesPage() {
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-6xl">
         <DialogHeader>
-          <DialogTitle>납품 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle>
+          <DialogTitle>납품 등록 (온라인)</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           {/* 기본 정보 */}
@@ -605,6 +605,159 @@ export default function DeliveriesPage() {
     </Dialog>
   )
 
+  // ── 오프라인: 기존 양식 (납품일/발주선택/납품주소 + 품목/수량/단가/금액 테이블) ──
+  const offlineCreateDialog = (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) setDetails([emptyDetail()])
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button>납품 등록</Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>납품 등록 (오프라인)</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                납품일 <span className="text-destructive">*</span>
+              </Label>
+              <Input name="deliveryDate" type="date" required className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">
+                발주 <span className="text-destructive">*</span>
+              </Label>
+              <Select name="salesOrderId">
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="발주 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.map((o: any) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.orderNo} - {o.partner?.partnerName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">납품주소</Label>
+              <Input name="deliveryAddress" className="h-8 text-xs" placeholder="납품주소" />
+            </div>
+          </div>
+
+          {/* 품목 테이블 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">품목 상세</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setDetails([...details, emptyDetail()])}
+              >
+                <Plus className="mr-1 h-3 w-3" /> 행 추가
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[500px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
+                      품목명 <span className="text-destructive">*</span>
+                    </th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">금액</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {details.map((d, idx) => {
+                    const amount = d.quantity * d.unitPrice
+                    return (
+                      <tr key={idx} className="border-b last:border-b-0">
+                        <td className="px-1 py-1.5">
+                          <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                            <SelectTrigger className="h-7 min-w-[140px] text-xs">
+                              <SelectValue placeholder="품목 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items.map((it: any) => (
+                                <SelectItem key={it.id} value={it.id}>
+                                  {it.itemCode} - {it.itemName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            type="number"
+                            className="h-7 w-[70px] text-right text-xs"
+                            value={d.quantity || ''}
+                            onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            type="number"
+                            className="h-7 w-[90px] text-right text-xs"
+                            value={d.unitPrice || ''}
+                            onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
+                          {formatCurrency(amount)}
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
+                            disabled={details.length <= 1}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/30 border-t">
+                    <td className="px-2 py-2 text-xs font-medium">합계</td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {details.reduce((s, d) => s + d.quantity, 0)}
+                    </td>
+                    <td></td>
+                    <td className="px-2 py-2 text-right font-mono text-xs font-medium">
+                      {formatCurrency(details.reduce((s, d) => s + d.quantity * d.unitPrice, 0))}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full" disabled={createMutation.isPending}>
+            {createMutation.isPending ? '등록 중...' : '납품 등록'}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+
   // Tracking upload dialog (only for online tab)
   const trackingDialog = (
     <Dialog
@@ -711,7 +864,7 @@ export default function DeliveriesPage() {
         <TabsContent value="ONLINE">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              {createDialog}
+              {onlineCreateDialog}
               <Button variant="outline" size="sm" onClick={handleDeliveryTemplateDownload}>
                 <FileDown className="mr-1 h-3.5 w-3.5" /> 납품 템플릿
               </Button>
@@ -741,15 +894,7 @@ export default function DeliveriesPage() {
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {createDialog}
-              <Button variant="outline" size="sm" onClick={handleDeliveryTemplateDownload}>
-                <FileDown className="mr-1 h-3.5 w-3.5" /> 납품 템플릿
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => deliveryImportFileRef.current?.click()}>
-                <Upload className="mr-1 h-3.5 w-3.5" /> 엑셀 업로드
-              </Button>
-            </div>
+            <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
             <DataTable
               columns={columns}
               data={offlineDeliveries}
