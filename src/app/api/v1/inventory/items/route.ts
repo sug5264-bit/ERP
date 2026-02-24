@@ -10,6 +10,7 @@ import {
   buildMeta,
 } from '@/lib/api-helpers'
 import { createItemSchema } from '@/lib/validations/inventory'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,8 +21,9 @@ export async function GET(request: NextRequest) {
     const { page, pageSize, skip } = getPaginationParams(sp)
 
     const where: any = {}
-    const search = sp.get('search')
-    if (search) {
+    const rawSearch = sp.get('search')
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
       where.OR = [
         { itemCode: { contains: search, mode: 'insensitive' } },
         { itemName: { contains: search, mode: 'insensitive' } },

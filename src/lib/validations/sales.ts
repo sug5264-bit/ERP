@@ -90,12 +90,26 @@ export const createSalesReturnSchema = z.object({
   reason: z.enum(['DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER']).optional().default('OTHER'),
   reasonDetail: z.string().max(1000).optional().nullable(),
   totalAmount: z.number().min(0).max(999_999_999_999).optional().default(0),
+  details: z
+    .array(
+      z.object({
+        itemId: z.string().min(1, '품목을 선택하세요').max(50),
+        quantity: z.number().min(0.01, '수량은 0보다 커야 합니다').max(999_999_999),
+        unitPrice: z.number().min(0, '단가는 0 이상이어야 합니다').max(999_999_999_999),
+        remark: z.string().max(500).optional().nullable(),
+      })
+    )
+    .optional()
+    .default([]),
 })
 
 // ─── 품질검사 ──────────────────────────────
 export const createQualityInspectionSchema = z.object({
   deliveryId: z.string().min(1, '납품을 선택하세요').max(50),
-  inspectionDate: z.string().min(1, '검사일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  inspectionDate: z
+    .string()
+    .min(1, '검사일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   inspectorName: z.string().min(1, '검사자명을 입력하세요').max(100),
   overallGrade: z.enum(['A', 'B', 'C', 'REJECT']).default('A'),
   sampleSize: z.number().int().min(0).max(999_999).default(0),
@@ -103,16 +117,21 @@ export const createQualityInspectionSchema = z.object({
   lotNo: z.string().max(100).optional().nullable(),
   judgement: z.enum(['PASS', 'CONDITIONAL_PASS', 'FAIL']).default('PASS'),
   remarks: z.string().max(2000).optional().nullable(),
-  items: z.array(z.object({
-    category: z.string().min(1, '검사 구분을 입력하세요').max(50),
-    checkItem: z.string().min(1, '검사 항목을 입력하세요').max(200),
-    spec: z.string().max(200).optional().nullable(),
-    measuredValue: z.string().max(200).optional().nullable(),
-    result: z.enum(['PASS', 'FAIL', 'NA']).default('PASS'),
-    grade: z.enum(['A', 'B', 'C', 'REJECT']).default('A'),
-    defectType: z.string().max(100).optional().nullable(),
-    remarks: z.string().max(500).optional().nullable(),
-  })).min(1, '최소 1개 이상의 검사항목이 필요합니다').max(50),
+  items: z
+    .array(
+      z.object({
+        category: z.string().min(1, '검사 구분을 입력하세요').max(50),
+        checkItem: z.string().min(1, '검사 항목을 입력하세요').max(200),
+        spec: z.string().max(200).optional().nullable(),
+        measuredValue: z.string().max(200).optional().nullable(),
+        result: z.enum(['PASS', 'FAIL', 'NA']).default('PASS'),
+        grade: z.enum(['A', 'B', 'C', 'REJECT']).default('A'),
+        defectType: z.string().max(100).optional().nullable(),
+        remarks: z.string().max(500).optional().nullable(),
+      })
+    )
+    .min(1, '최소 1개 이상의 검사항목이 필요합니다')
+    .max(50),
 })
 
 export const createQualityStandardSchema = z.object({

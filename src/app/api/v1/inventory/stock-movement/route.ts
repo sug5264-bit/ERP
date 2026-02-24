@@ -66,7 +66,13 @@ export async function POST(request: NextRequest) {
 
     const movementNo = await generateDocumentNumber('STK', new Date(data.movementDate))
 
-    // 이체 시 출발/도착 창고가 같으면 거부
+    // 창고 필수 검증
+    if (data.movementType === 'INBOUND' && !data.targetWarehouseId) {
+      return errorResponse('입고에는 대상 창고가 필요합니다.', 'MISSING_WAREHOUSE')
+    }
+    if (data.movementType === 'OUTBOUND' && !data.sourceWarehouseId) {
+      return errorResponse('출고에는 출발 창고가 필요합니다.', 'MISSING_WAREHOUSE')
+    }
     if (data.movementType === 'TRANSFER') {
       if (!data.sourceWarehouseId || !data.targetWarehouseId) {
         return errorResponse('이체에는 출발 창고와 도착 창고가 모두 필요합니다.', 'INVALID_WAREHOUSE')
@@ -74,6 +80,9 @@ export async function POST(request: NextRequest) {
       if (data.sourceWarehouseId === data.targetWarehouseId) {
         return errorResponse('출발 창고와 도착 창고가 동일할 수 없습니다.', 'SAME_WAREHOUSE')
       }
+    }
+    if (data.movementType === 'ADJUSTMENT' && !data.targetWarehouseId) {
+      return errorResponse('재고조정에는 대상 창고가 필요합니다.', 'MISSING_WAREHOUSE')
     }
 
     const result = await prisma.$transaction(async (tx) => {
