@@ -13,14 +13,68 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, Upload, FileDown } from 'lucide-react'
+import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye } from 'lucide-react'
 
 const STATUS_MAP: Record<string, string> = { PREPARING: '준비중', SHIPPED: '출하', DELIVERED: '납품완료' }
+const QUALITY_STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  PASS: { label: '합격', variant: 'default' },
+  CONDITIONAL_PASS: { label: '조건부합격', variant: 'secondary' },
+  FAIL: { label: '불합격', variant: 'destructive' },
+}
+const GRADE_MAP: Record<string, { label: string; color: string }> = {
+  A: { label: 'A등급', color: 'text-green-600' },
+  B: { label: 'B등급', color: 'text-blue-600' },
+  C: { label: 'C등급', color: 'text-yellow-600' },
+  REJECT: { label: '불합격', color: 'text-red-600' },
+}
+
+// 삼성/하이닉스 납품 기준 검사 카테고리
+const INSPECTION_CATEGORIES = [
+  { value: 'APPEARANCE', label: '외관검사' },
+  { value: 'DIMENSION', label: '치수검사' },
+  { value: 'FUNCTION', label: '기능검사' },
+  { value: 'RELIABILITY', label: '신뢰성검사' },
+  { value: 'PACKAGING', label: '포장상태' },
+  { value: 'DOCUMENT', label: '서류검사' },
+  { value: 'LABEL', label: '라벨/마킹' },
+  { value: 'CLEANLINESS', label: '청정도' },
+]
+
+const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  INSPECTION_CATEGORIES.map((c) => [c.value, c.label])
+)
+
+// 기본 검사 항목 템플릿 (반도체 납품 기준)
+const DEFAULT_INSPECTION_ITEMS = [
+  { category: 'APPEARANCE', checkItem: '외관 손상 여부 (스크래치, 찍힘, 변색)', spec: '무결점', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'APPEARANCE', checkItem: '이물질 부착 여부', spec: '이물질 없음', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'DIMENSION', checkItem: '주요 치수 규격 적합성', spec: '도면 기준 ±공차 이내', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'FUNCTION', checkItem: '기능/성능 테스트 결과', spec: '사양서 기준 충족', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'RELIABILITY', checkItem: '내구성/수명 테스트', spec: '기준 수명 이상', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'PACKAGING', checkItem: '포장 상태 및 완충재', spec: '규정 포장 준수', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'PACKAGING', checkItem: '방습/정전기 방지 포장', spec: 'ESD 포장 적용', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'DOCUMENT', checkItem: '품질성적서 첨부 여부', spec: '필수 첨부', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'DOCUMENT', checkItem: '출하검사 성적서', spec: '필수 첨부', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'LABEL', checkItem: 'LOT번호/바코드 표기', spec: '규정 라벨 부착', result: 'PASS' as const, grade: 'A' as const },
+  { category: 'CLEANLINESS', checkItem: '파티클/오염도 검사', spec: 'Class 기준 이내', result: 'PASS' as const, grade: 'A' as const },
+]
+
+interface InspectionItemInput {
+  category: string
+  checkItem: string
+  spec: string
+  measuredValue: string
+  result: 'PASS' | 'FAIL' | 'NA'
+  grade: 'A' | 'B' | 'C' | 'REJECT'
+  defectType: string
+  remarks: string
+}
 
 interface Detail {
   itemId: string
@@ -44,6 +98,17 @@ const emptyDetail = (): Detail => ({
   carrier: '',
   trackingNo: '',
   description: '',
+})
+
+const emptyInspectionItem = (): InspectionItemInput => ({
+  category: 'APPEARANCE',
+  checkItem: '',
+  spec: '',
+  measuredValue: '',
+  result: 'PASS',
+  grade: 'A',
+  defectType: '',
+  remarks: '',
 })
 
 export default function DeliveriesPage() {
@@ -100,6 +165,45 @@ export default function DeliveriesPage() {
       cell: ({ row }) => <Badge variant="outline">{STATUS_MAP[row.original.status] || row.original.status}</Badge>,
     },
     {
+      id: 'qualityStatus',
+      header: '품질검사',
+      cell: ({ row }) => {
+        const inspection = row.original.qualityInspections?.[0]
+        if (!inspection) {
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => openQualityInspection(row.original)}
+            >
+              <ClipboardCheck className="mr-1 h-3 w-3" />
+              검사등록
+            </Button>
+          )
+        }
+        const qs = QUALITY_STATUS_MAP[inspection.judgement] || { label: inspection.judgement, variant: 'outline' as const }
+        const grade = GRADE_MAP[inspection.overallGrade]
+        return (
+          <div className="flex items-center gap-1">
+            <Badge variant={qs.variant} className="text-xs">
+              {qs.label}
+            </Badge>
+            {grade && <span className={`text-xs font-medium ${grade.color}`}>{grade.label}</span>}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => openQualityView(row.original)}
+              title="검사 상세"
+            >
+              <Eye className="h-3 w-3" />
+            </Button>
+          </div>
+        )
+      },
+    },
+    {
       id: 'trackingNo',
       header: '운송장번호',
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span>,
@@ -134,6 +238,13 @@ export default function DeliveriesPage() {
       accessor: (r) => formatCurrency(r.details?.reduce((s: number, d: any) => s + Number(d.amount), 0) || 0),
     },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status] || r.status },
+    {
+      header: '품질검사',
+      accessor: (r) => {
+        const qi = r.qualityInspections?.[0]
+        return qi ? `${QUALITY_STATUS_MAP[qi.judgement]?.label || qi.judgement} (${GRADE_MAP[qi.overallGrade]?.label || qi.overallGrade})` : '미검사'
+      },
+    },
     { header: '운송장번호', accessor: (r) => r.trackingNo || '' },
     { header: '택배사', accessor: (r) => r.carrier || '' },
   ]
@@ -151,6 +262,37 @@ export default function DeliveriesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const deliveryImportFileRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
+
+  // 품질검사 state
+  const [qiOpen, setQiOpen] = useState(false)
+  const [qiViewOpen, setQiViewOpen] = useState(false)
+  const [qiDelivery, setQiDelivery] = useState<any>(null)
+  const [qiItems, setQiItems] = useState<InspectionItemInput[]>([])
+  const [qiViewData, setQiViewData] = useState<any>(null)
+
+  const openQualityInspection = (delivery: any) => {
+    setQiDelivery(delivery)
+    setQiItems(
+      DEFAULT_INSPECTION_ITEMS.map((item) => ({
+        ...item,
+        measuredValue: '',
+        defectType: '',
+        remarks: '',
+      }))
+    )
+    setQiOpen(true)
+  }
+
+  const openQualityView = async (delivery: any) => {
+    try {
+      const res = await api.get(`/sales/deliveries/${delivery.id}/quality-inspection`) as any
+      setQiViewData(res.data || res)
+      setQiDelivery(delivery)
+      setQiViewOpen(true)
+    } catch {
+      toast.error('품질검사 정보를 불러올 수 없습니다.')
+    }
+  }
 
   // Fetch deliveries filtered by salesChannel (ONLINE or OFFLINE)
   const { data: onlineData, isLoading: onlineLoading } = useQuery({
@@ -205,6 +347,18 @@ export default function DeliveriesPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const qiMutation = useMutation({
+    mutationFn: (body: any) => api.post(`/sales/deliveries/${body.deliveryId}/quality-inspection`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
+      setQiOpen(false)
+      setQiDelivery(null)
+      setQiItems([])
+      toast.success('품질검사가 등록되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const orders = ordersData?.data || []
   const partners = partnersData?.data || []
   const items = itemsData?.data || []
@@ -215,6 +369,16 @@ export default function DeliveriesPage() {
     const d = [...details]
     ;(d[idx] as any)[field] = value
     setDetails(d)
+  }
+
+  const updateQiItem = (idx: number, field: string, value: any) => {
+    const items = [...qiItems]
+    ;(items[idx] as any)[field] = value
+    // FAIL이면 grade를 REJECT로 자동 변경
+    if (field === 'result' && value === 'FAIL') {
+      items[idx].grade = 'REJECT'
+    }
+    setQiItems(items)
   }
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
@@ -229,6 +393,49 @@ export default function DeliveriesPage() {
       details: details
         .filter((d) => d.itemId)
         .map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
+    })
+  }
+
+  const handleQiSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!qiDelivery) return
+    const form = new FormData(e.currentTarget)
+    const failCount = qiItems.filter((i) => i.result === 'FAIL').length
+    const sampleSize = parseInt(form.get('sampleSize') as string) || 0
+    const defectCount = parseInt(form.get('defectCount') as string) || 0
+
+    // 전체 등급 자동 산정
+    const grades = qiItems.map((i) => i.grade)
+    let overallGrade: 'A' | 'B' | 'C' | 'REJECT' = 'A'
+    if (grades.includes('REJECT') || failCount > 0) overallGrade = 'REJECT'
+    else if (grades.includes('C')) overallGrade = 'C'
+    else if (grades.includes('B')) overallGrade = 'B'
+
+    // 판정: FAIL 항목이 있으면 FAIL, C등급이면 CONDITIONAL_PASS
+    let judgement: 'PASS' | 'CONDITIONAL_PASS' | 'FAIL' = 'PASS'
+    if (overallGrade === 'REJECT') judgement = 'FAIL'
+    else if (overallGrade === 'C') judgement = 'CONDITIONAL_PASS'
+
+    qiMutation.mutate({
+      deliveryId: qiDelivery.id,
+      inspectionDate: form.get('inspectionDate'),
+      inspectorName: form.get('inspectorName'),
+      overallGrade,
+      sampleSize,
+      defectCount,
+      lotNo: form.get('lotNo') || undefined,
+      judgement,
+      remarks: form.get('remarks') || undefined,
+      items: qiItems.filter((i) => i.checkItem).map((i) => ({
+        category: i.category,
+        checkItem: i.checkItem,
+        spec: i.spec || undefined,
+        measuredValue: i.measuredValue || undefined,
+        result: i.result,
+        grade: i.grade,
+        defectType: i.defectType || undefined,
+        remarks: i.remarks || undefined,
+      })),
     })
   }
 
@@ -699,9 +906,336 @@ export default function DeliveriesPage() {
     </Dialog>
   )
 
+  // 품질검사 등록 다이얼로그
+  const qualityInspectionDialog = (
+    <Dialog
+      open={qiOpen}
+      onOpenChange={(v) => {
+        setQiOpen(v)
+        if (!v) {
+          setQiDelivery(null)
+          setQiItems([])
+        }
+      }}
+    >
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-4xl lg:max-w-6xl">
+        <DialogHeader>
+          <DialogTitle>
+            납품 품질검사 - {qiDelivery?.deliveryNo}
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              ({qiDelivery?.partner?.partnerName})
+            </span>
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleQiSubmit} className="space-y-4">
+          {/* 검사 기본 정보 */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                검사일 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                name="inspectionDate"
+                type="date"
+                required
+                className="h-8 text-xs"
+                defaultValue={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">
+                검사자 <span className="text-destructive">*</span>
+              </Label>
+              <Input name="inspectorName" required className="h-8 text-xs" placeholder="검사자명" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">LOT 번호</Label>
+              <Input name="lotNo" className="h-8 text-xs" placeholder="LOT-YYYYMMDD-001" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">시료수</Label>
+                <Input name="sampleSize" type="number" className="h-8 text-xs" defaultValue="0" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">불량수</Label>
+                <Input name="defectCount" type="number" className="h-8 text-xs" defaultValue="0" />
+              </div>
+            </div>
+          </div>
+
+          {/* 검사 항목 테이블 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">검사 항목 (삼성/하이닉스 납품 기준)</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setQiItems([...qiItems, emptyInspectionItem()])}
+              >
+                <Plus className="mr-1 h-3 w-3" /> 항목 추가
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[900px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">구분</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
+                      검사항목 <span className="text-destructive">*</span>
+                    </th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">규격/기준</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">측정값</th>
+                    <th className="px-2 py-2 text-center font-medium whitespace-nowrap">판정</th>
+                    <th className="px-2 py-2 text-center font-medium whitespace-nowrap">등급</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">불량유형</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {qiItems.map((item, idx) => (
+                    <tr key={idx} className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-red-50 dark:bg-red-950/20' : ''}`}>
+                      <td className="px-1 py-1.5">
+                        <Select value={item.category} onValueChange={(v) => updateQiItem(idx, 'category', v)}>
+                          <SelectTrigger className="h-7 min-w-[90px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {INSPECTION_CATEGORIES.map((c) => (
+                              <SelectItem key={c.value} value={c.value}>
+                                {c.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          className="h-7 min-w-[180px] text-xs"
+                          value={item.checkItem}
+                          onChange={(e) => updateQiItem(idx, 'checkItem', e.target.value)}
+                          placeholder="검사항목 입력"
+                        />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          className="h-7 w-[120px] text-xs"
+                          value={item.spec}
+                          onChange={(e) => updateQiItem(idx, 'spec', e.target.value)}
+                          placeholder="규격/기준"
+                        />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          className="h-7 w-[100px] text-xs"
+                          value={item.measuredValue}
+                          onChange={(e) => updateQiItem(idx, 'measuredValue', e.target.value)}
+                          placeholder="측정값"
+                        />
+                      </td>
+                      <td className="px-1 py-1.5 text-center">
+                        <Select value={item.result} onValueChange={(v) => updateQiItem(idx, 'result', v)}>
+                          <SelectTrigger className={`h-7 w-[72px] text-xs ${item.result === 'FAIL' ? 'border-red-500 text-red-600' : item.result === 'PASS' ? 'text-green-600' : ''}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PASS">PASS</SelectItem>
+                            <SelectItem value="FAIL">FAIL</SelectItem>
+                            <SelectItem value="NA">N/A</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-1 py-1.5 text-center">
+                        <Select value={item.grade} onValueChange={(v) => updateQiItem(idx, 'grade', v)}>
+                          <SelectTrigger className={`h-7 w-[72px] text-xs ${GRADE_MAP[item.grade]?.color || ''}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A">A</SelectItem>
+                            <SelectItem value="B">B</SelectItem>
+                            <SelectItem value="C">C</SelectItem>
+                            <SelectItem value="REJECT">REJECT</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          className="h-7 w-[100px] text-xs"
+                          value={item.defectType}
+                          onChange={(e) => updateQiItem(idx, 'defectType', e.target.value)}
+                          placeholder="불량유형"
+                        />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => qiItems.length > 1 && setQiItems(qiItems.filter((_, i) => i !== idx))}
+                          disabled={qiItems.length <= 1}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/30 border-t">
+                    <td colSpan={4} className="px-2 py-2 text-xs font-medium">
+                      검사 요약: {qiItems.length}개 항목 |
+                      PASS {qiItems.filter((i) => i.result === 'PASS').length} |
+                      FAIL <span className="text-red-600">{qiItems.filter((i) => i.result === 'FAIL').length}</span> |
+                      N/A {qiItems.filter((i) => i.result === 'NA').length}
+                    </td>
+                    <td colSpan={4} className="px-2 py-2 text-right text-xs">
+                      {(() => {
+                        const failCount = qiItems.filter((i) => i.result === 'FAIL').length
+                        const grades = qiItems.map((i) => i.grade)
+                        if (failCount > 0 || grades.includes('REJECT'))
+                          return <Badge variant="destructive">불합격 예상</Badge>
+                        if (grades.includes('C'))
+                          return <Badge variant="secondary">조건부합격 예상</Badge>
+                        return <Badge variant="default">합격 예상</Badge>
+                      })()}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          {/* 비고 */}
+          <div className="space-y-1">
+            <Label className="text-xs">비고/특이사항</Label>
+            <Textarea
+              name="remarks"
+              className="text-xs"
+              rows={2}
+              placeholder="검사 관련 특이사항을 기록합니다"
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={qiMutation.isPending}>
+            {qiMutation.isPending ? '등록 중...' : '품질검사 완료'}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+
+  // 품질검사 조회 다이얼로그
+  const qualityViewDialog = (
+    <Dialog open={qiViewOpen} onOpenChange={setQiViewOpen}>
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-5xl">
+        <DialogHeader>
+          <DialogTitle>
+            품질검사 결과 - {qiDelivery?.deliveryNo}
+          </DialogTitle>
+        </DialogHeader>
+        {Array.isArray(qiViewData) && qiViewData.length > 0 ? (
+          <div className="space-y-4">
+            {qiViewData.map((inspection: any) => (
+              <div key={inspection.id} className="space-y-3 rounded-md border p-4">
+                {/* 검사 헤더 */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-mono text-sm font-medium">{inspection.inspectionNo}</span>
+                  <Badge variant={QUALITY_STATUS_MAP[inspection.judgement]?.variant || 'outline'}>
+                    {QUALITY_STATUS_MAP[inspection.judgement]?.label || inspection.judgement}
+                  </Badge>
+                  <span className={`text-sm font-medium ${GRADE_MAP[inspection.overallGrade]?.color || ''}`}>
+                    {GRADE_MAP[inspection.overallGrade]?.label || inspection.overallGrade}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    검사일: {formatDate(inspection.inspectionDate)} | 검사자: {inspection.inspectorName}
+                  </span>
+                </div>
+
+                {/* 검사 요약 */}
+                <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-3 sm:grid-cols-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">시료수</Label>
+                    <p className="text-sm font-medium">{inspection.sampleSize}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">불량수</Label>
+                    <p className="text-sm font-medium">{inspection.defectCount}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">불량률(PPM)</Label>
+                    <p className="text-sm font-medium">
+                      {Number(inspection.defectRate).toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">LOT번호</Label>
+                    <p className="text-sm font-medium font-mono">{inspection.lotNo || '-'}</p>
+                  </div>
+                </div>
+
+                {/* 검사 항목 테이블 */}
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50 border-b">
+                        <th className="px-2 py-1.5 text-left font-medium">구분</th>
+                        <th className="px-2 py-1.5 text-left font-medium">검사항목</th>
+                        <th className="px-2 py-1.5 text-left font-medium">규격</th>
+                        <th className="px-2 py-1.5 text-left font-medium">측정값</th>
+                        <th className="px-2 py-1.5 text-center font-medium">판정</th>
+                        <th className="px-2 py-1.5 text-center font-medium">등급</th>
+                        <th className="px-2 py-1.5 text-left font-medium">불량유형</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(inspection.items || []).map((item: any) => (
+                        <tr
+                          key={item.id}
+                          className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-red-50 dark:bg-red-950/20' : ''}`}
+                        >
+                          <td className="px-2 py-1.5">{CATEGORY_LABEL_MAP[item.category] || item.category}</td>
+                          <td className="px-2 py-1.5">{item.checkItem}</td>
+                          <td className="px-2 py-1.5">{item.spec || '-'}</td>
+                          <td className="px-2 py-1.5">{item.measuredValue || '-'}</td>
+                          <td className="px-2 py-1.5 text-center">
+                            <Badge
+                              variant={item.result === 'PASS' ? 'default' : item.result === 'FAIL' ? 'destructive' : 'outline'}
+                              className="text-xs"
+                            >
+                              {item.result}
+                            </Badge>
+                          </td>
+                          <td className={`px-2 py-1.5 text-center font-medium ${GRADE_MAP[item.grade]?.color || ''}`}>
+                            {GRADE_MAP[item.grade]?.label || item.grade}
+                          </td>
+                          <td className="px-2 py-1.5 text-red-600">{item.defectType || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {inspection.remarks && (
+                  <div className="rounded-md bg-muted/30 p-2 text-xs">
+                    <Label className="text-xs text-muted-foreground">비고:</Label> {inspection.remarks}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm py-8 text-center">품질검사 기록이 없습니다.</p>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+
   return (
     <div className="space-y-6">
-      <PageHeader title="납품관리" description="고객 납품 현황을 관리합니다" />
+      <PageHeader title="납품관리" description="고객 납품 현황 및 품질검사를 관리합니다" />
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="ONLINE">온라인</TabsTrigger>
@@ -762,6 +1296,10 @@ export default function DeliveriesPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* 품질검사 다이얼로그 (페이지 레벨) */}
+      {qualityInspectionDialog}
+      {qualityViewDialog}
     </div>
   )
 }

@@ -734,6 +734,7 @@ model Item {
   purchaseOrderDetails   PurchaseOrderDetail[]
   receivingDetails       ReceivingDetail[]
   salesReturnDetails     SalesReturnDetail[]
+  qualityStandards       QualityStandard[]
 
   @@index([itemName])
   @@index([isActive, itemType])
@@ -1016,14 +1017,17 @@ model Delivery {
   deliveryAddress String?
   trackingNo      String?
   carrier         String?
+  qualityStatus   String?
   createdAt       DateTime @default(now())
 
-  salesOrder SalesOrder     @relation(fields: [salesOrderId], references: [id])
-  partner    Partner        @relation(fields: [partnerId], references: [id])
+  salesOrder SalesOrder          @relation(fields: [salesOrderId], references: [id])
+  partner    Partner             @relation(fields: [partnerId], references: [id])
   details    DeliveryDetail[]
+  qualityInspections QualityInspection[]
 
   @@index([deliveryDate])
   @@index([salesOrderId])
+  @@index([qualityStatus])
   @@map("deliveries")
 }
 
@@ -1089,6 +1093,91 @@ model SalesReturnDetail {
 
   @@index([salesReturnId])
   @@map("sales_return_details")
+}
+
+// ============================================================
+// 품질관리 (Quality Management)
+// ============================================================
+
+enum QualityGrade {
+  A
+  B
+  C
+  REJECT
+}
+
+enum InspectionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model QualityStandard {
+  id           String  @id @default(cuid())
+  itemId       String
+  standardName String
+  category     String
+  checkMethod  String?
+  spec         String?
+  minValue     Decimal? @db.Decimal(15, 4)
+  maxValue     Decimal? @db.Decimal(15, 4)
+  unit         String?
+  isCritical   Boolean  @default(false)
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  item Item @relation(fields: [itemId], references: [id])
+
+  @@index([itemId])
+  @@index([category])
+  @@map("quality_standards")
+}
+
+model QualityInspection {
+  id              String           @id @default(cuid())
+  inspectionNo    String           @unique
+  deliveryId      String
+  inspectionDate  DateTime         @db.Date
+  inspectorName   String
+  overallGrade    QualityGrade     @default(A)
+  status          InspectionStatus @default(PENDING)
+  sampleSize      Int              @default(0)
+  defectCount     Int              @default(0)
+  defectRate      Decimal          @default(0) @db.Decimal(8, 4)
+  lotNo           String?
+  judgement       String           @default("PASS")
+  remarks         String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  delivery Delivery                @relation(fields: [deliveryId], references: [id])
+  items    QualityInspectionItem[]
+
+  @@index([deliveryId])
+  @@index([inspectionDate])
+  @@index([overallGrade])
+  @@index([judgement])
+  @@map("quality_inspections")
+}
+
+model QualityInspectionItem {
+  id                  String       @id @default(cuid())
+  qualityInspectionId String
+  category            String
+  checkItem           String
+  spec                String?
+  measuredValue       String?
+  result              String       @default("PASS")
+  grade               QualityGrade @default(A)
+  defectType          String?
+  remarks             String?
+
+  qualityInspection QualityInspection @relation(fields: [qualityInspectionId], references: [id], onDelete: Cascade)
+
+  @@index([qualityInspectionId])
+  @@map("quality_inspection_items")
 }
 
 // ============================================================
