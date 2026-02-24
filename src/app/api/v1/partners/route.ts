@@ -45,9 +45,7 @@ export async function GET(request: NextRequest) {
       prisma.partner.count({ where }),
     ])
 
-    return successResponse(partners, buildMeta(page, pageSize, totalCount), {
-      cache: 's-maxage=60, stale-while-revalidate=120',
-    })
+    return successResponse(partners, buildMeta(page, pageSize, totalCount))
   } catch (error) {
     return handleApiError(error)
   }

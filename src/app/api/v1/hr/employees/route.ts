@@ -82,9 +82,7 @@ export async function GET(req: NextRequest) {
       ? employees
       : employees.map((e) => stripSensitiveFields(e as unknown as Record<string, unknown>))
 
-    return successResponse(data, buildMeta(page, pageSize, totalCount), {
-      cache: 's-maxage=60, stale-while-revalidate=120',
-    })
+    return successResponse(data, buildMeta(page, pageSize, totalCount))
   } catch (error) {
     return handleApiError(error)
   }

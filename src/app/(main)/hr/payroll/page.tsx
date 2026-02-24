@@ -59,22 +59,14 @@ export default function PayrollPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await api.post('/payroll', body)
-      await queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      return result
-    },
-    onSuccess: () => { setOpen(false); toast.success('급여가 생성되었습니다.') },
+    mutationFn: (body: any) => api.post('/payroll', body),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll'] }); setOpen(false); toast.success('급여가 생성되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const confirmMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const result = await api.put(`/payroll/${id}`, { status: 'CONFIRMED' })
-      await queryClient.invalidateQueries({ queryKey: ['payroll'] })
-      return result
-    },
-    onSuccess: () => { setDetailOpen(false); toast.success('급여가 확정되었습니다.') },
+    mutationFn: (id: string) => api.put(`/payroll/${id}`, { status: 'CONFIRMED' }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payroll'] }); setDetailOpen(false); toast.success('급여가 확정되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

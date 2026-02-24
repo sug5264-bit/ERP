@@ -95,12 +95,9 @@ export default function VouchersPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await api.post('/accounting/vouchers', body)
-      await queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] })
-      return result
-    },
+    mutationFn: (body: any) => api.post('/accounting/vouchers', body),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] })
       setOpen(false)
       setDetails([
         { accountSubjectId: '', debitAmount: 0, creditAmount: 0, description: '' },
@@ -112,12 +109,8 @@ export default function VouchersPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const result = await api.delete(`/accounting/vouchers/${id}`)
-      await queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] })
-      return result
-    },
-    onSuccess: () => { toast.success('전표가 삭제되었습니다.') },
+    mutationFn: (id: string) => api.delete(`/accounting/vouchers/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] }); toast.success('전표가 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

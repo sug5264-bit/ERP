@@ -28,7 +28,7 @@ export async function GET() {
       })),
     }))
 
-    return successResponse(data, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
+    return successResponse(data)
   } catch (error) {
     return handleApiError(error)
   }

@@ -132,12 +132,9 @@ export default function AttendancePage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await api.post('/hr/attendance', body)
-      await queryClient.invalidateQueries({ queryKey: ['hr-attendance'] })
-      return result
-    },
+    mutationFn: (body: any) => api.post('/hr/attendance', body),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-attendance'] })
       setOpen(false)
       toast.success('근태가 등록되었습니다.')
     },

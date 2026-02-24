@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       orderBy: [{ groupCode: 'asc' }, { sortOrder: 'asc' }],
     })
 
-    return successResponse(codes, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
+    return successResponse(codes)
   } catch (error) {
     return handleApiError(error)
   }

@@ -37,22 +37,15 @@ export default function ApprovalPendingPage() {
   const { data, isLoading } = useQuery({ queryKey: ['approval-pending'], queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=50') as Promise<any> })
 
   const actionMutation = useMutation({
-    mutationFn: async ({ id, body }: { id: string; body: any }) => {
-      const result = await api.put(`/approval/documents/${id}`, body)
-      await queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
-      return result
-    },
-    onSuccess: () => { setDetailOpen(false); setComment(''); toast.success('처리되었습니다.') },
+    mutationFn: ({ id, body }: { id: string; body: any }) => api.put(`/approval/documents/${id}`, body),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['approval-pending'] }); setDetailOpen(false); setComment(''); toast.success('처리되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const batchMutation = useMutation({
-    mutationFn: async (body: any) => {
-      const result = await (api.post('/approval/batch', body) as Promise<any>)
-      await queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
-      return result
-    },
+    mutationFn: (body: any) => api.post('/approval/batch', body) as Promise<any>,
     onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
       const d = res?.data || res
       toast.success(`${d.successCount}건 처리 완료${d.failCount > 0 ? `, ${d.failCount}건 실패` : ''}`)
       setSelectedRows([])

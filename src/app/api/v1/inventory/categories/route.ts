@@ -18,7 +18,7 @@ export async function GET() {
       include: { _count: { select: { items: true, children: true } } },
       orderBy: [{ level: 'asc' }, { code: 'asc' }],
     })
-    return successResponse(categories, undefined, { cache: 's-maxage=300, stale-while-revalidate=600' })
+    return successResponse(categories)
   } catch (error) {
     return handleApiError(error)
   }
