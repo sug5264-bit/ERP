@@ -4,6 +4,32 @@
 -- Run this against your existing database to fix order registration errors
 -- ============================================================
 
+-- 0. Create companies table if not exists
+CREATE TABLE IF NOT EXISTS "companies" (
+    "id" TEXT NOT NULL,
+    "companyName" TEXT NOT NULL,
+    "bizNo" TEXT,
+    "ceoName" TEXT,
+    "bizType" TEXT,
+    "bizCategory" TEXT,
+    "address" TEXT,
+    "phone" TEXT,
+    "fax" TEXT,
+    "email" TEXT,
+    "bankName" TEXT,
+    "bankAccount" TEXT,
+    "bankHolder" TEXT,
+    "bankCopyPath" TEXT,
+    "bizCertPath" TEXT,
+    "logoPath" TEXT,
+    "isDefault" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "companies_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "companies_bizNo_key" ON "companies"("bizNo");
+
 -- 1. Add missing enums (safe: IF NOT EXISTS)
 DO $$ BEGIN
   CREATE TYPE "ReturnReason" AS ENUM ('DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER');

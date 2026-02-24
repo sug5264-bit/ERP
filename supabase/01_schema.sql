@@ -196,6 +196,31 @@ CREATE TABLE "document_sequences" (
 );
 
 -- CreateTable
+CREATE TABLE "companies" (
+    "id" TEXT NOT NULL,
+    "companyName" TEXT NOT NULL,
+    "bizNo" TEXT,
+    "ceoName" TEXT,
+    "bizType" TEXT,
+    "bizCategory" TEXT,
+    "address" TEXT,
+    "phone" TEXT,
+    "fax" TEXT,
+    "email" TEXT,
+    "bankName" TEXT,
+    "bankAccount" TEXT,
+    "bankHolder" TEXT,
+    "bankCopyPath" TEXT,
+    "bizCertPath" TEXT,
+    "logoPath" TEXT,
+    "isDefault" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "companies_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "departments" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
@@ -1188,6 +1213,9 @@ CREATE INDEX "notifications_userId_isRead_idx" ON "notifications"("userId", "isR
 
 -- CreateIndex
 CREATE UNIQUE INDEX "document_sequences_prefix_yearMonth_key" ON "document_sequences"("prefix", "yearMonth");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "companies_bizNo_key" ON "companies"("bizNo");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "departments_code_key" ON "departments"("code");

@@ -4,6 +4,12 @@
 -- ============================================================
 
 -- 테이블 삭제 (FK 의존 역순)
+DROP TABLE IF EXISTS "quality_inspection_items" CASCADE;
+DROP TABLE IF EXISTS "quality_inspections" CASCADE;
+DROP TABLE IF EXISTS "quality_standards" CASCADE;
+DROP TABLE IF EXISTS "sales_return_details" CASCADE;
+DROP TABLE IF EXISTS "sales_returns" CASCADE;
+DROP TABLE IF EXISTS "notes" CASCADE;
 DROP TABLE IF EXISTS "messages" CASCADE;
 DROP TABLE IF EXISTS "post_comments" CASCADE;
 DROP TABLE IF EXISTS "posts" CASCADE;
@@ -66,9 +72,13 @@ DROP TABLE IF EXISTS "user_roles" CASCADE;
 DROP TABLE IF EXISTS "role_permissions" CASCADE;
 DROP TABLE IF EXISTS "permissions" CASCADE;
 DROP TABLE IF EXISTS "roles" CASCADE;
+DROP TABLE IF EXISTS "companies" CASCADE;
 DROP TABLE IF EXISTS "users" CASCADE;
 
 -- ENUM 타입 삭제
+DROP TYPE IF EXISTS "InspectionStatus" CASCADE;
+DROP TYPE IF EXISTS "QualityGrade" CASCADE;
+DROP TYPE IF EXISTS "ReturnReason" CASCADE;
 DROP TYPE IF EXISTS "StepStatus" CASCADE;
 DROP TYPE IF EXISTS "ApprovalStatus" CASCADE;
 DROP TYPE IF EXISTS "TaskStatus" CASCADE;

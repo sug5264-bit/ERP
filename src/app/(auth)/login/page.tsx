@@ -29,20 +29,26 @@ function LoginForm() {
         username,
         password,
         redirect: false,
+        callbackUrl,
       })
 
       if (result?.error) {
-        if (result.error.includes('로그인 시도가 너무 많습니다')) {
-          setError(result.error)
-        } else {
+        if (result.error === 'CredentialsSignin') {
           setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+        } else if (result.error === 'Configuration') {
+          setError('서버 설정 오류가 발생했습니다. 관리자에게 문의하세요.')
+        } else {
+          setError(`로그인 실패: ${result.error}`)
         }
-      } else {
+      } else if (result?.ok) {
         router.push(callbackUrl)
         router.refresh()
+      } else {
+        setError('로그인 응답을 처리할 수 없습니다.')
       }
-    } catch {
-      setError('로그인 중 오류가 발생했습니다.')
+    } catch (err) {
+      console.error('[Login] Error:', err)
+      setError('로그인 중 오류가 발생했습니다. 네트워크를 확인하세요.')
     } finally {
       setIsLoading(false)
     }

@@ -94,7 +94,7 @@ async function applyPermissions() {
     'projects',
     'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
     'board', 'board.notices', 'board.general', 'board.messages',
-    'admin', 'admin.users', 'admin.roles', 'admin.codes', 'admin.logs',
+    'admin', 'admin.users', 'admin.roles', 'admin.codes', 'admin.logs', 'admin.company',
   ]
   const actions = ['read', 'create', 'update', 'delete']
 

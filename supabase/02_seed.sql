@@ -323,6 +323,13 @@ INSERT INTO "leave_balances" ("id", "employeeId", "year", "totalDays", "usedDays
 ON CONFLICT ("employeeId", "year") DO NOTHING;
 
 -- ============================================================
+-- 18. 회사 정보 (Companies)
+-- ============================================================
+INSERT INTO "companies" ("id", "companyName", "bizNo", "ceoName", "bizType", "bizCategory", "address", "phone", "fax", "email", "bankName", "bankAccount", "bankHolder", "isDefault", "createdAt", "updatedAt") VALUES
+  ('comp-001', '(주)웰그린', '123-86-00001', '김웰그린', '제조업', '전자부품 제조', '서울시 강남구 테헤란로 100', '02-555-1234', '02-555-1235', 'info@wellgreen.co.kr', '국민은행', '123-456-789012', '(주)웰그린', true, NOW(), NOW())
+ON CONFLICT ("id") DO UPDATE SET "companyName" = EXCLUDED."companyName", "updatedAt" = NOW();
+
+-- ============================================================
 -- 완료!
 -- 로그인 계정:
 --   Admin: admin / admin1234

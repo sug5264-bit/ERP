@@ -16,6 +16,21 @@ export const authConfig: NextAuthConfig = {
     error: '/login',
   },
   callbacks: {
+    async signIn() {
+      // 모든 로그인 허용 (커스텀 검증은 authorize에서 처리)
+      return true
+    },
+    async redirect({ url, baseUrl }) {
+      // 상대 경로는 baseUrl 붙여서 반환
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      // 같은 origin이면 그대로
+      try {
+        if (new URL(url).origin === baseUrl) return url
+      } catch {
+        // URL 파싱 실패 시 baseUrl로
+      }
+      return baseUrl
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
