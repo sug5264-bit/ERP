@@ -43,6 +43,35 @@ async function main() {
   console.log('[db-sync] Checking database schema...')
   let changeCount = 0
 
+  // ── companies 테이블 ──
+  if (!(await tableExists('companies'))) {
+    console.log('  + Creating table: companies')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "companies" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "companyName" TEXT NOT NULL,
+        "bizNo" TEXT UNIQUE,
+        "ceoName" TEXT,
+        "bizType" TEXT,
+        "bizCategory" TEXT,
+        "address" TEXT,
+        "phone" TEXT,
+        "fax" TEXT,
+        "email" TEXT,
+        "bankName" TEXT,
+        "bankAccount" TEXT,
+        "bankHolder" TEXT,
+        "bankCopyPath" TEXT,
+        "bizCertPath" TEXT,
+        "logoPath" TEXT,
+        "isDefault" BOOLEAN NOT NULL DEFAULT false,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `)
+    changeCount++
+  }
+
   // ── sales_orders: 누락 컬럼 ──
   const salesOrderColumns = [
     ['vatIncluded', 'BOOLEAN NOT NULL DEFAULT true'],
