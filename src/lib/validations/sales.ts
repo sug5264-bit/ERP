@@ -67,6 +67,8 @@ export const createDeliverySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
   deliveryAddress: z.string().max(500).optional().nullable(),
+  trackingNo: z.string().max(100).optional().nullable(),
+  carrier: z.string().max(100).optional().nullable(),
   details: z
     .array(
       z.object({
