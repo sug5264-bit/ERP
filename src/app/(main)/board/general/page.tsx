@@ -38,14 +38,22 @@ export default function GeneralBoardPage() {
   const generalBoard = (boardsData?.data || []).find((b: any) => b.boardCode === 'GENERAL')
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/board/posts', body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-general'] }); setOpen(false); toast.success('게시글이 등록되었습니다.') },
+    mutationFn: async (body: any) => {
+      const result = await api.post('/board/posts', body)
+      await queryClient.invalidateQueries({ queryKey: ['board-general'] })
+      return result
+    },
+    onSuccess: () => { setOpen(false); toast.success('게시글이 등록되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/board/posts/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['board-general'] }); toast.success('게시글이 삭제되었습니다.') },
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/board/posts/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['board-general'] })
+      return result
+    },
+    onSuccess: () => { toast.success('게시글이 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

@@ -75,9 +75,12 @@ export default function PartnersPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/partners', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/partners', body)
+      await queryClient.invalidateQueries({ queryKey: ['partners'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['partners'] })
       setOpen(false)
       toast.success('거래처가 등록되었습니다.')
     },
@@ -85,9 +88,12 @@ export default function PartnersPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/partners/${id}`, body),
+    mutationFn: async ({ id, ...body }: any) => {
+      const result = await api.put(`/partners/${id}`, body)
+      await queryClient.invalidateQueries({ queryKey: ['partners'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['partners'] })
       setEditTarget(null)
       toast.success('거래처 정보가 수정되었습니다.')
     },
@@ -95,8 +101,12 @@ export default function PartnersPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/partners/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['partners'] }); toast.success('거래처가 삭제되었습니다.') },
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/partners/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['partners'] })
+      return result
+    },
+    onSuccess: () => { toast.success('거래처가 삭제되었습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

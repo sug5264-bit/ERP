@@ -97,9 +97,12 @@ export default function CodesPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/admin/codes', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/admin/codes', body)
+      await queryClient.invalidateQueries({ queryKey: ['admin-codes'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-codes'] })
       setOpen(false)
       toast.success('코드가 등록되었습니다.')
     },

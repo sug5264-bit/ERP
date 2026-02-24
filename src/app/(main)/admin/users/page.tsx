@@ -110,9 +110,12 @@ export default function UsersPage() {
   const positions: PositionItem[] = positionsData?.data || []
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/admin/users', data),
+    mutationFn: async (data: any) => {
+      const result = await api.post('/admin/users', data)
+      await queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setCreateOpen(false)
       resetForm()
       toast.success('사용자가 생성되었습니다.')
@@ -123,10 +126,12 @@ export default function UsersPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      api.put(`/admin/users/${id}`, data),
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const result = await api.put(`/admin/users/${id}`, data)
+      await queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setEditOpen(false)
       setSelectedUser(null)
       resetForm()
@@ -138,9 +143,12 @@ export default function UsersPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/admin/users/${id}`),
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/admin/users/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setDeleteOpen(false)
       setSelectedUser(null)
       toast.success('사용자가 삭제되었습니다.')

@@ -44,8 +44,12 @@ export default function MessagesPage() {
   const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: () => api.get('/admin/users?pageSize=500') as Promise<any> })
 
   const sendMutation = useMutation({
-    mutationFn: (body: any) => api.post('/board/messages', body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages-sent'] }); setOpen(false); toast.success('메시지를 보냈습니다.') },
+    mutationFn: async (body: any) => {
+      const result = await api.post('/board/messages', body)
+      await queryClient.invalidateQueries({ queryKey: ['messages-sent'] })
+      return result
+    },
+    onSuccess: () => { setOpen(false); toast.success('메시지를 보냈습니다.') },
     onError: (err: Error) => toast.error(err.message),
   })
 

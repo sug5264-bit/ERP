@@ -75,9 +75,12 @@ export default function ApprovalDraftPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/approval/documents', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/approval/documents', body)
+      await queryClient.invalidateQueries({ queryKey: ['approval-my-drafts'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['approval-my-drafts'] })
       setOpen(false)
       resetForm()
       toast.success('기안서가 작성되었습니다.')
@@ -86,9 +89,12 @@ export default function ApprovalDraftPage() {
   })
 
   const actionMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: any }) => api.put(`/approval/documents/${id}`, body),
+    mutationFn: async ({ id, body }: { id: string; body: any }) => {
+      const result = await api.put(`/approval/documents/${id}`, body)
+      await queryClient.invalidateQueries({ queryKey: ['approval-my-drafts'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['approval-my-drafts'] })
       setDetailOpen(false)
       toast.success('처리되었습니다.')
     },
