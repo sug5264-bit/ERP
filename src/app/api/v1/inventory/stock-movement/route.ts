@@ -31,8 +31,14 @@ export async function GET(request: NextRequest) {
     const endDate = sp.get('endDate')
     if (startDate || endDate) {
       where.movementDate = {}
-      if (startDate) where.movementDate.gte = new Date(startDate)
-      if (endDate) where.movementDate.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) where.movementDate.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) where.movementDate.lte = d
+      }
     }
 
     const [movements, totalCount] = await Promise.all([

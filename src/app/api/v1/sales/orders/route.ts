@@ -28,8 +28,14 @@ export async function GET(request: NextRequest) {
     const endDate = sp.get('endDate')
     if (startDate || endDate) {
       where.orderDate = {}
-      if (startDate) where.orderDate.gte = new Date(startDate)
-      if (endDate) where.orderDate.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) where.orderDate.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) where.orderDate.lte = d
+      }
     }
     // 거래처 필터
     const partnerId = sp.get('partnerId')

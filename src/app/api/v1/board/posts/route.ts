@@ -9,6 +9,7 @@ import {
   buildMeta,
 } from '@/lib/api-helpers'
 import { createPostSchema } from '@/lib/validations/board'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,8 +22,9 @@ export async function GET(request: NextRequest) {
     if (boardId) where.boardId = boardId
     const boardCode = sp.get('boardCode')
     if (boardCode) where.board = { boardCode }
-    const search = sp.get('search')
-    if (search) {
+    const rawSearch = sp.get('search')
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { content: { contains: search, mode: 'insensitive' } },

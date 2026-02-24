@@ -23,8 +23,14 @@ export async function GET(request: NextRequest) {
     // 계정과목별 집계 보기 (선택 없을 때)
     if (!accountSubjectId) {
       const voucherDateWhere: any = {}
-      if (startDate) voucherDateWhere.gte = new Date(startDate)
-      if (endDate) voucherDateWhere.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) voucherDateWhere.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) voucherDateWhere.lte = d
+      }
 
       // groupBy 단일 쿼리로 모든 계정과목 집계 (N+1 → 1 쿼리)
       const [accounts, aggs] = await Promise.all([
@@ -65,8 +71,14 @@ export async function GET(request: NextRequest) {
     const dateWhere: any = {}
     if (startDate || endDate) {
       dateWhere.voucherDate = {}
-      if (startDate) dateWhere.voucherDate.gte = new Date(startDate)
-      if (endDate) dateWhere.voucherDate.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) dateWhere.voucherDate.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) dateWhere.voucherDate.lte = d
+      }
     }
 
     const detailWhere = {

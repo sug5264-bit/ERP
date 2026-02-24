@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
     const where: any = {}
     if (employeeId) where.employeeId = employeeId
     if (startDate && endDate) {
-      where.workDate = { gte: new Date(startDate), lte: new Date(endDate) }
+      const sd = new Date(startDate)
+      const ed = new Date(endDate)
+      if (!isNaN(sd.getTime()) && !isNaN(ed.getTime())) {
+        where.workDate = { gte: sd, lte: ed }
+      }
     }
 
     const [records, totalCount] = await Promise.all([

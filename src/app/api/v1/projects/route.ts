@@ -9,6 +9,7 @@ import {
   buildMeta,
 } from '@/lib/api-helpers'
 import { createProjectSchema } from '@/lib/validations/project'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,10 +17,13 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const search = sp.get('search') || ''
+    const rawSearch = sp.get('search') || ''
     const status = sp.get('status') || ''
     const where: any = {}
-    if (search) where.projectName = { contains: search, mode: 'insensitive' }
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
+      where.projectName = { contains: search, mode: 'insensitive' }
+    }
     if (status) where.status = status
     const [items, totalCount] = await Promise.all([
       prisma.project.findMany({

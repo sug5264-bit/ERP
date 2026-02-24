@@ -11,6 +11,7 @@ import {
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,13 +20,13 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = req.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
-    const search = searchParams.get('search') || ''
+    const rawSearch = searchParams.get('search') || ''
 
-    const where = search
+    const where = rawSearch
       ? {
           OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { email: { contains: search, mode: 'insensitive' as const } },
+            { name: { contains: sanitizeSearchQuery(rawSearch), mode: 'insensitive' as const } },
+            { email: { contains: sanitizeSearchQuery(rawSearch), mode: 'insensitive' as const } },
           ],
         }
       : {}

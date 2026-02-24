@@ -10,6 +10,7 @@ import {
 } from '@/lib/api-helpers'
 import { createTaxInvoiceSchema } from '@/lib/validations/accounting'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,18 +22,25 @@ export async function GET(request: NextRequest) {
     const invoiceType = searchParams.get('invoiceType')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
-    const search = searchParams.get('search')
+    const rawSearch = searchParams.get('search')
 
     const where: any = {}
     if (invoiceType) where.invoiceType = invoiceType
     if (startDate || endDate) {
       where.issueDate = {}
-      if (startDate) where.issueDate.gte = new Date(startDate)
-      if (endDate) where.issueDate.lte = new Date(endDate)
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) where.issueDate.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) where.issueDate.lte = d
+      }
     }
-    if (search) {
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
       where.OR = [
-        { invoiceNo: { contains: search } },
+        { invoiceNo: { contains: search, mode: 'insensitive' } },
         { supplierName: { contains: search, mode: 'insensitive' } },
         { buyerName: { contains: search, mode: 'insensitive' } },
       ]
