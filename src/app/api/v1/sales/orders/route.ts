@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
         data: {
           orderNo,
           orderDate: new Date(data.orderDate),
-          partnerId: data.partnerId,
+          partnerId: data.partnerId || null,
           quotationId: data.quotationId || null,
           deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
           salesChannel: data.salesChannel || 'OFFLINE',

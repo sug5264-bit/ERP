@@ -951,7 +951,7 @@ model SalesOrder {
   id            String           @id @default(cuid())
   orderNo       String           @unique
   orderDate     DateTime         @db.Date
-  partnerId     String
+  partnerId     String?
   quotationId   String?
   deliveryDate  DateTime?        @db.Date
   salesChannel  SalesChannel     @default(OFFLINE)
@@ -982,7 +982,7 @@ model SalesOrder {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  partner    Partner            @relation(fields: [partnerId], references: [id])
+  partner    Partner?           @relation(fields: [partnerId], references: [id])
   quotation  Quotation?         @relation(fields: [quotationId], references: [id])
   employee   Employee           @relation(fields: [employeeId], references: [id])
   details    SalesOrderDetail[]
