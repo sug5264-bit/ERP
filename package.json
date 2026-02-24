@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && (prisma db push --skip-generate || node scripts/db-sync.mjs || echo 'DB sync skipped') && next build",
+    "build": "prisma generate && (prisma db push --skip-generate || node scripts/db-sync.mjs || echo 'DB sync skipped') && node scripts/db-seed-sync.mjs && next build",
     "db:sync": "node scripts/db-sync.mjs",
     "postinstall": "prisma generate",
     "start": "next start",
