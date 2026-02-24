@@ -18,8 +18,7 @@ import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, Upload, FileDown, Paperclip, FileText } from 'lucide-react'
-import { RecordSubTabs, savePendingData } from '@/components/common/record-sub-tabs'
+import { Plus, Trash2, Upload, FileDown } from 'lucide-react'
 
 const STATUS_MAP: Record<string, string> = { PREPARING: '준비중', SHIPPED: '출하', DELIVERED: '납품완료' }
 
@@ -27,6 +26,9 @@ interface Detail {
   itemId: string
   quantity: number
   unitPrice: number
+  carrier: string
+  trackingNo: string
+  description: string
 }
 
 interface TrackingRow {
@@ -34,6 +36,15 @@ interface TrackingRow {
   carrier: string
   trackingNo: string
 }
+
+const emptyDetail = (): Detail => ({
+  itemId: '',
+  quantity: 1,
+  unitPrice: 0,
+  carrier: '',
+  trackingNo: '',
+  description: '',
+})
 
 export default function DeliveriesPage() {
   const [activeTab, setActiveTab] = useState<string>('ONLINE')
@@ -129,7 +140,7 @@ export default function DeliveriesPage() {
 
   const [open, setOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
-  const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
+  const [details, setDetails] = useState<Detail[]>([emptyDetail()])
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{
     total: number
@@ -137,9 +148,8 @@ export default function DeliveriesPage() {
     failed: number
     errors: string[]
   } | null>(null)
-  const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [pendingNote, setPendingNote] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const deliveryImportFileRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   // Fetch deliveries filtered by salesChannel (ONLINE or OFFLINE)
@@ -157,24 +167,28 @@ export default function DeliveriesPage() {
     queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any>,
     staleTime: 5 * 60 * 1000,
   })
+  const { data: partnersData } = useQuery({
+    queryKey: ['partners-sales'],
+    queryFn: () => api.get('/partners?pageSize=500') as Promise<any>,
+    staleTime: 10 * 60 * 1000,
+  })
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
     queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
     staleTime: 10 * 60 * 1000,
   })
+  const { data: companyData } = useQuery({
+    queryKey: ['admin-company'],
+    queryFn: () => api.get('/admin/company') as Promise<any>,
+    staleTime: 30 * 60 * 1000,
+  })
 
   const createMutation = useMutation({
     mutationFn: (body: any) => api.post('/sales/deliveries', body),
-    onSuccess: async (res: any) => {
-      const record = res.data || res
-      if (record?.id && (pendingFiles.length > 0 || pendingNote.trim())) {
-        await savePendingData('Delivery', record.id, pendingFiles, pendingNote)
-      }
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       setOpen(false)
-      setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
-      setPendingFiles([])
-      setPendingNote('')
+      setDetails([emptyDetail()])
       toast.success('납품이 등록되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -192,6 +206,7 @@ export default function DeliveriesPage() {
   })
 
   const orders = ordersData?.data || []
+  const partners = partnersData?.data || []
   const items = itemsData?.data || []
   const onlineDeliveries = onlineData?.data || []
   const offlineDeliveries = offlineData?.data || []
@@ -209,9 +224,11 @@ export default function DeliveriesPage() {
       deliveryDate: form.get('deliveryDate'),
       salesOrderId: form.get('salesOrderId'),
       deliveryAddress: form.get('deliveryAddress') || undefined,
-      carrier: form.get('carrier') || undefined,
-      trackingNo: form.get('trackingNo') || undefined,
-      details: details.filter((d) => d.itemId),
+      carrier: details[0]?.carrier || undefined,
+      trackingNo: details[0]?.trackingNo || undefined,
+      details: details
+        .filter((d) => d.itemId)
+        .map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
     })
   }
 
@@ -227,23 +244,128 @@ export default function DeliveriesPage() {
     })
   }
 
+  const handleDeliveryTemplateDownload = () => {
+    // 회사 정보 가져오기
+    const companies = companyData?.data || []
+    const company = companies.find((c: any) => c.isDefault) || companies[0]
+    const senderName = company?.companyName || ''
+    const senderPhone = company?.phone || ''
+    const senderAddress = company?.address || ''
+
+    downloadImportTemplate({
+      fileName: '납품_등록_템플릿',
+      sheetName: '납품',
+      columns: [
+        { header: '도서', key: 'isIsland', example: '', width: 6 },
+        { header: '운송장번호', key: 'trackingNo', example: '', width: 16 },
+        { header: '보내시는 분', key: 'senderName', example: senderName, width: 16 },
+        { header: '보내시는 분 전화', key: 'senderPhone', example: senderPhone, width: 16 },
+        { header: '보내는분담당자', key: 'senderContact', example: '', width: 14 },
+        { header: '보내는분담당자HP', key: 'senderContactHP', example: '', width: 16 },
+        { header: '보내는분우편번호', key: 'senderZip', example: '', width: 14 },
+        { header: '보내는분총주소', key: 'senderAddress', example: senderAddress, width: 28 },
+        { header: '받으시는 분', key: 'receiverName', example: '(주)거래처명', width: 16, required: true },
+        { header: '받으시는 분 전화', key: 'receiverPhone', example: '02-1234-5678', width: 16 },
+        { header: '받는분담당자', key: 'receiverContact', example: '담당자명', width: 14 },
+        { header: '받는분핸드폰', key: 'receiverMobile', example: '010-1234-5678', width: 16 },
+        { header: '받는분우편번호', key: 'receiverZip', example: '06000', width: 14 },
+        { header: '받는분총주소', key: 'receiverAddress', example: '서울시 강남구', width: 28, required: true },
+        { header: '송고번호', key: 'shipmentRef', example: '', width: 14 },
+        { header: '특기사항', key: 'specialNote', example: '', width: 20 },
+        { header: '메모1', key: 'memo', example: '', width: 16 },
+        { header: '내품명', key: 'itemName', example: '품목명', width: 18, required: true },
+        { header: '내품수량', key: 'quantity', example: '10', width: 10, required: true },
+        { header: '내품가격', key: 'unitPrice', example: '50000', width: 12 },
+        { header: '상품코드', key: 'itemCode', example: '', width: 14 },
+        { header: '주문번호', key: 'orderNo', example: 'ORD-20260201-001', width: 22 },
+        { header: '배송성명', key: 'deliveryName', example: '', width: 14 },
+      ],
+    })
+  }
+
+  const handleDeliveryImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const keyMap: Record<string, string> = {
+        도서: 'isIsland',
+        운송장번호: 'trackingNo',
+        '보내시는 분': 'senderName',
+        '보내시는 분 전화': 'senderPhone',
+        보내는분담당자: 'senderContact',
+        보내는분담당자HP: 'senderContactHP',
+        보내는분우편번호: 'senderZip',
+        보내는분총주소: 'senderAddress',
+        '받으시는 분': 'receiverName',
+        '받으시는 분 전화': 'receiverPhone',
+        받는분담당자: 'receiverContact',
+        받는분핸드폰: 'receiverMobile',
+        받는분우편번호: 'receiverZip',
+        받는분총주소: 'receiverAddress',
+        송고번호: 'shipmentRef',
+        특기사항: 'specialNote',
+        메모1: 'memo',
+        내품명: 'itemName',
+        내품수량: 'quantity',
+        내품가격: 'unitPrice',
+        상품코드: 'itemCode',
+        주문번호: 'orderNo',
+        배송성명: 'deliveryName',
+      }
+      const rows = await readExcelFile(file, keyMap)
+      if (rows.length === 0) {
+        toast.error('데이터가 없습니다.')
+        return
+      }
+
+      let successCount = 0
+      let failCount = 0
+      const today = new Date().toISOString().split('T')[0]
+      for (const row of rows) {
+        const order = orders.find((o: any) => o.orderNo === row.orderNo)
+        const item = items.find(
+          (it: any) => it.itemName === row.itemName || it.itemCode === row.itemName || it.itemCode === row.itemCode
+        )
+        if (!item) {
+          failCount++
+          continue
+        }
+        try {
+          await api.post('/sales/deliveries', {
+            deliveryDate: today,
+            salesOrderId: order?.id || undefined,
+            deliveryAddress: row.receiverAddress || undefined,
+            carrier: undefined,
+            trackingNo: row.trackingNo || undefined,
+            receiverName: row.receiverName || undefined,
+            receiverPhone: row.receiverPhone || row.receiverMobile || undefined,
+            specialNote: row.specialNote || undefined,
+            memo: row.memo || undefined,
+            details: [{ itemId: item.id, quantity: Number(row.quantity) || 1, unitPrice: Number(row.unitPrice) || 0 }],
+          })
+          successCount++
+        } catch {
+          failCount++
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
+      toast.success(`${successCount}건 등록 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
+    } catch (err: any) {
+      toast.error(err.message || '엑셀 파일을 읽을 수 없습니다.')
+    }
+    if (deliveryImportFileRef.current) deliveryImportFileRef.current.value = ''
+  }
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-
     try {
-      const rows = await readExcelFile(file, {
-        납품번호: 'deliveryNo',
-        택배사: 'carrier',
-        운송장번호: 'trackingNo',
-      })
+      const rows = await readExcelFile(file, { 납품번호: 'deliveryNo', 택배사: 'carrier', 운송장번호: 'trackingNo' })
       setTrackingRows(rows as TrackingRow[])
       setTrackingResult(null)
-    } catch (err) {
+    } catch {
       toast.error('엑셀 파일을 읽을 수 없습니다.')
     }
-
-    // reset file input
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -269,152 +391,212 @@ export default function DeliveriesPage() {
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
-  // Shared create dialog (appears on both tabs)
+  // 회사 정보 (보내는분 자동 채움)
+  const companyInfo = (() => {
+    const companies = companyData?.data || []
+    return companies.find((c: any) => c.isDefault) || companies[0] || {}
+  })()
+
+  // 납품 등록 다이얼로그 — 택배 양식 기반 테이블
   const createDialog = (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) setDetails([emptyDetail()])
+      }}
+    >
       <DialogTrigger asChild>
         <Button>납품 등록</Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl lg:max-w-5xl">
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-6xl">
         <DialogHeader>
           <DialogTitle>납품 등록 ({activeTab === 'ONLINE' ? '온라인' : '오프라인'})</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
-          <Tabs defaultValue="info">
-            <TabsList variant="line">
-              <TabsTrigger value="info">기본 정보</TabsTrigger>
-              <TabsTrigger value="files">
-                <Paperclip className="mr-1 h-3.5 w-3.5" />
-                특이사항{pendingFiles.length > 0 && <span className="ml-1 text-xs">({pendingFiles.length})</span>}
-              </TabsTrigger>
-              <TabsTrigger value="notes">
-                <FileText className="mr-1 h-3.5 w-3.5" />
-                게시글
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="info" className="space-y-4 pt-3">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>
-                    납품일 <span className="text-destructive">*</span>
-                  </Label>
-                  <Input name="deliveryDate" type="date" required aria-required="true" />
-                </div>
-                <div className="space-y-2">
-                  <Label>
-                    발주 <span className="text-destructive">*</span>
-                  </Label>
-                  <Select name="salesOrderId">
-                    <SelectTrigger>
-                      <SelectValue placeholder="발주 선택" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {orders.map((o: any) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.orderNo} - {o.partner?.partnerName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* 기본 정보 */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <Label className="text-xs">
+                납품일 <span className="text-destructive">*</span>
+              </Label>
+              <Input name="deliveryDate" type="date" required className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">
+                발주 <span className="text-destructive">*</span>
+              </Label>
+              <Select name="salesOrderId">
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="발주 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {orders.map((o: any) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.orderNo} - {o.partner?.partnerName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">납품주소</Label>
+              <Input name="deliveryAddress" className="h-8 text-xs" placeholder="납품주소" />
+            </div>
+          </div>
+
+          {/* 보내는분 / 받는분 정보 */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2 rounded-md border p-3">
+              <Label className="text-xs font-medium text-blue-600">보내는분 (발신)</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  className="h-7 text-xs"
+                  placeholder="보내시는 분"
+                  defaultValue={companyInfo.companyName || ''}
+                  name="senderName"
+                />
+                <Input
+                  className="h-7 text-xs"
+                  placeholder="전화"
+                  defaultValue={companyInfo.phone || ''}
+                  name="senderPhone"
+                />
+                <Input
+                  className="col-span-2 h-7 text-xs"
+                  placeholder="주소"
+                  defaultValue={companyInfo.address || ''}
+                  name="senderAddress"
+                />
               </div>
-              {activeTab === 'ONLINE' && (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>택배사</Label>
-                    <Input name="carrier" placeholder="CJ대한통운, 한진택배 등" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>운송장번호</Label>
-                    <Input name="trackingNo" placeholder="운송장번호 입력" />
-                  </div>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>납품주소</Label>
-                <Input name="deliveryAddress" />
+            </div>
+            <div className="space-y-2 rounded-md border p-3">
+              <Label className="text-xs font-medium text-green-600">받는분 (수신)</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input className="h-7 text-xs" placeholder="받으시는 분" name="receiverName" />
+                <Input className="h-7 text-xs" placeholder="전화/핸드폰" name="receiverPhone" />
+                <Input className="h-7 text-xs" placeholder="우편번호" name="receiverZip" />
+                <Input className="h-7 text-xs" placeholder="주소" name="receiverAddress" />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>품목</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDetails([...details, { itemId: '', quantity: 1, unitPrice: 0 }])}
-                  >
-                    <Plus className="mr-1 h-3 w-3" /> 행 추가
-                  </Button>
-                </div>
-                <div className="space-y-3">
-                  {details.map((d, idx) => (
-                    <div key={idx} className="space-y-2 rounded-md border p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs font-medium">품목 #{idx + 1}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
-                          disabled={details.length <= 1}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
-                        <SelectTrigger className="truncate text-xs">
-                          <SelectValue placeholder="품목 선택" />
-                        </SelectTrigger>
-                        <SelectContent className="max-w-[calc(100vw-4rem)]">
-                          {items.map((it: any) => (
-                            <SelectItem key={it.id} value={it.id}>
-                              <span className="truncate">
-                                {it.itemCode} - {it.itemName}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <div className="grid min-w-0 grid-cols-3 gap-2">
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">수량</Label>
+            </div>
+          </div>
+
+          {/* 품목 테이블 */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium">내품 상세</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setDetails([...details, emptyDetail()])}
+              >
+                <Plus className="mr-1 h-3 w-3" /> 행 추가
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[700px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
+                      내품명 <span className="text-destructive">*</span>
+                    </th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">내품수량</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">내품가격</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">금액</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">운송장번호</th>
+                    <th className="px-2 py-2 text-left font-medium whitespace-nowrap">특기사항</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {details.map((d, idx) => {
+                    const amount = d.quantity * d.unitPrice
+                    return (
+                      <tr key={idx} className="border-b last:border-b-0">
+                        <td className="px-1 py-1.5">
+                          <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                            <SelectTrigger className="h-7 min-w-[140px] text-xs">
+                              <SelectValue placeholder="품목 선택" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items.map((it: any) => (
+                                <SelectItem key={it.id} value={it.id}>
+                                  {it.itemCode} - {it.itemName}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-1 py-1.5">
                           <Input
                             type="number"
-                            className="text-xs"
+                            className="h-7 w-[70px] text-right text-xs"
                             value={d.quantity || ''}
                             onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)}
                           />
-                        </div>
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">단가</Label>
+                        </td>
+                        <td className="px-1 py-1.5">
                           <Input
                             type="number"
-                            className="text-xs"
+                            className="h-7 w-[90px] text-right text-xs"
                             value={d.unitPrice || ''}
                             onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
                           />
-                        </div>
-                        <div className="min-w-0 space-y-1">
-                          <Label className="text-[11px]">금액</Label>
-                          <div className="bg-muted/50 flex h-9 items-center justify-end rounded-md border px-2 font-mono text-xs">
-                            {formatCurrency(d.quantity * d.unitPrice)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-            <RecordSubTabs
-              relatedTable="Delivery"
-              pendingFiles={pendingFiles}
-              onPendingFilesChange={setPendingFiles}
-              pendingNote={pendingNote}
-              onPendingNoteChange={setPendingNote}
-            />
-          </Tabs>
+                        </td>
+                        <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
+                          {formatCurrency(amount)}
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            className="h-7 w-[110px] text-xs"
+                            placeholder="운송장번호"
+                            value={d.trackingNo}
+                            onChange={(e) => updateDetail(idx, 'trackingNo', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Input
+                            className="h-7 w-[120px] text-xs"
+                            placeholder="특기사항"
+                            value={d.description}
+                            onChange={(e) => updateDetail(idx, 'description', e.target.value)}
+                          />
+                        </td>
+                        <td className="px-1 py-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => details.length > 1 && setDetails(details.filter((_, i) => i !== idx))}
+                            disabled={details.length <= 1}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-muted/30 border-t">
+                    <td className="px-2 py-2 text-xs font-medium">합계</td>
+                    <td className="px-2 py-2 text-right font-mono text-xs">
+                      {details.reduce((s, d) => s + d.quantity, 0)}
+                    </td>
+                    <td></td>
+                    <td className="px-2 py-2 text-right font-mono text-xs font-medium">
+                      {formatCurrency(details.reduce((s, d) => s + d.quantity * d.unitPrice, 0))}
+                    </td>
+                    <td colSpan={3}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
           <Button type="submit" className="w-full" disabled={createMutation.isPending}>
             {createMutation.isPending ? '등록 중...' : '납품 등록'}
           </Button>
@@ -528,8 +710,21 @@ export default function DeliveriesPage() {
 
         <TabsContent value="ONLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <div className="flex flex-wrap items-center gap-2">
               {createDialog}
+              <Button variant="outline" size="sm" onClick={handleDeliveryTemplateDownload}>
+                <FileDown className="mr-1 h-3.5 w-3.5" /> 납품 템플릿
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => deliveryImportFileRef.current?.click()}>
+                <Upload className="mr-1 h-3.5 w-3.5" /> 엑셀 업로드
+              </Button>
+              <input
+                ref={deliveryImportFileRef}
+                type="file"
+                accept=".xlsx"
+                className="hidden"
+                onChange={handleDeliveryImport}
+              />
               {trackingDialog}
             </div>
             <DataTable
@@ -546,7 +741,15 @@ export default function DeliveriesPage() {
 
         <TabsContent value="OFFLINE">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4">{createDialog}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {createDialog}
+              <Button variant="outline" size="sm" onClick={handleDeliveryTemplateDownload}>
+                <FileDown className="mr-1 h-3.5 w-3.5" /> 납품 템플릿
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => deliveryImportFileRef.current?.click()}>
+                <Upload className="mr-1 h-3.5 w-3.5" /> 엑셀 업로드
+              </Button>
+            </div>
             <DataTable
               columns={columns}
               data={offlineDeliveries}
