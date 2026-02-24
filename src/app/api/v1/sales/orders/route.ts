@@ -64,6 +64,11 @@ export async function GET(request: NextRequest) {
           partner: { select: { id: true, partnerCode: true, partnerName: true, partnerType: true } },
           employee: { select: { id: true, nameKo: true } },
           quotation: { select: { id: true, quotationNo: true } },
+          details: {
+            include: { item: { select: { id: true, itemName: true, itemCode: true, barcode: true } } },
+            orderBy: { lineNo: 'asc' },
+            take: 3,
+          },
           _count: { select: { details: true } },
         },
         orderBy: { createdAt: 'desc' },

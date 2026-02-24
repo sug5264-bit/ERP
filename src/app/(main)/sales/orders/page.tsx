@@ -137,6 +137,7 @@ export default function OrdersPage() {
     { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
   ])
   const [orderRows, setOrderRows] = useState<OrderRow[]>([])
+  const [onlineSubmitting, setOnlineSubmitting] = useState(false)
   const [createPartnerSearch, setCreatePartnerSearch] = useState('')
   const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
   const [trackingResult, setTrackingResult] = useState<{
@@ -370,7 +371,141 @@ export default function OrdersPage() {
     setShowAdvancedFilter(false)
   }
 
-  const columns: ColumnDef<any>[] = [
+  const actionsColumn: ColumnDef<any> = {
+    id: 'actions',
+    header: '',
+    cell: ({ row }) => {
+      const status = row.original.status
+      const canComplete = status === 'ORDERED' || status === 'IN_PROGRESS'
+      const canCancel = status !== 'CANCELLED' && status !== 'COMPLETED'
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleTaxInvoicePDF(row.original)}>
+              <FileDown className="mr-2 h-4 w-4" />
+              세금계산서 PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleTransactionStatementPDF(row.original)}>
+              <FileText className="mr-2 h-4 w-4" />
+              거래명세표 PDF
+            </DropdownMenuItem>
+            {canComplete && (
+              <DropdownMenuItem onClick={() => handleEdit(row.original)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                수정
+              </DropdownMenuItem>
+            )}
+            {canComplete && (
+              <DropdownMenuItem onClick={() => setCompleteTarget(row.original)}>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                완료 처리
+              </DropdownMenuItem>
+            )}
+            {canCancel && (
+              <DropdownMenuItem
+                onClick={() => setCancelTarget({ id: row.original.id, orderNo: row.original.orderNo })}
+                disabled={cancelMutation.isPending}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                취소 처리
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => handleDelete(row.original.id, row.original.orderNo)}
+              disabled={deleteMutation.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              삭제
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    },
+  }
+
+  const onlineColumns: ColumnDef<any>[] = [
+    { id: 'orderDate', header: '주문일', cell: ({ row }) => formatDate(row.original.orderDate) },
+    {
+      id: 'barcode',
+      header: '상품바코드',
+      cell: ({ row }) => {
+        const detail = row.original.details?.[0]
+        return <span className="font-mono text-xs">{detail?.item?.barcode || '-'}</span>
+      },
+    },
+    {
+      accessorKey: 'orderNo',
+      header: '주문번호',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
+    },
+    { id: 'siteName', header: '사이트명', cell: ({ row }) => row.original.siteName || '-' },
+    {
+      id: 'productName',
+      header: '상품명',
+      cell: ({ row }) => {
+        const detail = row.original.details?.[0]
+        return detail?.item?.itemName || '-'
+      },
+    },
+    {
+      id: 'quantity',
+      header: '수량',
+      cell: ({ row }) => {
+        const detail = row.original.details?.[0]
+        return detail ? Number(detail.quantity) : '-'
+      },
+    },
+    { id: 'orderer', header: '주문자', cell: ({ row }) => row.original.ordererName || '-' },
+    { id: 'recipient', header: '수취인', cell: ({ row }) => row.original.recipientName || '-' },
+    { id: 'ordererContact', header: '주문자 연락처', cell: ({ row }) => row.original.ordererContact || '-' },
+    { id: 'recipientContact', header: '수취인 연락처', cell: ({ row }) => row.original.recipientContact || '-' },
+    { id: 'zipCode', header: '우편번호', cell: ({ row }) => row.original.recipientZipCode || '-' },
+    {
+      id: 'address',
+      header: '주소',
+      cell: ({ row }) => (
+        <span className="max-w-[200px] truncate block" title={row.original.recipientAddress || ''}>
+          {row.original.recipientAddress || '-'}
+        </span>
+      ),
+    },
+    { id: 'requirements', header: '요구사항', cell: ({ row }) => row.original.requirements || '-' },
+    { id: 'trackingNo', header: '운송장번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span> },
+    { id: 'senderName', header: '보내는사람(업체명)', cell: ({ row }) => row.original.senderName || '-' },
+    { id: 'senderPhone', header: '전화번호', cell: ({ row }) => row.original.senderPhone || '-' },
+    {
+      id: 'senderAddress',
+      header: '주소',
+      cell: ({ row }) => (
+        <span className="max-w-[200px] truncate block" title={row.original.senderAddress || ''}>
+          {row.original.senderAddress || '-'}
+        </span>
+      ),
+    },
+    {
+      id: 'shippingCost',
+      header: '운임',
+      cell: ({ row }) => (row.original.shippingCost ? formatCurrency(row.original.shippingCost) : '-'),
+    },
+    { id: 'specialNote', header: '특기사항', cell: ({ row }) => row.original.specialNote || '-' },
+    {
+      id: 'status',
+      header: '상태',
+      cell: ({ row }) => {
+        const s = STATUS_MAP[row.original.status]
+        return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
+      },
+    },
+    actionsColumn,
+  ]
+
+  const offlineColumns: ColumnDef<any>[] = [
     {
       accessorKey: 'orderNo',
       header: '발주번호',
@@ -396,63 +531,7 @@ export default function OrdersPage() {
         return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
       },
     },
-    {
-      id: 'actions',
-      header: '',
-      cell: ({ row }) => {
-        const status = row.original.status
-        const canComplete = status === 'ORDERED' || status === 'IN_PROGRESS'
-        const canCancel = status !== 'CANCELLED' && status !== 'COMPLETED'
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleTaxInvoicePDF(row.original)}>
-                <FileDown className="mr-2 h-4 w-4" />
-                세금계산서 PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleTransactionStatementPDF(row.original)}>
-                <FileText className="mr-2 h-4 w-4" />
-                거래명세표 PDF
-              </DropdownMenuItem>
-              {canComplete && (
-                <DropdownMenuItem onClick={() => handleEdit(row.original)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  수정
-                </DropdownMenuItem>
-              )}
-              {canComplete && (
-                <DropdownMenuItem onClick={() => setCompleteTarget(row.original)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  완료 처리
-                </DropdownMenuItem>
-              )}
-              {canCancel && (
-                <DropdownMenuItem
-                  onClick={() => setCancelTarget({ id: row.original.id, orderNo: row.original.orderNo })}
-                  disabled={cancelMutation.isPending}
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  취소 처리
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => handleDelete(row.original.id, row.original.orderNo)}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                삭제
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
+    actionsColumn,
   ]
 
   // 날짜 프리셋 계산
@@ -594,7 +673,7 @@ export default function OrdersPage() {
     completedCount: summaryOrders.filter((o: any) => o.status === 'COMPLETED').length,
   }
 
-  const exportColumns: ExportColumn[] = [
+  const offlineExportColumns: ExportColumn[] = [
     { header: '발주번호', accessor: 'orderNo' },
     { header: '발주일', accessor: (r) => (r.orderDate ? formatDate(r.orderDate) : '') },
     { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
@@ -603,13 +682,37 @@ export default function OrdersPage() {
     { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
   ]
 
+  const onlineExportColumns: ExportColumn[] = [
+    { header: '주문일', accessor: (r) => (r.orderDate ? formatDate(r.orderDate) : '') },
+    { header: '상품바코드', accessor: (r) => r.details?.[0]?.item?.barcode || '' },
+    { header: '주문번호', accessor: 'orderNo' },
+    { header: '사이트명', accessor: (r) => r.siteName || '' },
+    { header: '상품명', accessor: (r) => r.details?.[0]?.item?.itemName || '' },
+    { header: '수량', accessor: (r) => (r.details?.[0] ? Number(r.details[0].quantity) : '') },
+    { header: '주문자', accessor: (r) => r.ordererName || '' },
+    { header: '수취인', accessor: (r) => r.recipientName || '' },
+    { header: '주문자 연락처', accessor: (r) => r.ordererContact || '' },
+    { header: '수취인 연락처', accessor: (r) => r.recipientContact || '' },
+    { header: '우편번호', accessor: (r) => r.recipientZipCode || '' },
+    { header: '주소', accessor: (r) => r.recipientAddress || '' },
+    { header: '요구사항', accessor: (r) => r.requirements || '' },
+    { header: '운송장번호', accessor: (r) => r.trackingNo || '' },
+    { header: '보내는사람(업체명)', accessor: (r) => r.senderName || '' },
+    { header: '전화번호', accessor: (r) => r.senderPhone || '' },
+    { header: '보내는사람 주소', accessor: (r) => r.senderAddress || '' },
+    { header: '운임', accessor: (r) => (r.shippingCost ? formatCurrency(r.shippingCost) : '') },
+    { header: '특기사항', accessor: (r) => r.specialNote || '' },
+    { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
+  ]
+
   const handleExport = (type: 'excel' | 'pdf') => {
     const currentOrders = activeTab === 'ONLINE' ? onlineOrders : offlineOrders
     const tabLabel = activeTab === 'ONLINE' ? '온라인' : '오프라인'
+    const cols = activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns
     const cfg = {
       fileName: `발주목록_${tabLabel}`,
       title: `발주관리 목록 (${tabLabel})`,
-      columns: exportColumns,
+      columns: cols,
       data: currentOrders,
     }
     if (type === 'excel') exportToExcel(cfg)
@@ -625,17 +728,21 @@ export default function OrdersPage() {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const validDetails = details.filter((d) => d.itemId)
+    if (validDetails.length === 0) {
+      toast.error('최소 1개 이상의 품목을 선택해주세요.')
+      return
+    }
     const form = new FormData(e.currentTarget)
+    const partnerId = form.get('partnerId') as string | null
     createMutation.mutate({
       orderDate: form.get('orderDate'),
-      partnerId: form.get('partnerId'),
+      partnerId: partnerId || undefined,
       salesChannel: activeTab,
       vatIncluded,
       deliveryDate: form.get('deliveryDate') || undefined,
       description: details[0]?.description || undefined,
-      details: details
-        .filter((d) => d.itemId)
-        .map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
+      details: validDetails.map(({ itemId, quantity, unitPrice }) => ({ itemId, quantity, unitPrice })),
     })
   }
 
@@ -669,7 +776,7 @@ export default function OrdersPage() {
       { header: '운송장번호', key: 'trackingNo', example: '1234567890', width: 16 },
       { header: '보내는사람(업체명)', key: 'senderName', example: getCompanyInfo().name, width: 18 },
       { header: '전화번호', key: 'senderPhone', example: getCompanyInfo().tel, width: 14 },
-      { header: '주소', key: 'senderAddress', example: getCompanyInfo().address, width: 30 },
+      { header: '보내는사람 주소', key: 'senderAddress', example: getCompanyInfo().address, width: 30 },
       { header: '운임', key: 'shippingCost', example: '3000', width: 10 },
       { header: '특기사항', key: 'specialNote', example: '', width: 20 },
     ]
@@ -698,6 +805,7 @@ export default function OrdersPage() {
         운송장번호: 'trackingNo',
         '보내는사람(업체명)': 'senderName',
         전화번호: 'senderPhone',
+        '보내는사람 주소': 'senderAddress',
         운임: 'shippingCost',
         특기사항: 'specialNote',
       }
@@ -810,7 +918,7 @@ export default function OrdersPage() {
     setOrderRows(rows)
   }
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     if (orderRows.length === 0) {
       toast.error('등록할 데이터가 없습니다.')
       return
@@ -820,57 +928,56 @@ export default function OrdersPage() {
       toast.error('모든 행에 품목을 선택해주세요.')
       return
     }
-    const processRows = async () => {
-      let successCount = 0
-      let failCount = 0
-      const failReasons: string[] = []
-      for (const row of orderRows) {
-        const item = items.find((it: any) => it.id === row.itemId)
-        if (!item) {
-          failCount++
-          failReasons.push(`품목 ID "${row.itemId}" 미매칭`)
-          continue
-        }
-        try {
-          await api.post('/sales/orders', {
-            orderDate: row.orderDate || new Date().toISOString().split('T')[0],
-            salesChannel: activeTab,
-            vatIncluded: true,
-            siteName: row.siteName || undefined,
-            ordererName: row.orderer || undefined,
-            recipientName: row.recipient || undefined,
-            ordererContact: row.ordererContact || undefined,
-            recipientContact: row.recipientContact || undefined,
-            recipientZipCode: row.zipCode || undefined,
-            recipientAddress: row.address || undefined,
-            requirements: row.requirements || undefined,
-            trackingNo: row.trackingNo || undefined,
-            senderName: row.senderName || undefined,
-            senderPhone: row.senderPhone || undefined,
-            senderAddress: row.senderAddress || undefined,
-            shippingCost: row.shippingCost ? Number(row.shippingCost) : undefined,
-            specialNote: row.specialNote || undefined,
-            details: [
-              { itemId: item.id, quantity: Number(row.quantity) || 1, unitPrice: Number(item.standardPrice) || 0 },
-            ],
-          })
-          successCount++
-        } catch {
-          failCount++
-        }
+    setOnlineSubmitting(true)
+    let successCount = 0
+    let failCount = 0
+    const failReasons: string[] = []
+    for (const row of orderRows) {
+      const item = items.find((it: any) => it.id === row.itemId)
+      if (!item) {
+        failCount++
+        failReasons.push(`품목 ID "${row.itemId}" 미매칭`)
+        continue
       }
-      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
-      setOpen(false)
-      setOrderRows([])
-      if (failCount > 0) {
-        toast.error(
-          `${successCount}건 등록, ${failCount}건 실패${failReasons.length > 0 ? ': ' + failReasons.slice(0, 3).join(', ') : ''}`
-        )
-      } else {
-        toast.success(`${successCount}건 등록 완료`)
+      try {
+        await api.post('/sales/orders', {
+          orderDate: row.orderDate || new Date().toISOString().split('T')[0],
+          salesChannel: activeTab,
+          vatIncluded: true,
+          siteName: row.siteName || undefined,
+          ordererName: row.orderer || undefined,
+          recipientName: row.recipient || undefined,
+          ordererContact: row.ordererContact || undefined,
+          recipientContact: row.recipientContact || undefined,
+          recipientZipCode: row.zipCode || undefined,
+          recipientAddress: row.address || undefined,
+          requirements: row.requirements || undefined,
+          trackingNo: row.trackingNo || undefined,
+          senderName: row.senderName || undefined,
+          senderPhone: row.senderPhone || undefined,
+          senderAddress: row.senderAddress || undefined,
+          shippingCost: row.shippingCost ? Number(row.shippingCost) : undefined,
+          specialNote: row.specialNote || undefined,
+          details: [
+            { itemId: item.id, quantity: Number(row.quantity) || 1, unitPrice: Number(item.standardPrice) || 0 },
+          ],
+        })
+        successCount++
+      } catch {
+        failCount++
       }
     }
-    processRows()
+    queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+    setOpen(false)
+    setOrderRows([])
+    setOnlineSubmitting(false)
+    if (failCount > 0) {
+      toast.error(
+        `${successCount}건 등록, ${failCount}건 실패${failReasons.length > 0 ? ': ' + failReasons.slice(0, 3).join(', ') : ''}`
+      )
+    } else {
+      toast.success(`${successCount}건 등록 완료`)
+    }
   }
 
   // ── 온라인: 카드 기반 e-커머스 양식 ──
@@ -1124,8 +1231,8 @@ export default function OrdersPage() {
             ))}
           </div>
 
-          <Button className="w-full" onClick={handleCreateOrder} disabled={createMutation.isPending}>
-            {createMutation.isPending ? '등록 중...' : `발주 등록 (${orderRows.length}건)`}
+          <Button className="w-full" onClick={handleCreateOrder} disabled={onlineSubmitting}>
+            {onlineSubmitting ? '등록 중...' : `발주 등록 (${orderRows.length}건)`}
           </Button>
         </div>
       </DialogContent>
@@ -1623,10 +1730,10 @@ export default function OrdersPage() {
               {trackingDialog}
             </div>
             <DataTable
-              columns={columns}
+              columns={onlineColumns}
               data={onlineOrders}
               searchColumn="orderNo"
-              searchPlaceholder="발주번호로 검색..."
+              searchPlaceholder="주문번호로 검색..."
               isLoading={onlineLoading}
               pageSize={50}
               selectable
@@ -1649,7 +1756,7 @@ export default function OrdersPage() {
                     exportToExcel({
                       fileName: '선택_발주목록',
                       title: '발주관리 선택 목록',
-                      columns: exportColumns,
+                      columns: activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns,
                       data: rows,
                     })
                     toast.success('선택한 항목이 다운로드되었습니다.')
@@ -1678,7 +1785,7 @@ export default function OrdersPage() {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
             <DataTable
-              columns={columns}
+              columns={offlineColumns}
               data={offlineOrders}
               searchColumn="orderNo"
               searchPlaceholder="발주번호로 검색..."
@@ -1704,7 +1811,7 @@ export default function OrdersPage() {
                     exportToExcel({
                       fileName: '선택_발주목록',
                       title: '발주관리 선택 목록',
-                      columns: exportColumns,
+                      columns: activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns,
                       data: rows,
                     })
                     toast.success('선택한 항목이 다운로드되었습니다.')
