@@ -15,7 +15,6 @@ import {
   Search,
   MessageSquare,
   Paperclip,
-  Download,
   FileImage,
   FileText,
   FileSpreadsheet,
@@ -52,52 +51,45 @@ function getFileTypeBadge(mimeType: string, fileName: string) {
   return { label: ext.toUpperCase() || '파일', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes}B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
-}
-
-export default function OrderPostsPage() {
+export default function DeliveryPostsPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('all')
-  const [postOrderId, setPostOrderId] = useState<string>('')
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>('all')
+  const [postDeliveryId, setPostDeliveryId] = useState<string>('')
   const [newContent, setNewContent] = useState('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const { data: ordersData } = useQuery({
-    queryKey: ['sales-orders-all'],
+  const { data: deliveriesData } = useQuery({
+    queryKey: ['sales-deliveries-all'],
     queryFn: async () => {
-      const res = await fetch('/api/v1/sales/orders?pageSize=9999')
+      const res = await fetch('/api/v1/sales/deliveries?pageSize=9999')
       return res.json()
     },
   })
-  const orders = ordersData?.data?.data || ordersData?.data || []
+  const deliveries = deliveriesData?.data?.data || deliveriesData?.data || []
 
   const { data: notesData } = useQuery({
-    queryKey: ['notes', 'SalesOrder', selectedOrderId],
+    queryKey: ['notes', 'Delivery', selectedDeliveryId],
     queryFn: async () => {
       const url =
-        selectedOrderId && selectedOrderId !== 'all'
-          ? `/api/v1/notes?relatedTable=SalesOrder&relatedId=${selectedOrderId}`
-          : `/api/v1/notes?relatedTable=SalesOrder`
+        selectedDeliveryId && selectedDeliveryId !== 'all'
+          ? `/api/v1/notes?relatedTable=Delivery&relatedId=${selectedDeliveryId}`
+          : `/api/v1/notes?relatedTable=Delivery`
       const res = await fetch(url)
       return res.json()
     },
   })
   const notes = notesData?.data || []
 
-  // 게시글별 첨부파일 조회
   const { data: allAttachmentsData } = useQuery({
-    queryKey: ['attachments', 'SalesOrderPost', selectedOrderId],
+    queryKey: ['attachments', 'DeliveryPost', selectedDeliveryId],
     queryFn: async () => {
       const url =
-        selectedOrderId && selectedOrderId !== 'all'
-          ? `/api/v1/attachments?relatedTable=SalesOrderPost&relatedId=${selectedOrderId}`
-          : `/api/v1/attachments?relatedTable=SalesOrderPost`
+        selectedDeliveryId && selectedDeliveryId !== 'all'
+          ? `/api/v1/attachments?relatedTable=DeliveryPost&relatedId=${selectedDeliveryId}`
+          : `/api/v1/attachments?relatedTable=DeliveryPost`
       const res = await fetch(url)
       return res.json()
     },
@@ -115,35 +107,33 @@ export default function OrderPostsPage() {
   }
 
   const handleAddPost = async () => {
-    if (!newContent.trim() || !postOrderId) {
-      toast.error('발주 선택 및 내용을 입력해주세요.')
+    if (!newContent.trim() || !postDeliveryId) {
+      toast.error('납품 선택 및 내용을 입력해주세요.')
       return
     }
     setSubmitting(true)
     try {
-      // 1. 게시글 등록
       const res = await fetch('/api/v1/notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newContent.trim(), relatedTable: 'SalesOrder', relatedId: postOrderId }),
+        body: JSON.stringify({ content: newContent.trim(), relatedTable: 'Delivery', relatedId: postDeliveryId }),
       })
       if (!res.ok) throw new Error()
       const noteResult = await res.json()
       const noteId = noteResult?.data?.id
 
-      // 2. 첨부파일 업로드
       if (pendingFiles.length > 0 && noteId) {
         for (const file of pendingFiles) {
           const formData = new FormData()
           formData.append('file', file)
-          formData.append('relatedTable', 'SalesOrderPost')
+          formData.append('relatedTable', 'DeliveryPost')
           formData.append('relatedId', noteId)
           await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {})
         }
       }
 
-      queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
-      queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrderPost'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'Delivery'] })
+      queryClient.invalidateQueries({ queryKey: ['attachments', 'DeliveryPost'] })
       setNewContent('')
       setPendingFiles([])
       toast.success('게시글이 등록되었습니다.')
@@ -156,7 +146,7 @@ export default function OrderPostsPage() {
   const handleDelete = async (id: string) => {
     try {
       await fetch(`/api/v1/notes/${id}`, { method: 'DELETE' })
-      queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'Delivery'] })
       toast.success('게시글이 삭제되었습니다.')
     } catch {
       toast.error('게시글 삭제에 실패했습니다.')
@@ -164,28 +154,27 @@ export default function OrderPostsPage() {
     setDeleteTarget(null)
   }
 
-  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id.slice(-6)]))
-
-  // 게시글에 연결된 첨부파일 가져오기
+  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id.slice(-6)]))
   const getPostAttachments = (noteId: string) => allAttachments.filter((a: any) => a.relatedId === noteId)
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader title="게시글" description="발주 관련 게시글 관리 (파일 첨부 가능)" />
+      <PageHeader title="게시글" description="납품 관련 게시글 관리 (파일 첨부 가능)" />
 
       {/* 작성 영역 */}
       <div className="space-y-3 rounded-lg border p-4">
         <h3 className="text-sm font-medium">게시글 작성</h3>
         <div className="space-y-1">
-          <label className="text-muted-foreground text-xs">발주 선택</label>
-          <Select value={postOrderId} onValueChange={setPostOrderId}>
+          <label className="text-muted-foreground text-xs">납품 선택</label>
+          <Select value={postDeliveryId} onValueChange={setPostDeliveryId}>
             <SelectTrigger className="w-full sm:w-[300px]">
-              <SelectValue placeholder="발주 선택" />
+              <SelectValue placeholder="납품 선택" />
             </SelectTrigger>
             <SelectContent>
-              {orders.map((o: any) => (
-                <SelectItem key={o.id} value={o.id}>
-                  {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
+              {deliveries.map((d: any) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.deliveryNo || d.id.slice(-6)} -{' '}
+                  {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -198,7 +187,6 @@ export default function OrderPostsPage() {
             onChange={(e) => setNewContent(e.target.value)}
             rows={3}
           />
-          {/* 파일 첨부 */}
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -236,7 +224,7 @@ export default function OrderPostsPage() {
           </p>
         </div>
         <div className="flex justify-end">
-          <Button onClick={handleAddPost} disabled={!newContent.trim() || !postOrderId || submitting} size="sm">
+          <Button onClick={handleAddPost} disabled={!newContent.trim() || !postDeliveryId || submitting} size="sm">
             <Send className="mr-1 h-3.5 w-3.5" />
             {submitting ? '등록 중...' : '등록'}
           </Button>
@@ -246,15 +234,15 @@ export default function OrderPostsPage() {
       {/* 필터 */}
       <div className="flex items-center gap-2">
         <Search className="text-muted-foreground h-4 w-4" />
-        <Select value={selectedOrderId} onValueChange={setSelectedOrderId}>
+        <Select value={selectedDeliveryId} onValueChange={setSelectedDeliveryId}>
           <SelectTrigger className="w-[260px]">
-            <SelectValue placeholder="전체 발주" />
+            <SelectValue placeholder="전체 납품" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체 발주</SelectItem>
-            {orders.map((o: any) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
+            <SelectItem value="all">전체 납품</SelectItem>
+            {deliveries.map((d: any) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.deliveryNo || d.id.slice(-6)} - {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
               </SelectItem>
             ))}
           </SelectContent>
@@ -285,7 +273,6 @@ export default function OrderPostsPage() {
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                {/* 첨부파일 표시 */}
                 {postFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {postFiles.map((att: any) => {
@@ -309,7 +296,7 @@ export default function OrderPostsPage() {
                 )}
                 <div className="text-muted-foreground flex items-center gap-2 text-xs">
                   <Badge variant="outline" className="text-xs">
-                    발주 {orderMap.get(note.relatedId) || note.relatedId?.slice(-6)}
+                    납품 {deliveryMap.get(note.relatedId) || note.relatedId?.slice(-6)}
                   </Badge>
                   <span>{formatDate(note.createdAt)}</span>
                 </div>

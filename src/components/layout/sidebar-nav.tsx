@@ -100,7 +100,15 @@ const navItems: NavItem[] = [
           { title: '게시글', href: '/sales/orders/posts', permission: 'sales.orders' },
         ],
       },
-      { title: '납품관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
+      {
+        title: '납품관리',
+        href: '/sales/deliveries',
+        permission: 'sales.deliveries',
+        children: [
+          { title: '특이사항', href: '/sales/deliveries/notes', permission: 'sales.deliveries' },
+          { title: '게시글', href: '/sales/deliveries/posts', permission: 'sales.deliveries' },
+        ],
+      },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
     ],
   },
