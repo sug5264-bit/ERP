@@ -10,10 +10,19 @@ export async function GET() {
   const checks: Record<string, unknown> = {}
 
   try {
+    // 0. 환경변수 확인
+    checks.authSecretSet = !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET)
+
     // 1. admin 사용자 존재 확인
     const admin = await prisma.user.findUnique({
       where: { username: 'admin' },
-      select: { id: true, username: true, isActive: true, passwordHash: true },
+      select: {
+        id: true,
+        username: true,
+        isActive: true,
+        passwordHash: true,
+        userRoles: { include: { role: { select: { name: true } } } },
+      },
     })
 
     if (!admin) {
@@ -24,6 +33,7 @@ export async function GET() {
 
     checks.adminExists = true
     checks.adminActive = admin.isActive
+    checks.roles = admin.userRoles.map((r) => r.role.name)
 
     // 2. 비밀번호 검증
     const isValid = await compare('admin1234', admin.passwordHash)
@@ -36,20 +46,16 @@ export async function GET() {
         where: { username: 'admin' },
         data: { passwordHash: newHash },
       })
+      // 복구 후 재검증
+      const verified = await compare('admin1234', newHash)
       checks.passwordReset = true
+      checks.passwordVerified = verified
       checks.message = 'admin 비밀번호가 복구되었습니다. admin / admin1234 로 로그인하세요.'
     } else {
       checks.message = 'admin 계정 정상 (admin / admin1234)'
     }
 
-    // 4. 역할 확인
-    const roles = await prisma.userRole.findMany({
-      where: { userId: admin.id },
-      include: { role: { select: { name: true } } },
-    })
-    checks.roles = roles.map((r) => r.role.name)
-
-    // 5. 다른 사용자도 비밀번호 복구
+    // 4. 다른 사용자도 비밀번호 복구
     const otherUsers = await prisma.user.findMany({
       where: { username: { in: ['parksales', 'leedev', 'hanacct', 'kangstaff'] } },
       select: { username: true, passwordHash: true },
@@ -68,6 +74,11 @@ export async function GET() {
     }
     if (userFixed > 0) {
       checks.otherUsersFixed = userFixed
+    }
+
+    // 5. 진단 요약
+    if (!checks.authSecretSet) {
+      checks.warning = 'AUTH_SECRET이 설정되지 않았습니다! 로그인이 작동하지 않을 수 있습니다.'
     }
 
     return NextResponse.json(checks)
