@@ -34,9 +34,12 @@ export default function WarehousesPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/inventory/warehouses', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/inventory/warehouses', body)
+      await queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
       setOpen(false)
       toast.success('창고가 등록되었습니다.')
     },
@@ -44,10 +47,12 @@ export default function WarehousesPage() {
   })
 
   const createZoneMutation = useMutation({
-    mutationFn: ({ warehouseId, ...body }: any) =>
-      api.post(`/inventory/warehouses/${warehouseId}/zones`, body),
+    mutationFn: async ({ warehouseId, ...body }: any) => {
+      const result = await api.post(`/inventory/warehouses/${warehouseId}/zones`, body)
+      await queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
       setZoneDialogId(null)
       toast.success('구역이 등록되었습니다.')
     },
@@ -55,9 +60,12 @@ export default function WarehousesPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/inventory/warehouses/${id}`),
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/inventory/warehouses/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
       toast.success('창고가 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

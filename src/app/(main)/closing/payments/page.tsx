@@ -109,9 +109,12 @@ export default function PaymentsPage() {
   const totalAmount = rows.reduce((sum, r) => sum + r.totalAmount, 0)
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/accounting/vouchers', data),
+    mutationFn: async (data: any) => {
+      const result = await api.post('/accounting/vouchers', data)
+      await queryClient.invalidateQueries({ queryKey: ['closing-payments'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['closing-payments'] })
       setCreateOpen(false)
       resetForm()
       toast.success('대금지급 전표가 생성되었습니다.')

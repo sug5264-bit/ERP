@@ -80,9 +80,12 @@ export default function OrganizationPage() {
   })
 
   const createDeptMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/departments', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/hr/departments', body)
+      await queryClient.invalidateQueries({ queryKey: ['hr-departments'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hr-departments'] })
       setDeptOpen(false)
       toast.success('부서가 등록되었습니다.')
     },
@@ -90,9 +93,12 @@ export default function OrganizationPage() {
   })
 
   const createPosMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/positions', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/hr/positions', body)
+      await queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
       setPosOpen(false)
       toast.success('직급이 등록되었습니다.')
     },
@@ -100,18 +106,24 @@ export default function OrganizationPage() {
   })
 
   const deleteDeptMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/hr/departments/${id}`),
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/hr/departments/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['hr-departments'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hr-departments'] })
       toast.success('부서가 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
   })
 
   const deletePosMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/hr/positions/${id}`),
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/hr/positions/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
       toast.success('직급이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

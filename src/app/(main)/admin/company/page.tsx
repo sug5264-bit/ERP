@@ -51,9 +51,12 @@ export default function CompanyManagementPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/admin/company', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/admin/company', body)
+      await queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       setCreateOpen(false)
       toast.success('회사 정보가 등록되었습니다.')
     },
@@ -61,9 +64,12 @@ export default function CompanyManagementPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/admin/company/${id}`, body),
+    mutationFn: async ({ id, ...body }: any) => {
+      const result = await api.put(`/admin/company/${id}`, body)
+      await queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       setEditTarget(null)
       toast.success('회사 정보가 수정되었습니다.')
     },
@@ -71,9 +77,12 @@ export default function CompanyManagementPage() {
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.delete(`/admin/company/${id}`),
+    mutationFn: async (id: string) => {
+      const result = await api.delete(`/admin/company/${id}`)
+      await queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       toast.success('회사 정보가 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

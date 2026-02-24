@@ -84,9 +84,12 @@ export default function LeavePage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/leave', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/hr/leave', body)
+      await queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       setOpen(false)
       setApprovalSteps(DEFAULT_APPROVAL_LINE.map(label => ({ approverId: '', approvalType: 'APPROVE', lineLabel: label })))
       toast.success('휴가가 신청되었습니다.')
@@ -95,9 +98,12 @@ export default function LeavePage() {
   })
 
   const actionMutation = useMutation({
-    mutationFn: (body: { id: string; action: string; comment?: string }) => api.put('/hr/leave', body),
+    mutationFn: async (body: { id: string; action: string; comment?: string }) => {
+      const result = await api.put('/hr/leave', body)
+      await queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
+      return result
+    },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       const msg = variables.action === 'approve' ? '승인' : variables.action === 'reject' ? '반려' : '취소'
       toast.success(`휴가가 ${msg}되었습니다.`)
       setDetailOpen(false)
@@ -107,9 +113,12 @@ export default function LeavePage() {
   })
 
   const batchMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/leave/batch', body) as Promise<any>,
+    mutationFn: async (body: any) => {
+      const result = await (api.post('/hr/leave/batch', body) as Promise<any>)
+      await queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
+      return result
+    },
     onSuccess: (res: any) => {
-      queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       const d = res?.data || res
       toast.success(`${d.successCount}건 처리 완료${d.failCount > 0 ? `, ${d.failCount}건 실패` : ''}`)
       setSelectedRows([])

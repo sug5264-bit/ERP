@@ -64,9 +64,12 @@ export default function TaxInvoicePage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/accounting/tax-invoice', body),
+    mutationFn: async (body: any) => {
+      const result = await api.post('/accounting/tax-invoice', body)
+      await queryClient.invalidateQueries({ queryKey: ['accounting-tax-invoice'] })
+      return result
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounting-tax-invoice'] })
       setOpen(false)
       setItems([{ itemDate: '', itemName: '', specification: '', qty: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0 }])
       toast.success('세금계산서가 등록되었습니다.')
