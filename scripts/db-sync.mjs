@@ -236,6 +236,13 @@ async function main() {
   }
 
   await prisma.$disconnect()
+
+  // 스키마 동기화 후 시드 데이터도 확인/적용
+  try {
+    const { default: seedSync } = await import('./db-seed-sync.mjs')
+  } catch {
+    // db-seed-sync.mjs는 자체적으로 main()을 실행하므로 import만 하면 됨
+  }
 }
 
 main().catch((e) => {
