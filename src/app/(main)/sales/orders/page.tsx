@@ -868,12 +868,13 @@ export default function OrdersPage() {
             ],
           })
           successCount++
-        } catch {
+        } catch (err: any) {
           failCount++
+          failReasons.push(err?.message || '알 수 없는 오류')
         }
       }
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
-      if (failReasons.length > 0) {
+      if (failCount > 0) {
         toast.error(
           `${successCount}건 등록, ${failCount}건 실패: ${failReasons.slice(0, 3).join(', ')}${failReasons.length > 3 ? ' ...' : ''}`
         )
@@ -963,8 +964,9 @@ export default function OrdersPage() {
           ],
         })
         successCount++
-      } catch {
+      } catch (err: any) {
         failCount++
+        failReasons.push(err?.message || '알 수 없는 오류')
       }
     }
     queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
@@ -973,7 +975,7 @@ export default function OrdersPage() {
     setOnlineSubmitting(false)
     if (failCount > 0) {
       toast.error(
-        `${successCount}건 등록, ${failCount}건 실패${failReasons.length > 0 ? ': ' + failReasons.slice(0, 3).join(', ') : ''}`
+        `${successCount}건 등록, ${failCount}건 실패: ${failReasons.slice(0, 3).join(', ')}${failReasons.length > 3 ? ' ...' : ''}`
       )
     } else {
       toast.success(`${successCount}건 등록 완료`)

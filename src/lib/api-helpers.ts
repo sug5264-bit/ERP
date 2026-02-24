@@ -99,15 +99,19 @@ function isPrismaError(error: unknown): boolean {
 
 function getPrismaErrorMessage(error: unknown): string {
   const code = (error as any).code as string
+  const meta = (error as any).meta
   switch (code) {
     case 'P2002':
       return '이미 존재하는 데이터입니다. 중복된 값을 확인해주세요.'
     case 'P2003':
-      return '참조하는 데이터가 존재하지 않습니다.'
+      return `참조하는 데이터가 존재하지 않습니다.${meta?.field_name ? ` (${meta.field_name})` : ''}`
     case 'P2025':
       return '해당 데이터를 찾을 수 없습니다.'
+    case 'P2010':
+    case 'P2022':
+      return '데이터베이스 스키마가 최신이 아닙니다. 관리자에게 DB 마이그레이션을 요청하세요.'
     default:
-      return '데이터 처리 중 오류가 발생했습니다.'
+      return `데이터 처리 중 오류가 발생했습니다. (${code})`
   }
 }
 

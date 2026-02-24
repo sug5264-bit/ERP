@@ -90,8 +90,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createSalesOrderSchema.parse(body)
     const orderNo = await generateDocumentNumber('SO', new Date(data.orderDate))
-    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
-    if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+    // 세션에서 employeeId를 직접 가져오고, 없으면 DB 조회로 폴백
+    let employeeId = authResult.session.user.employeeId
+    if (!employeeId) {
+      const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
+      if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다. 관리자에게 사원 연결을 요청하세요.', 'NOT_FOUND', 404)
+      employeeId = employee.id
+    }
 
     // 가용재고 체크: 현재고 - 기존 미처리 수주잔량
     const warnings: string[] = []
@@ -165,7 +171,7 @@ export async function POST(request: NextRequest) {
           totalSupply,
           totalTax,
           totalAmount: totalSupply + totalTax,
-          employeeId: employee.id,
+          employeeId,
           description: data.description || null,
           vatIncluded: data.vatIncluded ?? true,
           siteName: data.siteName || null,
