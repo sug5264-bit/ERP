@@ -21,11 +21,11 @@ export async function POST(req: NextRequest) {
       return errorResponse('한 번에 최대 500건까지 업로드할 수 있습니다.', 'TOO_LARGE', 413)
     }
 
-    // Preload departments and positions for name-based matching
+    // Preload departments and positions for name-based matching (trim + case-insensitive)
     const departments = await prisma.department.findMany()
     const positions = await prisma.position.findMany()
-    const deptMap = new Map(departments.map((d) => [d.name, d.id]))
-    const posMap = new Map(positions.map((p) => [p.name, p.id]))
+    const deptMap = new Map(departments.map((d) => [d.name.trim().toLowerCase(), d.id]))
+    const posMap = new Map(positions.map((p) => [p.name.trim().toLowerCase(), p.id]))
 
     let success = 0
     let failed = 0
@@ -93,11 +93,13 @@ export async function POST(req: NextRequest) {
           throw new Error(`사번 '${empNo}'가 이미 존재합니다.`)
         }
 
-        const departmentId = row.departmentId || deptMap.get(row.department)
-        const positionId = row.positionId || posMap.get(row.position)
+        const deptKey = row.department ? String(row.department).trim().toLowerCase() : ''
+        const posKey = row.position ? String(row.position).trim().toLowerCase() : ''
+        const departmentId = row.departmentId || deptMap.get(deptKey)
+        const positionId = row.positionId || posMap.get(posKey)
 
-        if (!departmentId) throw new Error('부서를 찾을 수 없습니다.')
-        if (!positionId) throw new Error('직급을 찾을 수 없습니다.')
+        if (!departmentId) throw new Error(`부서 "${row.department || ''}" 를 찾을 수 없습니다.`)
+        if (!positionId) throw new Error(`직급 "${row.position || ''}" 를 찾을 수 없습니다.`)
 
         await prisma.employee.create({
           data: {
