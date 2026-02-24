@@ -9,6 +9,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { hash } from 'bcryptjs'
 import { readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -197,12 +198,38 @@ async function applyPermissions() {
   } catch { /* ignore */ }
 }
 
+/** admin 비밀번호를 항상 올바른 값으로 리셋 */
+async function ensureAdminPassword() {
+  try {
+    const adminHash = await hash('admin1234', 10)
+    const userHash = await hash('user1234', 10)
+
+    // admin 비밀번호 리셋
+    await prisma.$executeRawUnsafe(
+      `UPDATE "users" SET "passwordHash" = $1 WHERE "username" = 'admin'`,
+      adminHash
+    )
+
+    // 일반 사용자 비밀번호도 리셋
+    await prisma.$executeRawUnsafe(
+      `UPDATE "users" SET "passwordHash" = $1 WHERE "username" IN ('parksales', 'leedev', 'hanacct', 'kangstaff')`,
+      userHash
+    )
+
+    console.log('[db-seed-sync] Password hashes updated.')
+  } catch (err) {
+    console.warn(`[db-seed-sync] Password reset warning: ${err.message?.slice(0, 80)}`)
+  }
+}
+
 async function main() {
   console.log('[db-seed-sync] Checking seed data...')
 
   const exists = await checkSeedDataExists()
   if (exists) {
-    console.log('[db-seed-sync] Seed data already exists. Skipping.')
+    console.log('[db-seed-sync] Seed data already exists. Ensuring passwords are correct...')
+    await ensureAdminPassword()
+    await applyPermissions()
     await prisma.$disconnect()
     return
   }
@@ -214,6 +241,8 @@ async function main() {
     console.log('[db-seed-sync] Seed SQL applied successfully.')
   }
 
+  // SQL 시드 적용 후에도 비밀번호 리셋 (해시 호환성 보장)
+  await ensureAdminPassword()
   await applyPermissions()
   console.log('[db-seed-sync] Seed data sync completed.')
   console.log('[db-seed-sync] Login: admin / admin1234')

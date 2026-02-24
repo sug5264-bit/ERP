@@ -54,16 +54,16 @@ ON CONFLICT ("employeeNo") DO NOTHING;
 
 -- ============================================================
 -- 5. 사용자 (Users)
--- admin1234 -> $2b$10$k8flrjpEyLIHQEnqT789LOFy8camlx4vHV1XGrHr8g95nZltVVJqC
--- user1234  -> $2b$10$AufGbMvD486i1VRbSe82LOI7a6w1rx3CL0vx2ZVxTp6CjDDHmYv9.
+-- admin1234 -> $2b$10$mbSYWrZ4HarVDb9NnFDrBuuWzAOpyn528yVNzPWy5pz5ZEuvQJRQ2
+-- user1234  -> $2b$10$zhUBG1FWJA9vWwRvntg4OeSHUYkS.Gb5GS/Qzka2xJhJx1KU0kvnG
 -- ============================================================
 INSERT INTO "users" ("id", "username", "email", "passwordHash", "name", "isActive", "employeeId", "createdAt", "updatedAt") VALUES
-  ('user-admin', 'admin', 'admin@wellgreen.co.kr', '$2b$10$k8flrjpEyLIHQEnqT789LOFy8camlx4vHV1XGrHr8g95nZltVVJqC', '김웰그린', true, 'emp-001', NOW(), NOW()),
-  ('user-park', 'parksales', 'park@wellgreen.co.kr', '$2b$10$AufGbMvD486i1VRbSe82LOI7a6w1rx3CL0vx2ZVxTp6CjDDHmYv9.', '박영업', true, 'emp-002', NOW(), NOW()),
-  ('user-lee', 'leedev', 'lee@wellgreen.co.kr', '$2b$10$AufGbMvD486i1VRbSe82LOI7a6w1rx3CL0vx2ZVxTp6CjDDHmYv9.', '이개발', true, 'emp-003', NOW(), NOW()),
-  ('user-han', 'hanacct', 'han@wellgreen.co.kr', '$2b$10$AufGbMvD486i1VRbSe82LOI7a6w1rx3CL0vx2ZVxTp6CjDDHmYv9.', '한회계', true, 'emp-006', NOW(), NOW()),
-  ('user-kang', 'kangstaff', 'kang@wellgreen.co.kr', '$2b$10$AufGbMvD486i1VRbSe82LOI7a6w1rx3CL0vx2ZVxTp6CjDDHmYv9.', '강사원', true, 'emp-007', NOW(), NOW())
-ON CONFLICT ("username") DO NOTHING;
+  ('user-admin', 'admin', 'admin@wellgreen.co.kr', '$2b$10$mbSYWrZ4HarVDb9NnFDrBuuWzAOpyn528yVNzPWy5pz5ZEuvQJRQ2', '김웰그린', true, 'emp-001', NOW(), NOW()),
+  ('user-park', 'parksales', 'park@wellgreen.co.kr', '$2b$10$zhUBG1FWJA9vWwRvntg4OeSHUYkS.Gb5GS/Qzka2xJhJx1KU0kvnG', '박영업', true, 'emp-002', NOW(), NOW()),
+  ('user-lee', 'leedev', 'lee@wellgreen.co.kr', '$2b$10$zhUBG1FWJA9vWwRvntg4OeSHUYkS.Gb5GS/Qzka2xJhJx1KU0kvnG', '이개발', true, 'emp-003', NOW(), NOW()),
+  ('user-han', 'hanacct', 'han@wellgreen.co.kr', '$2b$10$zhUBG1FWJA9vWwRvntg4OeSHUYkS.Gb5GS/Qzka2xJhJx1KU0kvnG', '한회계', true, 'emp-006', NOW(), NOW()),
+  ('user-kang', 'kangstaff', 'kang@wellgreen.co.kr', '$2b$10$zhUBG1FWJA9vWwRvntg4OeSHUYkS.Gb5GS/Qzka2xJhJx1KU0kvnG', '강사원', true, 'emp-007', NOW(), NOW())
+ON CONFLICT ("username") DO UPDATE SET "passwordHash" = EXCLUDED."passwordHash";
 
 -- 사용자-역할 매핑
 INSERT INTO "user_roles" ("userId", "roleId") VALUES
