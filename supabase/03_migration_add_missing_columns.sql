@@ -1,7 +1,8 @@
 -- ============================================================
 -- Migration: Add missing columns, enums, and tables
 -- Description: Prisma 스키마와 실제 DB 간의 불일치 해소
--- Run this against your existing database to fix order registration errors
+-- 이 파일은 01_schema.sql 이후에 실행 (idempotent - 재실행 안전)
+-- 01_schema.sql에 이미 포함된 내용은 IF NOT EXISTS로 건너뜀
 -- ============================================================
 
 -- 0. Create companies table if not exists

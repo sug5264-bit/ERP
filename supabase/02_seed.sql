@@ -1,7 +1,8 @@
 -- ============================================================
 -- ERP Seed Data for Supabase
 -- Supabase Dashboard > SQL Editor 에서 실행
--- 반드시 01_schema.sql 실행 후에 실행할 것
+-- 실행 순서: 00_reset.sql → 01_schema.sql → 02_seed.sql → 03_migration.sql
+-- 모든 INSERT는 ON CONFLICT로 idempotent하게 작성됨
 -- ============================================================
 
 -- ============================================================

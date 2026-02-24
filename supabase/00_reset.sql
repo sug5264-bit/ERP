@@ -75,7 +75,7 @@ DROP TABLE IF EXISTS "roles" CASCADE;
 DROP TABLE IF EXISTS "companies" CASCADE;
 DROP TABLE IF EXISTS "users" CASCADE;
 
--- ENUM 타입 삭제
+-- ENUM 타입 삭제 (모든 enum 포함)
 DROP TYPE IF EXISTS "InspectionStatus" CASCADE;
 DROP TYPE IF EXISTS "QualityGrade" CASCADE;
 DROP TYPE IF EXISTS "ReturnReason" CASCADE;
@@ -100,3 +100,6 @@ DROP TYPE IF EXISTS "LeaveType" CASCADE;
 DROP TYPE IF EXISTS "AttendanceType" CASCADE;
 DROP TYPE IF EXISTS "EmployeeStatus" CASCADE;
 DROP TYPE IF EXISTS "EmployeeType" CASCADE;
+
+-- 확인: 모든 테이블과 ENUM이 정상적으로 삭제되었습니다
+SELECT 'Reset completed successfully' AS status;

@@ -1,80 +1,34 @@
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
--- CreateEnum
-CREATE TYPE "EmployeeType" AS ENUM ('REGULAR', 'CONTRACT', 'DISPATCH', 'INTERN');
-
--- CreateEnum
-CREATE TYPE "EmployeeStatus" AS ENUM ('ACTIVE', 'ON_LEAVE', 'RESIGNED');
-
--- CreateEnum
-CREATE TYPE "AttendanceType" AS ENUM ('NORMAL', 'LATE', 'EARLY', 'ABSENT', 'BUSINESS', 'REMOTE');
-
--- CreateEnum
-CREATE TYPE "LeaveType" AS ENUM ('ANNUAL', 'SICK', 'FAMILY', 'MATERNITY', 'PARENTAL', 'OFFICIAL');
-
--- CreateEnum
-CREATE TYPE "LeaveStatus" AS ENUM ('REQUESTED', 'APPROVED', 'REJECTED', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "AccountType" AS ENUM ('ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE');
-
--- CreateEnum
-CREATE TYPE "VoucherType" AS ENUM ('RECEIPT', 'PAYMENT', 'TRANSFER', 'PURCHASE', 'SALES');
-
--- CreateEnum
-CREATE TYPE "VoucherStatus" AS ENUM ('DRAFT', 'APPROVED', 'CONFIRMED');
-
--- CreateEnum
-CREATE TYPE "ItemType" AS ENUM ('RAW_MATERIAL', 'PRODUCT', 'GOODS', 'SUBSIDIARY');
-
--- CreateEnum
-CREATE TYPE "TaxType" AS ENUM ('TAXABLE', 'TAX_FREE', 'ZERO_RATE');
-
--- CreateEnum
-CREATE TYPE "MovementType" AS ENUM ('INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT');
-
--- CreateEnum
-CREATE TYPE "PartnerType" AS ENUM ('SALES', 'PURCHASE', 'BOTH');
-
--- CreateEnum
-CREATE TYPE "QuotationStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'ORDERED', 'LOST', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "SalesOrderStatus" AS ENUM ('ORDERED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "SalesChannel" AS ENUM ('ONLINE', 'OFFLINE');
-
--- CreateEnum
-CREATE TYPE "ReturnReason" AS ENUM ('DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER');
-
--- CreateEnum
-CREATE TYPE "QualityGrade" AS ENUM ('A', 'B', 'C', 'REJECT');
-
--- CreateEnum
-CREATE TYPE "InspectionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED');
-
--- CreateEnum
-CREATE TYPE "ProjectStatus" AS ENUM ('PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "ProjectMemberRole" AS ENUM ('PM', 'MEMBER', 'REVIEWER');
-
--- CreateEnum
-CREATE TYPE "TaskPriority" AS ENUM ('URGENT', 'HIGH', 'NORMAL', 'LOW');
-
--- CreateEnum
-CREATE TYPE "TaskStatus" AS ENUM ('WAITING', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD');
-
--- CreateEnum
-CREATE TYPE "ApprovalStatus" AS ENUM ('DRAFTED', 'IN_PROGRESS', 'APPROVED', 'REJECTED', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "StepStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SKIPPED');
+-- CreateEnum (idempotent: DO block with exception handling)
+DO $$ BEGIN CREATE TYPE "EmployeeType" AS ENUM ('REGULAR', 'CONTRACT', 'DISPATCH', 'INTERN'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "EmployeeStatus" AS ENUM ('ACTIVE', 'ON_LEAVE', 'RESIGNED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "AttendanceType" AS ENUM ('NORMAL', 'LATE', 'EARLY', 'ABSENT', 'BUSINESS', 'REMOTE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "LeaveType" AS ENUM ('ANNUAL', 'SICK', 'FAMILY', 'MATERNITY', 'PARENTAL', 'OFFICIAL'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "LeaveStatus" AS ENUM ('REQUESTED', 'APPROVED', 'REJECTED', 'CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "AccountType" AS ENUM ('ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "VoucherType" AS ENUM ('RECEIPT', 'PAYMENT', 'TRANSFER', 'PURCHASE', 'SALES'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "VoucherStatus" AS ENUM ('DRAFT', 'APPROVED', 'CONFIRMED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "ItemType" AS ENUM ('RAW_MATERIAL', 'PRODUCT', 'GOODS', 'SUBSIDIARY'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "TaxType" AS ENUM ('TAXABLE', 'TAX_FREE', 'ZERO_RATE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "MovementType" AS ENUM ('INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "PartnerType" AS ENUM ('SALES', 'PURCHASE', 'BOTH'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "QuotationStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'ORDERED', 'LOST', 'CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "SalesOrderStatus" AS ENUM ('ORDERED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "SalesChannel" AS ENUM ('ONLINE', 'OFFLINE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "ReturnReason" AS ENUM ('DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "QualityGrade" AS ENUM ('A', 'B', 'C', 'REJECT'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "InspectionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "ProjectStatus" AS ENUM ('PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "ProjectMemberRole" AS ENUM ('PM', 'MEMBER', 'REVIEWER'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "TaskPriority" AS ENUM ('URGENT', 'HIGH', 'NORMAL', 'LOW'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "TaskStatus" AS ENUM ('WAITING', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "ApprovalStatus" AS ENUM ('DRAFTED', 'IN_PROGRESS', 'APPROVED', 'REJECTED', 'CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE "StepStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SKIPPED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- CreateTable
-CREATE TABLE "users" (
+CREATE TABLE IF NOT EXISTS "users" (
     "id" TEXT NOT NULL,
     "username" TEXT NOT NULL,
     "email" TEXT NOT NULL,
@@ -90,7 +44,7 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
-CREATE TABLE "roles" (
+CREATE TABLE IF NOT EXISTS "roles" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -101,7 +55,7 @@ CREATE TABLE "roles" (
 );
 
 -- CreateTable
-CREATE TABLE "permissions" (
+CREATE TABLE IF NOT EXISTS "permissions" (
     "id" TEXT NOT NULL,
     "module" TEXT NOT NULL,
     "action" TEXT NOT NULL,
@@ -111,7 +65,7 @@ CREATE TABLE "permissions" (
 );
 
 -- CreateTable
-CREATE TABLE "role_permissions" (
+CREATE TABLE IF NOT EXISTS "role_permissions" (
     "roleId" TEXT NOT NULL,
     "permissionId" TEXT NOT NULL,
 
@@ -119,7 +73,7 @@ CREATE TABLE "role_permissions" (
 );
 
 -- CreateTable
-CREATE TABLE "user_roles" (
+CREATE TABLE IF NOT EXISTS "user_roles" (
     "userId" TEXT NOT NULL,
     "roleId" TEXT NOT NULL,
 
@@ -127,7 +81,7 @@ CREATE TABLE "user_roles" (
 );
 
 -- CreateTable
-CREATE TABLE "common_codes" (
+CREATE TABLE IF NOT EXISTS "common_codes" (
     "id" TEXT NOT NULL,
     "groupCode" TEXT NOT NULL,
     "code" TEXT NOT NULL,
@@ -142,7 +96,7 @@ CREATE TABLE "common_codes" (
 );
 
 -- CreateTable
-CREATE TABLE "audit_logs" (
+CREATE TABLE IF NOT EXISTS "audit_logs" (
     "id" TEXT NOT NULL,
     "userId" TEXT,
     "action" TEXT NOT NULL,
@@ -157,7 +111,7 @@ CREATE TABLE "audit_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "attachments" (
+CREATE TABLE IF NOT EXISTS "attachments" (
     "id" TEXT NOT NULL,
     "fileName" TEXT NOT NULL,
     "filePath" TEXT NOT NULL,
@@ -172,7 +126,7 @@ CREATE TABLE "attachments" (
 );
 
 -- CreateTable
-CREATE TABLE "notifications" (
+CREATE TABLE IF NOT EXISTS "notifications" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
@@ -186,7 +140,7 @@ CREATE TABLE "notifications" (
 );
 
 -- CreateTable
-CREATE TABLE "document_sequences" (
+CREATE TABLE IF NOT EXISTS "document_sequences" (
     "id" TEXT NOT NULL,
     "prefix" TEXT NOT NULL,
     "yearMonth" TEXT NOT NULL,
@@ -196,7 +150,7 @@ CREATE TABLE "document_sequences" (
 );
 
 -- CreateTable
-CREATE TABLE "companies" (
+CREATE TABLE IF NOT EXISTS "companies" (
     "id" TEXT NOT NULL,
     "companyName" TEXT NOT NULL,
     "bizNo" TEXT,
@@ -221,7 +175,7 @@ CREATE TABLE "companies" (
 );
 
 -- CreateTable
-CREATE TABLE "departments" (
+CREATE TABLE IF NOT EXISTS "departments" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -235,7 +189,7 @@ CREATE TABLE "departments" (
 );
 
 -- CreateTable
-CREATE TABLE "positions" (
+CREATE TABLE IF NOT EXISTS "positions" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -246,7 +200,7 @@ CREATE TABLE "positions" (
 );
 
 -- CreateTable
-CREATE TABLE "employees" (
+CREATE TABLE IF NOT EXISTS "employees" (
     "id" TEXT NOT NULL,
     "employeeNo" TEXT NOT NULL,
     "nameKo" TEXT NOT NULL,
@@ -272,7 +226,7 @@ CREATE TABLE "employees" (
 );
 
 -- CreateTable
-CREATE TABLE "employee_histories" (
+CREATE TABLE IF NOT EXISTS "employee_histories" (
     "id" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
     "changeType" TEXT NOT NULL,
@@ -288,7 +242,7 @@ CREATE TABLE "employee_histories" (
 );
 
 -- CreateTable
-CREATE TABLE "payroll_headers" (
+CREATE TABLE IF NOT EXISTS "payroll_headers" (
     "id" TEXT NOT NULL,
     "payPeriod" TEXT NOT NULL,
     "payDate" TIMESTAMP(3) NOT NULL,
@@ -299,7 +253,7 @@ CREATE TABLE "payroll_headers" (
 );
 
 -- CreateTable
-CREATE TABLE "payroll_details" (
+CREATE TABLE IF NOT EXISTS "payroll_details" (
     "id" TEXT NOT NULL,
     "payrollHeaderId" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
@@ -322,7 +276,7 @@ CREATE TABLE "payroll_details" (
 );
 
 -- CreateTable
-CREATE TABLE "attendances" (
+CREATE TABLE IF NOT EXISTS "attendances" (
     "id" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
     "workDate" DATE NOT NULL,
@@ -337,7 +291,7 @@ CREATE TABLE "attendances" (
 );
 
 -- CreateTable
-CREATE TABLE "leaves" (
+CREATE TABLE IF NOT EXISTS "leaves" (
     "id" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
     "leaveType" "LeaveType" NOT NULL,
@@ -353,7 +307,7 @@ CREATE TABLE "leaves" (
 );
 
 -- CreateTable
-CREATE TABLE "leave_balances" (
+CREATE TABLE IF NOT EXISTS "leave_balances" (
     "id" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
     "year" INTEGER NOT NULL,
@@ -365,7 +319,7 @@ CREATE TABLE "leave_balances" (
 );
 
 -- CreateTable
-CREATE TABLE "recruitments" (
+CREATE TABLE IF NOT EXISTS "recruitments" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "departmentId" TEXT NOT NULL,
@@ -381,7 +335,7 @@ CREATE TABLE "recruitments" (
 );
 
 -- CreateTable
-CREATE TABLE "applicants" (
+CREATE TABLE IF NOT EXISTS "applicants" (
     "id" TEXT NOT NULL,
     "recruitmentId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -396,7 +350,7 @@ CREATE TABLE "applicants" (
 );
 
 -- CreateTable
-CREATE TABLE "fiscal_years" (
+CREATE TABLE IF NOT EXISTS "fiscal_years" (
     "id" TEXT NOT NULL,
     "year" INTEGER NOT NULL,
     "startDate" DATE NOT NULL,
@@ -407,7 +361,7 @@ CREATE TABLE "fiscal_years" (
 );
 
 -- CreateTable
-CREATE TABLE "account_subjects" (
+CREATE TABLE IF NOT EXISTS "account_subjects" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "nameKo" TEXT NOT NULL,
@@ -422,7 +376,7 @@ CREATE TABLE "account_subjects" (
 );
 
 -- CreateTable
-CREATE TABLE "vouchers" (
+CREATE TABLE IF NOT EXISTS "vouchers" (
     "id" TEXT NOT NULL,
     "voucherNo" TEXT NOT NULL,
     "voucherDate" DATE NOT NULL,
@@ -441,7 +395,7 @@ CREATE TABLE "vouchers" (
 );
 
 -- CreateTable
-CREATE TABLE "voucher_details" (
+CREATE TABLE IF NOT EXISTS "voucher_details" (
     "id" TEXT NOT NULL,
     "voucherId" TEXT NOT NULL,
     "lineNo" INTEGER NOT NULL,
@@ -456,7 +410,7 @@ CREATE TABLE "voucher_details" (
 );
 
 -- CreateTable
-CREATE TABLE "tax_invoices" (
+CREATE TABLE IF NOT EXISTS "tax_invoices" (
     "id" TEXT NOT NULL,
     "invoiceNo" TEXT NOT NULL,
     "issueDate" DATE NOT NULL,
@@ -486,7 +440,7 @@ CREATE TABLE "tax_invoices" (
 );
 
 -- CreateTable
-CREATE TABLE "tax_invoice_items" (
+CREATE TABLE IF NOT EXISTS "tax_invoice_items" (
     "id" TEXT NOT NULL,
     "taxInvoiceId" TEXT NOT NULL,
     "itemDate" DATE NOT NULL,
@@ -501,7 +455,7 @@ CREATE TABLE "tax_invoice_items" (
 );
 
 -- CreateTable
-CREATE TABLE "cost_centers" (
+CREATE TABLE IF NOT EXISTS "cost_centers" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -511,7 +465,7 @@ CREATE TABLE "cost_centers" (
 );
 
 -- CreateTable
-CREATE TABLE "budget_headers" (
+CREATE TABLE IF NOT EXISTS "budget_headers" (
     "id" TEXT NOT NULL,
     "fiscalYearId" TEXT NOT NULL,
     "departmentId" TEXT NOT NULL,
@@ -521,7 +475,7 @@ CREATE TABLE "budget_headers" (
 );
 
 -- CreateTable
-CREATE TABLE "budget_details" (
+CREATE TABLE IF NOT EXISTS "budget_details" (
     "id" TEXT NOT NULL,
     "budgetHeaderId" TEXT NOT NULL,
     "accountSubjectId" TEXT NOT NULL,
@@ -543,7 +497,7 @@ CREATE TABLE "budget_details" (
 );
 
 -- CreateTable
-CREATE TABLE "item_categories" (
+CREATE TABLE IF NOT EXISTS "item_categories" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -554,7 +508,7 @@ CREATE TABLE "item_categories" (
 );
 
 -- CreateTable
-CREATE TABLE "items" (
+CREATE TABLE IF NOT EXISTS "items" (
     "id" TEXT NOT NULL,
     "itemCode" TEXT NOT NULL,
     "itemName" TEXT NOT NULL,
@@ -574,7 +528,7 @@ CREATE TABLE "items" (
 );
 
 -- CreateTable
-CREATE TABLE "warehouses" (
+CREATE TABLE IF NOT EXISTS "warehouses" (
     "id" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
@@ -586,7 +540,7 @@ CREATE TABLE "warehouses" (
 );
 
 -- CreateTable
-CREATE TABLE "warehouse_zones" (
+CREATE TABLE IF NOT EXISTS "warehouse_zones" (
     "id" TEXT NOT NULL,
     "warehouseId" TEXT NOT NULL,
     "zoneCode" TEXT NOT NULL,
@@ -596,7 +550,7 @@ CREATE TABLE "warehouse_zones" (
 );
 
 -- CreateTable
-CREATE TABLE "stock_movements" (
+CREATE TABLE IF NOT EXISTS "stock_movements" (
     "id" TEXT NOT NULL,
     "movementNo" TEXT NOT NULL,
     "movementDate" DATE NOT NULL,
@@ -613,7 +567,7 @@ CREATE TABLE "stock_movements" (
 );
 
 -- CreateTable
-CREATE TABLE "stock_movement_details" (
+CREATE TABLE IF NOT EXISTS "stock_movement_details" (
     "id" TEXT NOT NULL,
     "stockMovementId" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
@@ -627,7 +581,7 @@ CREATE TABLE "stock_movement_details" (
 );
 
 -- CreateTable
-CREATE TABLE "stock_balances" (
+CREATE TABLE IF NOT EXISTS "stock_balances" (
     "id" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
     "warehouseId" TEXT NOT NULL,
@@ -640,7 +594,7 @@ CREATE TABLE "stock_balances" (
 );
 
 -- CreateTable
-CREATE TABLE "partners" (
+CREATE TABLE IF NOT EXISTS "partners" (
     "id" TEXT NOT NULL,
     "partnerCode" TEXT NOT NULL,
     "partnerName" TEXT NOT NULL,
@@ -665,7 +619,7 @@ CREATE TABLE "partners" (
 );
 
 -- CreateTable
-CREATE TABLE "quotations" (
+CREATE TABLE IF NOT EXISTS "quotations" (
     "id" TEXT NOT NULL,
     "quotationNo" TEXT NOT NULL,
     "quotationDate" DATE NOT NULL,
@@ -684,7 +638,7 @@ CREATE TABLE "quotations" (
 );
 
 -- CreateTable
-CREATE TABLE "quotation_details" (
+CREATE TABLE IF NOT EXISTS "quotation_details" (
     "id" TEXT NOT NULL,
     "quotationId" TEXT NOT NULL,
     "lineNo" INTEGER NOT NULL,
@@ -700,7 +654,7 @@ CREATE TABLE "quotation_details" (
 );
 
 -- CreateTable
-CREATE TABLE "sales_orders" (
+CREATE TABLE IF NOT EXISTS "sales_orders" (
     "id" TEXT NOT NULL,
     "orderNo" TEXT NOT NULL,
     "orderDate" DATE NOT NULL,
@@ -738,7 +692,7 @@ CREATE TABLE "sales_orders" (
 );
 
 -- CreateTable
-CREATE TABLE "sales_order_details" (
+CREATE TABLE IF NOT EXISTS "sales_order_details" (
     "id" TEXT NOT NULL,
     "salesOrderId" TEXT NOT NULL,
     "lineNo" INTEGER NOT NULL,
@@ -756,7 +710,7 @@ CREATE TABLE "sales_order_details" (
 );
 
 -- CreateTable
-CREATE TABLE "deliveries" (
+CREATE TABLE IF NOT EXISTS "deliveries" (
     "id" TEXT NOT NULL,
     "deliveryNo" TEXT NOT NULL,
     "deliveryDate" DATE NOT NULL,
@@ -773,7 +727,7 @@ CREATE TABLE "deliveries" (
 );
 
 -- CreateTable
-CREATE TABLE "delivery_details" (
+CREATE TABLE IF NOT EXISTS "delivery_details" (
     "id" TEXT NOT NULL,
     "deliveryId" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
@@ -786,7 +740,7 @@ CREATE TABLE "delivery_details" (
 );
 
 -- CreateTable
-CREATE TABLE "notes" (
+CREATE TABLE IF NOT EXISTS "notes" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "relatedTable" TEXT NOT NULL,
@@ -799,7 +753,7 @@ CREATE TABLE "notes" (
 );
 
 -- CreateTable
-CREATE TABLE "sales_returns" (
+CREATE TABLE IF NOT EXISTS "sales_returns" (
     "id" TEXT NOT NULL,
     "returnNo" TEXT NOT NULL,
     "returnDate" DATE NOT NULL,
@@ -818,7 +772,7 @@ CREATE TABLE "sales_returns" (
 );
 
 -- CreateTable
-CREATE TABLE "sales_return_details" (
+CREATE TABLE IF NOT EXISTS "sales_return_details" (
     "id" TEXT NOT NULL,
     "salesReturnId" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
@@ -831,7 +785,7 @@ CREATE TABLE "sales_return_details" (
 );
 
 -- CreateTable
-CREATE TABLE "quality_standards" (
+CREATE TABLE IF NOT EXISTS "quality_standards" (
     "id" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
     "standardName" TEXT NOT NULL,
@@ -851,7 +805,7 @@ CREATE TABLE "quality_standards" (
 );
 
 -- CreateTable
-CREATE TABLE "quality_inspections" (
+CREATE TABLE IF NOT EXISTS "quality_inspections" (
     "id" TEXT NOT NULL,
     "inspectionNo" TEXT NOT NULL,
     "deliveryId" TEXT NOT NULL,
@@ -872,7 +826,7 @@ CREATE TABLE "quality_inspections" (
 );
 
 -- CreateTable
-CREATE TABLE "quality_inspection_items" (
+CREATE TABLE IF NOT EXISTS "quality_inspection_items" (
     "id" TEXT NOT NULL,
     "qualityInspectionId" TEXT NOT NULL,
     "category" TEXT NOT NULL,
@@ -888,7 +842,7 @@ CREATE TABLE "quality_inspection_items" (
 );
 
 -- CreateTable
-CREATE TABLE "purchase_requests" (
+CREATE TABLE IF NOT EXISTS "purchase_requests" (
     "id" TEXT NOT NULL,
     "requestNo" TEXT NOT NULL,
     "requestDate" DATE NOT NULL,
@@ -903,7 +857,7 @@ CREATE TABLE "purchase_requests" (
 );
 
 -- CreateTable
-CREATE TABLE "purchase_request_details" (
+CREATE TABLE IF NOT EXISTS "purchase_request_details" (
     "id" TEXT NOT NULL,
     "purchaseRequestId" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
@@ -915,7 +869,7 @@ CREATE TABLE "purchase_request_details" (
 );
 
 -- CreateTable
-CREATE TABLE "purchase_orders" (
+CREATE TABLE IF NOT EXISTS "purchase_orders" (
     "id" TEXT NOT NULL,
     "orderNo" TEXT NOT NULL,
     "orderDate" DATE NOT NULL,
@@ -938,7 +892,7 @@ CREATE TABLE "purchase_orders" (
 );
 
 -- CreateTable
-CREATE TABLE "purchase_order_details" (
+CREATE TABLE IF NOT EXISTS "purchase_order_details" (
     "id" TEXT NOT NULL,
     "purchaseOrderId" TEXT NOT NULL,
     "lineNo" INTEGER NOT NULL,
@@ -956,7 +910,7 @@ CREATE TABLE "purchase_order_details" (
 );
 
 -- CreateTable
-CREATE TABLE "receivings" (
+CREATE TABLE IF NOT EXISTS "receivings" (
     "id" TEXT NOT NULL,
     "receivingNo" TEXT NOT NULL,
     "receivingDate" DATE NOT NULL,
@@ -970,7 +924,7 @@ CREATE TABLE "receivings" (
 );
 
 -- CreateTable
-CREATE TABLE "receiving_details" (
+CREATE TABLE IF NOT EXISTS "receiving_details" (
     "id" TEXT NOT NULL,
     "receivingId" TEXT NOT NULL,
     "itemId" TEXT NOT NULL,
@@ -986,7 +940,7 @@ CREATE TABLE "receiving_details" (
 );
 
 -- CreateTable
-CREATE TABLE "purchase_payments" (
+CREATE TABLE IF NOT EXISTS "purchase_payments" (
     "id" TEXT NOT NULL,
     "paymentNo" TEXT NOT NULL,
     "paymentDate" DATE NOT NULL,
@@ -1002,7 +956,7 @@ CREATE TABLE "purchase_payments" (
 );
 
 -- CreateTable
-CREATE TABLE "projects" (
+CREATE TABLE IF NOT EXISTS "projects" (
     "id" TEXT NOT NULL,
     "projectCode" TEXT NOT NULL,
     "projectName" TEXT NOT NULL,
@@ -1021,7 +975,7 @@ CREATE TABLE "projects" (
 );
 
 -- CreateTable
-CREATE TABLE "project_members" (
+CREATE TABLE IF NOT EXISTS "project_members" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "employeeId" TEXT NOT NULL,
@@ -1031,7 +985,7 @@ CREATE TABLE "project_members" (
 );
 
 -- CreateTable
-CREATE TABLE "project_tasks" (
+CREATE TABLE IF NOT EXISTS "project_tasks" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "taskName" TEXT NOT NULL,
@@ -1051,7 +1005,7 @@ CREATE TABLE "project_tasks" (
 );
 
 -- CreateTable
-CREATE TABLE "project_schedules" (
+CREATE TABLE IF NOT EXISTS "project_schedules" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -1064,7 +1018,7 @@ CREATE TABLE "project_schedules" (
 );
 
 -- CreateTable
-CREATE TABLE "approval_templates" (
+CREATE TABLE IF NOT EXISTS "approval_templates" (
     "id" TEXT NOT NULL,
     "templateName" TEXT NOT NULL,
     "moduleCode" TEXT NOT NULL,
@@ -1075,7 +1029,7 @@ CREATE TABLE "approval_templates" (
 );
 
 -- CreateTable
-CREATE TABLE "approval_lines" (
+CREATE TABLE IF NOT EXISTS "approval_lines" (
     "id" TEXT NOT NULL,
     "templateId" TEXT NOT NULL,
     "lineOrder" INTEGER NOT NULL,
@@ -1088,7 +1042,7 @@ CREATE TABLE "approval_lines" (
 );
 
 -- CreateTable
-CREATE TABLE "approval_documents" (
+CREATE TABLE IF NOT EXISTS "approval_documents" (
     "id" TEXT NOT NULL,
     "documentNo" TEXT NOT NULL,
     "templateId" TEXT,
@@ -1109,7 +1063,7 @@ CREATE TABLE "approval_documents" (
 );
 
 -- CreateTable
-CREATE TABLE "approval_steps" (
+CREATE TABLE IF NOT EXISTS "approval_steps" (
     "id" TEXT NOT NULL,
     "documentId" TEXT NOT NULL,
     "stepOrder" INTEGER NOT NULL,
@@ -1123,7 +1077,7 @@ CREATE TABLE "approval_steps" (
 );
 
 -- CreateTable
-CREATE TABLE "boards" (
+CREATE TABLE IF NOT EXISTS "boards" (
     "id" TEXT NOT NULL,
     "boardCode" TEXT NOT NULL,
     "boardName" TEXT NOT NULL,
@@ -1134,7 +1088,7 @@ CREATE TABLE "boards" (
 );
 
 -- CreateTable
-CREATE TABLE "posts" (
+CREATE TABLE IF NOT EXISTS "posts" (
     "id" TEXT NOT NULL,
     "boardId" TEXT NOT NULL,
     "title" TEXT NOT NULL,
@@ -1150,7 +1104,7 @@ CREATE TABLE "posts" (
 );
 
 -- CreateTable
-CREATE TABLE "post_comments" (
+CREATE TABLE IF NOT EXISTS "post_comments" (
     "id" TEXT NOT NULL,
     "postId" TEXT NOT NULL,
     "authorId" TEXT NOT NULL,
@@ -1162,7 +1116,7 @@ CREATE TABLE "post_comments" (
 );
 
 -- CreateTable
-CREATE TABLE "messages" (
+CREATE TABLE IF NOT EXISTS "messages" (
     "id" TEXT NOT NULL,
     "senderId" TEXT NOT NULL,
     "receiverId" TEXT NOT NULL,
@@ -1176,676 +1130,677 @@ CREATE TABLE "messages" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_username_key" ON "users"("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "users_employeeId_key" ON "users"("employeeId");
+CREATE UNIQUE INDEX IF NOT EXISTS "users_employeeId_key" ON "users"("employeeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
+CREATE UNIQUE INDEX IF NOT EXISTS "roles_name_key" ON "roles"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "permissions_module_action_key" ON "permissions"("module", "action");
+CREATE UNIQUE INDEX IF NOT EXISTS "permissions_module_action_key" ON "permissions"("module", "action");
 
 -- CreateIndex
-CREATE INDEX "common_codes_groupCode_idx" ON "common_codes"("groupCode");
+CREATE INDEX IF NOT EXISTS "common_codes_groupCode_idx" ON "common_codes"("groupCode");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "common_codes_groupCode_code_key" ON "common_codes"("groupCode", "code");
+CREATE UNIQUE INDEX IF NOT EXISTS "common_codes_groupCode_code_key" ON "common_codes"("groupCode", "code");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_tableName_recordId_idx" ON "audit_logs"("tableName", "recordId");
+CREATE INDEX IF NOT EXISTS "audit_logs_tableName_recordId_idx" ON "audit_logs"("tableName", "recordId");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
+CREATE INDEX IF NOT EXISTS "audit_logs_createdAt_idx" ON "audit_logs"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "audit_logs_userId_action_idx" ON "audit_logs"("userId", "action");
+CREATE INDEX IF NOT EXISTS "audit_logs_userId_action_idx" ON "audit_logs"("userId", "action");
 
 -- CreateIndex
-CREATE INDEX "attachments_relatedTable_relatedId_idx" ON "attachments"("relatedTable", "relatedId");
+CREATE INDEX IF NOT EXISTS "attachments_relatedTable_relatedId_idx" ON "attachments"("relatedTable", "relatedId");
 
 -- CreateIndex
-CREATE INDEX "notifications_userId_isRead_idx" ON "notifications"("userId", "isRead");
+CREATE INDEX IF NOT EXISTS "notifications_userId_isRead_idx" ON "notifications"("userId", "isRead");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "document_sequences_prefix_yearMonth_key" ON "document_sequences"("prefix", "yearMonth");
+CREATE UNIQUE INDEX IF NOT EXISTS "document_sequences_prefix_yearMonth_key" ON "document_sequences"("prefix", "yearMonth");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "companies_bizNo_key" ON "companies"("bizNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "companies_bizNo_key" ON "companies"("bizNo");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "departments_code_key" ON "departments"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "departments_code_key" ON "departments"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "positions_code_key" ON "positions"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "positions_code_key" ON "positions"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "employees_employeeNo_key" ON "employees"("employeeNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "employees_employeeNo_key" ON "employees"("employeeNo");
 
 -- CreateIndex
-CREATE INDEX "employees_departmentId_idx" ON "employees"("departmentId");
+CREATE INDEX IF NOT EXISTS "employees_departmentId_idx" ON "employees"("departmentId");
 
 -- CreateIndex
-CREATE INDEX "employees_status_idx" ON "employees"("status");
+CREATE INDEX IF NOT EXISTS "employees_status_idx" ON "employees"("status");
 
 -- CreateIndex
-CREATE INDEX "employees_positionId_idx" ON "employees"("positionId");
+CREATE INDEX IF NOT EXISTS "employees_positionId_idx" ON "employees"("positionId");
 
 -- CreateIndex
-CREATE INDEX "employees_nameKo_idx" ON "employees"("nameKo");
+CREATE INDEX IF NOT EXISTS "employees_nameKo_idx" ON "employees"("nameKo");
 
 -- CreateIndex
-CREATE INDEX "employees_email_idx" ON "employees"("email");
+CREATE INDEX IF NOT EXISTS "employees_email_idx" ON "employees"("email");
 
 -- CreateIndex
-CREATE INDEX "employee_histories_employeeId_idx" ON "employee_histories"("employeeId");
+CREATE INDEX IF NOT EXISTS "employee_histories_employeeId_idx" ON "employee_histories"("employeeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "payroll_headers_payPeriod_key" ON "payroll_headers"("payPeriod");
+CREATE UNIQUE INDEX IF NOT EXISTS "payroll_headers_payPeriod_key" ON "payroll_headers"("payPeriod");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "payroll_details_payrollHeaderId_employeeId_key" ON "payroll_details"("payrollHeaderId", "employeeId");
+CREATE UNIQUE INDEX IF NOT EXISTS "payroll_details_payrollHeaderId_employeeId_key" ON "payroll_details"("payrollHeaderId", "employeeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "attendances_employeeId_workDate_key" ON "attendances"("employeeId", "workDate");
+CREATE UNIQUE INDEX IF NOT EXISTS "attendances_employeeId_workDate_key" ON "attendances"("employeeId", "workDate");
 
 -- CreateIndex
-CREATE INDEX "leaves_employeeId_startDate_idx" ON "leaves"("employeeId", "startDate");
+CREATE INDEX IF NOT EXISTS "leaves_employeeId_startDate_idx" ON "leaves"("employeeId", "startDate");
 
 -- CreateIndex
-CREATE INDEX "leaves_status_idx" ON "leaves"("status");
+CREATE INDEX IF NOT EXISTS "leaves_status_idx" ON "leaves"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "leave_balances_employeeId_year_key" ON "leave_balances"("employeeId", "year");
+CREATE UNIQUE INDEX IF NOT EXISTS "leave_balances_employeeId_year_key" ON "leave_balances"("employeeId", "year");
 
 -- CreateIndex
-CREATE INDEX "applicants_recruitmentId_idx" ON "applicants"("recruitmentId");
+CREATE INDEX IF NOT EXISTS "applicants_recruitmentId_idx" ON "applicants"("recruitmentId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "fiscal_years_year_key" ON "fiscal_years"("year");
+CREATE UNIQUE INDEX IF NOT EXISTS "fiscal_years_year_key" ON "fiscal_years"("year");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "account_subjects_code_key" ON "account_subjects"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "account_subjects_code_key" ON "account_subjects"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "vouchers_voucherNo_key" ON "vouchers"("voucherNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "vouchers_voucherNo_key" ON "vouchers"("voucherNo");
 
 -- CreateIndex
-CREATE INDEX "vouchers_voucherDate_idx" ON "vouchers"("voucherDate");
+CREATE INDEX IF NOT EXISTS "vouchers_voucherDate_idx" ON "vouchers"("voucherDate");
 
 -- CreateIndex
-CREATE INDEX "vouchers_voucherType_idx" ON "vouchers"("voucherType");
+CREATE INDEX IF NOT EXISTS "vouchers_voucherType_idx" ON "vouchers"("voucherType");
 
 -- CreateIndex
-CREATE INDEX "vouchers_status_voucherDate_idx" ON "vouchers"("status", "voucherDate");
+CREATE INDEX IF NOT EXISTS "vouchers_status_voucherDate_idx" ON "vouchers"("status", "voucherDate");
 
 -- CreateIndex
-CREATE INDEX "vouchers_fiscalYearId_idx" ON "vouchers"("fiscalYearId");
+CREATE INDEX IF NOT EXISTS "vouchers_fiscalYearId_idx" ON "vouchers"("fiscalYearId");
 
 -- CreateIndex
-CREATE INDEX "vouchers_createdById_idx" ON "vouchers"("createdById");
+CREATE INDEX IF NOT EXISTS "vouchers_createdById_idx" ON "vouchers"("createdById");
 
 -- CreateIndex
-CREATE INDEX "voucher_details_voucherId_idx" ON "voucher_details"("voucherId");
+CREATE INDEX IF NOT EXISTS "voucher_details_voucherId_idx" ON "voucher_details"("voucherId");
 
 -- CreateIndex
-CREATE INDEX "voucher_details_accountSubjectId_idx" ON "voucher_details"("accountSubjectId");
+CREATE INDEX IF NOT EXISTS "voucher_details_accountSubjectId_idx" ON "voucher_details"("accountSubjectId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "tax_invoices_invoiceNo_key" ON "tax_invoices"("invoiceNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "tax_invoices_invoiceNo_key" ON "tax_invoices"("invoiceNo");
 
 -- CreateIndex
-CREATE INDEX "tax_invoices_issueDate_idx" ON "tax_invoices"("issueDate");
+CREATE INDEX IF NOT EXISTS "tax_invoices_issueDate_idx" ON "tax_invoices"("issueDate");
 
 -- CreateIndex
-CREATE INDEX "tax_invoices_partnerId_idx" ON "tax_invoices"("partnerId");
+CREATE INDEX IF NOT EXISTS "tax_invoices_partnerId_idx" ON "tax_invoices"("partnerId");
 
 -- CreateIndex
-CREATE INDEX "tax_invoices_transmissionStatus_idx" ON "tax_invoices"("transmissionStatus");
+CREATE INDEX IF NOT EXISTS "tax_invoices_transmissionStatus_idx" ON "tax_invoices"("transmissionStatus");
 
 -- CreateIndex
-CREATE INDEX "tax_invoice_items_taxInvoiceId_idx" ON "tax_invoice_items"("taxInvoiceId");
+CREATE INDEX IF NOT EXISTS "tax_invoice_items_taxInvoiceId_idx" ON "tax_invoice_items"("taxInvoiceId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "cost_centers_code_key" ON "cost_centers"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "cost_centers_code_key" ON "cost_centers"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "budget_headers_fiscalYearId_departmentId_key" ON "budget_headers"("fiscalYearId", "departmentId");
+CREATE UNIQUE INDEX IF NOT EXISTS "budget_headers_fiscalYearId_departmentId_key" ON "budget_headers"("fiscalYearId", "departmentId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "budget_details_budgetHeaderId_accountSubjectId_key" ON "budget_details"("budgetHeaderId", "accountSubjectId");
+CREATE UNIQUE INDEX IF NOT EXISTS "budget_details_budgetHeaderId_accountSubjectId_key" ON "budget_details"("budgetHeaderId", "accountSubjectId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "item_categories_code_key" ON "item_categories"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "item_categories_code_key" ON "item_categories"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "items_itemCode_key" ON "items"("itemCode");
+CREATE UNIQUE INDEX IF NOT EXISTS "items_itemCode_key" ON "items"("itemCode");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "items_barcode_key" ON "items"("barcode");
+CREATE UNIQUE INDEX IF NOT EXISTS "items_barcode_key" ON "items"("barcode");
 
 -- CreateIndex
-CREATE INDEX "items_itemName_idx" ON "items"("itemName");
+CREATE INDEX IF NOT EXISTS "items_itemName_idx" ON "items"("itemName");
 
 -- CreateIndex
-CREATE INDEX "items_isActive_itemType_idx" ON "items"("isActive", "itemType");
+CREATE INDEX IF NOT EXISTS "items_isActive_itemType_idx" ON "items"("isActive", "itemType");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "warehouses_code_key" ON "warehouses"("code");
+CREATE UNIQUE INDEX IF NOT EXISTS "warehouses_code_key" ON "warehouses"("code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "warehouse_zones_warehouseId_zoneCode_key" ON "warehouse_zones"("warehouseId", "zoneCode");
+CREATE UNIQUE INDEX IF NOT EXISTS "warehouse_zones_warehouseId_zoneCode_key" ON "warehouse_zones"("warehouseId", "zoneCode");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "stock_movements_movementNo_key" ON "stock_movements"("movementNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "stock_movements_movementNo_key" ON "stock_movements"("movementNo");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_movementDate_idx" ON "stock_movements"("movementDate");
+CREATE INDEX IF NOT EXISTS "stock_movements_movementDate_idx" ON "stock_movements"("movementDate");
 
 -- CreateIndex
-CREATE INDEX "stock_movements_movementType_movementDate_idx" ON "stock_movements"("movementType", "movementDate");
+CREATE INDEX IF NOT EXISTS "stock_movements_movementType_movementDate_idx" ON "stock_movements"("movementType", "movementDate");
 
 -- CreateIndex
-CREATE INDEX "stock_movement_details_stockMovementId_idx" ON "stock_movement_details"("stockMovementId");
+CREATE INDEX IF NOT EXISTS "stock_movement_details_stockMovementId_idx" ON "stock_movement_details"("stockMovementId");
 
 -- CreateIndex
-CREATE INDEX "stock_movement_details_itemId_idx" ON "stock_movement_details"("itemId");
+CREATE INDEX IF NOT EXISTS "stock_movement_details_itemId_idx" ON "stock_movement_details"("itemId");
 
 -- CreateIndex
-CREATE INDEX "stock_balances_itemId_idx" ON "stock_balances"("itemId");
+CREATE INDEX IF NOT EXISTS "stock_balances_itemId_idx" ON "stock_balances"("itemId");
 
 -- CreateIndex
-CREATE INDEX "stock_balances_warehouseId_idx" ON "stock_balances"("warehouseId");
+CREATE INDEX IF NOT EXISTS "stock_balances_warehouseId_idx" ON "stock_balances"("warehouseId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "stock_balances_itemId_warehouseId_zoneId_key" ON "stock_balances"("itemId", "warehouseId", "zoneId");
+CREATE UNIQUE INDEX IF NOT EXISTS "stock_balances_itemId_warehouseId_zoneId_key" ON "stock_balances"("itemId", "warehouseId", "zoneId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "partners_partnerCode_key" ON "partners"("partnerCode");
+CREATE UNIQUE INDEX IF NOT EXISTS "partners_partnerCode_key" ON "partners"("partnerCode");
 
 -- CreateIndex
-CREATE INDEX "partners_partnerName_idx" ON "partners"("partnerName");
+CREATE INDEX IF NOT EXISTS "partners_partnerName_idx" ON "partners"("partnerName");
 
 -- CreateIndex
-CREATE INDEX "partners_bizNo_idx" ON "partners"("bizNo");
+CREATE INDEX IF NOT EXISTS "partners_bizNo_idx" ON "partners"("bizNo");
 
 -- CreateIndex
-CREATE INDEX "partners_isActive_partnerType_idx" ON "partners"("isActive", "partnerType");
+CREATE INDEX IF NOT EXISTS "partners_isActive_partnerType_idx" ON "partners"("isActive", "partnerType");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "quotations_quotationNo_key" ON "quotations"("quotationNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "quotations_quotationNo_key" ON "quotations"("quotationNo");
 
 -- CreateIndex
-CREATE INDEX "quotations_quotationDate_idx" ON "quotations"("quotationDate");
+CREATE INDEX IF NOT EXISTS "quotations_quotationDate_idx" ON "quotations"("quotationDate");
 
 -- CreateIndex
-CREATE INDEX "quotations_partnerId_idx" ON "quotations"("partnerId");
+CREATE INDEX IF NOT EXISTS "quotations_partnerId_idx" ON "quotations"("partnerId");
 
 -- CreateIndex
-CREATE INDEX "quotations_status_idx" ON "quotations"("status");
+CREATE INDEX IF NOT EXISTS "quotations_status_idx" ON "quotations"("status");
 
 -- CreateIndex
-CREATE INDEX "quotations_employeeId_idx" ON "quotations"("employeeId");
+CREATE INDEX IF NOT EXISTS "quotations_employeeId_idx" ON "quotations"("employeeId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sales_orders_orderNo_key" ON "sales_orders"("orderNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "sales_orders_orderNo_key" ON "sales_orders"("orderNo");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_orderDate_idx" ON "sales_orders"("orderDate");
+CREATE INDEX IF NOT EXISTS "sales_orders_orderDate_idx" ON "sales_orders"("orderDate");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_status_idx" ON "sales_orders"("status");
+CREATE INDEX IF NOT EXISTS "sales_orders_status_idx" ON "sales_orders"("status");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_status_salesChannel_idx" ON "sales_orders"("status", "salesChannel");
+CREATE INDEX IF NOT EXISTS "sales_orders_status_salesChannel_idx" ON "sales_orders"("status", "salesChannel");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_partnerId_idx" ON "sales_orders"("partnerId");
+CREATE INDEX IF NOT EXISTS "sales_orders_partnerId_idx" ON "sales_orders"("partnerId");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_status_createdAt_idx" ON "sales_orders"("status", "createdAt");
+CREATE INDEX IF NOT EXISTS "sales_orders_status_createdAt_idx" ON "sales_orders"("status", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_employeeId_idx" ON "sales_orders"("employeeId");
+CREATE INDEX IF NOT EXISTS "sales_orders_employeeId_idx" ON "sales_orders"("employeeId");
 
 -- CreateIndex
-CREATE INDEX "sales_orders_orderDate_status_idx" ON "sales_orders"("orderDate", "status");
+CREATE INDEX IF NOT EXISTS "sales_orders_orderDate_status_idx" ON "sales_orders"("orderDate", "status");
 
 -- CreateIndex
-CREATE INDEX "sales_order_details_salesOrderId_idx" ON "sales_order_details"("salesOrderId");
+CREATE INDEX IF NOT EXISTS "sales_order_details_salesOrderId_idx" ON "sales_order_details"("salesOrderId");
 
 -- CreateIndex
-CREATE INDEX "sales_order_details_itemId_idx" ON "sales_order_details"("itemId");
+CREATE INDEX IF NOT EXISTS "sales_order_details_itemId_idx" ON "sales_order_details"("itemId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "deliveries_deliveryNo_key" ON "deliveries"("deliveryNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "deliveries_deliveryNo_key" ON "deliveries"("deliveryNo");
 
 -- CreateIndex
-CREATE INDEX "deliveries_deliveryDate_idx" ON "deliveries"("deliveryDate");
+CREATE INDEX IF NOT EXISTS "deliveries_deliveryDate_idx" ON "deliveries"("deliveryDate");
 
 -- CreateIndex
-CREATE INDEX "deliveries_salesOrderId_idx" ON "deliveries"("salesOrderId");
+CREATE INDEX IF NOT EXISTS "deliveries_salesOrderId_idx" ON "deliveries"("salesOrderId");
 
 -- CreateIndex
-CREATE INDEX "deliveries_qualityStatus_idx" ON "deliveries"("qualityStatus");
+CREATE INDEX IF NOT EXISTS "deliveries_qualityStatus_idx" ON "deliveries"("qualityStatus");
 
 -- CreateIndex
-CREATE INDEX "delivery_details_deliveryId_idx" ON "delivery_details"("deliveryId");
+CREATE INDEX IF NOT EXISTS "delivery_details_deliveryId_idx" ON "delivery_details"("deliveryId");
 
 -- CreateIndex
-CREATE INDEX "notes_relatedTable_relatedId_idx" ON "notes"("relatedTable", "relatedId");
+CREATE INDEX IF NOT EXISTS "notes_relatedTable_relatedId_idx" ON "notes"("relatedTable", "relatedId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sales_returns_returnNo_key" ON "sales_returns"("returnNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "sales_returns_returnNo_key" ON "sales_returns"("returnNo");
 
 -- CreateIndex
-CREATE INDEX "sales_returns_returnDate_idx" ON "sales_returns"("returnDate");
+CREATE INDEX IF NOT EXISTS "sales_returns_returnDate_idx" ON "sales_returns"("returnDate");
 
 -- CreateIndex
-CREATE INDEX "sales_returns_status_idx" ON "sales_returns"("status");
+CREATE INDEX IF NOT EXISTS "sales_returns_status_idx" ON "sales_returns"("status");
 
 -- CreateIndex
-CREATE INDEX "sales_return_details_salesReturnId_idx" ON "sales_return_details"("salesReturnId");
+CREATE INDEX IF NOT EXISTS "sales_return_details_salesReturnId_idx" ON "sales_return_details"("salesReturnId");
 
 -- CreateIndex
-CREATE INDEX "quality_standards_itemId_idx" ON "quality_standards"("itemId");
+CREATE INDEX IF NOT EXISTS "quality_standards_itemId_idx" ON "quality_standards"("itemId");
 
 -- CreateIndex
-CREATE INDEX "quality_standards_category_idx" ON "quality_standards"("category");
+CREATE INDEX IF NOT EXISTS "quality_standards_category_idx" ON "quality_standards"("category");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "quality_inspections_inspectionNo_key" ON "quality_inspections"("inspectionNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "quality_inspections_inspectionNo_key" ON "quality_inspections"("inspectionNo");
 
 -- CreateIndex
-CREATE INDEX "quality_inspections_deliveryId_idx" ON "quality_inspections"("deliveryId");
+CREATE INDEX IF NOT EXISTS "quality_inspections_deliveryId_idx" ON "quality_inspections"("deliveryId");
 
 -- CreateIndex
-CREATE INDEX "quality_inspections_inspectionDate_idx" ON "quality_inspections"("inspectionDate");
+CREATE INDEX IF NOT EXISTS "quality_inspections_inspectionDate_idx" ON "quality_inspections"("inspectionDate");
 
 -- CreateIndex
-CREATE INDEX "quality_inspections_overallGrade_idx" ON "quality_inspections"("overallGrade");
+CREATE INDEX IF NOT EXISTS "quality_inspections_overallGrade_idx" ON "quality_inspections"("overallGrade");
 
 -- CreateIndex
-CREATE INDEX "quality_inspections_judgement_idx" ON "quality_inspections"("judgement");
+CREATE INDEX IF NOT EXISTS "quality_inspections_judgement_idx" ON "quality_inspections"("judgement");
 
 -- CreateIndex
-CREATE INDEX "quality_inspection_items_qualityInspectionId_idx" ON "quality_inspection_items"("qualityInspectionId");
+CREATE INDEX IF NOT EXISTS "quality_inspection_items_qualityInspectionId_idx" ON "quality_inspection_items"("qualityInspectionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "purchase_requests_requestNo_key" ON "purchase_requests"("requestNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "purchase_requests_requestNo_key" ON "purchase_requests"("requestNo");
 
 -- CreateIndex
-CREATE INDEX "purchase_requests_requestDate_idx" ON "purchase_requests"("requestDate");
+CREATE INDEX IF NOT EXISTS "purchase_requests_requestDate_idx" ON "purchase_requests"("requestDate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "purchase_orders_orderNo_key" ON "purchase_orders"("orderNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "purchase_orders_orderNo_key" ON "purchase_orders"("orderNo");
 
 -- CreateIndex
-CREATE INDEX "purchase_orders_orderDate_idx" ON "purchase_orders"("orderDate");
+CREATE INDEX IF NOT EXISTS "purchase_orders_orderDate_idx" ON "purchase_orders"("orderDate");
 
 -- CreateIndex
-CREATE INDEX "purchase_orders_partnerId_idx" ON "purchase_orders"("partnerId");
+CREATE INDEX IF NOT EXISTS "purchase_orders_partnerId_idx" ON "purchase_orders"("partnerId");
 
 -- CreateIndex
-CREATE INDEX "purchase_orders_status_idx" ON "purchase_orders"("status");
+CREATE INDEX IF NOT EXISTS "purchase_orders_status_idx" ON "purchase_orders"("status");
 
 -- CreateIndex
-CREATE INDEX "purchase_orders_employeeId_idx" ON "purchase_orders"("employeeId");
+CREATE INDEX IF NOT EXISTS "purchase_orders_employeeId_idx" ON "purchase_orders"("employeeId");
 
 -- CreateIndex
-CREATE INDEX "purchase_order_details_purchaseOrderId_idx" ON "purchase_order_details"("purchaseOrderId");
+CREATE INDEX IF NOT EXISTS "purchase_order_details_purchaseOrderId_idx" ON "purchase_order_details"("purchaseOrderId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "receivings_receivingNo_key" ON "receivings"("receivingNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "receivings_receivingNo_key" ON "receivings"("receivingNo");
 
 -- CreateIndex
-CREATE INDEX "receivings_receivingDate_idx" ON "receivings"("receivingDate");
+CREATE INDEX IF NOT EXISTS "receivings_receivingDate_idx" ON "receivings"("receivingDate");
 
 -- CreateIndex
-CREATE INDEX "receiving_details_receivingId_idx" ON "receiving_details"("receivingId");
+CREATE INDEX IF NOT EXISTS "receiving_details_receivingId_idx" ON "receiving_details"("receivingId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "purchase_payments_paymentNo_key" ON "purchase_payments"("paymentNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "purchase_payments_paymentNo_key" ON "purchase_payments"("paymentNo");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "projects_projectCode_key" ON "projects"("projectCode");
+CREATE UNIQUE INDEX IF NOT EXISTS "projects_projectCode_key" ON "projects"("projectCode");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "project_members_projectId_employeeId_key" ON "project_members"("projectId", "employeeId");
+CREATE UNIQUE INDEX IF NOT EXISTS "project_members_projectId_employeeId_key" ON "project_members"("projectId", "employeeId");
 
 -- CreateIndex
-CREATE INDEX "project_tasks_projectId_idx" ON "project_tasks"("projectId");
+CREATE INDEX IF NOT EXISTS "project_tasks_projectId_idx" ON "project_tasks"("projectId");
 
 -- CreateIndex
-CREATE INDEX "project_tasks_assigneeId_idx" ON "project_tasks"("assigneeId");
+CREATE INDEX IF NOT EXISTS "project_tasks_assigneeId_idx" ON "project_tasks"("assigneeId");
 
 -- CreateIndex
-CREATE INDEX "project_tasks_status_idx" ON "project_tasks"("status");
+CREATE INDEX IF NOT EXISTS "project_tasks_status_idx" ON "project_tasks"("status");
 
 -- CreateIndex
-CREATE INDEX "approval_lines_templateId_idx" ON "approval_lines"("templateId");
+CREATE INDEX IF NOT EXISTS "approval_lines_templateId_idx" ON "approval_lines"("templateId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "approval_documents_documentNo_key" ON "approval_documents"("documentNo");
+CREATE UNIQUE INDEX IF NOT EXISTS "approval_documents_documentNo_key" ON "approval_documents"("documentNo");
 
 -- CreateIndex
-CREATE INDEX "approval_documents_status_idx" ON "approval_documents"("status");
+CREATE INDEX IF NOT EXISTS "approval_documents_status_idx" ON "approval_documents"("status");
 
 -- CreateIndex
-CREATE INDEX "approval_documents_drafterId_idx" ON "approval_documents"("drafterId");
+CREATE INDEX IF NOT EXISTS "approval_documents_drafterId_idx" ON "approval_documents"("drafterId");
 
 -- CreateIndex
-CREATE INDEX "approval_documents_createdAt_idx" ON "approval_documents"("createdAt");
+CREATE INDEX IF NOT EXISTS "approval_documents_createdAt_idx" ON "approval_documents"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "approval_documents_status_createdAt_idx" ON "approval_documents"("status", "createdAt");
+CREATE INDEX IF NOT EXISTS "approval_documents_status_createdAt_idx" ON "approval_documents"("status", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "approval_steps_approverId_status_idx" ON "approval_steps"("approverId", "status");
+CREATE INDEX IF NOT EXISTS "approval_steps_approverId_status_idx" ON "approval_steps"("approverId", "status");
 
 -- CreateIndex
-CREATE INDEX "approval_steps_documentId_stepOrder_idx" ON "approval_steps"("documentId", "stepOrder");
+CREATE INDEX IF NOT EXISTS "approval_steps_documentId_stepOrder_idx" ON "approval_steps"("documentId", "stepOrder");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "boards_boardCode_key" ON "boards"("boardCode");
+CREATE UNIQUE INDEX IF NOT EXISTS "boards_boardCode_key" ON "boards"("boardCode");
 
 -- CreateIndex
-CREATE INDEX "posts_boardId_createdAt_idx" ON "posts"("boardId", "createdAt");
+CREATE INDEX IF NOT EXISTS "posts_boardId_createdAt_idx" ON "posts"("boardId", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "posts_authorId_idx" ON "posts"("authorId");
+CREATE INDEX IF NOT EXISTS "posts_authorId_idx" ON "posts"("authorId");
 
 -- CreateIndex
-CREATE INDEX "post_comments_postId_idx" ON "post_comments"("postId");
+CREATE INDEX IF NOT EXISTS "post_comments_postId_idx" ON "post_comments"("postId");
 
 -- CreateIndex
-CREATE INDEX "messages_receiverId_isRead_idx" ON "messages"("receiverId", "isRead");
+CREATE INDEX IF NOT EXISTS "messages_receiverId_isRead_idx" ON "messages"("receiverId", "isRead");
 
 -- CreateIndex
-CREATE INDEX "messages_senderId_sentAt_idx" ON "messages"("senderId", "sentAt");
+CREATE INDEX IF NOT EXISTS "messages_senderId_sentAt_idx" ON "messages"("senderId", "sentAt");
 
--- AddForeignKey
+-- AddForeignKey (idempotent: DROP IF EXISTS before ADD)
+ALTER TABLE "users" DROP CONSTRAINT IF EXISTS "users_employeeId_fkey";
 ALTER TABLE "users" ADD CONSTRAINT "users_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "role_permissions" DROP CONSTRAINT IF EXISTS "role_permissions_roleId_fkey";
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "role_permissions" DROP CONSTRAINT IF EXISTS "role_permissions_permissionId_fkey";
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "user_roles" DROP CONSTRAINT IF EXISTS "user_roles_userId_fkey";
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "user_roles" DROP CONSTRAINT IF EXISTS "user_roles_roleId_fkey";
 ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "common_codes" DROP CONSTRAINT IF EXISTS "common_codes_parentId_fkey";
 ALTER TABLE "common_codes" ADD CONSTRAINT "common_codes_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "common_codes"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "audit_logs" DROP CONSTRAINT IF EXISTS "audit_logs_userId_fkey";
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "notifications" DROP CONSTRAINT IF EXISTS "notifications_userId_fkey";
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "departments" DROP CONSTRAINT IF EXISTS "departments_parentId_fkey";
 ALTER TABLE "departments" ADD CONSTRAINT "departments_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "employees" DROP CONSTRAINT IF EXISTS "employees_departmentId_fkey";
 ALTER TABLE "employees" ADD CONSTRAINT "employees_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "employees" DROP CONSTRAINT IF EXISTS "employees_positionId_fkey";
 ALTER TABLE "employees" ADD CONSTRAINT "employees_positionId_fkey" FOREIGN KEY ("positionId") REFERENCES "positions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "employee_histories" DROP CONSTRAINT IF EXISTS "employee_histories_employeeId_fkey";
 ALTER TABLE "employee_histories" ADD CONSTRAINT "employee_histories_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "payroll_details" DROP CONSTRAINT IF EXISTS "payroll_details_payrollHeaderId_fkey";
 ALTER TABLE "payroll_details" ADD CONSTRAINT "payroll_details_payrollHeaderId_fkey" FOREIGN KEY ("payrollHeaderId") REFERENCES "payroll_headers"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "payroll_details" DROP CONSTRAINT IF EXISTS "payroll_details_employeeId_fkey";
 ALTER TABLE "payroll_details" ADD CONSTRAINT "payroll_details_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "attendances" DROP CONSTRAINT IF EXISTS "attendances_employeeId_fkey";
 ALTER TABLE "attendances" ADD CONSTRAINT "attendances_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "leaves" DROP CONSTRAINT IF EXISTS "leaves_employeeId_fkey";
 ALTER TABLE "leaves" ADD CONSTRAINT "leaves_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "leave_balances" DROP CONSTRAINT IF EXISTS "leave_balances_employeeId_fkey";
 ALTER TABLE "leave_balances" ADD CONSTRAINT "leave_balances_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "applicants" DROP CONSTRAINT IF EXISTS "applicants_recruitmentId_fkey";
 ALTER TABLE "applicants" ADD CONSTRAINT "applicants_recruitmentId_fkey" FOREIGN KEY ("recruitmentId") REFERENCES "recruitments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "account_subjects" DROP CONSTRAINT IF EXISTS "account_subjects_parentId_fkey";
 ALTER TABLE "account_subjects" ADD CONSTRAINT "account_subjects_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "account_subjects"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "vouchers" DROP CONSTRAINT IF EXISTS "vouchers_fiscalYearId_fkey";
 ALTER TABLE "vouchers" ADD CONSTRAINT "vouchers_fiscalYearId_fkey" FOREIGN KEY ("fiscalYearId") REFERENCES "fiscal_years"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "vouchers" DROP CONSTRAINT IF EXISTS "vouchers_createdById_fkey";
 ALTER TABLE "vouchers" ADD CONSTRAINT "vouchers_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "vouchers" DROP CONSTRAINT IF EXISTS "vouchers_approvedById_fkey";
 ALTER TABLE "vouchers" ADD CONSTRAINT "vouchers_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "employees"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "voucher_details" DROP CONSTRAINT IF EXISTS "voucher_details_voucherId_fkey";
 ALTER TABLE "voucher_details" ADD CONSTRAINT "voucher_details_voucherId_fkey" FOREIGN KEY ("voucherId") REFERENCES "vouchers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "voucher_details" DROP CONSTRAINT IF EXISTS "voucher_details_accountSubjectId_fkey";
 ALTER TABLE "voucher_details" ADD CONSTRAINT "voucher_details_accountSubjectId_fkey" FOREIGN KEY ("accountSubjectId") REFERENCES "account_subjects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "voucher_details" DROP CONSTRAINT IF EXISTS "voucher_details_partnerId_fkey";
 ALTER TABLE "voucher_details" ADD CONSTRAINT "voucher_details_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "voucher_details" DROP CONSTRAINT IF EXISTS "voucher_details_costCenterId_fkey";
 ALTER TABLE "voucher_details" ADD CONSTRAINT "voucher_details_costCenterId_fkey" FOREIGN KEY ("costCenterId") REFERENCES "cost_centers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "tax_invoices" DROP CONSTRAINT IF EXISTS "tax_invoices_voucherId_fkey";
 ALTER TABLE "tax_invoices" ADD CONSTRAINT "tax_invoices_voucherId_fkey" FOREIGN KEY ("voucherId") REFERENCES "vouchers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "tax_invoices" DROP CONSTRAINT IF EXISTS "tax_invoices_partnerId_fkey";
 ALTER TABLE "tax_invoices" ADD CONSTRAINT "tax_invoices_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "tax_invoice_items" DROP CONSTRAINT IF EXISTS "tax_invoice_items_taxInvoiceId_fkey";
 ALTER TABLE "tax_invoice_items" ADD CONSTRAINT "tax_invoice_items_taxInvoiceId_fkey" FOREIGN KEY ("taxInvoiceId") REFERENCES "tax_invoices"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "cost_centers" DROP CONSTRAINT IF EXISTS "cost_centers_departmentId_fkey";
 ALTER TABLE "cost_centers" ADD CONSTRAINT "cost_centers_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "budget_headers" DROP CONSTRAINT IF EXISTS "budget_headers_fiscalYearId_fkey";
 ALTER TABLE "budget_headers" ADD CONSTRAINT "budget_headers_fiscalYearId_fkey" FOREIGN KEY ("fiscalYearId") REFERENCES "fiscal_years"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "budget_headers" DROP CONSTRAINT IF EXISTS "budget_headers_departmentId_fkey";
 ALTER TABLE "budget_headers" ADD CONSTRAINT "budget_headers_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "budget_details" DROP CONSTRAINT IF EXISTS "budget_details_budgetHeaderId_fkey";
 ALTER TABLE "budget_details" ADD CONSTRAINT "budget_details_budgetHeaderId_fkey" FOREIGN KEY ("budgetHeaderId") REFERENCES "budget_headers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "budget_details" DROP CONSTRAINT IF EXISTS "budget_details_accountSubjectId_fkey";
 ALTER TABLE "budget_details" ADD CONSTRAINT "budget_details_accountSubjectId_fkey" FOREIGN KEY ("accountSubjectId") REFERENCES "account_subjects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "item_categories" DROP CONSTRAINT IF EXISTS "item_categories_parentId_fkey";
 ALTER TABLE "item_categories" ADD CONSTRAINT "item_categories_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "item_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "items" DROP CONSTRAINT IF EXISTS "items_categoryId_fkey";
 ALTER TABLE "items" ADD CONSTRAINT "items_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "item_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "warehouse_zones" DROP CONSTRAINT IF EXISTS "warehouse_zones_warehouseId_fkey";
 ALTER TABLE "warehouse_zones" ADD CONSTRAINT "warehouse_zones_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "warehouses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_movements" DROP CONSTRAINT IF EXISTS "stock_movements_sourceWarehouseId_fkey";
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_sourceWarehouseId_fkey" FOREIGN KEY ("sourceWarehouseId") REFERENCES "warehouses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_movements" DROP CONSTRAINT IF EXISTS "stock_movements_targetWarehouseId_fkey";
 ALTER TABLE "stock_movements" ADD CONSTRAINT "stock_movements_targetWarehouseId_fkey" FOREIGN KEY ("targetWarehouseId") REFERENCES "warehouses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_movement_details" DROP CONSTRAINT IF EXISTS "stock_movement_details_stockMovementId_fkey";
 ALTER TABLE "stock_movement_details" ADD CONSTRAINT "stock_movement_details_stockMovementId_fkey" FOREIGN KEY ("stockMovementId") REFERENCES "stock_movements"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_movement_details" DROP CONSTRAINT IF EXISTS "stock_movement_details_itemId_fkey";
 ALTER TABLE "stock_movement_details" ADD CONSTRAINT "stock_movement_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_balances" DROP CONSTRAINT IF EXISTS "stock_balances_itemId_fkey";
 ALTER TABLE "stock_balances" ADD CONSTRAINT "stock_balances_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_balances" DROP CONSTRAINT IF EXISTS "stock_balances_warehouseId_fkey";
 ALTER TABLE "stock_balances" ADD CONSTRAINT "stock_balances_warehouseId_fkey" FOREIGN KEY ("warehouseId") REFERENCES "warehouses"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "stock_balances" DROP CONSTRAINT IF EXISTS "stock_balances_zoneId_fkey";
 ALTER TABLE "stock_balances" ADD CONSTRAINT "stock_balances_zoneId_fkey" FOREIGN KEY ("zoneId") REFERENCES "warehouse_zones"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quotations" DROP CONSTRAINT IF EXISTS "quotations_partnerId_fkey";
 ALTER TABLE "quotations" ADD CONSTRAINT "quotations_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quotations" DROP CONSTRAINT IF EXISTS "quotations_employeeId_fkey";
 ALTER TABLE "quotations" ADD CONSTRAINT "quotations_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quotation_details" DROP CONSTRAINT IF EXISTS "quotation_details_quotationId_fkey";
 ALTER TABLE "quotation_details" ADD CONSTRAINT "quotation_details_quotationId_fkey" FOREIGN KEY ("quotationId") REFERENCES "quotations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quotation_details" DROP CONSTRAINT IF EXISTS "quotation_details_itemId_fkey";
 ALTER TABLE "quotation_details" ADD CONSTRAINT "quotation_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_orders" DROP CONSTRAINT IF EXISTS "sales_orders_partnerId_fkey";
 ALTER TABLE "sales_orders" ADD CONSTRAINT "sales_orders_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_orders" DROP CONSTRAINT IF EXISTS "sales_orders_quotationId_fkey";
 ALTER TABLE "sales_orders" ADD CONSTRAINT "sales_orders_quotationId_fkey" FOREIGN KEY ("quotationId") REFERENCES "quotations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_orders" DROP CONSTRAINT IF EXISTS "sales_orders_employeeId_fkey";
 ALTER TABLE "sales_orders" ADD CONSTRAINT "sales_orders_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_order_details" DROP CONSTRAINT IF EXISTS "sales_order_details_salesOrderId_fkey";
 ALTER TABLE "sales_order_details" ADD CONSTRAINT "sales_order_details_salesOrderId_fkey" FOREIGN KEY ("salesOrderId") REFERENCES "sales_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_order_details" DROP CONSTRAINT IF EXISTS "sales_order_details_itemId_fkey";
 ALTER TABLE "sales_order_details" ADD CONSTRAINT "sales_order_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "deliveries" DROP CONSTRAINT IF EXISTS "deliveries_salesOrderId_fkey";
 ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_salesOrderId_fkey" FOREIGN KEY ("salesOrderId") REFERENCES "sales_orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "deliveries" DROP CONSTRAINT IF EXISTS "deliveries_partnerId_fkey";
 ALTER TABLE "deliveries" ADD CONSTRAINT "deliveries_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "delivery_details" DROP CONSTRAINT IF EXISTS "delivery_details_deliveryId_fkey";
 ALTER TABLE "delivery_details" ADD CONSTRAINT "delivery_details_deliveryId_fkey" FOREIGN KEY ("deliveryId") REFERENCES "deliveries"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "delivery_details" DROP CONSTRAINT IF EXISTS "delivery_details_itemId_fkey";
 ALTER TABLE "delivery_details" ADD CONSTRAINT "delivery_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_requests" DROP CONSTRAINT IF EXISTS "purchase_requests_departmentId_fkey";
 ALTER TABLE "purchase_requests" ADD CONSTRAINT "purchase_requests_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_request_details" DROP CONSTRAINT IF EXISTS "purchase_request_details_purchaseRequestId_fkey";
 ALTER TABLE "purchase_request_details" ADD CONSTRAINT "purchase_request_details_purchaseRequestId_fkey" FOREIGN KEY ("purchaseRequestId") REFERENCES "purchase_requests"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_request_details" DROP CONSTRAINT IF EXISTS "purchase_request_details_itemId_fkey";
 ALTER TABLE "purchase_request_details" ADD CONSTRAINT "purchase_request_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_orders" DROP CONSTRAINT IF EXISTS "purchase_orders_partnerId_fkey";
 ALTER TABLE "purchase_orders" ADD CONSTRAINT "purchase_orders_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_orders" DROP CONSTRAINT IF EXISTS "purchase_orders_employeeId_fkey";
 ALTER TABLE "purchase_orders" ADD CONSTRAINT "purchase_orders_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_order_details" DROP CONSTRAINT IF EXISTS "purchase_order_details_purchaseOrderId_fkey";
 ALTER TABLE "purchase_order_details" ADD CONSTRAINT "purchase_order_details_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "purchase_orders"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_order_details" DROP CONSTRAINT IF EXISTS "purchase_order_details_itemId_fkey";
 ALTER TABLE "purchase_order_details" ADD CONSTRAINT "purchase_order_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "receivings" DROP CONSTRAINT IF EXISTS "receivings_purchaseOrderId_fkey";
 ALTER TABLE "receivings" ADD CONSTRAINT "receivings_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "purchase_orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "receivings" DROP CONSTRAINT IF EXISTS "receivings_partnerId_fkey";
 ALTER TABLE "receivings" ADD CONSTRAINT "receivings_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "receiving_details" DROP CONSTRAINT IF EXISTS "receiving_details_receivingId_fkey";
 ALTER TABLE "receiving_details" ADD CONSTRAINT "receiving_details_receivingId_fkey" FOREIGN KEY ("receivingId") REFERENCES "receivings"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "receiving_details" DROP CONSTRAINT IF EXISTS "receiving_details_itemId_fkey";
 ALTER TABLE "receiving_details" ADD CONSTRAINT "receiving_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "purchase_payments" DROP CONSTRAINT IF EXISTS "purchase_payments_partnerId_fkey";
 ALTER TABLE "purchase_payments" ADD CONSTRAINT "purchase_payments_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "projects" DROP CONSTRAINT IF EXISTS "projects_departmentId_fkey";
 ALTER TABLE "projects" ADD CONSTRAINT "projects_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "departments"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "project_members" DROP CONSTRAINT IF EXISTS "project_members_projectId_fkey";
 ALTER TABLE "project_members" ADD CONSTRAINT "project_members_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "project_members" DROP CONSTRAINT IF EXISTS "project_members_employeeId_fkey";
 ALTER TABLE "project_members" ADD CONSTRAINT "project_members_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "project_tasks" DROP CONSTRAINT IF EXISTS "project_tasks_projectId_fkey";
 ALTER TABLE "project_tasks" ADD CONSTRAINT "project_tasks_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "project_tasks" DROP CONSTRAINT IF EXISTS "project_tasks_parentTaskId_fkey";
 ALTER TABLE "project_tasks" ADD CONSTRAINT "project_tasks_parentTaskId_fkey" FOREIGN KEY ("parentTaskId") REFERENCES "project_tasks"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "project_schedules" DROP CONSTRAINT IF EXISTS "project_schedules_projectId_fkey";
 ALTER TABLE "project_schedules" ADD CONSTRAINT "project_schedules_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "approval_lines" DROP CONSTRAINT IF EXISTS "approval_lines_templateId_fkey";
 ALTER TABLE "approval_lines" ADD CONSTRAINT "approval_lines_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "approval_templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "approval_documents" DROP CONSTRAINT IF EXISTS "approval_documents_templateId_fkey";
 ALTER TABLE "approval_documents" ADD CONSTRAINT "approval_documents_templateId_fkey" FOREIGN KEY ("templateId") REFERENCES "approval_templates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "approval_documents" DROP CONSTRAINT IF EXISTS "approval_documents_drafterId_fkey";
 ALTER TABLE "approval_documents" ADD CONSTRAINT "approval_documents_drafterId_fkey" FOREIGN KEY ("drafterId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "approval_steps" DROP CONSTRAINT IF EXISTS "approval_steps_documentId_fkey";
 ALTER TABLE "approval_steps" ADD CONSTRAINT "approval_steps_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "approval_documents"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "approval_steps" DROP CONSTRAINT IF EXISTS "approval_steps_approverId_fkey";
 ALTER TABLE "approval_steps" ADD CONSTRAINT "approval_steps_approverId_fkey" FOREIGN KEY ("approverId") REFERENCES "employees"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "posts" DROP CONSTRAINT IF EXISTS "posts_boardId_fkey";
 ALTER TABLE "posts" ADD CONSTRAINT "posts_boardId_fkey" FOREIGN KEY ("boardId") REFERENCES "boards"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "posts" DROP CONSTRAINT IF EXISTS "posts_authorId_fkey";
 ALTER TABLE "posts" ADD CONSTRAINT "posts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "post_comments" DROP CONSTRAINT IF EXISTS "post_comments_postId_fkey";
 ALTER TABLE "post_comments" ADD CONSTRAINT "post_comments_postId_fkey" FOREIGN KEY ("postId") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "post_comments" DROP CONSTRAINT IF EXISTS "post_comments_authorId_fkey";
 ALTER TABLE "post_comments" ADD CONSTRAINT "post_comments_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "post_comments" DROP CONSTRAINT IF EXISTS "post_comments_parentCommentId_fkey";
 ALTER TABLE "post_comments" ADD CONSTRAINT "post_comments_parentCommentId_fkey" FOREIGN KEY ("parentCommentId") REFERENCES "post_comments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "messages" DROP CONSTRAINT IF EXISTS "messages_senderId_fkey";
 ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "messages" DROP CONSTRAINT IF EXISTS "messages_receiverId_fkey";
 ALTER TABLE "messages" ADD CONSTRAINT "messages_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_returns" DROP CONSTRAINT IF EXISTS "sales_returns_salesOrderId_fkey";
 ALTER TABLE "sales_returns" ADD CONSTRAINT "sales_returns_salesOrderId_fkey" FOREIGN KEY ("salesOrderId") REFERENCES "sales_orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_returns" DROP CONSTRAINT IF EXISTS "sales_returns_partnerId_fkey";
 ALTER TABLE "sales_returns" ADD CONSTRAINT "sales_returns_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_return_details" DROP CONSTRAINT IF EXISTS "sales_return_details_salesReturnId_fkey";
 ALTER TABLE "sales_return_details" ADD CONSTRAINT "sales_return_details_salesReturnId_fkey" FOREIGN KEY ("salesReturnId") REFERENCES "sales_returns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "sales_return_details" DROP CONSTRAINT IF EXISTS "sales_return_details_itemId_fkey";
 ALTER TABLE "sales_return_details" ADD CONSTRAINT "sales_return_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quality_standards" DROP CONSTRAINT IF EXISTS "quality_standards_itemId_fkey";
 ALTER TABLE "quality_standards" ADD CONSTRAINT "quality_standards_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quality_inspections" DROP CONSTRAINT IF EXISTS "quality_inspections_deliveryId_fkey";
 ALTER TABLE "quality_inspections" ADD CONSTRAINT "quality_inspections_deliveryId_fkey" FOREIGN KEY ("deliveryId") REFERENCES "deliveries"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
+ALTER TABLE "quality_inspection_items" DROP CONSTRAINT IF EXISTS "quality_inspection_items_qualityInspectionId_fkey";
 ALTER TABLE "quality_inspection_items" ADD CONSTRAINT "quality_inspection_items_qualityInspectionId_fkey" FOREIGN KEY ("qualityInspectionId") REFERENCES "quality_inspections"("id") ON DELETE CASCADE ON UPDATE CASCADE;
