@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
           salesOrderId: data.salesOrderId,
           partnerId: salesOrder.partnerId!,
           deliveryAddress: data.deliveryAddress || null,
+          trackingNo: data.trackingNo || null,
+          carrier: data.carrier || null,
           details: {
             create: data.details.map((d) => ({
               itemId: d.itemId,

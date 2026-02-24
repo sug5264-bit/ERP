@@ -91,6 +91,10 @@ export async function POST(request: NextRequest) {
       return errorResponse('재고조정에는 대상 창고가 필요합니다.', 'MISSING_WAREHOUSE')
     }
 
+    // 사원 정보 조회 (createdBy에 Employee ID 사용)
+    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
+    if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
     const result = await prisma.$transaction(async (tx) => {
       const movement = await tx.stockMovement.create({
         data: {
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
           targetWarehouseId: data.targetWarehouseId || null,
           relatedDocType: data.relatedDocType || null,
           relatedDocId: data.relatedDocId || null,
-          createdBy: authResult.session.user.id,
+          createdBy: employee.id,
           details: {
             create: data.details.map((d) => ({
               itemId: d.itemId,
