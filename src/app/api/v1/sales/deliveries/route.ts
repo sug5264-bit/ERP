@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       select: { id: true, partnerId: true },
     })
     if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (!salesOrder.partnerId) return errorResponse('수주에 거래처 정보가 없습니다.', 'VALIDATION_ERROR', 400)
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate))
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
           deliveryNo,
           deliveryDate: new Date(data.deliveryDate),
           salesOrderId: data.salesOrderId,
-          partnerId: salesOrder.partnerId,
+          partnerId: salesOrder.partnerId!,
           deliveryAddress: data.deliveryAddress || null,
           details: {
             create: data.details.map((d) => ({
