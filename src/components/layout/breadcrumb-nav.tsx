@@ -38,6 +38,8 @@ const pathLabels: Record<string, string> = {
   partners: '거래처관리',
   quotations: '견적관리',
   orders: '발주관리',
+  notes: '특이사항',
+  posts: '게시글',
   deliveries: '납품관리',
   returns: '반품관리',
   company: '회사관리',
@@ -66,7 +68,7 @@ export function BreadcrumbNav() {
   if (segments.length <= 1) return null
 
   return (
-    <Breadcrumb className="mb-3 sm:mb-4 overflow-x-auto scrollbar-none">
+    <Breadcrumb className="scrollbar-none mb-3 overflow-x-auto sm:mb-4">
       <BreadcrumbList className="flex-nowrap text-[13px] sm:text-sm">
         {segments.map((segment, index) => {
           const href = '/' + segments.slice(0, index + 1).join('/')

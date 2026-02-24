@@ -11,12 +11,15 @@ export async function GET(request: NextRequest) {
     const relatedTable = sp.get('relatedTable')
     const relatedId = sp.get('relatedId')
 
-    if (!relatedTable || !relatedId) {
-      return errorResponse('relatedTable과 relatedId가 필요합니다.', 'VALIDATION_ERROR')
+    if (!relatedTable) {
+      return errorResponse('relatedTable이 필요합니다.', 'VALIDATION_ERROR')
     }
 
+    const where: any = { relatedTable }
+    if (relatedId) where.relatedId = relatedId
+
     const notes = await prisma.note.findMany({
-      where: { relatedTable, relatedId },
+      where,
       orderBy: { createdAt: 'desc' },
     })
 

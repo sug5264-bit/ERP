@@ -18,11 +18,7 @@ import {
   CalendarCheck,
   type LucideIcon,
 } from 'lucide-react'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useState, useMemo, useCallback, memo } from 'react'
 import { useSidebarStore } from '@/stores/sidebar-store'
 
@@ -30,6 +26,7 @@ interface NavChild {
   title: string
   href: string
   permission?: string
+  children?: NavChild[]
 }
 
 interface NavItem {
@@ -94,7 +91,15 @@ const navItems: NavItem[] = [
     children: [
       { title: '매출집계', href: '/sales/summary', permission: 'sales.summary' },
       { title: '거래처관리', href: '/sales/partners', permission: 'sales.partners' },
-      { title: '발주관리', href: '/sales/orders', permission: 'sales.orders' },
+      {
+        title: '발주관리',
+        href: '/sales/orders',
+        permission: 'sales.orders',
+        children: [
+          { title: '특이사항', href: '/sales/orders/notes', permission: 'sales.orders' },
+          { title: '게시글', href: '/sales/orders/posts', permission: 'sales.orders' },
+        ],
+      },
       { title: '납품관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
     ],
@@ -165,9 +170,7 @@ export function SidebarNav() {
   const hasPermission = useCallback(
     (module: string) =>
       userPermissions.some(
-        (p: any) =>
-          (p.module === module || p.module.startsWith(module + '.')) &&
-          p.action === 'read'
+        (p: any) => (p.module === module || p.module.startsWith(module + '.')) && p.action === 'read'
       ),
     [userPermissions]
   )
@@ -179,18 +182,14 @@ export function SidebarNav() {
         if (isAdmin) return item
 
         // 모듈 전체 권한 보유 시 모든 하위 페이지 표시
-        const hasModuleAccess = userPermissions.some(
-          (p: any) => p.module === item.module && p.action === 'read'
-        )
+        const hasModuleAccess = userPermissions.some((p: any) => p.module === item.module && p.action === 'read')
         if (hasModuleAccess) return item
 
         // 하위 페이지별 권한 체크
         if (item.children) {
           const filteredChildren = item.children.filter((child) => {
             if (!child.permission) return hasModuleAccess
-            return userPermissions.some(
-              (p: any) => p.module === child.permission && p.action === 'read'
-            )
+            return userPermissions.some((p: any) => p.module === child.permission && p.action === 'read')
           })
           if (filteredChildren.length === 0) return null
           return { ...item, children: filteredChildren }
@@ -210,16 +209,64 @@ export function SidebarNav() {
   return (
     <nav className="flex flex-col gap-1 p-2">
       {filteredNavItems.map((item) => (
-        <NavItemComponent
-          key={item.href}
-          item={item}
-          pathname={pathname}
-          onNavigate={closeMobileSidebar}
-        />
+        <NavItemComponent key={item.href} item={item} pathname={pathname} onNavigate={closeMobileSidebar} />
       ))}
     </nav>
   )
 }
+
+const NavChildWithChildren = memo(function NavChildWithChildren({
+  child,
+  pathname,
+  onNavigate,
+}: {
+  child: NavChild
+  pathname: string
+  onNavigate: () => void
+}) {
+  const isActive = pathname === child.href || pathname.startsWith(child.href + '/')
+  const [isOpen, setIsOpen] = useState(isActive)
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="flex items-center">
+        <Link
+          href={child.href}
+          onClick={onNavigate}
+          className={cn(
+            'flex-1 rounded-md px-3 py-2 text-sm transition-colors',
+            pathname === child.href ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {child.title}
+        </Link>
+        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground rounded-md p-1">
+          <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent>
+        <div className="ml-3 flex flex-col gap-0.5 border-l pl-3">
+          {child.children!.map((sub) => {
+            const subActive = pathname === sub.href
+            return (
+              <Link
+                key={sub.href}
+                href={sub.href}
+                onClick={onNavigate}
+                className={cn(
+                  'rounded-md px-3 py-1.5 text-xs transition-colors',
+                  subActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {sub.title}
+              </Link>
+            )
+          })}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+})
 
 const NavItemComponent = memo(function NavItemComponent({
   item,
@@ -265,17 +312,15 @@ const NavItemComponent = memo(function NavItemComponent({
           <item.icon className="h-4 w-4" />
           <span>{item.title}</span>
         </div>
-        <ChevronDown
-          className={cn(
-            'h-4 w-4 transition-transform',
-            isOpen && 'rotate-180'
-          )}
-        />
+        <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l pl-4">
+        <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l pl-4">
           {item.children.map((child) => {
-            const childActive = pathname === child.href
+            const childActive = pathname === child.href || pathname.startsWith(child.href + '/')
+            if (child.children) {
+              return <NavChildWithChildren key={child.href} child={child} pathname={pathname} onNavigate={onNavigate} />
+            }
             return (
               <Link
                 key={child.href}
@@ -283,9 +328,7 @@ const NavItemComponent = memo(function NavItemComponent({
                 onClick={onNavigate}
                 className={cn(
                   'rounded-md px-3 py-2 text-sm transition-colors',
-                  childActive
-                    ? 'font-medium text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
+                  childActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 {child.title}
