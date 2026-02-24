@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createSalesOrderSchema } from '@/lib/validations/sales'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,8 +43,9 @@ export async function GET(request: NextRequest) {
       if (maxAmount) where.totalAmount.lte = Number(maxAmount)
     }
     // 통합 검색 (발주번호 또는 거래처명)
-    const search = sp.get('search')
-    if (search) {
+    const rawSearch = sp.get('search')
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
       where.OR = [
         { orderNo: { contains: search, mode: 'insensitive' } },
         { partner: { partnerName: { contains: search, mode: 'insensitive' } } },

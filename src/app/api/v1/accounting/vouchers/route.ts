@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createVoucherSchema } from '@/lib/validations/accounting'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +35,11 @@ export async function GET(request: NextRequest) {
       if (endDate) where.voucherDate.lte = new Date(endDate)
     }
     if (search) {
-      where.OR = [{ voucherNo: { contains: search } }, { description: { contains: search, mode: 'insensitive' } }]
+      const sanitized = sanitizeSearchQuery(search)
+      where.OR = [
+        { voucherNo: { contains: sanitized, mode: 'insensitive' } },
+        { description: { contains: sanitized, mode: 'insensitive' } },
+      ]
     }
 
     const [vouchers, totalCount] = await Promise.all([
@@ -66,18 +71,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createVoucherSchema.parse(body)
 
-    // Resolve accountCode to accountSubjectId if needed
-    const resolvedDetails = await Promise.all(
-      data.details.map(async (d) => {
-        let accountSubjectId = d.accountSubjectId
-        if (!accountSubjectId && (d as any).accountCode) {
-          const acc = await prisma.accountSubject.findUnique({ where: { code: (d as any).accountCode } })
-          if (!acc) throw new Error(`계정과목 코드 ${(d as any).accountCode}를 찾을 수 없습니다.`)
-          accountSubjectId = acc.id
-        }
-        return { ...d, accountSubjectId: accountSubjectId! }
+    // Resolve accountCode to accountSubjectId if needed (배치 조회로 N+1 방지)
+    const accountCodes = data.details
+      .filter((d) => !d.accountSubjectId && (d as any).accountCode)
+      .map((d) => (d as any).accountCode as string)
+    const accountCodeMap = new Map<string, string>()
+    if (accountCodes.length > 0) {
+      const accounts = await prisma.accountSubject.findMany({
+        where: { code: { in: accountCodes } },
+        select: { id: true, code: true },
       })
-    )
+      for (const acc of accounts) accountCodeMap.set(acc.code, acc.id)
+      const missing = accountCodes.filter((c) => !accountCodeMap.has(c))
+      if (missing.length > 0) {
+        return errorResponse(`계정과목 코드를 찾을 수 없습니다: ${missing.join(', ')}`, 'ACCOUNT_NOT_FOUND')
+      }
+    }
+    const resolvedDetails = data.details.map((d) => {
+      const accountSubjectId = d.accountSubjectId || accountCodeMap.get((d as any).accountCode)
+      return { ...d, accountSubjectId: accountSubjectId! }
+    })
 
     // 차/대변 합계 검증 (정수 연산으로 부동소수점 오차 제거)
     const totalDebit = resolvedDetails.reduce((sum, d) => sum + Math.round(d.debitAmount * 100), 0) / 100

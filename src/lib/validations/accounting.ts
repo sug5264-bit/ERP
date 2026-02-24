@@ -2,33 +2,38 @@ import { z } from 'zod'
 
 // 전표
 export const createVoucherSchema = z.object({
-  voucherDate: z.string().min(1, '전표일자를 입력하세요'),
+  voucherDate: z
+    .string()
+    .min(1, '전표일자를 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   voucherType: z.enum(['RECEIPT', 'PAYMENT', 'TRANSFER', 'PURCHASE', 'SALES']),
   description: z.string().optional(),
   details: z
     .array(
-      z.object({
-        accountSubjectId: z.string().min(1, '계정과목을 선택하세요').optional(),
-        accountCode: z.string().optional(),
-        debitAmount: z.number().min(0).default(0),
-        creditAmount: z.number().min(0).default(0),
-        partnerId: z.string().optional(),
-        description: z.string().optional(),
-        costCenterId: z.string().optional(),
-      }).refine(
-        (d) => d.accountSubjectId || d.accountCode,
-        { message: '계정과목 ID 또는 코드를 입력하세요' }
-      ).refine(
-        (d) => (d.debitAmount > 0 || d.creditAmount > 0) && !(d.debitAmount > 0 && d.creditAmount > 0),
-        { message: '차변 또는 대변 중 하나만 입력하세요' }
-      )
+      z
+        .object({
+          accountSubjectId: z.string().min(1, '계정과목을 선택하세요').optional(),
+          accountCode: z.string().optional(),
+          debitAmount: z.number().min(0).default(0),
+          creditAmount: z.number().min(0).default(0),
+          partnerId: z.string().optional(),
+          description: z.string().optional(),
+          costCenterId: z.string().optional(),
+        })
+        .refine((d) => d.accountSubjectId || d.accountCode, { message: '계정과목 ID 또는 코드를 입력하세요' })
+        .refine((d) => (d.debitAmount > 0 || d.creditAmount > 0) && !(d.debitAmount > 0 && d.creditAmount > 0), {
+          message: '차변 또는 대변 중 하나만 입력하세요',
+        })
     )
     .min(1, '분개 항목을 하나 이상 입력하세요'),
 })
 
 // 세금계산서
 export const createTaxInvoiceSchema = z.object({
-  issueDate: z.string().min(1, '발행일을 입력하세요').regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+  issueDate: z
+    .string()
+    .min(1, '발행일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
   invoiceType: z.enum(['SALES', 'PURCHASE']),
   supplierBizNo: z.string().min(1, '공급자 사업자번호를 입력하세요').max(20),
   supplierName: z.string().min(1, '공급자명을 입력하세요').max(200),
@@ -61,7 +66,11 @@ export const createTaxInvoiceSchema = z.object({
 
 // 계정과목
 export const createAccountSubjectSchema = z.object({
-  code: z.string().min(1, '계정코드를 입력하세요').max(20).regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
+  code: z
+    .string()
+    .min(1, '계정코드를 입력하세요')
+    .max(20)
+    .regex(/^[A-Za-z0-9-]+$/, '코드는 영문, 숫자, 하이픈만 사용 가능합니다'),
   nameKo: z.string().min(1, '계정명을 입력하세요').max(100),
   nameEn: z.string().max(200).optional(),
   accountType: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']),

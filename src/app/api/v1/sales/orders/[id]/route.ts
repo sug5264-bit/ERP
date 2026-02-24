@@ -158,9 +158,20 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await prisma.$transaction(async (tx) => {
       const deliveries = await tx.delivery.findMany({ where: { salesOrderId: id }, select: { id: true } })
       if (deliveries.length > 0) {
-        await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map((d) => d.id) } } })
+        const deliveryIds = deliveries.map((d) => d.id)
+        // 품질검사 관련 데이터 먼저 삭제 (FK 제약조건)
+        await tx.qualityInspectionItem.deleteMany({
+          where: { qualityInspection: { deliveryId: { in: deliveryIds } } },
+        })
+        await tx.qualityInspection.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
+        await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
         await tx.delivery.deleteMany({ where: { salesOrderId: id } })
       }
+      // 반품 관련 데이터 삭제
+      await tx.salesReturnDetail.deleteMany({
+        where: { salesReturn: { salesOrderId: id } },
+      })
+      await tx.salesReturn.deleteMany({ where: { salesOrderId: id } })
       await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
       await tx.salesOrder.delete({ where: { id } })
     })

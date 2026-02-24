@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createEmployeeSchema } from '@/lib/validations/hr'
 import { hasPermission } from '@/lib/rbac'
+import { sanitizeSearchQuery } from '@/lib/sanitize'
 import {
   successResponse,
   errorResponse,
@@ -31,12 +32,13 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = req.nextUrl
     const { page, pageSize, skip } = getPaginationParams(searchParams)
-    const search = searchParams.get('search') || ''
+    const rawSearch = searchParams.get('search') || ''
     const departmentId = searchParams.get('departmentId')
     const status = searchParams.get('status')
 
     const where: any = {}
-    if (search) {
+    if (rawSearch) {
+      const search = sanitizeSearchQuery(rawSearch)
       where.OR = [
         { nameKo: { contains: search, mode: 'insensitive' } },
         { employeeNo: { contains: search, mode: 'insensitive' } },

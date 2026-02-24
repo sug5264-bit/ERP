@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
         include: {
           salesOrder: { select: { id: true, orderNo: true } },
           partner: { select: { id: true, partnerName: true } },
+          details: { include: { item: { select: { id: true, itemName: true } } } },
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -51,6 +52,11 @@ export async function POST(req: NextRequest) {
     const data = createSalesReturnSchema.parse(body)
     const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate))
 
+    // 반품 상세가 있으면 totalAmount를 자동 계산
+    const details = data.details || []
+    const computedTotal =
+      details.length > 0 ? details.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0) : data.totalAmount
+
     const salesReturn = await prisma.salesReturn.create({
       data: {
         returnNo,
@@ -59,11 +65,23 @@ export async function POST(req: NextRequest) {
         partnerId: data.partnerId,
         reason: data.reason,
         reasonDetail: data.reasonDetail || null,
-        totalAmount: data.totalAmount,
+        totalAmount: computedTotal,
+        ...(details.length > 0 && {
+          details: {
+            create: details.map((d) => ({
+              itemId: d.itemId,
+              quantity: d.quantity,
+              unitPrice: d.unitPrice,
+              amount: Math.round(d.quantity * d.unitPrice),
+              remark: d.remark || null,
+            })),
+          },
+        }),
       },
       include: {
         salesOrder: { select: { id: true, orderNo: true } },
         partner: { select: { id: true, partnerName: true } },
+        details: { include: { item: { select: { id: true, itemName: true } } } },
       },
     })
 
