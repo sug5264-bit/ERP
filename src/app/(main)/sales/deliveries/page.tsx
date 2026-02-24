@@ -527,14 +527,30 @@ export default function DeliveriesPage() {
 
       let successCount = 0
       let failCount = 0
+      const failReasons: string[] = []
+      const normalize = (s: any) => (s ? String(s).trim().toLowerCase() : '')
       const today = new Date().toISOString().split('T')[0]
       for (const row of rows) {
-        const order = orders.find((o: any) => o.orderNo === row.orderNo)
-        const item = items.find(
-          (it: any) => it.itemName === row.itemName || it.itemCode === row.itemName || it.itemCode === row.itemCode
-        )
+        const orderNoVal = normalize(row.orderNo)
+        const order = orders.find((o: any) => normalize(o.orderNo) === orderNoVal)
+        const nameVal = normalize(row.itemName)
+        const codeVal = normalize(row.itemCode)
+        // 품목 매칭: 품목명(정확) → 품목코드(정확) → 부분 포함
+        const item =
+          items.find(
+            (it: any) =>
+              (nameVal && normalize(it.itemName) === nameVal) ||
+              (nameVal && normalize(it.itemCode) === nameVal) ||
+              (codeVal && normalize(it.itemCode) === codeVal)
+          ) ||
+          items.find(
+            (it: any) =>
+              (nameVal && normalize(it.itemName).includes(nameVal)) ||
+              (codeVal && normalize(it.itemName).includes(codeVal))
+          )
         if (!item) {
           failCount++
+          failReasons.push(`내품명 "${row.itemName || row.itemCode}" 미매칭`)
           continue
         }
         try {
@@ -556,7 +572,13 @@ export default function DeliveriesPage() {
         }
       }
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
-      toast.success(`${successCount}건 등록 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
+      if (failReasons.length > 0) {
+        toast.error(
+          `${successCount}건 등록, ${failCount}건 실패: ${failReasons.slice(0, 3).join(', ')}${failReasons.length > 3 ? ' ...' : ''}`
+        )
+      } else {
+        toast.success(`${successCount}건 등록 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
+      }
     } catch (err: any) {
       toast.error(err.message || '엑셀 파일을 읽을 수 없습니다.')
     }

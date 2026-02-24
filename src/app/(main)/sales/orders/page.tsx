@@ -711,18 +711,37 @@ export default function OrdersPage() {
       let successCount = 0
       let failCount = 0
       const failReasons: string[] = []
+      const normalize = (s: any) => (s ? String(s).trim().toLowerCase() : '')
       for (const row of rows) {
-        // 품목 매칭: 바코드 → 품목명 → 품목코드
-        const item = items.find(
-          (it: any) =>
-            (row.barcode && it.barcode === String(row.barcode)) ||
-            it.itemName === row.productName ||
-            it.itemCode === row.productName
-        )
-        // 거래처 매칭: 사이트명 또는 주문자명으로
-        const partner = partners.find(
-          (p: any) => (row.siteName && p.partnerName === row.siteName) || (row.orderer && p.partnerName === row.orderer)
-        )
+        const barcodeVal = normalize(row.barcode)
+        const productVal = normalize(row.productName)
+        // 품목 매칭: 바코드(정확) → 품목명(포함) → 품목코드(포함)
+        const item =
+          items.find(
+            (it: any) =>
+              (barcodeVal && normalize(it.barcode) === barcodeVal) ||
+              (productVal && normalize(it.itemName) === productVal) ||
+              (productVal && normalize(it.itemCode) === productVal)
+          ) ||
+          items.find(
+            (it: any) =>
+              (productVal && normalize(it.itemName).includes(productVal)) ||
+              (productVal && normalize(it.itemCode).includes(productVal))
+          )
+        // 거래처 매칭: 사이트명 또는 주문자명(포함)
+        const siteVal = normalize(row.siteName)
+        const ordererVal = normalize(row.orderer)
+        const partner =
+          partners.find(
+            (p: any) =>
+              (siteVal && normalize(p.partnerName) === siteVal) ||
+              (ordererVal && normalize(p.partnerName) === ordererVal)
+          ) ||
+          partners.find(
+            (p: any) =>
+              (siteVal && normalize(p.partnerName).includes(siteVal)) ||
+              (ordererVal && normalize(p.partnerName).includes(ordererVal))
+          )
         if (!item) {
           failCount++
           failReasons.push(`상품명 "${row.productName || row.barcode}" 미매칭`)
