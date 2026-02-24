@@ -47,6 +47,15 @@ CREATE TYPE "SalesOrderStatus" AS ENUM ('ORDERED', 'IN_PROGRESS', 'COMPLETED', '
 CREATE TYPE "SalesChannel" AS ENUM ('ONLINE', 'OFFLINE');
 
 -- CreateEnum
+CREATE TYPE "ReturnReason" AS ENUM ('DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "QualityGrade" AS ENUM ('A', 'B', 'C', 'REJECT');
+
+-- CreateEnum
+CREATE TYPE "InspectionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED');
+
+-- CreateEnum
 CREATE TYPE "ProjectStatus" AS ENUM ('PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED');
 
 -- CreateEnum
@@ -670,7 +679,7 @@ CREATE TABLE "sales_orders" (
     "id" TEXT NOT NULL,
     "orderNo" TEXT NOT NULL,
     "orderDate" DATE NOT NULL,
-    "partnerId" TEXT NOT NULL,
+    "partnerId" TEXT,
     "quotationId" TEXT,
     "deliveryDate" DATE,
     "salesChannel" "SalesChannel" NOT NULL DEFAULT 'OFFLINE',
@@ -680,6 +689,23 @@ CREATE TABLE "sales_orders" (
     "status" "SalesOrderStatus" NOT NULL DEFAULT 'ORDERED',
     "employeeId" TEXT NOT NULL,
     "description" TEXT,
+    "vatIncluded" BOOLEAN NOT NULL DEFAULT true,
+    "dispatchInfo" TEXT,
+    "receivedBy" TEXT,
+    "siteName" TEXT,
+    "ordererName" TEXT,
+    "recipientName" TEXT,
+    "ordererContact" TEXT,
+    "recipientContact" TEXT,
+    "recipientZipCode" TEXT,
+    "recipientAddress" TEXT,
+    "requirements" TEXT,
+    "senderName" TEXT,
+    "senderPhone" TEXT,
+    "senderAddress" TEXT,
+    "shippingCost" DECIMAL(15,2),
+    "trackingNo" TEXT,
+    "specialNote" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -715,6 +741,7 @@ CREATE TABLE "deliveries" (
     "deliveryAddress" TEXT,
     "trackingNo" TEXT,
     "carrier" TEXT,
+    "qualityStatus" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "deliveries_pkey" PRIMARY KEY ("id")
@@ -731,6 +758,108 @@ CREATE TABLE "delivery_details" (
     "stockMovementId" TEXT,
 
     CONSTRAINT "delivery_details_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "notes" (
+    "id" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "relatedTable" TEXT NOT NULL,
+    "relatedId" TEXT NOT NULL,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "notes_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sales_returns" (
+    "id" TEXT NOT NULL,
+    "returnNo" TEXT NOT NULL,
+    "returnDate" DATE NOT NULL,
+    "salesOrderId" TEXT NOT NULL,
+    "partnerId" TEXT NOT NULL,
+    "reason" "ReturnReason" NOT NULL DEFAULT 'OTHER',
+    "reasonDetail" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'REQUESTED',
+    "totalAmount" DECIMAL(15,2) NOT NULL DEFAULT 0,
+    "processedBy" TEXT,
+    "processedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "sales_returns_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "sales_return_details" (
+    "id" TEXT NOT NULL,
+    "salesReturnId" TEXT NOT NULL,
+    "itemId" TEXT NOT NULL,
+    "quantity" DECIMAL(15,2) NOT NULL,
+    "unitPrice" DECIMAL(15,2) NOT NULL,
+    "amount" DECIMAL(15,2) NOT NULL,
+    "remark" TEXT,
+
+    CONSTRAINT "sales_return_details_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "quality_standards" (
+    "id" TEXT NOT NULL,
+    "itemId" TEXT NOT NULL,
+    "standardName" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "checkMethod" TEXT,
+    "spec" TEXT,
+    "minValue" DECIMAL(15,4),
+    "maxValue" DECIMAL(15,4),
+    "unit" TEXT,
+    "isCritical" BOOLEAN NOT NULL DEFAULT false,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "quality_standards_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "quality_inspections" (
+    "id" TEXT NOT NULL,
+    "inspectionNo" TEXT NOT NULL,
+    "deliveryId" TEXT NOT NULL,
+    "inspectionDate" DATE NOT NULL,
+    "inspectorName" TEXT NOT NULL,
+    "overallGrade" "QualityGrade" NOT NULL DEFAULT 'A',
+    "status" "InspectionStatus" NOT NULL DEFAULT 'PENDING',
+    "sampleSize" INTEGER NOT NULL DEFAULT 0,
+    "defectCount" INTEGER NOT NULL DEFAULT 0,
+    "defectRate" DECIMAL(8,4) NOT NULL DEFAULT 0,
+    "lotNo" TEXT,
+    "judgement" TEXT NOT NULL DEFAULT 'PASS',
+    "remarks" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "quality_inspections_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "quality_inspection_items" (
+    "id" TEXT NOT NULL,
+    "qualityInspectionId" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "checkItem" TEXT NOT NULL,
+    "spec" TEXT,
+    "measuredValue" TEXT,
+    "result" TEXT NOT NULL DEFAULT 'PASS',
+    "grade" "QualityGrade" NOT NULL DEFAULT 'A',
+    "defectType" TEXT,
+    "remarks" TEXT,
+
+    CONSTRAINT "quality_inspection_items_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -774,6 +903,9 @@ CREATE TABLE "purchase_orders" (
     "status" TEXT NOT NULL DEFAULT 'ORDERED',
     "employeeId" TEXT NOT NULL,
     "description" TEXT,
+    "dispatchInfo" TEXT,
+    "receivedBy" TEXT,
+    "vatIncluded" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -1271,7 +1403,49 @@ CREATE INDEX "deliveries_deliveryDate_idx" ON "deliveries"("deliveryDate");
 CREATE INDEX "deliveries_salesOrderId_idx" ON "deliveries"("salesOrderId");
 
 -- CreateIndex
+CREATE INDEX "deliveries_qualityStatus_idx" ON "deliveries"("qualityStatus");
+
+-- CreateIndex
 CREATE INDEX "delivery_details_deliveryId_idx" ON "delivery_details"("deliveryId");
+
+-- CreateIndex
+CREATE INDEX "notes_relatedTable_relatedId_idx" ON "notes"("relatedTable", "relatedId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sales_returns_returnNo_key" ON "sales_returns"("returnNo");
+
+-- CreateIndex
+CREATE INDEX "sales_returns_returnDate_idx" ON "sales_returns"("returnDate");
+
+-- CreateIndex
+CREATE INDEX "sales_returns_status_idx" ON "sales_returns"("status");
+
+-- CreateIndex
+CREATE INDEX "sales_return_details_salesReturnId_idx" ON "sales_return_details"("salesReturnId");
+
+-- CreateIndex
+CREATE INDEX "quality_standards_itemId_idx" ON "quality_standards"("itemId");
+
+-- CreateIndex
+CREATE INDEX "quality_standards_category_idx" ON "quality_standards"("category");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "quality_inspections_inspectionNo_key" ON "quality_inspections"("inspectionNo");
+
+-- CreateIndex
+CREATE INDEX "quality_inspections_deliveryId_idx" ON "quality_inspections"("deliveryId");
+
+-- CreateIndex
+CREATE INDEX "quality_inspections_inspectionDate_idx" ON "quality_inspections"("inspectionDate");
+
+-- CreateIndex
+CREATE INDEX "quality_inspections_overallGrade_idx" ON "quality_inspections"("overallGrade");
+
+-- CreateIndex
+CREATE INDEX "quality_inspections_judgement_idx" ON "quality_inspections"("judgement");
+
+-- CreateIndex
+CREATE INDEX "quality_inspection_items_qualityInspectionId_idx" ON "quality_inspection_items"("qualityInspectionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "purchase_requests_requestNo_key" ON "purchase_requests"("requestNo");
@@ -1511,7 +1685,7 @@ ALTER TABLE "quotation_details" ADD CONSTRAINT "quotation_details_quotationId_fk
 ALTER TABLE "quotation_details" ADD CONSTRAINT "quotation_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "sales_orders" ADD CONSTRAINT "sales_orders_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "sales_orders" ADD CONSTRAINT "sales_orders_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "sales_orders" ADD CONSTRAINT "sales_orders_quotationId_fkey" FOREIGN KEY ("quotationId") REFERENCES "quotations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1626,3 +1800,24 @@ ALTER TABLE "messages" ADD CONSTRAINT "messages_senderId_fkey" FOREIGN KEY ("sen
 
 -- AddForeignKey
 ALTER TABLE "messages" ADD CONSTRAINT "messages_receiverId_fkey" FOREIGN KEY ("receiverId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales_returns" ADD CONSTRAINT "sales_returns_salesOrderId_fkey" FOREIGN KEY ("salesOrderId") REFERENCES "sales_orders"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales_returns" ADD CONSTRAINT "sales_returns_partnerId_fkey" FOREIGN KEY ("partnerId") REFERENCES "partners"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales_return_details" ADD CONSTRAINT "sales_return_details_salesReturnId_fkey" FOREIGN KEY ("salesReturnId") REFERENCES "sales_returns"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "sales_return_details" ADD CONSTRAINT "sales_return_details_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "quality_standards" ADD CONSTRAINT "quality_standards_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "quality_inspections" ADD CONSTRAINT "quality_inspections_deliveryId_fkey" FOREIGN KEY ("deliveryId") REFERENCES "deliveries"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "quality_inspection_items" ADD CONSTRAINT "quality_inspection_items_qualityInspectionId_fkey" FOREIGN KEY ("qualityInspectionId") REFERENCES "quality_inspections"("id") ON DELETE CASCADE ON UPDATE CASCADE;
