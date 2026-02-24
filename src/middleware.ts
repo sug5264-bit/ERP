@@ -34,7 +34,7 @@ function getIp(req: NextRequest): string {
     || 'unknown'
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // 정적 파일 허용
