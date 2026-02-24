@@ -1,7 +1,9 @@
 -- ============================================================
 -- ERP Seed Data for Supabase
 -- Supabase Dashboard > SQL Editor 에서 실행
--- 실행 순서: 00_reset.sql → 01_schema.sql → 02_seed.sql → 03_migration.sql
+-- 실행 순서:
+--   신규 셋업: 00_reset.sql → 01_schema.sql → 02_seed.sql
+--   기존 DB 업그레이드: 03_migration_add_missing_columns.sql → 02_seed.sql
 -- 모든 INSERT는 ON CONFLICT로 idempotent하게 작성됨
 -- ============================================================
 
