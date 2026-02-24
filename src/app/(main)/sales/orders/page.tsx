@@ -873,37 +873,7 @@ export default function OrdersPage() {
     processRows()
   }
 
-  // 19열 컬럼 정의
-  const orderColDefs: {
-    key: keyof OrderRow
-    label: string
-    width: string
-    type?: 'date' | 'number'
-    required?: boolean
-    highlight?: boolean
-  }[] = [
-    { key: 'orderDate', label: '주문일', width: 'w-[100px]', type: 'date', required: true },
-    { key: 'barcode', label: '상품바코드', width: 'w-[110px]' },
-    { key: 'orderNumber', label: '주문번호', width: 'w-[100px]' },
-    { key: 'siteName', label: '사이트명', width: 'w-[90px]' },
-    { key: 'productName', label: '상품명', width: 'w-[120px]', required: true },
-    { key: 'quantity', label: '수량', width: 'w-[60px]', type: 'number', required: true },
-    { key: 'orderer', label: '주문자', width: 'w-[80px]' },
-    { key: 'recipient', label: '수취인', width: 'w-[80px]' },
-    { key: 'ordererContact', label: '주문자 연락처', width: 'w-[110px]' },
-    { key: 'recipientContact', label: '수취인 연락처', width: 'w-[110px]' },
-    { key: 'zipCode', label: '우편번호', width: 'w-[80px]' },
-    { key: 'address', label: '주소', width: 'w-[160px]' },
-    { key: 'requirements', label: '요구사항', width: 'w-[120px]' },
-    { key: 'trackingNo', label: '운송장번호', width: 'w-[110px]' },
-    { key: 'senderName', label: '보내는사람(업체명)', width: 'w-[120px]', highlight: true },
-    { key: 'senderPhone', label: '전화번호', width: 'w-[100px]', highlight: true },
-    { key: 'senderAddress', label: '주소', width: 'w-[160px]', highlight: true },
-    { key: 'shippingCost', label: '운임', width: 'w-[80px]', type: 'number', highlight: true },
-    { key: 'specialNote', label: '특기사항', width: 'w-[120px]', highlight: true },
-  ]
-
-  // ── 온라인: 19열 e-커머스 양식 ──
+  // ── 온라인: 카드 기반 e-커머스 양식 ──
   const onlineCreateDialog = (
     <Dialog
       open={open}
@@ -918,13 +888,19 @@ export default function OrdersPage() {
       <DialogTrigger asChild>
         <Button>발주 등록</Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-[98vw] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl lg:max-w-4xl">
         <DialogHeader>
           <DialogTitle>발주 등록 (온라인)</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-muted-foreground text-xs">노란색 영역(보내는사람~특기사항)은 업체정보 자동입력</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {orderRows.length}건
+            </Badge>
+            <span className="text-muted-foreground text-xs">
+              총 수량: {orderRows.reduce((s, r) => s + (r.quantity || 0), 0)} | 운임 합계:{' '}
+              {formatCurrency(orderRows.reduce((s, r) => s + (r.shippingCost || 0), 0))}
+            </span>
             <div className="flex-1" />
             <Button
               type="button"
@@ -936,100 +912,216 @@ export default function OrdersPage() {
               <Plus className="mr-1 h-3 w-3" /> 행 추가
             </Button>
           </div>
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b">
-                  {orderColDefs.map((col) => (
-                    <th
-                      key={col.key}
-                      className={`px-1.5 py-2 text-left font-medium whitespace-nowrap ${col.highlight ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-muted/50'}`}
+
+          <div className="space-y-3">
+            {orderRows.map((row, idx) => (
+              <div key={idx} className="space-y-3 rounded-lg border p-3">
+                {/* 카드 헤더 */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold">#{idx + 1}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => orderRows.length > 1 && setOrderRows(orderRows.filter((_, i) => i !== idx))}
+                    disabled={orderRows.length <= 1}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+
+                {/* 주문 정보 */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">
+                      주문일 <span className="text-destructive">*</span>
+                    </label>
+                    <Input
+                      type="date"
+                      className="h-7 text-xs"
+                      value={row.orderDate}
+                      onChange={(e) => updateOrderRow(idx, 'orderDate', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="text-muted-foreground text-[11px]">
+                      품목 <span className="text-destructive">*</span>
+                    </label>
+                    <Select
+                      value={row.itemId || ''}
+                      onValueChange={(v) => {
+                        const selectedItem = items.find((it: any) => it.id === v)
+                        updateOrderRow(idx, 'itemId', v)
+                        updateOrderRow(idx, 'productName', selectedItem?.itemName || '')
+                        if (selectedItem?.barcode && !row.barcode) {
+                          updateOrderRow(idx, 'barcode', selectedItem.barcode)
+                        }
+                      }}
                     >
-                      {col.label}
-                      {col.required && <span className="text-destructive"> *</span>}
-                    </th>
-                  ))}
-                  <th className="bg-muted/50 w-8 px-1 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {orderRows.map((row, idx) => (
-                  <tr key={idx} className="border-b last:border-b-0">
-                    {orderColDefs.map((col) => (
-                      <td
-                        key={col.key}
-                        className={`px-0.5 py-1 ${col.highlight ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''}`}
-                      >
-                        {col.key === 'productName' ? (
-                          <Select
-                            value={row.itemId || ''}
-                            onValueChange={(v) => {
-                              const selectedItem = items.find((it: any) => it.id === v)
-                              updateOrderRow(idx, 'itemId', v)
-                              updateOrderRow(idx, 'productName', selectedItem?.itemName || '')
-                              if (selectedItem?.barcode && !row.barcode) {
-                                updateOrderRow(idx, 'barcode', selectedItem.barcode)
-                              }
-                            }}
-                          >
-                            <SelectTrigger className={`h-7 ${col.width} text-xs`}>
-                              <SelectValue placeholder="품목 선택" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {items.map((it: any) => (
-                                <SelectItem key={it.id} value={it.id}>
-                                  {it.itemCode} - {it.itemName}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input
-                            type={col.type || 'text'}
-                            className={`h-7 ${col.width} text-xs`}
-                            value={(row as any)[col.key] || ''}
-                            onChange={(e) =>
-                              updateOrderRow(
-                                idx,
-                                col.key as keyof OrderRow,
-                                col.type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value
-                              )
-                            }
-                          />
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-0.5 py-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => orderRows.length > 1 && setOrderRows(orderRows.filter((_, i) => i !== idx))}
-                        disabled={orderRows.length <= 1}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-muted/30 border-t">
-                  <td colSpan={5} className="px-2 py-2 text-xs font-medium">
-                    합계: {orderRows.length}건
-                  </td>
-                  <td className="px-2 py-2 text-right font-mono text-xs font-medium">
-                    {orderRows.reduce((s, r) => s + (r.quantity || 0), 0)}
-                  </td>
-                  <td colSpan={11}></td>
-                  <td className="px-2 py-2 text-right font-mono text-xs font-medium">
-                    {formatCurrency(orderRows.reduce((s, r) => s + (r.shippingCost || 0), 0))}
-                  </td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
+                      <SelectTrigger className="h-7 text-xs">
+                        <SelectValue placeholder="품목 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {items.map((it: any) => (
+                          <SelectItem key={it.id} value={it.id}>
+                            {it.itemCode} - {it.itemName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">
+                      수량 <span className="text-destructive">*</span>
+                    </label>
+                    <Input
+                      type="number"
+                      className="h-7 text-xs"
+                      value={row.quantity || ''}
+                      onChange={(e) => updateOrderRow(idx, 'quantity', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">사이트명</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.siteName}
+                      onChange={(e) => updateOrderRow(idx, 'siteName', e.target.value)}
+                      placeholder="쿠팡, 네이버 등"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">주문번호</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.orderNumber}
+                      onChange={(e) => updateOrderRow(idx, 'orderNumber', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* 주문자 / 수취인 정보 */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">주문자</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.orderer}
+                      onChange={(e) => updateOrderRow(idx, 'orderer', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">주문자 연락처</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.ordererContact}
+                      onChange={(e) => updateOrderRow(idx, 'ordererContact', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">수취인</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.recipient}
+                      onChange={(e) => updateOrderRow(idx, 'recipient', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">수취인 연락처</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.recipientContact}
+                      onChange={(e) => updateOrderRow(idx, 'recipientContact', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">우편번호</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.zipCode}
+                      onChange={(e) => updateOrderRow(idx, 'zipCode', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-[11px]">요구사항</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.requirements}
+                      onChange={(e) => updateOrderRow(idx, 'requirements', e.target.value)}
+                      placeholder="부재시 경비실 등"
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-1 sm:col-span-4 lg:col-span-6">
+                    <label className="text-muted-foreground text-[11px]">주소</label>
+                    <Input
+                      className="h-7 text-xs"
+                      value={row.address}
+                      onChange={(e) => updateOrderRow(idx, 'address', e.target.value)}
+                      placeholder="수취인 주소"
+                    />
+                  </div>
+                </div>
+
+                {/* 배송 정보 (보내는사람) - 노란 영역 */}
+                <div className="rounded-md border border-yellow-200 bg-yellow-50 p-2 dark:border-yellow-800 dark:bg-yellow-900/10">
+                  <label className="mb-1.5 block text-[11px] font-medium text-yellow-700 dark:text-yellow-400">
+                    보내는사람 (업체정보 자동입력)
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground text-[11px]">업체명</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={row.senderName}
+                        onChange={(e) => updateOrderRow(idx, 'senderName', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground text-[11px]">전화번호</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={row.senderPhone}
+                        onChange={(e) => updateOrderRow(idx, 'senderPhone', e.target.value)}
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-1 sm:col-span-2 lg:col-span-2">
+                      <label className="text-muted-foreground text-[11px]">주소</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={row.senderAddress}
+                        onChange={(e) => updateOrderRow(idx, 'senderAddress', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground text-[11px]">운송장번호</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={row.trackingNo}
+                        onChange={(e) => updateOrderRow(idx, 'trackingNo', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground text-[11px]">운임</label>
+                      <Input
+                        type="number"
+                        className="h-7 text-xs"
+                        value={row.shippingCost || ''}
+                        onChange={(e) => updateOrderRow(idx, 'shippingCost', parseFloat(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <label className="text-muted-foreground text-[11px]">특기사항</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={row.specialNote}
+                        onChange={(e) => updateOrderRow(idx, 'specialNote', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <Button className="w-full" onClick={handleCreateOrder} disabled={createMutation.isPending}>
