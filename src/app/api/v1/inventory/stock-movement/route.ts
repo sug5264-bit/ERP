@@ -145,51 +145,53 @@ export async function POST(request: NextRequest) {
         // 입고 처리
         if (data.movementType === 'INBOUND' || data.movementType === 'TRANSFER') {
           if (data.targetWarehouseId) {
-            await tx.stockBalance.upsert({
-              where: {
-                itemId_warehouseId_zoneId: {
+            const existing = await tx.stockBalance.findFirst({
+              where: { itemId: detail.itemId, warehouseId: data.targetWarehouseId },
+            })
+            if (existing) {
+              await tx.stockBalance.update({
+                where: { id: existing.id },
+                data: {
+                  quantity: { increment: detail.quantity },
+                  lastMovementDate: movementDate,
+                },
+              })
+            } else {
+              await tx.stockBalance.create({
+                data: {
                   itemId: detail.itemId,
                   warehouseId: data.targetWarehouseId,
-                  zoneId: '',
+                  quantity: detail.quantity,
+                  averageCost: detail.unitPrice || 0,
+                  lastMovementDate: movementDate,
                 },
-              },
-              update: {
-                quantity: { increment: detail.quantity },
+              })
+            }
+          }
+        }
+        if (data.movementType === 'ADJUSTMENT' && data.targetWarehouseId) {
+          const existing = await tx.stockBalance.findFirst({
+            where: { itemId: detail.itemId, warehouseId: data.targetWarehouseId },
+          })
+          if (existing) {
+            await tx.stockBalance.update({
+              where: { id: existing.id },
+              data: {
+                quantity: detail.quantity,
                 lastMovementDate: movementDate,
               },
-              create: {
+            })
+          } else {
+            await tx.stockBalance.create({
+              data: {
                 itemId: detail.itemId,
                 warehouseId: data.targetWarehouseId,
-                zoneId: '',
                 quantity: detail.quantity,
                 averageCost: detail.unitPrice || 0,
                 lastMovementDate: movementDate,
               },
             })
           }
-        }
-        if (data.movementType === 'ADJUSTMENT' && data.targetWarehouseId) {
-          await tx.stockBalance.upsert({
-            where: {
-              itemId_warehouseId_zoneId: {
-                itemId: detail.itemId,
-                warehouseId: data.targetWarehouseId,
-                zoneId: '',
-              },
-            },
-            update: {
-              quantity: detail.quantity,
-              lastMovementDate: movementDate,
-            },
-            create: {
-              itemId: detail.itemId,
-              warehouseId: data.targetWarehouseId,
-              zoneId: '',
-              quantity: detail.quantity,
-              averageCost: detail.unitPrice || 0,
-              lastMovementDate: movementDate,
-            },
-          })
         }
       }
 

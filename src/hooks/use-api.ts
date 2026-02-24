@@ -52,7 +52,17 @@ async function request(method: string, url: string, data?: any) {
       clearTimeout(timeoutId)
 
       if (!res.ok) {
-        const message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'
+        let message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'
+        // 유효성 검증 에러: 상세 필드 메시지 포함
+        if (json?.error?.code === 'VALIDATION_ERROR' && Array.isArray(json?.error?.details)) {
+          const fieldMessages = json.error.details
+            .map((d: any) => d.message)
+            .filter(Boolean)
+            .slice(0, 3)
+          if (fieldMessages.length > 0) {
+            message = fieldMessages.join(', ')
+          }
+        }
         throw new Error(message)
       }
 
