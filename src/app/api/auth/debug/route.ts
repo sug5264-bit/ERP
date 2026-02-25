@@ -5,8 +5,15 @@ import { compare, hash } from 'bcryptjs'
 /**
  * GET /api/auth/debug
  * 인증 시스템 전체 진단 - DB, 비밀번호, 환경변수, JWT 설정 확인
+ * ⚠️ 개발 환경에서만 사용 가능
  */
 export async function GET() {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'This endpoint is disabled in production' },
+      { status: 403 }
+    )
+  }
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
   }

@@ -40,6 +40,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Docker/standalone 배포 지원 (Vercel에서도 호환)
+  output: 'standalone',
   // 보안 헤더
   async headers() {
     return [
