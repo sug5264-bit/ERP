@@ -19,7 +19,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'default' | 'destructive'
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   isPending?: boolean
 }
 
@@ -54,8 +54,8 @@ export function ConfirmDialog({
           </Button>
           <Button
             variant={variant === 'destructive' ? 'destructive' : 'default'}
-            onClick={() => {
-              onConfirm()
+            onClick={async () => {
+              await onConfirm()
               onOpenChange(false)
             }}
             disabled={isPending}

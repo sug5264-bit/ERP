@@ -35,8 +35,11 @@ const detailColumns: ColumnDef<LedgerDetail>[] = [
 ]
 
 export default function LedgerPage() {
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const today = new Date()
+  const defaultStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+  const defaultEnd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()).padStart(2, '0')}`
+  const [startDate, setStartDate] = useState(defaultStart)
+  const [endDate, setEndDate] = useState(defaultEnd)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
 
   const qp = new URLSearchParams()

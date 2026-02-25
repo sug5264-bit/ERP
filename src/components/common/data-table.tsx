@@ -140,6 +140,12 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // 모바일 전환 시 페이지 크기 동기화
+  useEffect(() => {
+    table.setPageSize(effectivePageSize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectivePageSize])
+
   // 선택 변경 콜백 (table은 매 렌더링마다 새 참조이므로 deps에서 제외)
   useEffect(() => {
     if (onSelectionChange) {
