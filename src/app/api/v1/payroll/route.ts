@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   requirePermissionCheck,
   isErrorResponse,
@@ -37,6 +38,14 @@ export async function POST(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const body = await request.json()
     const data = createPayrollSchema.parse(body)
+
+    // 동일 급여기간 중복 체크
+    const existingPayroll = await prisma.payrollHeader.findFirst({
+      where: { payPeriod: data.payPeriod },
+    })
+    if (existingPayroll) {
+      return errorResponse(`이미 ${data.payPeriod} 기간의 급여가 생성되어 있습니다.`, 'DUPLICATE_PERIOD', 400)
+    }
 
     // 전체 재직 사원 조회 (직급별 기본급 산정)
     const employees = await prisma.employee.findMany({
