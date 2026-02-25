@@ -28,8 +28,20 @@ export function formatPhone(phone: string | null | undefined): string {
   if (cleaned.length === 11) {
     return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')
   }
+  // 서울 지역번호 (02-xxxx-xxxx)
+  if (cleaned.length === 10 && cleaned.startsWith('02')) {
+    return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3')
+  }
   if (cleaned.length === 10) {
     return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
+  }
+  // 서울 지역번호 9자리 (02-xxx-xxxx)
+  if (cleaned.length === 9 && cleaned.startsWith('02')) {
+    return cleaned.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3')
+  }
+  // 대표번호 (1588-xxxx, 1577-xxxx 등)
+  if (cleaned.length === 8 && cleaned.startsWith('1')) {
+    return cleaned.replace(/(\d{4})(\d{4})/, '$1-$2')
   }
   return phone
 }
