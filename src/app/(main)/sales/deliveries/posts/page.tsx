@@ -311,7 +311,9 @@ export default function DeliveryPostsPage() {
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="게시글 삭제"
         description="이 게시글을 삭제하시겠습니까?"
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget)
+        }}
         variant="destructive"
       />
     </div>

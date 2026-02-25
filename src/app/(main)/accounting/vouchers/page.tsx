@@ -10,20 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
@@ -45,7 +33,11 @@ interface VoucherRow {
 }
 
 const TYPE_MAP: Record<string, string> = {
-  RECEIPT: '입금', PAYMENT: '출금', TRANSFER: '대체', PURCHASE: '매입', SALES: '매출',
+  RECEIPT: '입금',
+  PAYMENT: '출금',
+  TRANSFER: '대체',
+  PURCHASE: '매입',
+  SALES: '매출',
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
@@ -55,19 +47,40 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 }
 
 const columns: ColumnDef<VoucherRow>[] = [
-  { accessorKey: 'voucherNo', header: '전표번호', cell: ({ row }) => <span className="font-mono text-sm">{row.original.voucherNo}</span> },
+  {
+    accessorKey: 'voucherNo',
+    header: '전표번호',
+    cell: ({ row }) => <span className="font-mono text-sm">{row.original.voucherNo}</span>,
+  },
   { accessorKey: 'voucherDate', header: '전표일자', cell: ({ row }) => formatDate(row.original.voucherDate) },
-  { id: 'voucherType', header: '유형', cell: ({ row }) => <Badge variant="outline">{TYPE_MAP[row.original.voucherType] || row.original.voucherType}</Badge> },
+  {
+    id: 'voucherType',
+    header: '유형',
+    cell: ({ row }) => (
+      <Badge variant="outline">{TYPE_MAP[row.original.voucherType] || row.original.voucherType}</Badge>
+    ),
+  },
   { accessorKey: 'description', header: '적요', cell: ({ row }) => row.original.description || '-' },
   { id: 'totalDebit', header: '차변', cell: ({ row }) => formatCurrency(row.original.totalDebit) },
   { id: 'totalCredit', header: '대변', cell: ({ row }) => formatCurrency(row.original.totalCredit) },
   { id: 'detailCount', header: '분개', cell: ({ row }) => `${row.original._count.details}건` },
-  { id: 'status', header: '상태', cell: ({ row }) => { const s = STATUS_MAP[row.original.status]; return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status } },
+  {
+    id: 'status',
+    header: '상태',
+    cell: ({ row }) => {
+      const s = STATUS_MAP[row.original.status]
+      return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
+    },
+  },
   { id: 'createdBy', header: '작성자', cell: ({ row }) => row.original.createdBy.nameKo },
 ]
 
-
-interface DetailLine { accountSubjectId: string; debitAmount: number; creditAmount: number; description: string }
+interface DetailLine {
+  accountSubjectId: string
+  debitAmount: number
+  creditAmount: number
+  description: string
+}
 
 export default function VouchersPage() {
   const [open, setOpen] = useState(false)
@@ -110,7 +123,10 @@ export default function VouchersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/accounting/vouchers/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] }); toast.success('전표가 삭제되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] })
+      toast.success('전표가 삭제되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -123,7 +139,7 @@ export default function VouchersPage() {
 
   const exportColumns: ExportColumn[] = [
     { header: '전표번호', accessor: 'voucherNo' },
-    { header: '전표일자', accessor: (r) => r.voucherDate ? formatDate(r.voucherDate) : '' },
+    { header: '전표일자', accessor: (r) => (r.voucherDate ? formatDate(r.voucherDate) : '') },
     { header: '유형', accessor: (r) => TYPE_MAP[r.voucherType] || r.voucherType },
     { header: '적요', accessor: (r) => r.description || '' },
     { header: '차변', accessor: (r) => formatCurrency(r.totalDebit) },
@@ -140,9 +156,17 @@ export default function VouchersPage() {
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
-  const addLine = () => setDetails([...details, { accountSubjectId: '', debitAmount: 0, creditAmount: 0, description: '' }])
-  const removeLine = (idx: number) => { if (details.length <= 2) return; setDetails(details.filter((_, i) => i !== idx)) }
-  const updateLine = (idx: number, field: string, value: any) => { const n = [...details]; (n[idx] as any)[field] = value; setDetails(n) }
+  const addLine = () =>
+    setDetails([...details, { accountSubjectId: '', debitAmount: 0, creditAmount: 0, description: '' }])
+  const removeLine = (idx: number) => {
+    if (details.length <= 2) return
+    setDetails(details.filter((_, i) => i !== idx))
+  }
+  const updateLine = (idx: number, field: string, value: any) => {
+    const n = [...details]
+    ;(n[idx] as any)[field] = value
+    setDetails(n)
+  }
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -163,76 +187,187 @@ export default function VouchersPage() {
       <PageHeader title="전표관리" description="회계 전표를 등록하고 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 유형" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="전체 유형" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
-            {Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            {Object.entries(TYPE_MAP).map(([k, v]) => (
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 상태" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="전체 상태" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
-            {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+            {Object.entries(STATUS_MAP).map(([k, v]) => (
+              <SelectItem key={k} value={k}>
+                {v.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button>전표 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-2xl lg:max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>전표 등록</DialogTitle></DialogHeader>
+          <DialogTrigger asChild>
+            <Button>전표 등록</Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl lg:max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>전표 등록</DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2"><Label>전표일자 <span className="text-destructive">*</span></Label><Input name="voucherDate" type="date" required aria-required="true" /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
-                  <Label>전표유형 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    전표일자 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input name="voucherDate" type="date" required aria-required="true" />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    전표유형 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="voucherType" required>
-                    <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>{Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                    <SelectTrigger>
+                      <SelectValue placeholder="선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(TYPE_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>적요</Label><Input name="description" /></div>
+                <div className="space-y-2">
+                  <Label>적요</Label>
+                  <Input name="description" />
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>분개 내역</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addLine}><Plus className="mr-1 h-3 w-3" /> 행 추가</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                    <Plus className="mr-1 h-3 w-3" /> 행 추가
+                  </Button>
                 </div>
                 <div className="space-y-3">
                   {details.map((line, idx) => (
-                    <div key={`line-${idx}-${line.accountSubjectId}`} className="rounded-md border p-3 space-y-2">
+                    <div key={`line-${idx}-${line.accountSubjectId}`} className="space-y-2 rounded-md border p-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground font-medium">분개 #{idx + 1}</span>
-                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)} disabled={details.length <= 2} aria-label="삭제"><Trash2 className="h-3 w-3" /></Button>
+                        <span className="text-muted-foreground text-xs font-medium">분개 #{idx + 1}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeLine(idx)}
+                          disabled={details.length <= 2}
+                          aria-label="삭제"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <select className="w-full rounded border p-2 text-xs bg-background" value={line.accountSubjectId} onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}>
+                      <select
+                        className="bg-background w-full rounded border p-2 text-xs"
+                        value={line.accountSubjectId}
+                        onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}
+                      >
                         <option value="">계정과목 선택</option>
-                        {accounts.map((a: any) => <option key={a.id} value={a.id}>{a.code} - {a.nameKo}</option>)}
+                        {accounts.map((a: any) => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} - {a.nameKo}
+                          </option>
+                        ))}
                       </select>
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1"><Label className="text-xs">차변</Label><Input type="number" className="text-xs text-right" value={line.debitAmount || ''} onChange={(e) => updateLine(idx, 'debitAmount', parseFloat(e.target.value) || 0)} /></div>
-                        <div className="space-y-1"><Label className="text-xs">대변</Label><Input type="number" className="text-xs text-right" value={line.creditAmount || ''} onChange={(e) => updateLine(idx, 'creditAmount', parseFloat(e.target.value) || 0)} /></div>
-                        <div className="space-y-1"><Label className="text-xs">적요</Label><Input className="text-xs" value={line.description} onChange={(e) => updateLine(idx, 'description', e.target.value)} /></div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">차변</Label>
+                          <Input
+                            type="number"
+                            className="text-right text-xs"
+                            value={line.debitAmount || ''}
+                            onChange={(e) => updateLine(idx, 'debitAmount', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">대변</Label>
+                          <Input
+                            type="number"
+                            className="text-right text-xs"
+                            value={line.creditAmount || ''}
+                            onChange={(e) => updateLine(idx, 'creditAmount', parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">적요</Label>
+                          <Input
+                            className="text-xs"
+                            value={line.description}
+                            onChange={(e) => updateLine(idx, 'description', e.target.value)}
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center justify-between rounded-md border bg-muted/50 p-3 text-sm font-medium">
+                <div className="bg-muted/50 flex items-center justify-between rounded-md border p-3 text-sm font-medium">
                   <span>합계</span>
                   <div className="flex items-center gap-4">
                     <span>차변: {formatCurrency(totalDebit)}</span>
                     <span>대변: {formatCurrency(totalCredit)}</span>
-                    {Math.abs(totalDebit - totalCredit) > 0.01 && <span className="text-destructive text-xs">차액: {formatCurrency(Math.abs(totalDebit - totalCredit))}</span>}
+                    {Math.abs(totalDebit - totalCredit) > 0.01 && (
+                      <span className="text-destructive text-xs">
+                        차액: {formatCurrency(Math.abs(totalDebit - totalCredit))}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-              <Button type="submit" className="w-full" disabled={createMutation.isPending || Math.abs(totalDebit - totalCredit) > 0.01}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={createMutation.isPending || Math.abs(totalDebit - totalCredit) > 0.01}
+              >
                 {createMutation.isPending ? '등록 중...' : '전표 등록'}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'delete', header: '', cell: ({ row }: any) => <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.voucherNo)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>, size: 50 }]} data={vouchers} searchColumn="voucherNo" searchPlaceholder="전표번호로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable
+        columns={[
+          ...columns,
+          {
+            id: 'delete',
+            header: '',
+            cell: ({ row }: any) => (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive h-8 w-8"
+                onClick={() => handleDelete(row.original.id, row.original.voucherNo)}
+                aria-label="삭제"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            ),
+            size: 50,
+          },
+        ]}
+        data={vouchers}
+        searchColumn="voucherNo"
+        searchPlaceholder="전표번호로 검색..."
+        isLoading={isLoading}
+        pageSize={50}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
+      />
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
@@ -240,7 +375,9 @@ export default function VouchersPage() {
         description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
         isPending={deleteMutation.isPending}
       />
     </div>

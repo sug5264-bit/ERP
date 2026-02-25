@@ -9,15 +9,17 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Plus, MapPin, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface WarehouseRow {
-  id: string; code: string; name: string; location: string | null; isActive: boolean
+  id: string
+  code: string
+  name: string
+  location: string | null
+  isActive: boolean
   zones: { id: string; zoneCode: string; zoneName: string }[]
   _count: { stockBalances: number }
 }
@@ -44,8 +46,7 @@ export default function WarehousesPage() {
   })
 
   const createZoneMutation = useMutation({
-    mutationFn: ({ warehouseId, ...body }: any) =>
-      api.post(`/inventory/warehouses/${warehouseId}/zones`, body),
+    mutationFn: ({ warehouseId, ...body }: any) => api.post(`/inventory/warehouses/${warehouseId}/zones`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
       setZoneDialogId(null)
@@ -94,13 +95,30 @@ export default function WarehousesPage() {
       <PageHeader title="창고관리" description="창고 정보를 등록하고 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button>창고 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>창고 등록</DialogTitle></DialogHeader>
+          <DialogTrigger asChild>
+            <Button>창고 등록</Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>창고 등록</DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2"><Label>창고코드 <span className="text-destructive">*</span></Label><Input name="code" required aria-required="true" placeholder="WH-01" /></div>
-              <div className="space-y-2"><Label>창고명 <span className="text-destructive">*</span></Label><Input name="name" required aria-required="true" /></div>
-              <div className="space-y-2"><Label>위치</Label><Input name="location" /></div>
+              <div className="space-y-2">
+                <Label>
+                  창고코드 <span className="text-destructive">*</span>
+                </Label>
+                <Input name="code" required aria-required="true" placeholder="WH-01" />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  창고명 <span className="text-destructive">*</span>
+                </Label>
+                <Input name="name" required aria-required="true" />
+              </div>
+              <div className="space-y-2">
+                <Label>위치</Label>
+                <Input name="location" />
+              </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? '등록 중...' : '창고 등록'}
               </Button>
@@ -113,19 +131,19 @@ export default function WarehousesPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={`skeleton-${i}`}>
-              <CardContent className="p-6 space-y-3">
-                <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-20 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-full animate-pulse rounded bg-muted" />
+              <CardContent className="space-y-3 p-6">
+                <div className="bg-muted h-5 w-32 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-20 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-full animate-pulse rounded" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : warehouses.length === 0 ? (
         <div className="rounded-lg border p-8 text-center">
-          <MapPin className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+          <MapPin className="text-muted-foreground/50 mx-auto mb-3 h-10 w-10" />
           <p className="text-muted-foreground">등록된 창고가 없습니다.</p>
-          <p className="text-xs text-muted-foreground mt-1">위의 '창고 등록' 버튼으로 첫 창고를 등록하세요.</p>
+          <p className="text-muted-foreground mt-1 text-xs">위의 '창고 등록' 버튼으로 첫 창고를 등록하세요.</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -135,9 +153,7 @@ export default function WarehousesPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{wh.name}</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Badge variant={wh.isActive ? 'default' : 'secondary'}>
-                      {wh.isActive ? '활성' : '비활성'}
-                    </Badge>
+                    <Badge variant={wh.isActive ? 'default' : 'secondary'}>{wh.isActive ? '활성' : '비활성'}</Badge>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -147,33 +163,45 @@ export default function WarehousesPage() {
                       title="창고 삭제"
                       aria-label="삭제"
                     >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      <Trash2 className="text-destructive h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground font-mono">{wh.code}</p>
+                <p className="text-muted-foreground font-mono text-sm">{wh.code}</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 {wh.location && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <div className="text-muted-foreground flex items-center gap-1 text-sm">
                     <MapPin className="h-3 w-3" /> {wh.location}
                   </div>
                 )}
-                <div className="text-sm text-muted-foreground">
-                  재고 품목: {wh._count.stockBalances}건
-                </div>
+                <div className="text-muted-foreground text-sm">재고 품목: {wh._count.stockBalances}건</div>
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">구역 ({wh.zones.length})</span>
                     <Dialog open={zoneDialogId === wh.id} onOpenChange={(v) => setZoneDialogId(v ? wh.id : null)}>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm"><Plus className="mr-1 h-3 w-3" /> 구역추가</Button>
+                        <Button variant="ghost" size="sm">
+                          <Plus className="mr-1 h-3 w-3" /> 구역추가
+                        </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
-                        <DialogHeader><DialogTitle>{wh.name} - 구역 추가</DialogTitle></DialogHeader>
+                      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
+                        <DialogHeader>
+                          <DialogTitle>{wh.name} - 구역 추가</DialogTitle>
+                        </DialogHeader>
                         <form onSubmit={handleCreateZone} className="space-y-4">
-                          <div className="space-y-2"><Label>구역코드 <span className="text-destructive">*</span></Label><Input name="zoneCode" required aria-required="true" placeholder="A-01" /></div>
-                          <div className="space-y-2"><Label>구역명 <span className="text-destructive">*</span></Label><Input name="zoneName" required aria-required="true" /></div>
+                          <div className="space-y-2">
+                            <Label>
+                              구역코드 <span className="text-destructive">*</span>
+                            </Label>
+                            <Input name="zoneCode" required aria-required="true" placeholder="A-01" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>
+                              구역명 <span className="text-destructive">*</span>
+                            </Label>
+                            <Input name="zoneName" required aria-required="true" />
+                          </div>
                           <Button type="submit" className="w-full" disabled={createZoneMutation.isPending}>
                             {createZoneMutation.isPending ? '등록 중...' : '구역 추가'}
                           </Button>
@@ -182,7 +210,7 @@ export default function WarehousesPage() {
                     </Dialog>
                   </div>
                   {wh.zones.length > 0 && (
-                    <div className="rounded border divide-y">
+                    <div className="divide-y rounded border">
                       {wh.zones.map((zone) => (
                         <div key={zone.id} className="flex items-center justify-between px-3 py-1.5 text-sm">
                           <span className="font-mono text-xs">{zone.zoneCode}</span>
@@ -205,7 +233,9 @@ export default function WarehousesPage() {
         description={`"${deleteTarget?.name}" 창고를 삭제하시겠습니까?`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
         isPending={deleteMutation.isPending}
       />
     </div>

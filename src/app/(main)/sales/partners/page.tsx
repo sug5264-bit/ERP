@@ -10,12 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
@@ -25,33 +21,81 @@ import { Upload, Trash2, Pencil } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const PARTNER_TYPE_MAP: Record<string, string> = {
-  SALES: '매출', PURCHASE: '매입', BOTH: '매출/매입',
+  SALES: '매출',
+  PURCHASE: '매입',
+  BOTH: '매출/매입',
 }
 
 const CHANNEL_MAP: Record<string, string> = {
-  ONLINE: '온라인', OFFLINE: '오프라인',
+  ONLINE: '온라인',
+  OFFLINE: '오프라인',
 }
 
 interface PartnerRow {
-  id: string; partnerCode: string; partnerName: string; partnerType: string
+  id: string
+  partnerCode: string
+  partnerName: string
+  partnerType: string
   salesChannel: string
-  bizNo: string | null; ceoName: string | null; phone: string | null; fax: string | null
-  email: string | null; address: string | null; contactPerson: string | null
-  bizType: string | null; bizCategory: string | null
-  creditLimit: number | null; paymentTerms: string | null; isActive: boolean
+  bizNo: string | null
+  ceoName: string | null
+  phone: string | null
+  fax: string | null
+  email: string | null
+  address: string | null
+  contactPerson: string | null
+  bizType: string | null
+  bizCategory: string | null
+  creditLimit: number | null
+  paymentTerms: string | null
+  isActive: boolean
 }
 
 const columns: ColumnDef<PartnerRow>[] = [
-  { accessorKey: 'partnerCode', header: '거래처코드', cell: ({ row }) => <span className="font-mono text-xs">{row.original.partnerCode}</span> },
-  { accessorKey: 'partnerName', header: '거래처명', cell: ({ row }) => <span className="font-medium">{row.original.partnerName}</span> },
-  { id: 'partnerType', header: '구분', cell: ({ row }) => <Badge variant="outline">{PARTNER_TYPE_MAP[row.original.partnerType] || row.original.partnerType}</Badge> },
-  { id: 'salesChannel', header: '채널', cell: ({ row }) => <Badge variant={row.original.salesChannel === 'ONLINE' ? 'default' : 'secondary'}>{CHANNEL_MAP[row.original.salesChannel] || '오프라인'}</Badge> },
+  {
+    accessorKey: 'partnerCode',
+    header: '거래처코드',
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.partnerCode}</span>,
+  },
+  {
+    accessorKey: 'partnerName',
+    header: '거래처명',
+    cell: ({ row }) => <span className="font-medium">{row.original.partnerName}</span>,
+  },
+  {
+    id: 'partnerType',
+    header: '구분',
+    cell: ({ row }) => (
+      <Badge variant="outline">{PARTNER_TYPE_MAP[row.original.partnerType] || row.original.partnerType}</Badge>
+    ),
+  },
+  {
+    id: 'salesChannel',
+    header: '채널',
+    cell: ({ row }) => (
+      <Badge variant={row.original.salesChannel === 'ONLINE' ? 'default' : 'secondary'}>
+        {CHANNEL_MAP[row.original.salesChannel] || '오프라인'}
+      </Badge>
+    ),
+  },
   { id: 'bizNo', header: '사업자번호', cell: ({ row }) => row.original.bizNo || '-' },
   { id: 'ceoName', header: '대표자', cell: ({ row }) => row.original.ceoName || '-' },
   { id: 'phone', header: '연락처', cell: ({ row }) => row.original.phone || '-' },
   { id: 'contactPerson', header: '담당자', cell: ({ row }) => row.original.contactPerson || '-' },
-  { id: 'creditLimit', header: '여신한도', cell: ({ row }) => row.original.creditLimit ? formatCurrency(row.original.creditLimit) : '-' },
-  { id: 'status', header: '상태', cell: ({ row }) => <Badge variant={row.original.isActive ? 'default' : 'secondary'}>{row.original.isActive ? '활성' : '비활성'}</Badge> },
+  {
+    id: 'creditLimit',
+    header: '여신한도',
+    cell: ({ row }) => (row.original.creditLimit ? formatCurrency(row.original.creditLimit) : '-'),
+  },
+  {
+    id: 'status',
+    header: '상태',
+    cell: ({ row }) => (
+      <Badge variant={row.original.isActive ? 'default' : 'secondary'}>
+        {row.original.isActive ? '활성' : '비활성'}
+      </Badge>
+    ),
+  },
 ]
 
 export default function PartnersPage() {
@@ -96,7 +140,10 @@ export default function PartnersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/partners/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['partners'] }); toast.success('거래처가 삭제되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['partners'] })
+      toast.success('거래처가 삭제되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -140,8 +187,8 @@ export default function PartnersPage() {
     { header: '전화번호', accessor: (r) => r.phone || '' },
     { header: '담당자', accessor: (r) => r.contactPerson || '' },
     { header: '이메일', accessor: (r) => r.email || '' },
-    { header: '여신한도', accessor: (r) => r.creditLimit ? formatCurrency(r.creditLimit) : '' },
-    { header: '상태', accessor: (r) => r.isActive ? '활성' : '비활성' },
+    { header: '여신한도', accessor: (r) => (r.creditLimit ? formatCurrency(r.creditLimit) : '') },
+    { header: '상태', accessor: (r) => (r.isActive ? '활성' : '비활성') },
   ]
 
   const importTemplateColumns: TemplateColumn[] = [
@@ -163,11 +210,22 @@ export default function PartnersPage() {
   ]
 
   const importKeyMap: Record<string, string> = {
-    '거래처코드': 'partnerCode', '거래처명': 'partnerName', '구분': 'partnerType',
-    '채널': 'salesChannel', '사업자번호': 'bizNo', '대표자': 'ceoName', '업태': 'bizType',
-    '종목': 'bizCategory', '전화번호': 'phone', '연락처': 'phone', '팩스': 'fax',
-    '이메일': 'email', '주소': 'address', '담당자': 'contactPerson',
-    '여신한도': 'creditLimit', '결제조건': 'paymentTerms',
+    거래처코드: 'partnerCode',
+    거래처명: 'partnerName',
+    구분: 'partnerType',
+    채널: 'salesChannel',
+    사업자번호: 'bizNo',
+    대표자: 'ceoName',
+    업태: 'bizType',
+    종목: 'bizCategory',
+    전화번호: 'phone',
+    연락처: 'phone',
+    팩스: 'fax',
+    이메일: 'email',
+    주소: 'address',
+    담당자: 'contactPerson',
+    여신한도: 'creditLimit',
+    결제조건: 'paymentTerms',
   }
 
   const handleExport = (type: 'excel' | 'pdf') => {
@@ -204,39 +262,73 @@ export default function PartnersPage() {
       <PageHeader title="거래처관리" description="고객 및 공급업체 정보를 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-36"><SelectValue placeholder="전체 구분" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="전체 구분" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
             {Object.entries(PARTNER_TYPE_MAP).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <div className="flex items-center gap-1.5">
-          <Input type="date" className="w-full sm:w-36" value={startDate} onChange={e => setStartDate(e.target.value)} placeholder="시작일" />
-          <span className="text-xs text-muted-foreground">~</span>
-          <Input type="date" className="w-full sm:w-36" value={endDate} onChange={e => setEndDate(e.target.value)} placeholder="종료일" />
+          <Input
+            type="date"
+            className="w-full sm:w-36"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            placeholder="시작일"
+          />
+          <span className="text-muted-foreground text-xs">~</span>
+          <Input
+            type="date"
+            className="w-full sm:w-36"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            placeholder="종료일"
+          />
         </div>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <Upload className="mr-1 h-4 w-4" /> 업로드
         </Button>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button>거래처 등록</Button></DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>거래처 등록</DialogTitle></DialogHeader>
+          <DialogTrigger asChild>
+            <Button>거래처 등록</Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>거래처 등록</DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>거래처코드 <span className="text-destructive">*</span></Label><Input name="partnerCode" required aria-required="true" placeholder="PTN-001" /></div>
-                <div className="space-y-2"><Label>거래처명 <span className="text-destructive">*</span></Label><Input name="partnerName" required aria-required="true" /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>
+                    거래처코드 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input name="partnerCode" required aria-required="true" placeholder="PTN-001" />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    거래처명 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input name="partnerName" required aria-required="true" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
                   <Label>구분</Label>
                   <Select name="partnerType" defaultValue="BOTH">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {Object.entries(PARTNER_TYPE_MAP).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -244,33 +336,68 @@ export default function PartnersPage() {
                 <div className="space-y-2">
                   <Label>매출채널</Label>
                   <Select name="salesChannel" defaultValue="OFFLINE">
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ONLINE">온라인</SelectItem>
                       <SelectItem value="OFFLINE">오프라인</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>사업자번호</Label><Input name="bizNo" placeholder="000-00-00000" /></div>
+                <div className="space-y-2">
+                  <Label>사업자번호</Label>
+                  <Input name="bizNo" placeholder="000-00-00000" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>대표자</Label><Input name="ceoName" /></div>
-                <div className="space-y-2"><Label>담당자</Label><Input name="contactPerson" /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>대표자</Label>
+                  <Input name="ceoName" />
+                </div>
+                <div className="space-y-2">
+                  <Label>담당자</Label>
+                  <Input name="contactPerson" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>업태</Label><Input name="bizType" /></div>
-                <div className="space-y-2"><Label>종목</Label><Input name="bizCategory" /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>업태</Label>
+                  <Input name="bizType" />
+                </div>
+                <div className="space-y-2">
+                  <Label>종목</Label>
+                  <Input name="bizCategory" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>전화번호</Label><Input name="phone" /></div>
-                <div className="space-y-2"><Label>팩스</Label><Input name="fax" /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>전화번호</Label>
+                  <Input name="phone" />
+                </div>
+                <div className="space-y-2">
+                  <Label>팩스</Label>
+                  <Input name="fax" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>이메일</Label><Input name="email" type="email" /></div>
-                <div className="space-y-2"><Label>여신한도</Label><Input name="creditLimit" type="number" /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>이메일</Label>
+                  <Input name="email" type="email" />
+                </div>
+                <div className="space-y-2">
+                  <Label>여신한도</Label>
+                  <Input name="creditLimit" type="number" />
+                </div>
               </div>
-              <div className="space-y-2"><Label>주소</Label><Input name="address" /></div>
-              <div className="space-y-2"><Label>결제조건</Label><Input name="paymentTerms" placeholder="월말 30일" /></div>
+              <div className="space-y-2">
+                <Label>주소</Label>
+                <Input name="address" />
+              </div>
+              <div className="space-y-2">
+                <Label>결제조건</Label>
+                <Input name="paymentTerms" placeholder="월말 30일" />
+              </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? '등록 중...' : '거래처 등록'}
               </Button>
@@ -278,12 +405,44 @@ export default function PartnersPage() {
           </DialogContent>
         </Dialog>
       </div>
-      <DataTable columns={[...columns, { id: 'actions', header: '', cell: ({ row }: any) => (
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정"><Pencil className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.partnerName)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>
-        </div>
-      ), size: 80 }]} data={partners} searchColumn="partnerName" searchPlaceholder="거래처명으로 검색..." isLoading={isLoading} pageSize={50} onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }} />
+      <DataTable
+        columns={[
+          ...columns,
+          {
+            id: 'actions',
+            header: '',
+            cell: ({ row }: any) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditTarget(row.original)}
+                  aria-label="수정"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive h-8 w-8"
+                  onClick={() => handleDelete(row.original.id, row.original.partnerName)}
+                  aria-label="삭제"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ),
+            size: 80,
+          },
+        ]}
+        data={partners}
+        searchColumn="partnerName"
+        searchPlaceholder="거래처명으로 검색..."
+        isLoading={isLoading}
+        pageSize={50}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
+      />
       <ExcelImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
@@ -295,22 +454,36 @@ export default function PartnersPage() {
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['partners'] })}
       />
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>거래처 수정</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>거래처 수정</DialogTitle>
+          </DialogHeader>
           {editTarget && (
             <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>거래처코드</Label><Input value={editTarget.partnerCode} disabled className="bg-muted" /></div>
-                <div className="space-y-2"><Label>거래처명 <span className="text-destructive">*</span></Label><Input name="partnerName" required aria-required="true" defaultValue={editTarget.partnerName} /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>거래처코드</Label>
+                  <Input value={editTarget.partnerCode} disabled className="bg-muted" />
+                </div>
+                <div className="space-y-2">
+                  <Label>
+                    거래처명 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input name="partnerName" required aria-required="true" defaultValue={editTarget.partnerName} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
                   <Label>구분</Label>
                   <Select name="partnerType" defaultValue={editTarget.partnerType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       {Object.entries(PARTNER_TYPE_MAP).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                        <SelectItem key={k} value={k}>
+                          {v}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -318,37 +491,74 @@ export default function PartnersPage() {
                 <div className="space-y-2">
                   <Label>매출채널</Label>
                   <Select name="salesChannel" defaultValue={editTarget.salesChannel}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ONLINE">온라인</SelectItem>
                       <SelectItem value="OFFLINE">오프라인</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>사업자번호</Label><Input name="bizNo" defaultValue={editTarget.bizNo || ''} placeholder="000-00-00000" /></div>
+                <div className="space-y-2">
+                  <Label>사업자번호</Label>
+                  <Input name="bizNo" defaultValue={editTarget.bizNo || ''} placeholder="000-00-00000" />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>대표자</Label><Input name="ceoName" defaultValue={editTarget.ceoName || ''} /></div>
-                <div className="space-y-2"><Label>담당자</Label><Input name="contactPerson" defaultValue={editTarget.contactPerson || ''} /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>대표자</Label>
+                  <Input name="ceoName" defaultValue={editTarget.ceoName || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>담당자</Label>
+                  <Input name="contactPerson" defaultValue={editTarget.contactPerson || ''} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>업태</Label><Input name="bizType" defaultValue={editTarget.bizType || ''} /></div>
-                <div className="space-y-2"><Label>종목</Label><Input name="bizCategory" defaultValue={editTarget.bizCategory || ''} /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>업태</Label>
+                  <Input name="bizType" defaultValue={editTarget.bizType || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>종목</Label>
+                  <Input name="bizCategory" defaultValue={editTarget.bizCategory || ''} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>전화번호</Label><Input name="phone" defaultValue={editTarget.phone || ''} /></div>
-                <div className="space-y-2"><Label>팩스</Label><Input name="fax" defaultValue={editTarget.fax || ''} /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>전화번호</Label>
+                  <Input name="phone" defaultValue={editTarget.phone || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>팩스</Label>
+                  <Input name="fax" defaultValue={editTarget.fax || ''} />
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>이메일</Label><Input name="email" type="email" defaultValue={editTarget.email || ''} /></div>
-                <div className="space-y-2"><Label>여신한도</Label><Input name="creditLimit" type="number" defaultValue={editTarget.creditLimit || ''} /></div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>이메일</Label>
+                  <Input name="email" type="email" defaultValue={editTarget.email || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label>여신한도</Label>
+                  <Input name="creditLimit" type="number" defaultValue={editTarget.creditLimit || ''} />
+                </div>
               </div>
-              <div className="space-y-2"><Label>주소</Label><Input name="address" defaultValue={editTarget.address || ''} /></div>
-              <div className="space-y-2"><Label>결제조건</Label><Input name="paymentTerms" defaultValue={editTarget.paymentTerms || ''} placeholder="월말 30일" /></div>
+              <div className="space-y-2">
+                <Label>주소</Label>
+                <Input name="address" defaultValue={editTarget.address || ''} />
+              </div>
+              <div className="space-y-2">
+                <Label>결제조건</Label>
+                <Input name="paymentTerms" defaultValue={editTarget.paymentTerms || ''} placeholder="월말 30일" />
+              </div>
               <div className="space-y-2">
                 <Label>상태</Label>
                 <Select name="isActive" defaultValue={editTarget.isActive ? 'true' : 'false'}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="true">활성</SelectItem>
                     <SelectItem value="false">비활성</SelectItem>
@@ -369,7 +579,9 @@ export default function PartnersPage() {
         description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
         isPending={deleteMutation.isPending}
       />
     </div>
