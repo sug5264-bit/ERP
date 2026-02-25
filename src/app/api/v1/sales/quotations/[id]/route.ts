@@ -117,6 +117,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (body.description !== undefined) updateData.description = body.description || null
 
       if (body.details && Array.isArray(body.details)) {
+        // 상세 항목 기본 검증
+        for (const d of body.details) {
+          if (!d.itemId || typeof d.itemId !== 'string') throw new Error('품목 ID가 올바르지 않습니다.')
+          if (typeof d.quantity !== 'number' || d.quantity <= 0) throw new Error('수량은 0보다 커야 합니다.')
+          if (typeof d.unitPrice !== 'number' || d.unitPrice < 0) throw new Error('단가는 0 이상이어야 합니다.')
+        }
+
         const itemIds = body.details.map((d: any) => d.itemId)
         const itemsInfo = await prisma.item.findMany({
           where: { id: { in: itemIds } },
@@ -125,7 +132,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
 
         const details = body.details.map((d: any, idx: number) => {
-          const supplyAmount = d.quantity * d.unitPrice
+          const supplyAmount = Math.round(d.quantity * d.unitPrice)
           const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
           const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
           return {

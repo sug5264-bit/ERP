@@ -30,10 +30,29 @@ export async function POST(req: NextRequest) {
       매입: 'PURCHASE',
       '매출/매입': 'BOTH',
     }
+    const channelMap: Record<string, string> = {
+      온라인: 'ONLINE',
+      오프라인: 'OFFLINE',
+    }
     const VALID_TYPES = new Set(['SALES', 'PURCHASE', 'BOTH'])
+    const VALID_CHANNELS = new Set(['ONLINE', 'OFFLINE'])
     const PARTNER_CODE_RE = /^[A-Za-z0-9-]{1,50}$/
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const BIZ_NO_RE = /^[\d-]{0,20}$/
+
+    // 배치 중복 검사: N+1 쿼리 제거
+    const allCodes = rows.filter((r: any) => r.partnerCode).map((r: any) => String(r.partnerCode).trim())
+    const existingPartners = await prisma.partner.findMany({
+      where: { partnerCode: { in: allCodes } },
+      select: { partnerCode: true },
+    })
+    const existingCodeSet = new Set(existingPartners.map((p) => p.partnerCode))
+
+    /** 콤마 포함 숫자 문자열을 파싱 */
+    function parseNumber(val: any): number {
+      if (typeof val === 'number') return val
+      return parseFloat(String(val).replace(/,/g, ''))
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
@@ -58,6 +77,11 @@ export async function POST(req: NextRequest) {
           throw new Error(`유효하지 않은 거래처유형입니다: ${row.partnerType}`)
         }
 
+        const mappedChannel = channelMap[row.salesChannel] || row.salesChannel || 'OFFLINE'
+        if (!VALID_CHANNELS.has(mappedChannel)) {
+          throw new Error(`유효하지 않은 채널입니다: ${row.salesChannel}`)
+        }
+
         if (row.bizNo && !BIZ_NO_RE.test(String(row.bizNo))) {
           throw new Error('사업자번호 형식이 올바르지 않습니다.')
         }
@@ -66,15 +90,14 @@ export async function POST(req: NextRequest) {
           throw new Error('유효한 이메일 형식이 아닙니다.')
         }
 
-        if (row.creditLimit !== undefined) {
-          const limit = parseFloat(row.creditLimit)
+        if (row.creditLimit !== undefined && row.creditLimit !== '') {
+          const limit = parseNumber(row.creditLimit)
           if (isNaN(limit) || limit < 0) {
             throw new Error('신용한도는 0 이상의 숫자여야 합니다.')
           }
         }
 
-        const existing = await prisma.partner.findUnique({ where: { partnerCode } })
-        if (existing) {
+        if (existingCodeSet.has(partnerCode)) {
           throw new Error(`거래처코드 '${partnerCode}'가 이미 존재합니다.`)
         }
 
@@ -83,6 +106,7 @@ export async function POST(req: NextRequest) {
             partnerCode,
             partnerName,
             partnerType: mappedType,
+            salesChannel: mappedChannel,
             bizNo: row.bizNo ? String(row.bizNo).trim() : undefined,
             ceoName: row.ceoName ? String(row.ceoName).trim().slice(0, 100) : undefined,
             bizType: row.bizType ? String(row.bizType).trim().slice(0, 100) : undefined,
@@ -92,10 +116,11 @@ export async function POST(req: NextRequest) {
             email: row.email ? String(row.email).trim() : undefined,
             address: row.address ? String(row.address).trim().slice(0, 500) : undefined,
             contactPerson: row.contactPerson ? String(row.contactPerson).trim().slice(0, 100) : undefined,
-            creditLimit: row.creditLimit ? parseFloat(row.creditLimit) : undefined,
+            creditLimit: row.creditLimit ? parseNumber(row.creditLimit) : undefined,
             paymentTerms: row.paymentTerms ? String(row.paymentTerms).trim().slice(0, 100) : undefined,
           },
         })
+        existingCodeSet.add(partnerCode)
         success++
       } catch (err: unknown) {
         failed++

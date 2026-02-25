@@ -49,14 +49,24 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     const { id } = await params
 
+    // 사용 중인 품목은 삭제 대신 비활성화 (비즈니스 데이터 보호)
+    const [salesOrderCount, purchaseOrderCount, deliveryCount, movementCount] = await Promise.all([
+      prisma.salesOrderDetail.count({ where: { itemId: id } }),
+      prisma.purchaseOrderDetail.count({ where: { itemId: id } }),
+      prisma.deliveryDetail.count({ where: { itemId: id } }),
+      prisma.stockMovementDetail.count({ where: { itemId: id } }),
+    ])
+
+    if (salesOrderCount + purchaseOrderCount + deliveryCount + movementCount > 0) {
+      // 거래 이력이 있으면 비활성화 처리
+      await prisma.item.update({ where: { id }, data: { isActive: false } })
+      return successResponse({ deactivated: true, message: '거래 이력이 있어 비활성화 처리되었습니다.' })
+    }
+
+    // 거래 이력이 없으면 안전하게 삭제
     await prisma.$transaction(async (tx) => {
-      await tx.receivingDetail.deleteMany({ where: { itemId: id } })
-      await tx.purchaseOrderDetail.deleteMany({ where: { itemId: id } })
-      await tx.purchaseRequestDetail.deleteMany({ where: { itemId: id } })
-      await tx.deliveryDetail.deleteMany({ where: { itemId: id } })
-      await tx.salesOrderDetail.deleteMany({ where: { itemId: id } })
       await tx.quotationDetail.deleteMany({ where: { itemId: id } })
-      await tx.stockMovementDetail.deleteMany({ where: { itemId: id } })
+      await tx.purchaseRequestDetail.deleteMany({ where: { itemId: id } })
       await tx.stockBalance.deleteMany({ where: { itemId: id } })
       await tx.item.delete({ where: { id } })
     })

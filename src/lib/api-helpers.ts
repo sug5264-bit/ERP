@@ -74,13 +74,13 @@ export function handleApiError(error: unknown) {
     return errorResponse(prismaMessage, 'DATABASE_ERROR', 400)
   }
 
-  // 비즈니스 로직 에러는 메시지를 사용자에게 그대로 전달
+  // 일반 에러는 내부 정보 노출 방지 (로그에만 상세 기록)
   if (error instanceof Error) {
     logger.error('API Error', {
       error: error.message,
       stack: error.stack,
     })
-    return errorResponse(error.message, 'INTERNAL_ERROR', 500)
+    return errorResponse('서버 오류가 발생했습니다.', 'INTERNAL_ERROR', 500)
   }
 
   logger.error('API Error', { error: String(error) })

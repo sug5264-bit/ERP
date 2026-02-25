@@ -137,7 +137,7 @@ export default function PartnersPage() {
     { header: '채널', accessor: (r) => CHANNEL_MAP[r.salesChannel] || '오프라인' },
     { header: '사업자번호', accessor: (r) => r.bizNo || '' },
     { header: '대표자', accessor: (r) => r.ceoName || '' },
-    { header: '연락처', accessor: (r) => r.phone || '' },
+    { header: '전화번호', accessor: (r) => r.phone || '' },
     { header: '담당자', accessor: (r) => r.contactPerson || '' },
     { header: '이메일', accessor: (r) => r.email || '' },
     { header: '여신한도', accessor: (r) => r.creditLimit ? formatCurrency(r.creditLimit) : '' },
@@ -148,6 +148,7 @@ export default function PartnersPage() {
     { header: '거래처코드', key: 'partnerCode', example: 'PTN-001', required: true },
     { header: '거래처명', key: 'partnerName', example: '테스트거래처', required: true },
     { header: '구분', key: 'partnerType', example: '매출/매입' },
+    { header: '채널', key: 'salesChannel', example: '오프라인' },
     { header: '사업자번호', key: 'bizNo', example: '123-45-67890' },
     { header: '대표자', key: 'ceoName', example: '홍길동' },
     { header: '업태', key: 'bizType', example: '제조' },
@@ -163,8 +164,8 @@ export default function PartnersPage() {
 
   const importKeyMap: Record<string, string> = {
     '거래처코드': 'partnerCode', '거래처명': 'partnerName', '구분': 'partnerType',
-    '사업자번호': 'bizNo', '대표자': 'ceoName', '업태': 'bizType',
-    '종목': 'bizCategory', '전화번호': 'phone', '팩스': 'fax',
+    '채널': 'salesChannel', '사업자번호': 'bizNo', '대표자': 'ceoName', '업태': 'bizType',
+    '종목': 'bizCategory', '전화번호': 'phone', '연락처': 'phone', '팩스': 'fax',
     '이메일': 'email', '주소': 'address', '담당자': 'contactPerson',
     '여신한도': 'creditLimit', '결제조건': 'paymentTerms',
   }

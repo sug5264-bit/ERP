@@ -6,8 +6,12 @@ function escapeCsvValue(row: any, accessor: string | ((row: any) => any)): strin
   let val = getValue(row, accessor)
   if (val == null) return ''
   let str = String(val)
-  // CSV 수식 인젝션 방지: 셀이 =, +, -, @, \t, \r 로 시작하면 앞에 작은따옴표 추가
-  if (/^[=+\-@\t\r]/.test(str)) {
+  // CSV 수식 인젝션 방지:
+  // =, @, \t, \r 로 시작하면 항상 이스케이프 (명확한 수식 패턴)
+  // +, - 는 알파벳이 포함된 경우에만 이스케이프 (전화번호/음수 보호)
+  if (/^[=@\t\r]/.test(str)) {
+    str = `'${str}`
+  } else if (/^[+\-]/.test(str) && /[a-zA-Z]/.test(str)) {
     str = `'${str}`
   }
   // CSV 이스케이프: 쉼표, 줄바꿈, 따옴표가 포함된 경우

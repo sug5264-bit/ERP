@@ -5,8 +5,14 @@ import { hash, compare } from 'bcryptjs'
 /**
  * GET /api/health/seed
  * 시드 데이터 상태 확인 및 admin 비밀번호 자동 복구
+ * (개발 환경에서만 접근 가능)
  */
 export async function GET() {
+  // 프로덕션 환경에서는 접근 차단
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: '프로덕션 환경에서는 사용할 수 없습니다.' }, { status: 403 })
+  }
+
   const checks: Record<string, unknown> = {}
 
   try {

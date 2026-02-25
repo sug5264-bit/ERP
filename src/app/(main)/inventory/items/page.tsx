@@ -150,6 +150,8 @@ export default function ItemsPage() {
     { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
     { header: '품목명', key: 'itemName', example: '테스트 품목', required: true },
     { header: '구분', key: 'itemType', example: '상품' },
+    { header: '과세구분', key: 'taxType', example: '과세' },
+    { header: '분류', key: 'categoryName', example: '전자부품' },
     { header: '규격', key: 'specification', example: '100x200mm' },
     { header: '단위', key: 'unit', example: 'EA' },
     { header: '기준가', key: 'standardPrice', example: '10000' },
@@ -159,6 +161,7 @@ export default function ItemsPage() {
 
   const importKeyMap: Record<string, string> = {
     '품목코드': 'itemCode', '품목명': 'itemName', '구분': 'itemType',
+    '과세구분': 'taxType', '분류': 'categoryName',
     '규격': 'specification', '단위': 'unit', '기준가': 'standardPrice',
     '안전재고': 'safetyStock', '바코드': 'barcode',
   }

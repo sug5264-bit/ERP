@@ -117,6 +117,10 @@ export async function POST(request: NextRequest) {
         }
       }
     } else if (action === 'delete') {
+      // 삭제는 별도 권한 체크
+      const deleteAuth = await requirePermissionCheck('sales', 'delete')
+      if (isErrorResponse(deleteAuth)) return deleteAuth
+
       for (const order of orders) {
         try {
           await prisma.$transaction(async (tx) => {

@@ -16,6 +16,9 @@ export function triggerDownload(blob: Blob, fileName: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = fileName
+  document.body.appendChild(a)
   a.click()
-  URL.revokeObjectURL(url)
+  document.body.removeChild(a)
+  // Safari에서 비동기 다운로드가 완료되기 전에 revoke되는 문제 방지
+  setTimeout(() => URL.revokeObjectURL(url), 150)
 }

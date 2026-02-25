@@ -91,6 +91,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (body.receivedBy !== undefined) updateData.receivedBy = body.receivedBy
 
       if (body.details && Array.isArray(body.details)) {
+        // 상세 항목 기본 검증
+        for (const d of body.details) {
+          if (!d.itemId || typeof d.itemId !== 'string') throw new Error('품목 ID가 올바르지 않습니다.')
+          if (typeof d.quantity !== 'number' || d.quantity <= 0) throw new Error('수량은 0보다 커야 합니다.')
+          if (typeof d.unitPrice !== 'number' || d.unitPrice < 0) throw new Error('단가는 0 이상이어야 합니다.')
+        }
+
         // 기존 납품 수량 보존을 위해 맵 생성
         const existingDelivered = new Map(order.details.map((d: any) => [d.itemId, Number(d.deliveredQty ?? 0)]))
         // 품목 세금유형 조회
