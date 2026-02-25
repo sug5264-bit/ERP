@@ -122,9 +122,18 @@ export async function POST(request: NextRequest) {
           await prisma.$transaction(async (tx) => {
             const deliveries = await tx.delivery.findMany({ where: { salesOrderId: order.id }, select: { id: true } })
             if (deliveries.length > 0) {
-              await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveries.map((d) => d.id) } } })
+              const deliveryIds = deliveries.map((d) => d.id)
+              await tx.qualityInspectionItem.deleteMany({
+                where: { qualityInspection: { deliveryId: { in: deliveryIds } } },
+              })
+              await tx.qualityInspection.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
+              await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
               await tx.delivery.deleteMany({ where: { salesOrderId: order.id } })
             }
+            await tx.salesReturnDetail.deleteMany({
+              where: { salesReturn: { salesOrderId: order.id } },
+            })
+            await tx.salesReturn.deleteMany({ where: { salesOrderId: order.id } })
             await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: order.id } })
             await tx.salesOrder.delete({ where: { id: order.id } })
           })
