@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatDate, formatDateTime, formatDistanceToNow } from '@/lib/format'
 import { toast } from 'sonner'
 import {
-  User, KeyRound, FileText, CalendarOff, Bell, Shield, Clock,
+  User, KeyRound, FileText, CalendarOff, Shield, Clock,
 } from 'lucide-react'
 import Link from 'next/link'
 

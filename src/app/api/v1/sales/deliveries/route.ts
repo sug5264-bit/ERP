@@ -127,11 +127,12 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // 재고 잔량 차감 (음수 방지 검증)
+      // 재고 잔량 차감 (창고별 순차 차감, 음수 방지 검증)
       for (const d of data.details) {
         const balances = await tx.stockBalance.findMany({
           where: { itemId: d.itemId },
-          select: { quantity: true },
+          select: { id: true, quantity: true, warehouseId: true },
+          orderBy: { quantity: 'desc' },
         })
         const totalStock = balances.reduce((sum, b) => sum + Number(b.quantity), 0)
         if (totalStock < d.quantity) {
@@ -140,10 +141,20 @@ export async function POST(request: NextRequest) {
             `품목 "${item?.itemName || d.itemId}"의 재고가 부족합니다. (현재고: ${totalStock}, 출고량: ${d.quantity})`
           )
         }
-        await tx.stockBalance.updateMany({
-          where: { itemId: d.itemId },
-          data: { quantity: { decrement: d.quantity } },
-        })
+        // 재고가 많은 창고부터 순차 차감
+        let remaining = d.quantity
+        for (const bal of balances) {
+          if (remaining <= 0) break
+          const available = Number(bal.quantity)
+          const deduct = Math.min(available, remaining)
+          if (deduct > 0) {
+            await tx.stockBalance.update({
+              where: { id: bal.id },
+              data: { quantity: { decrement: deduct } },
+            })
+            remaining -= deduct
+          }
+        }
       }
 
       // 수주 전체 납품 완료 시 상태 자동 변경

@@ -13,6 +13,10 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return errorResponse('게시글을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
+    if (note.createdBy !== authResult.session.user.id) {
+      return errorResponse('본인이 작성한 메모만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
+    }
+
     await prisma.note.delete({ where: { id } })
 
     return successResponse({ deleted: true })

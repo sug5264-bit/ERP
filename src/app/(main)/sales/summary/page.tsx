@@ -63,13 +63,6 @@ export default function SalesSummaryPage() {
     ? Math.round((summary.online.totalAmount / summary.total.totalAmount) * 100)
     : 0
 
-  const exportMonthlyColumns: ExportColumn[] = [
-    { header: '월', accessor: 'month' },
-    { header: '온라인', accessor: (r) => formatCurrency(r.online) },
-    { header: '오프라인', accessor: (r) => formatCurrency(r.offline) },
-    { header: '합계', accessor: (r) => formatCurrency(r.total) },
-  ]
-
   const exportItemColumns: ExportColumn[] = [
     { header: '품목코드', accessor: 'itemCode' },
     { header: '품목명', accessor: 'itemName' },

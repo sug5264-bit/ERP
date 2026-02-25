@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         })
         const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
         const details = body.details.map((d: any, idx: number) => {
-          const supplyAmount = d.quantity * d.unitPrice
+          const supplyAmount = Math.round(d.quantity * d.unitPrice)
           const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
           const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
           const deliveredQty = existingDelivered.get(d.itemId) || 0

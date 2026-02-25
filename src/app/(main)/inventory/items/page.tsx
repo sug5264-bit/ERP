@@ -141,8 +141,8 @@ export default function ItemsPage() {
     { header: '바코드', accessor: 'barcode' },
     { header: '규격', accessor: 'specification' },
     { header: '단위', accessor: 'unit' },
-    { header: '기준가', accessor: 'standardPrice' },
-    { header: '안전재고', accessor: 'safetyStock' },
+    { header: '기준가', accessor: (r) => Number(r.standardPrice) },
+    { header: '안전재고', accessor: (r) => Number(r.safetyStock) },
     { header: '상태', accessor: (r) => r.isActive ? '활성' : '비활성' },
   ]
 
