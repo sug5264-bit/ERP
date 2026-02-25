@@ -38,8 +38,7 @@ export async function POST(req: NextRequest) {
       상품: 'GOODS',
       제품: 'PRODUCT',
       원자재: 'RAW_MATERIAL',
-      반제품: 'SEMI_PRODUCT',
-      부자재: 'SUB_MATERIAL',
+      부자재: 'SUBSIDIARY',
     }
 
     if (rows.length > 500) {
@@ -47,7 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     const ITEM_CODE_RE = /^[A-Za-z0-9-]{1,50}$/
-    const VALID_TYPES = new Set(['GOODS', 'PRODUCT', 'RAW_MATERIAL', 'SEMI_PRODUCT', 'SUB_MATERIAL', 'SUBSIDIARY'])
+    const VALID_TYPES = new Set(['GOODS', 'PRODUCT', 'RAW_MATERIAL', 'SUBSIDIARY'])
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]

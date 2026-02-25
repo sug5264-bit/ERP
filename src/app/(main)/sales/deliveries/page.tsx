@@ -553,22 +553,23 @@ export default function DeliveriesPage() {
           failReasons.push(`내품명 "${row.itemName || row.itemCode}" 미매칭`)
           continue
         }
+        if (!order?.id) {
+          failCount++
+          failReasons.push(`주문번호 "${row.orderNo || ''}" 미매칭`)
+          continue
+        }
         try {
           await api.post('/sales/deliveries', {
             deliveryDate: today,
-            salesOrderId: order?.id || undefined,
+            salesOrderId: order.id,
             deliveryAddress: row.receiverAddress || undefined,
-            carrier: undefined,
             trackingNo: row.trackingNo || undefined,
-            receiverName: row.receiverName || undefined,
-            receiverPhone: row.receiverPhone || row.receiverMobile || undefined,
-            specialNote: row.specialNote || undefined,
-            memo: row.memo || undefined,
             details: [{ itemId: item.id, quantity: Number(row.quantity) || 1, unitPrice: Number(row.unitPrice) || 0 }],
           })
           successCount++
-        } catch {
+        } catch (err: any) {
           failCount++
+          failReasons.push(err?.message || `납품 생성 실패`)
         }
       }
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
