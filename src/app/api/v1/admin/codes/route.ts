@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { successResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET(req: NextRequest) {
   try {
@@ -39,6 +39,11 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const validated = createCodeSchema.parse(body)
+
+    const existing = await prisma.commonCode.findFirst({
+      where: { groupCode: validated.groupCode, code: validated.code },
+    })
+    if (existing) return errorResponse('이미 존재하는 코드입니다.', 'CONFLICT', 409)
 
     const code = await prisma.commonCode.create({ data: validated })
     return successResponse(code)

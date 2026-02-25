@@ -50,6 +50,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (existing.status !== 'DRAFTED') {
         return errorResponse('작성 상태의 문서만 상신할 수 있습니다.', 'INVALID_STATUS', 400)
       }
+      if (existing.drafterId !== employee.id) {
+        return errorResponse('작성자만 문서를 상신할 수 있습니다.', 'FORBIDDEN', 403)
+      }
       const doc = await prisma.approvalDocument.update({
         where: { id },
         data: { status: 'IN_PROGRESS', currentStep: 1 },

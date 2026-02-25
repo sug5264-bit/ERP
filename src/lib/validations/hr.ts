@@ -51,6 +51,6 @@ export const createLeaveSchema = z.object({
   leaveType: z.enum(['ANNUAL', 'SICK', 'FAMILY', 'MATERNITY', 'PARENTAL', 'OFFICIAL']),
   startDate: z.string().min(1, '시작일을 입력하세요'),
   endDate: z.string().min(1, '종료일을 입력하세요'),
-  days: z.number().min(0.5),
+  days: z.number().min(0.5, '최소 0.5일 이상이어야 합니다').max(365, '최대 365일까지 입력할 수 있습니다'),
   reason: z.string().optional(),
 })

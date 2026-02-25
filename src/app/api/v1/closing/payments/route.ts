@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         description: v.description,
         totalAmount: Number(v.totalDebit),
         status: v.status,
-        createdBy: v.createdBy.nameKo,
+        createdBy: v.createdBy?.nameKo || '(unknown)',
         partner: partnerDetail?.partner
           ? {
               id: partnerDetail.partner.id,

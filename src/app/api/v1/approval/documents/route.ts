@@ -66,28 +66,37 @@ export async function GET(request: NextRequest) {
       },
     }
 
-    // myApprovals: raw query로 currentStep == stepOrder 조건을 DB에서 처리
+    // myApprovals: raw query로 currentStep == stepOrder 조건을 DB에서 처리 (LIMIT/OFFSET 포함)
     if (isMyApprovals && employeeId) {
-      const docIds = await prisma.$queryRaw<{ id: string }[]>`
-        SELECT ad.id FROM approval_documents ad
-        JOIN approval_steps ast ON ast."documentId" = ad.id
-        WHERE ad.status = 'IN_PROGRESS'
-          AND ast."approverId" = ${employeeId}
-          AND ast.status = 'PENDING'
-          AND ast."stepOrder" = ad."currentStep"
-        ORDER BY ad."createdAt" DESC
-      `
-      const ids = docIds.map((d) => d.id)
-      const [items, totalCount] = await Promise.all([
-        ids.length > 0
-          ? prisma.approvalDocument.findMany({
-              where: { id: { in: ids.slice(skip, skip + pageSize) } },
-              include: includeFields,
-              orderBy: { createdAt: 'desc' },
-            })
-          : Promise.resolve([]),
-        Promise.resolve(ids.length),
+      const [countResult, docIds] = await Promise.all([
+        prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(DISTINCT ad.id) as count FROM approval_documents ad
+          JOIN approval_steps ast ON ast."documentId" = ad.id
+          WHERE ad.status = 'IN_PROGRESS'
+            AND ast."approverId" = ${employeeId}
+            AND ast.status = 'PENDING'
+            AND ast."stepOrder" = ad."currentStep"
+        `,
+        prisma.$queryRaw<{ id: string }[]>`
+          SELECT ad.id FROM approval_documents ad
+          JOIN approval_steps ast ON ast."documentId" = ad.id
+          WHERE ad.status = 'IN_PROGRESS'
+            AND ast."approverId" = ${employeeId}
+            AND ast.status = 'PENDING'
+            AND ast."stepOrder" = ad."currentStep"
+          ORDER BY ad."createdAt" DESC
+          LIMIT ${pageSize} OFFSET ${skip}
+        `,
       ])
+      const totalCount = Number(countResult[0]?.count || 0)
+      const ids = docIds.map((d) => d.id)
+      const items = ids.length > 0
+        ? await prisma.approvalDocument.findMany({
+            where: { id: { in: ids } },
+            include: includeFields,
+            orderBy: { createdAt: 'desc' },
+          })
+        : []
       return successResponse(items, buildMeta(page, pageSize, totalCount))
     }
 

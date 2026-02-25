@@ -100,6 +100,20 @@ export async function PUT(req: NextRequest) {
         return errorResponse('대기 상태의 휴가만 승인할 수 있습니다.', 'BAD_REQUEST', 400)
       }
       const year = new Date(leave.startDate).getFullYear()
+      // 잔여 휴가일수 사전 체크
+      const balance = await prisma.leaveBalance.findFirst({
+        where: { employeeId: leave.employeeId, year },
+      })
+      if (!balance) {
+        return errorResponse('해당 연도의 휴가 잔여일 정보가 없습니다.', 'NOT_FOUND', 404)
+      }
+      if (Number(balance.remainingDays) < Number(leave.days)) {
+        return errorResponse(
+          `잔여 휴가일수(${balance.remainingDays}일)가 부족합니다.`,
+          'INSUFFICIENT_BALANCE',
+          400
+        )
+      }
       const updated = await prisma.$transaction(async (tx) => {
         const result = await tx.leave.update({
           where: { id },
