@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -9,6 +9,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params
     const body = await req.json()
+
+    if (!body.companyName || typeof body.companyName !== 'string' || body.companyName.trim().length === 0) {
+      return errorResponse('회사명은 필수입니다.', 'BAD_REQUEST', 400)
+    }
 
     const company = await prisma.$transaction(async (tx) => {
       if (body.isDefault) {

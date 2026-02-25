@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createDepartmentSchema } from '@/lib/validations/hr'
-import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
 
 export async function GET() {
   try {
@@ -31,9 +31,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const validated = createDepartmentSchema.parse(body)
 
-    const level = validated.parentId
-      ? ((await prisma.department.findUnique({ where: { id: validated.parentId } }))?.level ?? 0) + 1
-      : 1
+    let level = 1
+    if (validated.parentId) {
+      const parent = await prisma.department.findUnique({ where: { id: validated.parentId } })
+      if (!parent) return errorResponse('상위 부서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      level = parent.level + 1
+    }
 
     const dept = await prisma.department.create({
       data: { ...validated, level },

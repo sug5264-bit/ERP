@@ -125,6 +125,8 @@ export async function POST(req: NextRequest) {
             birthDate: row.birthDate ? new Date(row.birthDate) : undefined,
           },
         })
+        // 같은 배치 내 중복 사번 방지를 위해 Set에 추가
+        existingEmpNoSet.add(empNo)
         success++
       } catch (err: unknown) {
         failed++

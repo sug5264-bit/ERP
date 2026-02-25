@@ -52,9 +52,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
       const existing = await prisma.payrollHeader.findUnique({ where: { id } })
       if (!existing) return errorResponse('급여 데이터를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (existing.status === 'PAID') {
-        return errorResponse('이미 지급 완료된 급여는 상태를 변경할 수 없습니다.', 'INVALID_STATUS', 400)
+
+      // 유효한 상태 전이 맵: DRAFT→CONFIRMED→PAID, DRAFT→CANCELLED, CONFIRMED→CANCELLED
+      const validTransitions: Record<string, string[]> = {
+        DRAFT: ['CONFIRMED', 'CANCELLED'],
+        CONFIRMED: ['PAID', 'CANCELLED'],
+        PAID: [],
+        CANCELLED: [],
       }
+      const allowed = validTransitions[existing.status] || []
+      if (!allowed.includes(body.status)) {
+        return errorResponse(
+          `'${existing.status}' 상태에서 '${body.status}'(으)로 변경할 수 없습니다.`,
+          'INVALID_STATUS',
+          400
+        )
+      }
+
       const payroll = await prisma.payrollHeader.update({ where: { id }, data: { status: body.status } })
       return successResponse(payroll)
     }

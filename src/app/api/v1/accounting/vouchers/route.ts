@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // 전표번호 생성 + 전표 저장을 트랜잭션으로 원자적 처리
     const voucher = await prisma.$transaction(async (tx) => {
-      const voucherNo = await generateDocumentNumber('VOU', voucherDate)
+      const voucherNo = await generateDocumentNumber('VOU', voucherDate, tx)
       return tx.voucher.create({
         data: {
           voucherNo,

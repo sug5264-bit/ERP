@@ -48,26 +48,28 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const role = await prisma.role.findUnique({ where: { id } })
     if (!role) return errorResponse('역할을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (role.isSystem) return errorResponse('시스템 역할은 수정할 수 없습니다.', 'FORBIDDEN', 403)
 
-    // 역할 기본 정보 업데이트
+    // 역할 기본 정보 + 권한 재할당을 트랜잭션으로 원자적 처리
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
 
-    await prisma.role.update({ where: { id }, data: updateData })
+    await prisma.$transaction(async (tx) => {
+      await tx.role.update({ where: { id }, data: updateData })
 
-    // 권한 재할당
-    if (Array.isArray(permissionIds)) {
-      await prisma.rolePermission.deleteMany({ where: { roleId: id } })
-      if (permissionIds.length > 0) {
-        await prisma.rolePermission.createMany({
-          data: permissionIds.map((permissionId: string) => ({
-            roleId: id,
-            permissionId,
-          })),
-        })
+      if (Array.isArray(permissionIds)) {
+        await tx.rolePermission.deleteMany({ where: { roleId: id } })
+        if (permissionIds.length > 0) {
+          await tx.rolePermission.createMany({
+            data: permissionIds.map((permissionId: string) => ({
+              roleId: id,
+              permissionId,
+            })),
+          })
+        }
       }
-    }
+    })
 
     // 업데이트된 역할 반환
     const updated = await prisma.role.findUnique({

@@ -59,6 +59,12 @@ export async function POST(req: NextRequest) {
           continue
         }
 
+        if (currentStepData.status !== 'PENDING') {
+          failCount++
+          errors.push(`문서 ${doc.documentNo}: 이미 처리된 결재 단계`)
+          continue
+        }
+
         // 결재 단계 + 문서 상태를 트랜잭션으로 원자적 처리
         const docStatus =
           action === 'reject' ? ('REJECTED' as const) : doc.currentStep >= doc.totalSteps ? ('APPROVED' as const) : null

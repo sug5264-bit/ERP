@@ -49,10 +49,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const validated = updateUserSchema.parse(body)
 
+    // username/email 유니크 체크
+    if (validated.username) {
+      const existingUser = await prisma.user.findFirst({
+        where: { username: validated.username, id: { not: id } },
+      })
+      if (existingUser) return errorResponse('이미 사용 중인 사용자명입니다.', 'CONFLICT', 409)
+    }
+    if (validated.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: { email: validated.email, id: { not: id } },
+      })
+      if (existingUser) return errorResponse('이미 사용 중인 이메일입니다.', 'CONFLICT', 409)
+    }
+
     const updateData: any = {}
-    if (validated.username) updateData.username = validated.username
-    if (validated.email) updateData.email = validated.email
-    if (validated.name) updateData.name = validated.name
+    if (validated.username !== undefined) updateData.username = validated.username
+    if (validated.email !== undefined) updateData.email = validated.email
+    if (validated.name !== undefined) updateData.name = validated.name
     if (validated.isActive !== undefined) updateData.isActive = validated.isActive
     if (validated.password) updateData.passwordHash = await hash(validated.password, 12)
     if (validated.employeeId !== undefined) updateData.employeeId = validated.employeeId

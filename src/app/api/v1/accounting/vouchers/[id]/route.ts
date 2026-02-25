@@ -7,6 +7,7 @@ import {
   requirePermissionCheck,
   isErrorResponse,
 } from '@/lib/api-helpers'
+import { createVoucherSchema } from '@/lib/validations/accounting'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -63,6 +64,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         where: { id: authResult.session.user.id },
         select: { employeeId: true },
       })
+      // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
+      if (user?.employeeId && user.employeeId === existing.createdById) {
+        return errorResponse('작성자는 승인할 수 없습니다.', 'FORBIDDEN', 403)
+      }
       const voucher = await prisma.voucher.update({
         where: { id },
         data: {
@@ -75,9 +80,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // 일반 수정
     if (body.details) {
-      const totalDebit = body.details.reduce((s: number, d: any) => s + Math.round((d.debitAmount || 0) * 100), 0) / 100
-      const totalCredit =
-        body.details.reduce((s: number, d: any) => s + Math.round((d.creditAmount || 0) * 100), 0) / 100
+      // 수정 데이터를 전표 생성 스키마로 검증
+      const detailsSchema = createVoucherSchema.shape.details
+      const parsedDetails = detailsSchema.parse(body.details)
+
+      const totalDebit = parsedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0) / 100
+      const totalCredit = parsedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0) / 100
       if (totalDebit !== totalCredit) {
         return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
       }
@@ -93,11 +101,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             totalDebit,
             totalCredit,
             details: {
-              create: body.details.map((d: any, idx: number) => ({
+              create: parsedDetails.map((d, idx) => ({
                 lineNo: idx + 1,
-                accountSubjectId: d.accountSubjectId,
-                debitAmount: d.debitAmount || 0,
-                creditAmount: d.creditAmount || 0,
+                accountSubjectId: d.accountSubjectId!,
+                debitAmount: d.debitAmount,
+                creditAmount: d.creditAmount,
                 partnerId: d.partnerId || null,
                 description: d.description,
                 costCenterId: d.costCenterId || null,

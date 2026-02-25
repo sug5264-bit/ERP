@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { createAttendanceSchema } from '@/lib/validations/hr'
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   requirePermissionCheck,
   isErrorResponse,
@@ -23,11 +24,15 @@ export async function GET(req: NextRequest) {
 
     const where: any = {}
     if (employeeId) where.employeeId = employeeId
-    if (startDate && endDate) {
-      const sd = new Date(startDate)
-      const ed = new Date(endDate)
-      if (!isNaN(sd.getTime()) && !isNaN(ed.getTime())) {
-        where.workDate = { gte: sd, lte: ed }
+    if (startDate || endDate) {
+      where.workDate = {}
+      if (startDate) {
+        const sd = new Date(startDate)
+        if (!isNaN(sd.getTime())) where.workDate.gte = sd
+      }
+      if (endDate) {
+        const ed = new Date(endDate)
+        if (!isNaN(ed.getTime())) where.workDate.lte = ed
       }
     }
 
@@ -66,6 +71,9 @@ export async function POST(req: NextRequest) {
     let overtimeHours = null
 
     if (checkIn && checkOut) {
+      if (checkOut.getTime() <= checkIn.getTime()) {
+        return errorResponse('퇴근 시간은 출근 시간 이후여야 합니다.', 'BAD_REQUEST', 400)
+      }
       const diff = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60)
       workHours = Math.max(0, diff - 1) // 점심 1시간 제외
       overtimeHours = Math.max(0, workHours - 8)

@@ -49,8 +49,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     const data = updateProjectSchema.parse(body)
     const updateData: any = { ...data }
-    if (data.startDate) updateData.startDate = new Date(data.startDate)
-    if (data.endDate) updateData.endDate = new Date(data.endDate)
+    if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate) : null
+    if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null
     const project = await prisma.project.update({ where: { id }, data: updateData })
     return successResponse(project)
   } catch (error) {

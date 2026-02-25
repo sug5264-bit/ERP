@@ -45,9 +45,23 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        await prisma.leave.update({
-          where: { id: leaveId },
-          data: { status: newStatus },
+        await prisma.$transaction(async (tx) => {
+          await tx.leave.update({
+            where: { id: leaveId },
+            data: { status: newStatus },
+          })
+
+          // 승인 시 LeaveBalance 업데이트 (단건 승인과 동일 로직)
+          if (newStatus === 'APPROVED') {
+            const year = new Date(leave.startDate).getFullYear()
+            await tx.leaveBalance.updateMany({
+              where: { employeeId: leave.employeeId, year },
+              data: {
+                usedDays: { increment: Number(leave.days) },
+                remainingDays: { decrement: Number(leave.days) },
+              },
+            })
+          }
         })
 
         // 감사 로그 + 알림 병렬 실행

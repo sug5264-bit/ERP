@@ -99,5 +99,5 @@ export const createBudgetSchema = z.object({
       month11: z.number().min(0).default(0),
       month12: z.number().min(0).default(0),
     })
-  ),
+  ).min(1, '최소 1개 이상의 예산 항목이 필요합니다'),
 })
