@@ -298,6 +298,9 @@ export default function ItemsPage() {
           <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
             <DialogHeader>
               <DialogTitle>품목 등록</DialogTitle>
+              <p className="text-muted-foreground text-xs">
+                <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+              </p>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -481,6 +484,9 @@ export default function ItemsPage() {
         <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
           <DialogHeader>
             <DialogTitle>품목 수정</DialogTitle>
+            <p className="text-muted-foreground text-xs">
+              <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+            </p>
           </DialogHeader>
           {editTarget && (
             <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">

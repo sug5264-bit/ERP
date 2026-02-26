@@ -293,6 +293,9 @@ export default function LeavePage() {
           <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>휴가 신청</DialogTitle>
+              <p className="text-muted-foreground text-xs">
+                <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+              </p>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-5">
               {/* 기본정보 */}
