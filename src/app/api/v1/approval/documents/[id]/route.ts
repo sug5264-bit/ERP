@@ -42,20 +42,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     if (body.action === 'submit') {
-      const existing = await prisma.approvalDocument.findUnique({
-        where: { id },
-        select: { status: true, drafterId: true },
-      })
-      if (!existing) return errorResponse('결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (existing.status !== 'DRAFTED') {
-        return errorResponse('작성 상태의 문서만 상신할 수 있습니다.', 'INVALID_STATUS', 400)
-      }
-      if (existing.drafterId !== employee.id) {
-        return errorResponse('작성자만 문서를 상신할 수 있습니다.', 'FORBIDDEN', 403)
-      }
-      const doc = await prisma.approvalDocument.update({
-        where: { id },
-        data: { status: 'IN_PROGRESS', currentStep: 1 },
+      const doc = await prisma.$transaction(async (tx) => {
+        const existing = await tx.approvalDocument.findUnique({
+          where: { id },
+          select: { id: true, status: true, drafterId: true },
+        })
+        if (!existing) throw new Error('NOT_FOUND')
+        if (existing.status !== 'DRAFTED') throw new Error('INVALID_STATUS')
+        if (existing.drafterId !== employee.id) throw new Error('SUBMIT_FORBIDDEN')
+        return tx.approvalDocument.update({
+          where: { id },
+          data: { status: 'IN_PROGRESS', currentStep: 1 },
+        })
       })
       return successResponse(doc)
     }
@@ -96,18 +94,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     if (body.action === 'cancel') {
-      const existing = await prisma.approvalDocument.findUnique({
-        where: { id },
-        select: { status: true, drafterId: true },
+      await prisma.$transaction(async (tx) => {
+        const existing = await tx.approvalDocument.findUnique({
+          where: { id },
+          select: { id: true, status: true, drafterId: true },
+        })
+        if (!existing) throw new Error('NOT_FOUND')
+        if (!['DRAFTED', 'IN_PROGRESS'].includes(existing.status)) {
+          throw new Error('INVALID_STATUS')
+        }
+        if (existing.drafterId !== employee.id) throw new Error('CANCEL_FORBIDDEN')
+        await tx.approvalDocument.update({ where: { id }, data: { status: 'CANCELLED' } })
       })
-      if (!existing) return errorResponse('결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (!['DRAFTED', 'IN_PROGRESS'].includes(existing.status)) {
-        return errorResponse('완료되거나 이미 취소된 문서는 취소할 수 없습니다.', 'INVALID_STATUS', 400)
-      }
-      if (existing.drafterId !== employee.id) {
-        return errorResponse('작성자만 문서를 취소할 수 있습니다.', 'FORBIDDEN', 403)
-      }
-      await prisma.approvalDocument.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse({ cancelled: true })
     }
 
@@ -117,9 +115,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (error instanceof Error) {
       const errMap: Record<string, [string, string, number]> = {
         NOT_FOUND: ['결재 문서를 찾을 수 없습니다.', 'NOT_FOUND', 404],
-        INVALID_STATUS: ['진행 중인 문서만 결재할 수 있습니다.', 'INVALID_STATUS', 400],
+        INVALID_STATUS: ['현재 상태에서는 해당 작업을 수행할 수 없습니다.', 'INVALID_STATUS', 400],
         FORBIDDEN: ['현재 결재 권한이 없습니다.', 'FORBIDDEN', 403],
         ALREADY_PROCESSED: ['이미 처리된 결재 단계입니다.', 'ALREADY_PROCESSED', 409],
+        SUBMIT_FORBIDDEN: ['작성자만 문서를 상신할 수 있습니다.', 'FORBIDDEN', 403],
+        CANCEL_FORBIDDEN: ['작성자만 문서를 취소할 수 있습니다.', 'FORBIDDEN', 403],
       }
       const mapped = errMap[error.message]
       if (mapped) return errorResponse(mapped[0], mapped[1], mapped[2])

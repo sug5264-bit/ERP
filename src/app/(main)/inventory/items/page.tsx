@@ -445,14 +445,24 @@ export default function ItemsPage() {
             action: async (rows) => {
               if (!confirm(`선택한 ${rows.length}건의 품목을 삭제하시겠습니까?`)) return
               let success = 0
+              const failed: string[] = []
               for (const row of rows) {
                 try {
                   await api.delete(`/inventory/items/${(row as any).id}`)
                   success++
-                } catch {}
+                } catch {
+                  failed.push((row as any).itemName || (row as any).id)
+                }
               }
               queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
-              toast.success(`${success}건이 삭제되었습니다.`)
+              if (failed.length > 0) {
+                toast.error(
+                  `${failed.length}건 삭제 실패: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ' 외' : ''}`
+                )
+              }
+              if (success > 0) {
+                toast.success(`${success}건이 삭제되었습니다.`)
+              }
             },
           },
         ]}

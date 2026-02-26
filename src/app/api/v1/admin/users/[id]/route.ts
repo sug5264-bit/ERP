@@ -49,56 +49,65 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const validated = updateUserSchema.parse(body)
 
-    // username/email 유니크 체크
-    if (validated.username) {
-      const existingUser = await prisma.user.findFirst({
-        where: { username: validated.username, id: { not: id } },
+    // 비밀번호 해싱은 트랜잭션 밖에서 수행 (CPU-bound)
+    let passwordHash: string | undefined
+    if (validated.password) passwordHash = await hash(validated.password, 12)
+
+    const user = await prisma.$transaction(async (tx) => {
+      // username/email 유니크 체크 (트랜잭션 내에서 race condition 방지)
+      if (validated.username) {
+        const existingUser = await tx.user.findFirst({
+          where: { username: validated.username, id: { not: id } },
+        })
+        if (existingUser) throw new Error('CONFLICT:이미 사용 중인 사용자명입니다.')
+      }
+      if (validated.email) {
+        const existingUser = await tx.user.findFirst({
+          where: { email: validated.email, id: { not: id } },
+        })
+        if (existingUser) throw new Error('CONFLICT:이미 사용 중인 이메일입니다.')
+      }
+
+      const updateData: any = {}
+      if (validated.username !== undefined) updateData.username = validated.username
+      if (validated.email !== undefined) updateData.email = validated.email
+      if (validated.name !== undefined) updateData.name = validated.name
+      if (validated.isActive !== undefined) updateData.isActive = validated.isActive
+      if (passwordHash) updateData.passwordHash = passwordHash
+      if (validated.employeeId !== undefined) updateData.employeeId = validated.employeeId
+
+      const updated = await tx.user.update({
+        where: { id },
+        data: updateData,
+        include: { employee: true },
       })
-      if (existingUser) return errorResponse('이미 사용 중인 사용자명입니다.', 'CONFLICT', 409)
-    }
-    if (validated.email) {
-      const existingUser = await prisma.user.findFirst({
-        where: { email: validated.email, id: { not: id } },
-      })
-      if (existingUser) return errorResponse('이미 사용 중인 이메일입니다.', 'CONFLICT', 409)
-    }
 
-    const updateData: any = {}
-    if (validated.username !== undefined) updateData.username = validated.username
-    if (validated.email !== undefined) updateData.email = validated.email
-    if (validated.name !== undefined) updateData.name = validated.name
-    if (validated.isActive !== undefined) updateData.isActive = validated.isActive
-    if (validated.password) updateData.passwordHash = await hash(validated.password, 12)
-    if (validated.employeeId !== undefined) updateData.employeeId = validated.employeeId
+      // 소속(부서/직위) 변경
+      if ((validated.departmentId !== undefined || validated.positionId !== undefined) && updated.employeeId) {
+        const employeeUpdateData: any = {}
+        if (validated.departmentId !== undefined) employeeUpdateData.departmentId = validated.departmentId
+        if (validated.positionId !== undefined) employeeUpdateData.positionId = validated.positionId
+        await tx.employee.update({
+          where: { id: updated.employeeId },
+          data: employeeUpdateData,
+        })
+      }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      include: { employee: true },
-    })
-
-    // 소속(부서/직위) 변경
-    if ((validated.departmentId !== undefined || validated.positionId !== undefined) && user.employeeId) {
-      const employeeUpdateData: any = {}
-      if (validated.departmentId !== undefined) employeeUpdateData.departmentId = validated.departmentId
-      if (validated.positionId !== undefined) employeeUpdateData.positionId = validated.positionId
-      await prisma.employee.update({
-        where: { id: user.employeeId },
-        data: employeeUpdateData,
-      })
-    }
-
-    if (validated.roleIds) {
-      await prisma.$transaction(async (tx) => {
+      if (validated.roleIds) {
         await tx.userRole.deleteMany({ where: { userId: id } })
         await tx.userRole.createMany({
-          data: validated.roleIds!.map((roleId) => ({ userId: id, roleId })),
+          data: validated.roleIds.map((roleId) => ({ userId: id, roleId })),
         })
-      })
-    }
+      }
+
+      return updated
+    })
 
     return successResponse({ id: user.id, email: user.email, name: user.name })
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith('CONFLICT:')) {
+      return errorResponse(error.message.slice(9), 'CONFLICT', 409)
+    }
     return handleApiError(error)
   }
 }

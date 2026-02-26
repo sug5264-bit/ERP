@@ -100,21 +100,17 @@ export async function PUT(req: NextRequest) {
         return errorResponse('대기 상태의 휴가만 승인할 수 있습니다.', 'BAD_REQUEST', 400)
       }
       const year = new Date(leave.startDate).getFullYear()
-      // 잔여 휴가일수 사전 체크
-      const balance = await prisma.leaveBalance.findFirst({
-        where: { employeeId: leave.employeeId, year },
-      })
-      if (!balance) {
-        return errorResponse('해당 연도의 휴가 잔여일 정보가 없습니다.', 'NOT_FOUND', 404)
-      }
-      if (Number(balance.remainingDays) < Number(leave.days)) {
-        return errorResponse(
-          `잔여 휴가일수(${balance.remainingDays}일)가 부족합니다.`,
-          'INSUFFICIENT_BALANCE',
-          400
-        )
-      }
+      // 잔여일 조회 + 상태 변경 + 잔여일 차감을 하나의 트랜잭션으로 처리
       const updated = await prisma.$transaction(async (tx) => {
+        const balance = await tx.leaveBalance.findFirst({
+          where: { employeeId: leave.employeeId, year },
+        })
+        if (!balance) {
+          throw new Error('NOT_FOUND:해당 연도의 휴가 잔여일 정보가 없습니다.')
+        }
+        if (Number(balance.remainingDays) < Number(leave.days)) {
+          throw new Error(`INSUFFICIENT:잔여 휴가일수(${balance.remainingDays}일)가 부족합니다.`)
+        }
         const result = await tx.leave.update({
           where: { id },
           data: { status: 'APPROVED' },
@@ -172,6 +168,14 @@ export async function PUT(req: NextRequest) {
 
     return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION', 400)
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.startsWith('NOT_FOUND:')) {
+        return errorResponse(error.message.slice(10), 'NOT_FOUND', 404)
+      }
+      if (error.message.startsWith('INSUFFICIENT:')) {
+        return errorResponse(error.message.slice(13), 'INSUFFICIENT_BALANCE', 400)
+      }
+    }
     return handleApiError(error)
   }
 }

@@ -78,7 +78,9 @@ export default function ApprovalPendingPage() {
     onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
       const d = res?.data || res
-      toast.success(`${d.successCount}건 처리 완료${d.failCount > 0 ? `, ${d.failCount}건 실패` : ''}`)
+      const successCount = d?.successCount ?? 0
+      const failCount = d?.failCount ?? 0
+      toast.success(`${successCount}건 처리 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
       setSelectedRows([])
     },
     onError: (err: Error) => toast.error(err.message),

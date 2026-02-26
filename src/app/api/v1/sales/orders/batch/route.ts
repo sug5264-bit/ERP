@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
         if (actualCancellable.length > 0) {
           try {
             const result = await prisma.salesOrder.updateMany({
-              where: { id: { in: actualCancellable.map((o) => o.id) } },
+              where: { id: { in: actualCancellable.map((o) => o.id) }, status: { notIn: ['CANCELLED', 'COMPLETED'] } },
               data: { status: 'CANCELLED' },
             })
             success += result.count
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       if (completable.length > 0) {
         try {
           const result = await prisma.salesOrder.updateMany({
-            where: { id: { in: completable.map((o) => o.id) } },
+            where: { id: { in: completable.map((o) => o.id) }, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
             data: { status: 'COMPLETED', dispatchInfo, receivedBy },
           })
           success += result.count
