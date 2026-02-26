@@ -11,20 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/format'
 import { toast } from 'sonner'
 import { Pencil, Trash2 } from 'lucide-react'
@@ -123,8 +111,7 @@ export default function UsersPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) =>
-      api.put(`/admin/users/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/admin/users/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setEditOpen(false)
@@ -219,9 +206,7 @@ export default function UsersPage() {
   }
 
   const toggleRole = (roleId: string) => {
-    setFormRoleIds((prev) =>
-      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]
-    )
+    setFormRoleIds((prev) => (prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId]))
   }
 
   const columns: ColumnDef<UserRow>[] = [
@@ -270,10 +255,7 @@ export default function UsersPage() {
     {
       accessorKey: 'lastLoginAt',
       header: '최종 로그인',
-      cell: ({ row }) =>
-        row.original.lastLoginAt
-          ? formatDateTime(row.original.lastLoginAt)
-          : '-',
+      cell: ({ row }) => (row.original.lastLoginAt ? formatDateTime(row.original.lastLoginAt) : '-'),
     },
     {
       id: 'actions',
@@ -300,7 +282,7 @@ export default function UsersPage() {
               openDelete(row.original)
             }}
           >
-            <Trash2 className="h-4 w-4 text-destructive" />
+            <Trash2 className="text-destructive h-4 w-4" />
           </Button>
         </div>
       ),
@@ -309,10 +291,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="사용자관리"
-        description="시스템 사용자 계정을 관리합니다"
-      />
+      <PageHeader title="사용자관리" description="시스템 사용자 계정을 관리합니다" />
       <div className="flex justify-end">
         <Button onClick={openCreate}>사용자 추가</Button>
       </div>
@@ -332,7 +311,9 @@ export default function UsersPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>아이디 <span className="text-destructive">*</span></Label>
+              <Label>
+                아이디 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 placeholder="영문, 숫자, 점, 밑줄"
                 value={formUsername}
@@ -341,7 +322,9 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>이름 <span className="text-destructive">*</span></Label>
+              <Label>
+                이름 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 placeholder="이름"
                 value={formName}
@@ -350,7 +333,9 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>이메일 <span className="text-destructive">*</span></Label>
+              <Label>
+                이메일 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 type="email"
                 placeholder="user@erp.com"
@@ -360,7 +345,9 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>비밀번호 <span className="text-destructive">*</span></Label>
+              <Label>
+                비밀번호 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 type="password"
                 placeholder="6자 이상"
@@ -370,14 +357,13 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>역할 <span className="text-destructive">*</span></Label>
-              <div className="space-y-2 rounded-md border p-3 max-h-48 overflow-y-auto">
+              <Label>
+                역할 <span className="text-destructive">*</span>
+              </Label>
+              <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
                 {roles.map((role) => (
                   <div key={role.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={formRoleIds.includes(role.id)}
-                      onCheckedChange={() => toggleRole(role.id)}
-                    />
+                    <Checkbox checked={formRoleIds.includes(role.id)} onCheckedChange={() => toggleRole(role.id)} />
                     <span className="text-sm">{role.description || role.name}</span>
                   </div>
                 ))}
@@ -404,25 +390,15 @@ export default function UsersPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>아이디</Label>
-              <Input
-                value={formUsername}
-                onChange={(e) => setFormUsername(e.target.value)}
-              />
+              <Input value={formUsername} onChange={(e) => setFormUsername(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>이름</Label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-              />
+              <Input value={formName} onChange={(e) => setFormName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>이메일</Label>
-              <Input
-                type="email"
-                value={formEmail}
-                onChange={(e) => setFormEmail(e.target.value)}
-              />
+              <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>비밀번호 (변경 시에만 입력)</Label>
@@ -434,16 +410,13 @@ export default function UsersPage() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox
-                checked={formIsActive}
-                onCheckedChange={(checked) => setFormIsActive(checked === true)}
-              />
+              <Checkbox checked={formIsActive} onCheckedChange={(checked) => setFormIsActive(checked === true)} />
               <Label>활성 상태</Label>
             </div>
             {selectedUser?.employee && (
               <div className="space-y-2">
                 <Label>소속 변경</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Select value={formDepartmentId} onValueChange={setFormDepartmentId}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="부서 선택" />
@@ -473,13 +446,10 @@ export default function UsersPage() {
             )}
             <div className="space-y-2">
               <Label>역할</Label>
-              <div className="space-y-2 rounded-md border p-3 max-h-48 overflow-y-auto">
+              <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
                 {roles.map((role) => (
                   <div key={role.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={formRoleIds.includes(role.id)}
-                      onCheckedChange={() => toggleRole(role.id)}
-                    />
+                    <Checkbox checked={formRoleIds.includes(role.id)} onCheckedChange={() => toggleRole(role.id)} />
                     <span className="text-sm">{role.description || role.name}</span>
                   </div>
                 ))}
@@ -503,7 +473,7 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle>사용자 삭제</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             <strong>{selectedUser?.name}</strong> ({selectedUser?.username}) 사용자를 삭제하시겠습니까?
             <br />이 작업은 되돌릴 수 없습니다.
           </p>
@@ -511,11 +481,7 @@ export default function UsersPage() {
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
               취소
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteMutation.isPending}>
               {deleteMutation.isPending ? '삭제 중...' : '삭제'}
             </Button>
           </DialogFooter>

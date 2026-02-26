@@ -187,7 +187,7 @@ export default function ApprovalDraftPage() {
       case 'EXPENDITURE':
         return (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>
                   지출목적 <span className="text-destructive">*</span>
@@ -208,7 +208,7 @@ export default function ApprovalDraftPage() {
       case 'BUSINESS_TRIP':
         return (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>
                   출장목적 <span className="text-destructive">*</span>
@@ -229,7 +229,7 @@ export default function ApprovalDraftPage() {
       case 'OVERTIME':
         return (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>
                   근무사유 <span className="text-destructive">*</span>
@@ -250,7 +250,7 @@ export default function ApprovalDraftPage() {
       case 'PURCHASE':
         return (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>
                   구매목적 <span className="text-destructive">*</span>
@@ -286,7 +286,7 @@ export default function ApprovalDraftPage() {
       case 'COOPERATION':
         return (
           <>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>협조요청부서</Label>
                 <Input name="department" placeholder="요청 부서명" />
@@ -531,7 +531,7 @@ export default function ApprovalDraftPage() {
           {selectedDoc && (
             <div className="space-y-4">
               {/* 문서정보 */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <span className="text-muted-foreground">문서번호:</span>{' '}
                   <span className="font-mono">{selectedDoc.documentNo}</span>

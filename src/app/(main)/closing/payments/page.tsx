@@ -11,20 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 
@@ -167,9 +155,7 @@ export default function PaymentsPage() {
     {
       accessorKey: 'voucherNo',
       header: '전표번호',
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">{row.original.voucherNo}</span>
-      ),
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.voucherNo}</span>,
     },
     {
       accessorKey: 'voucherDate',
@@ -189,9 +175,7 @@ export default function PaymentsPage() {
     {
       accessorKey: 'totalAmount',
       header: '지급금액(원)',
-      cell: ({ row }) => (
-        <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span>
-      ),
+      cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span>,
     },
     {
       accessorKey: 'status',
@@ -219,17 +203,16 @@ export default function PaymentsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="대금지급"
-        description="거래처 대금 지급 내역을 관리합니다"
-      />
+      <PageHeader title="대금지급" description="거래처 대금 지급 내역을 관리합니다" />
 
       <div className="flex items-end justify-between">
         <div className="flex items-end gap-4">
           <div className="space-y-2">
             <Label>조회유형</Label>
             <Select value={dateType} onValueChange={(v: 'monthly' | 'daily') => setDateType(v)}>
-              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-28">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="monthly">월별</SelectItem>
                 <SelectItem value="daily">일자별</SelectItem>
@@ -246,7 +229,9 @@ export default function PaymentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                      <SelectItem key={y} value={y.toString()}>{y}년</SelectItem>
+                      <SelectItem key={y} value={y.toString()}>
+                        {y}년
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -259,7 +244,9 @@ export default function PaymentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <SelectItem key={m} value={m.toString()}>{m}월</SelectItem>
+                      <SelectItem key={m} value={m.toString()}>
+                        {m}월
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -269,11 +256,16 @@ export default function PaymentsPage() {
           {dateType === 'daily' && (
             <div className="space-y-2">
               <Label>일자</Label>
-              <Input type="date" className="w-44" value={filterDate} onChange={e => setFilterDate(e.target.value)} />
+              <Input type="date" className="w-44" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
             </div>
           )}
         </div>
-        <Button onClick={() => { resetForm(); setCreateOpen(true) }}>
+        <Button
+          onClick={() => {
+            resetForm()
+            setCreateOpen(true)
+          }}
+        >
           대금지급 등록
         </Button>
       </div>
@@ -281,11 +273,11 @@ export default function PaymentsPage() {
       {/* 요약 */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">총 지급건수</p>
+          <p className="text-muted-foreground text-sm">총 지급건수</p>
           <p className="text-2xl font-bold">{rows.length}건</p>
         </div>
         <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">총 지급금액</p>
+          <p className="text-muted-foreground text-sm">총 지급금액</p>
           <p className="text-2xl font-bold">{formatCurrency(totalAmount)}</p>
         </div>
       </div>
@@ -300,13 +292,15 @@ export default function PaymentsPage() {
 
       {/* 대금지급 등록 Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle>대금지급 등록</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>거래처 <span className="text-destructive">*</span></Label>
+              <Label>
+                거래처 <span className="text-destructive">*</span>
+              </Label>
               <Select value={formPartnerId} onValueChange={setFormPartnerId}>
                 <SelectTrigger>
                   <SelectValue placeholder="거래처 선택" />
@@ -321,7 +315,9 @@ export default function PaymentsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>지급금액 <span className="text-destructive">*</span></Label>
+              <Label>
+                지급금액 <span className="text-destructive">*</span>
+              </Label>
               <Input
                 type="number"
                 placeholder="0"
@@ -334,12 +330,10 @@ export default function PaymentsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>지급일 <span className="text-destructive">*</span></Label>
-              <Input
-                type="date"
-                value={formDate}
-                onChange={(e) => setFormDate(e.target.value)}
-              />
+              <Label>
+                지급일 <span className="text-destructive">*</span>
+              </Label>
+              <Input type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>적요</Label>
@@ -351,7 +345,9 @@ export default function PaymentsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              취소
+            </Button>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
               {createMutation.isPending ? '등록 중...' : '지급 등록'}
             </Button>
@@ -366,7 +362,7 @@ export default function PaymentsPage() {
             <DialogTitle>지급 상세 - {selectedPayment?.voucherNo}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
                 <span className="text-muted-foreground">거래처: </span>
                 <span className="font-medium">{selectedPayment?.partner?.partnerName || '-'}</span>
@@ -405,13 +401,9 @@ export default function PaymentsPage() {
                   {selectedPayment?.details.map((d, i) => (
                     <tr key={i} className="border-t">
                       <td className="px-3 py-2">{d.account}</td>
-                      <td className="px-3 py-2 text-right">
-                        {d.debit > 0 ? formatCurrency(d.debit) : '-'}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {d.credit > 0 ? formatCurrency(d.credit) : '-'}
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">{d.description || '-'}</td>
+                      <td className="px-3 py-2 text-right">{d.debit > 0 ? formatCurrency(d.debit) : '-'}</td>
+                      <td className="px-3 py-2 text-right">{d.credit > 0 ? formatCurrency(d.credit) : '-'}</td>
+                      <td className="text-muted-foreground px-3 py-2">{d.description || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -11,12 +11,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency } from '@/lib/format'
 
 const ACCOUNT_TYPE_MAP: Record<string, string> = {
-  ASSET: '자산', LIABILITY: '부채', EQUITY: '자본', REVENUE: '수익', EXPENSE: '비용',
+  ASSET: '자산',
+  LIABILITY: '부채',
+  EQUITY: '자본',
+  REVENUE: '수익',
+  EXPENSE: '비용',
 }
 
 interface AccountRow {
-  id: string; code: string; nameKo: string; accountType: string
-  totalDebit: number; totalCredit: number
+  id: string
+  code: string
+  nameKo: string
+  accountType: string
+  totalDebit: number
+  totalCredit: number
 }
 
 export default function FinancialStatementsPage() {
@@ -36,7 +44,8 @@ export default function FinancialStatementsPage() {
 
   const getByType = (type: string) => accounts.filter((a) => a.accountType === type)
   const getBalance = (row: AccountRow) => {
-    if (['ASSET', 'EXPENSE'].includes(row.accountType)) return Math.round((Number(row.totalDebit) - Number(row.totalCredit)) * 100) / 100
+    if (['ASSET', 'EXPENSE'].includes(row.accountType))
+      return Math.round((Number(row.totalDebit) - Number(row.totalCredit)) * 100) / 100
     return Math.round((Number(row.totalCredit) - Number(row.totalDebit)) * 100) / 100
   }
   const sumBalance = (type: string) => getByType(type).reduce((s, r) => s + getBalance(r), 0)
@@ -53,18 +62,22 @@ export default function FinancialStatementsPage() {
     const total = items.reduce((s, r) => s + getBalance(r), 0)
     return (
       <div className="space-y-2">
-        <h3 className="font-semibold text-lg border-b pb-1">{label}</h3>
+        <h3 className="border-b pb-1 text-lg font-semibold">{label}</h3>
         {items.length === 0 ? (
           <div className="flex items-center justify-center py-6">
-            <p className="text-sm text-muted-foreground">해당 데이터가 없습니다.</p>
+            <p className="text-muted-foreground text-sm">해당 데이터가 없습니다.</p>
           </div>
-        ) : items.map((row) => (
-          <div key={row.id} className="flex justify-between text-sm py-1">
-            <span>{row.code} {row.nameKo}</span>
-            <span className="font-mono">{formatCurrency(getBalance(row))}</span>
-          </div>
-        ))}
-        <div className="flex justify-between font-medium border-t pt-1">
+        ) : (
+          items.map((row) => (
+            <div key={row.id} className="flex justify-between py-1 text-sm">
+              <span>
+                {row.code} {row.nameKo}
+              </span>
+              <span className="font-mono">{formatCurrency(getBalance(row))}</span>
+            </div>
+          ))
+        )}
+        <div className="flex justify-between border-t pt-1 font-medium">
           <span>{label} 합계</span>
           <span className="font-mono">{formatCurrency(total)}</span>
         </div>
@@ -82,14 +95,59 @@ export default function FinancialStatementsPage() {
         <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
       </div>
 
-      {!isLoading && (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총자산</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalAssets)}</p></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총부채</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalLiabilities)}</p></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">총수익</CardTitle></CardHeader><CardContent><p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p></CardContent></Card>
-          <Card><CardHeader className="pb-2"><CardTitle className="text-sm">당기순이익</CardTitle></CardHeader><CardContent><p className={`text-xl font-bold ${netIncome < 0 ? 'text-destructive' : ''}`}>{formatCurrency(netIncome)}</p></CardContent></Card>
-        </div>
-      )}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {isLoading ? (
+          <>
+            {['총자산', '총부채', '총수익', '당기순이익'].map((label) => (
+              <Card key={label}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{label}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted h-7 w-24 animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">총자산</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{formatCurrency(totalAssets)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">총부채</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{formatCurrency(totalLiabilities)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">총수익</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{formatCurrency(totalRevenue)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">당기순이익</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-xl font-bold ${netIncome < 0 ? 'text-destructive' : ''}`}>
+                  {formatCurrency(netIncome)}
+                </p>
+              </CardContent>
+            </Card>
+          </>
+        )}
+      </div>
 
       <Tabs defaultValue="bs" className="space-y-4">
         <TabsList>
@@ -101,9 +159,9 @@ export default function FinancialStatementsPage() {
             <div className="space-y-4">
               {Array.from({ length: 2 }).map((_, i) => (
                 <Card key={`skeleton-bs-${i}`}>
-                  <CardContent className="p-6 space-y-3">
+                  <CardContent className="space-y-3 p-6">
                     {Array.from({ length: 3 }).map((_, j) => (
-                      <div key={`skel-${i}-${j}`} className="h-4 animate-pulse rounded bg-muted" />
+                      <div key={`skel-${i}-${j}`} className="bg-muted h-4 animate-pulse rounded" />
                     ))}
                   </CardContent>
                 </Card>
@@ -112,15 +170,19 @@ export default function FinancialStatementsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <Card>
-                <CardHeader><CardTitle>자산</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle>자산</CardTitle>
+                </CardHeader>
                 <CardContent>{renderSection('ASSET', '자산')}</CardContent>
               </Card>
               <Card>
-                <CardHeader><CardTitle>부채 및 자본</CardTitle></CardHeader>
+                <CardHeader>
+                  <CardTitle>부채 및 자본</CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-6">
                   {renderSection('LIABILITY', '부채')}
                   {renderSection('EQUITY', '자본')}
-                  <div className="flex justify-between font-bold border-t-2 pt-2">
+                  <div className="flex justify-between border-t-2 pt-2 font-bold">
                     <span>부채 및 자본 합계</span>
                     <span className="font-mono">{formatCurrency(totalLiabilities + totalEquity)}</span>
                   </div>
@@ -132,19 +194,23 @@ export default function FinancialStatementsPage() {
         <TabsContent value="is">
           {isLoading ? (
             <Card>
-              <CardContent className="p-6 space-y-3">
+              <CardContent className="space-y-3 p-6">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={`skel-is-${i}`} className="h-4 animate-pulse rounded bg-muted" />
+                  <div key={`skel-is-${i}`} className="bg-muted h-4 animate-pulse rounded" />
                 ))}
               </CardContent>
             </Card>
           ) : (
             <Card>
-              <CardHeader><CardTitle>손익계산서</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle>손익계산서</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-6">
                 {renderSection('REVENUE', '수익')}
                 {renderSection('EXPENSE', '비용')}
-                <div className={`flex justify-between font-bold border-t-2 pt-2 text-lg ${netIncome < 0 ? 'text-destructive' : ''}`}>
+                <div
+                  className={`flex justify-between border-t-2 pt-2 text-lg font-bold ${netIncome < 0 ? 'text-destructive' : ''}`}
+                >
                   <span>당기순이익</span>
                   <span className="font-mono">{formatCurrency(netIncome)}</span>
                 </div>

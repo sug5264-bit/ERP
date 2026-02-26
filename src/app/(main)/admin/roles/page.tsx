@@ -11,13 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Pencil, Trash2, Shield } from 'lucide-react'
 
@@ -262,7 +256,7 @@ export default function RolesPage() {
       header: '역할명',
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <Shield className="h-4 w-4 text-muted-foreground" />
+          <Shield className="text-muted-foreground h-4 w-4" />
           <span className="font-medium">{row.original.name}</span>
         </div>
       ),
@@ -275,9 +269,7 @@ export default function RolesPage() {
     {
       id: 'permCount',
       header: '권한',
-      cell: ({ row }) => (
-        <Badge variant="secondary">{row.original.permissions.length}개</Badge>
-      ),
+      cell: ({ row }) => <Badge variant="secondary">{row.original.permissions.length}개</Badge>,
     },
     {
       id: 'userCount',
@@ -303,7 +295,7 @@ export default function RolesPage() {
           </Button>
           {!row.original.isSystem && (
             <Button variant="ghost" size="icon" aria-label="삭제" onClick={() => openDelete(row.original)}>
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="text-destructive h-4 w-4" />
             </Button>
           )}
         </div>
@@ -314,7 +306,7 @@ export default function RolesPage() {
   const PermissionMatrix = () => (
     <div className="max-h-[50vh] overflow-auto rounded-md border">
       <table className="w-full text-sm">
-        <thead className="sticky top-0 bg-muted">
+        <thead className="bg-muted sticky top-0">
           <tr>
             <th className="px-3 py-2 text-left font-medium">모듈</th>
             {allActions.map((action) => (
@@ -328,10 +320,7 @@ export default function RolesPage() {
           {modulePermissions.map((group) => {
             const isParent = !group.module.includes('.')
             return (
-              <tr
-                key={group.module}
-                className={isParent ? 'bg-muted/30 border-t' : 'hover:bg-muted/20'}
-              >
+              <tr key={group.module} className={isParent ? 'bg-muted/30 border-t' : 'hover:bg-muted/20'}>
                 <td className="px-3 py-1.5">
                   <button
                     type="button"
@@ -343,7 +332,12 @@ export default function RolesPage() {
                 </td>
                 {allActions.map((action) => {
                   const perm = group.actions.find((a) => a.action === action)
-                  if (!perm) return <td key={action} className="px-3 py-1.5 text-center">-</td>
+                  if (!perm)
+                    return (
+                      <td key={action} className="px-3 py-1.5 text-center">
+                        -
+                      </td>
+                    )
                   return (
                     <td key={action} className="px-3 py-1.5 text-center">
                       <Checkbox
@@ -363,10 +357,7 @@ export default function RolesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="권한관리"
-        description="사용자 역할 및 모듈별 권한을 관리합니다"
-      />
+      <PageHeader title="권한관리" description="사용자 역할 및 모듈별 권한을 관리합니다" />
       <div className="flex justify-end">
         <Button onClick={openCreate}>역할 추가</Button>
       </div>
@@ -381,19 +372,17 @@ export default function RolesPage() {
 
       {/* 생성 Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-3xl">
           <DialogHeader>
             <DialogTitle>역할 추가</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>역할명 <span className="text-destructive">*</span></Label>
-                <Input
-                  placeholder="예: 회계담당자"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                />
+                <Label>
+                  역할명 <span className="text-destructive">*</span>
+                </Label>
+                <Input placeholder="예: 회계담당자" value={formName} onChange={(e) => setFormName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>설명</Label>
@@ -406,14 +395,17 @@ export default function RolesPage() {
             </div>
             <div className="space-y-2">
               <Label>권한 설정</Label>
-              <p className="text-xs text-muted-foreground">
-                모듈명을 클릭하면 해당 모듈의 모든 권한을 선택/해제합니다. 상위 모듈 권한이 있으면 모든 하위 페이지에 접근할 수 있습니다.
+              <p className="text-muted-foreground text-xs">
+                모듈명을 클릭하면 해당 모듈의 모든 권한을 선택/해제합니다. 상위 모듈 권한이 있으면 모든 하위 페이지에
+                접근할 수 있습니다.
               </p>
               <PermissionMatrix />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              취소
+            </Button>
             <Button onClick={handleCreate} disabled={createMutation.isPending}>
               {createMutation.isPending ? '생성 중...' : '생성'}
             </Button>
@@ -423,12 +415,12 @@ export default function RolesPage() {
 
       {/* 수정 Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-3xl">
           <DialogHeader>
             <DialogTitle>역할 수정 - {selectedRole?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>역할명</Label>
                 <Input
@@ -439,27 +431,25 @@ export default function RolesPage() {
               </div>
               <div className="space-y-2">
                 <Label>설명</Label>
-                <Input
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                />
+                <Input value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>권한 설정</Label>
-                <span className="text-xs text-muted-foreground">
-                  선택된 권한: {formPermissionIds.size}개
-                </span>
+                <span className="text-muted-foreground text-xs">선택된 권한: {formPermissionIds.size}개</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                모듈명을 클릭하면 해당 모듈의 모든 권한을 선택/해제합니다. 상위 모듈 권한이 있으면 모든 하위 페이지에 접근할 수 있습니다.
+              <p className="text-muted-foreground text-xs">
+                모듈명을 클릭하면 해당 모듈의 모든 권한을 선택/해제합니다. 상위 모듈 권한이 있으면 모든 하위 페이지에
+                접근할 수 있습니다.
               </p>
               <PermissionMatrix />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>
+              취소
+            </Button>
             <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
               {updateMutation.isPending ? '저장 중...' : '저장'}
             </Button>
@@ -473,17 +463,19 @@ export default function RolesPage() {
           <DialogHeader>
             <DialogTitle>역할 삭제</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             <strong>{selectedRole?.name}</strong> 역할을 삭제하시겠습니까?
             <br />이 작업은 되돌릴 수 없습니다.
           </p>
           {selectedRole && selectedRole.userCount > 0 && (
-            <p className="text-sm text-destructive">
+            <p className="text-destructive text-sm">
               현재 {selectedRole.userCount}명의 사용자에게 할당되어 있어 삭제할 수 없습니다.
             </p>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              취소
+            </Button>
             <Button
               variant="destructive"
               onClick={() => selectedRole && deleteMutation.mutate(selectedRole.id)}

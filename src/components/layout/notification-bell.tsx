@@ -105,7 +105,7 @@ export function NotificationBell() {
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            <span className="bg-destructive absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -137,7 +137,7 @@ export function NotificationBell() {
                 <div
                   key={notif.id}
                   className={`hover:bg-muted/50 flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
-                    !notif.isRead ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                    !notif.isRead ? 'bg-primary/5' : ''
                   }`}
                   onClick={() => handleClick(notif)}
                 >
@@ -145,7 +145,7 @@ export function NotificationBell() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-medium">{notif.title}</p>
-                      {!notif.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+                      {!notif.isRead && <span className="bg-primary h-2 w-2 shrink-0 rounded-full" />}
                     </div>
                     <p className="text-muted-foreground mt-0.5 truncate text-xs">{notif.message}</p>
                     <p className="text-muted-foreground mt-1 text-xs">{formatDistanceToNow(notif.createdAt)}</p>

@@ -229,7 +229,7 @@ export default function RecruitmentPage() {
                 </Label>
                 <Input name="title" required aria-required="true" placeholder="채용공고 제목" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>
                     부서 <span className="text-destructive">*</span>
@@ -265,7 +265,7 @@ export default function RecruitmentPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>모집인원</Label>
                   <Input name="requiredCount" type="number" defaultValue={1} min={1} />
@@ -313,7 +313,7 @@ export default function RecruitmentPage() {
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <span className="text-muted-foreground">부서:</span> {getDeptName(selected.departmentId)}
                 </div>

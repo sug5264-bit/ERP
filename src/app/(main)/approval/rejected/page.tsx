@@ -90,7 +90,7 @@ export default function RejectedPage() {
           </DialogHeader>
           {selectedDoc && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div>
                   <span className="text-muted-foreground">문서번호:</span>{' '}
                   <span className="font-mono">{selectedDoc.documentNo}</span>

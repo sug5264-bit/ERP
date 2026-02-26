@@ -103,61 +103,81 @@ export default function StockStatusPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-muted-foreground text-xs sm:text-sm">품목수</CardTitle>
-            <div className="bg-muted rounded-md p-1.5">
-              <Package className="text-muted-foreground h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-bold sm:text-xl">
-              {totalItems}
-              <span className="text-muted-foreground ml-0.5 text-xs font-normal">종</span>
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-muted-foreground text-xs sm:text-sm">총 현재고</CardTitle>
-            <div className="bg-status-info-muted rounded-md p-1.5">
-              <Warehouse className="text-status-info h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-status-info text-lg font-bold sm:text-xl">{totalCurrentQty.toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-muted-foreground text-xs sm:text-sm">총 가용재고</CardTitle>
-            <div
-              className={`rounded-md p-1.5 ${totalAvailableQty < totalCurrentQty ? 'bg-status-warning-muted' : 'bg-status-success-muted'}`}
-            >
-              <TrendingDown
-                className={`h-4 w-4 ${totalAvailableQty < totalCurrentQty ? 'text-status-warning' : 'text-status-success'}`}
-              />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p
-              className={`text-lg font-bold sm:text-xl ${totalAvailableQty < totalCurrentQty ? 'text-status-warning' : 'text-status-success'}`}
-            >
-              {totalAvailableQty.toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-muted-foreground text-xs sm:text-sm">총재고가치</CardTitle>
-            <div className="bg-muted rounded-md p-1.5">
-              <Banknote className="text-muted-foreground h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-bold sm:text-xl">{formatCurrency(totalValue)}</p>
-          </CardContent>
-        </Card>
+        {isLoading ? (
+          <>
+            {['품목수', '총 현재고', '총 가용재고', '총재고가치'].map((label) => (
+              <Card key={label}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-muted-foreground text-xs sm:text-sm">{label}</CardTitle>
+                  <div className="bg-muted rounded-md p-1.5">
+                    <div className="h-4 w-4" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted h-7 w-20 animate-pulse rounded" />
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-muted-foreground text-xs sm:text-sm">품목수</CardTitle>
+                <div className="bg-muted rounded-md p-1.5">
+                  <Package className="text-muted-foreground h-4 w-4" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg font-bold sm:text-xl">
+                  {totalItems}
+                  <span className="text-muted-foreground ml-0.5 text-xs font-normal">종</span>
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-muted-foreground text-xs sm:text-sm">총 현재고</CardTitle>
+                <div className="bg-status-info-muted rounded-md p-1.5">
+                  <Warehouse className="text-status-info h-4 w-4" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-status-info text-lg font-bold sm:text-xl">{totalCurrentQty.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-muted-foreground text-xs sm:text-sm">총 가용재고</CardTitle>
+                <div
+                  className={`rounded-md p-1.5 ${totalAvailableQty < totalCurrentQty ? 'bg-status-warning-muted' : 'bg-status-success-muted'}`}
+                >
+                  <TrendingDown
+                    className={`h-4 w-4 ${totalAvailableQty < totalCurrentQty ? 'text-status-warning' : 'text-status-success'}`}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p
+                  className={`text-lg font-bold sm:text-xl ${totalAvailableQty < totalCurrentQty ? 'text-status-warning' : 'text-status-success'}`}
+                >
+                  {totalAvailableQty.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-muted-foreground text-xs sm:text-sm">총재고가치</CardTitle>
+                <div className="bg-muted rounded-md p-1.5">
+                  <Banknote className="text-muted-foreground h-4 w-4" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-lg font-bold sm:text-xl">{formatCurrency(totalValue)}</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Filters + View toggle */}
