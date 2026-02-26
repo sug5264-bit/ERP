@@ -83,7 +83,7 @@ export default function BoardPage() {
                 {(notices?.data || []).slice(0, 5).map((p: any) => (
                   <li key={p.id} className="flex items-center justify-between border-b pb-2 text-sm">
                     <span className="flex-1 truncate">
-                      {p.isPinned && <span className="mr-1 text-red-500">[필독]</span>}
+                      {p.isPinned && <span className="text-destructive mr-1">[필독]</span>}
                       {p.title}
                     </span>
                     <span className="text-muted-foreground ml-2 text-xs">{formatDate(p.createdAt)}</span>

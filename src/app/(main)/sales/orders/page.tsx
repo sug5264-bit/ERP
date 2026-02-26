@@ -1206,7 +1206,7 @@ export default function OrdersPage() {
 
                 {/* 배송 정보 (보내는사람) - 노란 영역 */}
                 <div className="bg-status-warning-muted rounded-md border border-[var(--color-warning)]/20 p-2">
-                  <label className="mb-1.5 block text-[11px] font-medium text-yellow-700 dark:text-yellow-400">
+                  <label className="text-status-warning mb-1.5 block text-[11px] font-medium">
                     보내는사람 (업체정보 자동입력)
                   </label>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
@@ -1563,7 +1563,7 @@ export default function OrdersPage() {
                 <span>
                   전체: <strong>{trackingResult.total}건</strong>
                 </span>
-                <span className="text-green-600">
+                <span className="text-status-success">
                   성공: <strong>{trackingResult.success}건</strong>
                 </span>
                 <span className="text-status-danger">

@@ -168,7 +168,7 @@ export function ExcelImportDialog({
             <div className="space-y-2 rounded-md border p-4">
               <p className="text-sm font-medium">업로드 결과</p>
               <div className="flex gap-4 text-sm">
-                <span className="flex items-center gap-1 text-green-600">
+                <span className="text-status-success flex items-center gap-1">
                   <CheckCircle2 className="h-4 w-4" /> 성공: {result.success}건
                 </span>
                 {result.failed > 0 && (
