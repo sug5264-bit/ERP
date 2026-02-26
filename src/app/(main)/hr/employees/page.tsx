@@ -266,22 +266,22 @@ export default function EmployeesPage() {
       <PageHeader title="사원관리" description="사원 정보를 등록하고 관리합니다" />
 
       {/* 요약 통계 */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <div className="bg-muted/30 rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">전체</p>
-          <p className="text-sm font-bold sm:text-lg">{empSummary.total}명</p>
+          <p className="mt-0.5 text-sm font-bold sm:text-lg">{empSummary.total}명</p>
         </div>
-        <div className="rounded-lg border bg-green-50 p-3 text-center sm:p-4 dark:bg-green-950/30">
+        <div className="bg-status-success-muted rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">재직</p>
-          <p className="text-sm font-bold text-green-600 sm:text-lg dark:text-green-500">{empSummary.active}명</p>
+          <p className="text-status-success mt-0.5 text-sm font-bold sm:text-lg">{empSummary.active}명</p>
         </div>
-        <div className="rounded-lg border bg-yellow-50 p-3 text-center sm:p-4 dark:bg-yellow-950/30">
+        <div className="bg-status-warning-muted rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">휴직</p>
-          <p className="text-sm font-bold text-yellow-600 sm:text-lg dark:text-yellow-500">{empSummary.onLeave}명</p>
+          <p className="text-status-warning mt-0.5 text-sm font-bold sm:text-lg">{empSummary.onLeave}명</p>
         </div>
-        <div className="rounded-lg border bg-red-50 p-3 text-center sm:p-4 dark:bg-red-950/30">
+        <div className="bg-status-danger-muted rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">퇴직</p>
-          <p className="text-sm font-bold text-red-600 sm:text-lg dark:text-red-500">{empSummary.resigned}명</p>
+          <p className="text-status-danger mt-0.5 text-sm font-bold sm:text-lg">{empSummary.resigned}명</p>
         </div>
       </div>
 
@@ -350,6 +350,9 @@ export default function EmployeesPage() {
           <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
             <DialogHeader>
               <DialogTitle>신규 사원 등록</DialogTitle>
+              <p className="text-muted-foreground text-xs">
+                <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+              </p>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

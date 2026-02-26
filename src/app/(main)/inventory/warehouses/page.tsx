@@ -101,6 +101,9 @@ export default function WarehousesPage() {
           <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>창고 등록</DialogTitle>
+              <p className="text-muted-foreground text-xs">
+                <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+              </p>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
@@ -188,6 +191,9 @@ export default function WarehousesPage() {
                       <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
                         <DialogHeader>
                           <DialogTitle>{wh.name} - 구역 추가</DialogTitle>
+                          <p className="text-muted-foreground text-xs">
+                            <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+                          </p>
                         </DialogHeader>
                         <form onSubmit={handleCreateZone} className="space-y-4">
                           <div className="space-y-2">

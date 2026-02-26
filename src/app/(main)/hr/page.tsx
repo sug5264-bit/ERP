@@ -32,43 +32,63 @@ export default function HRPage() {
   const openRecruits = recruitData?.meta?.totalCount ?? 0
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <h1 className="text-xl sm:text-2xl font-bold tracking-tight">인사 모듈</h1>
-      <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+    <div className="animate-fade-in-up space-y-4 sm:space-y-6">
+      <h1 className="text-lg font-bold tracking-tight sm:text-2xl">인사 모듈</h1>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">총 사원 수</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium sm:text-sm">총 사원 수</CardTitle>
+            <div className="bg-muted hidden rounded-md p-1.5 sm:block">
+              <Users className="text-muted-foreground h-3.5 w-3.5" />
+            </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <p className="text-lg sm:text-2xl font-bold">{totalEmployees}명</p>
+            <p className="text-lg font-bold sm:text-2xl">
+              {totalEmployees}
+              <span className="text-muted-foreground ml-0.5 text-sm font-normal">명</span>
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">금일 출근</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium sm:text-sm">금일 출근</CardTitle>
+            <div className="bg-status-success-muted hidden rounded-md p-1.5 sm:block">
+              <Clock className="text-status-success h-3.5 w-3.5" />
+            </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <p className="text-lg sm:text-2xl font-bold">{todayAttendance}명</p>
+            <p className="text-lg font-bold sm:text-2xl">
+              {todayAttendance}
+              <span className="text-muted-foreground ml-0.5 text-sm font-normal">명</span>
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">휴가 승인대기</CardTitle>
-            <CalendarOff className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium sm:text-sm">휴가 승인대기</CardTitle>
+            <div className="bg-status-warning-muted hidden rounded-md p-1.5 sm:block">
+              <CalendarOff className="text-status-warning h-3.5 w-3.5" />
+            </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <p className={`text-lg sm:text-2xl font-bold ${pendingLeaves > 0 ? 'text-orange-600 dark:text-orange-500' : ''}`}>{pendingLeaves}건</p>
+            <p className={`text-lg font-bold sm:text-2xl ${pendingLeaves > 0 ? 'text-status-warning' : ''}`}>
+              {pendingLeaves}
+              <span className="text-muted-foreground ml-0.5 text-sm font-normal">건</span>
+            </p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-1 sm:pb-2 p-3 sm:p-6">
-            <CardTitle className="text-xs sm:text-sm font-medium">진행중 채용</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground hidden sm:block" />
+          <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium sm:text-sm">진행중 채용</CardTitle>
+            <div className="bg-status-info-muted hidden rounded-md p-1.5 sm:block">
+              <Briefcase className="text-status-info h-3.5 w-3.5" />
+            </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <p className="text-lg sm:text-2xl font-bold">{openRecruits}건</p>
+            <p className="text-lg font-bold sm:text-2xl">
+              {openRecruits}
+              <span className="text-muted-foreground ml-0.5 text-sm font-normal">건</span>
+            </p>
           </CardContent>
         </Card>
       </div>

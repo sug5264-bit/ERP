@@ -172,6 +172,9 @@ export default function PayrollPage() {
           <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>급여 생성</DialogTitle>
+              <p className="text-muted-foreground text-xs">
+                <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+              </p>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">

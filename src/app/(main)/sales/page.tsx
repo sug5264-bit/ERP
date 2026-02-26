@@ -8,10 +8,22 @@ import { FileText, ShoppingCart, Truck, Users } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SalesPage() {
-  const { data: quotations } = useQuery({ queryKey: ['sales-qt-summary'], queryFn: () => api.get('/sales/quotations?pageSize=1') as Promise<any> })
-  const { data: orders } = useQuery({ queryKey: ['sales-so-summary'], queryFn: () => api.get('/sales/orders?pageSize=1') as Promise<any> })
-  const { data: deliveries } = useQuery({ queryKey: ['sales-dlv-summary'], queryFn: () => api.get('/sales/deliveries?pageSize=1') as Promise<any> })
-  const { data: partners } = useQuery({ queryKey: ['sales-partner-summary'], queryFn: () => api.get('/partners?partnerType=SALES&pageSize=1') as Promise<any> })
+  const { data: quotations } = useQuery({
+    queryKey: ['sales-qt-summary'],
+    queryFn: () => api.get('/sales/quotations?pageSize=1') as Promise<any>,
+  })
+  const { data: orders } = useQuery({
+    queryKey: ['sales-so-summary'],
+    queryFn: () => api.get('/sales/orders?pageSize=1') as Promise<any>,
+  })
+  const { data: deliveries } = useQuery({
+    queryKey: ['sales-dlv-summary'],
+    queryFn: () => api.get('/sales/deliveries?pageSize=1') as Promise<any>,
+  })
+  const { data: partners } = useQuery({
+    queryKey: ['sales-partner-summary'],
+    queryFn: () => api.get('/partners?partnerType=SALES&pageSize=1') as Promise<any>,
+  })
 
   const cards = [
     { title: '견적서', value: `${quotations?.meta?.totalCount || 0}건`, icon: FileText, href: '/sales/quotations' },
@@ -28,27 +40,35 @@ export default function SalesPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">매출 모듈</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="animate-fade-in-up space-y-6">
+      <h1 className="text-lg font-bold tracking-tight sm:text-2xl">매출 모듈</h1>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {cards.map((card) => (
-          <Link key={card.title} href={card.href}>
-            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
+          <Link key={card.title} href={card.href} className="focus-visible:outline-none">
+            <Card className="card-interactive h-full">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs font-medium sm:text-sm">{card.title}</CardTitle>
+                <div className="bg-muted hidden rounded-md p-1.5 sm:block">
+                  <card.icon className="text-muted-foreground h-3.5 w-3.5" />
+                </div>
               </CardHeader>
-              <CardContent><p className="text-2xl font-bold">{card.value}</p></CardContent>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <p className="text-lg font-bold sm:text-2xl">{card.value}</p>
+              </CardContent>
             </Card>
           </Link>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {menus.map((menu) => (
-          <Link key={menu.title} href={menu.href}>
-            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-              <CardHeader><CardTitle className="text-base">{menu.title}</CardTitle></CardHeader>
-              <CardContent><p className="text-sm text-muted-foreground">{menu.desc}</p></CardContent>
+          <Link key={menu.title} href={menu.href} className="focus-visible:outline-none">
+            <Card className="card-interactive h-full">
+              <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-sm sm:text-base">{menu.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <p className="text-muted-foreground text-xs sm:text-sm">{menu.desc}</p>
+              </CardContent>
             </Card>
           </Link>
         ))}

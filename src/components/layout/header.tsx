@@ -3,7 +3,22 @@
 import { useSession, signOut } from 'next-auth/react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { LogOut, Menu, User, Moon, Sun, Star, StarOff, Search, X, Users, Package, ShoppingCart, FileText, FolderKanban } from 'lucide-react'
+import {
+  LogOut,
+  Menu,
+  User,
+  Moon,
+  Sun,
+  Star,
+  StarOff,
+  Search,
+  X,
+  Users,
+  Package,
+  ShoppingCart,
+  FileText,
+  FolderKanban,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -120,9 +135,10 @@ export function Header() {
   const menuResults = useMemo(() => {
     if (!searchQuery.trim()) return []
     const q = searchQuery.toLowerCase()
-    return SEARCHABLE_PAGES.filter(
-      (p) => p.title.toLowerCase().includes(q) || p.href.toLowerCase().includes(q)
-    ).slice(0, 5)
+    return SEARCHABLE_PAGES.filter((p) => p.title.toLowerCase().includes(q) || p.href.toLowerCase().includes(q)).slice(
+      0,
+      5
+    )
   }, [searchQuery])
 
   // 데이터 검색 (debounced)
@@ -187,34 +203,33 @@ export function Header() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const handleSearchNavigate = useCallback((href: string) => {
-    router.push(href)
-    setSearchOpen(false)
-    setSearchQuery('')
-    setDataResults([])
-  }, [router])
+  const handleSearchNavigate = useCallback(
+    (href: string) => {
+      router.push(href)
+      setSearchOpen(false)
+      setSearchQuery('')
+      setDataResults([])
+    },
+    [router]
+  )
 
   const hasResults = menuResults.length > 0 || dataResults.length > 0
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4">
-        <Button variant="ghost" size="icon" onClick={toggle} className="lg:hidden shrink-0" aria-label="메뉴 토글">
+      <header className="bg-background sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-2 sm:gap-4 sm:px-4">
+        <Button variant="ghost" size="icon" onClick={toggle} className="shrink-0 lg:hidden" aria-label="메뉴 토글">
           <Menu className="h-5 w-5" />
         </Button>
 
-        <div className="font-semibold text-sm lg:text-base truncate min-w-0">{pageTitle || APP_NAME}</div>
+        <div className="min-w-0 truncate text-sm font-semibold lg:text-base">{pageTitle || APP_NAME}</div>
 
         {/* Favorites - desktop only */}
         {!isMobile && favorites.length > 0 && (
-          <div className="hidden xl:flex items-center gap-1 ml-2">
+          <div className="ml-2 hidden items-center gap-1 xl:flex">
             {favorites.map((fav) => (
               <Link key={fav.href} href={fav.href}>
-                <Button
-                  variant={pathname === fav.href ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="h-7 text-xs"
-                >
+                <Button variant={pathname === fav.href ? 'secondary' : 'ghost'} size="sm" className="h-7 text-xs">
                   <Star className="mr-1 h-3 w-3 fill-yellow-400 text-yellow-400" />
                   {fav.title}
                 </Button>
@@ -231,58 +246,78 @@ export function Header() {
             onClick={() => setSearchOpen(true)}
             title="통합 검색 (Ctrl+K)"
             aria-label="통합 검색"
-            className="lg:hidden shrink-0"
+            className="shrink-0 lg:hidden"
           >
             <Search className="h-5 w-5" />
           </Button>
 
           {/* 통합 검색 - 데스크톱 */}
-          <div ref={searchContainerRef} className="hidden lg:block relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div ref={searchContainerRef} className="relative hidden lg:block">
+            <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
             <Input
               ref={searchRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="통합 검색... (Ctrl+K)"
               aria-label="통합 검색"
-              className="w-64 pl-8 pr-8 h-8 text-sm"
+              className="h-8 w-64 pr-8 pl-8 text-sm"
               onFocus={() => setSearchOpen(true)}
             />
             {searchQuery && (
-              <Button variant="ghost" size="icon" className="absolute right-0 top-0 h-8 w-8"
-                onClick={() => { setSearchQuery(''); setDataResults([]); searchRef.current?.focus() }}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-0 right-0 h-8 w-8"
+                onClick={() => {
+                  setSearchQuery('')
+                  setDataResults([])
+                  searchRef.current?.focus()
+                }}
+              >
                 <X className="h-3 w-3" />
               </Button>
             )}
             {searchOpen && searchQuery && (
-              <div className="absolute top-full left-0 w-96 mt-1 bg-background border rounded-md shadow-lg z-50 overflow-hidden max-h-[70vh] overflow-y-auto">
+              <div className="bg-popover animate-fade-in-up absolute top-full left-0 z-50 mt-1.5 max-h-[70vh] w-96 overflow-hidden overflow-y-auto rounded-lg border shadow-lg">
                 {menuResults.length > 0 && (
                   <>
-                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">메뉴</div>
+                    <div className="text-muted-foreground bg-muted/50 px-3 py-1.5 text-[11px] font-semibold tracking-wider uppercase">
+                      메뉴
+                    </div>
                     {menuResults.map((r) => (
-                      <button key={r.href} onClick={() => handleSearchNavigate(r.href)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none transition-colors flex items-center gap-2">
-                        <Search className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <button
+                        key={r.href}
+                        onClick={() => handleSearchNavigate(r.href)}
+                        className="hover:bg-accent focus-visible:bg-accent flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none"
+                      >
+                        <Search className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                         <span className="font-medium">{r.title}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">{r.href}</span>
+                        <span className="text-muted-foreground/70 ml-auto font-mono text-xs">{r.href}</span>
                       </button>
                     ))}
                   </>
                 )}
                 {dataResults.length > 0 && (
                   <>
-                    <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 border-t">데이터</div>
+                    <div className="text-muted-foreground bg-muted/50 border-t px-3 py-1.5 text-[11px] font-semibold tracking-wider uppercase">
+                      데이터
+                    </div>
                     {dataResults.map((r) => {
                       const Icon = TYPE_ICON_MAP[r.type] || Search
                       return (
-                        <button key={`${r.type}-${r.id}`} onClick={() => handleSearchNavigate(r.url)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-accent focus-visible:bg-accent focus-visible:outline-none transition-colors flex items-center gap-2">
-                          <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium truncate block">{r.title}</span>
-                            {r.subtitle && <span className="text-xs text-muted-foreground truncate block">{r.subtitle}</span>}
+                        <button
+                          key={`${r.type}-${r.id}`}
+                          onClick={() => handleSearchNavigate(r.url)}
+                          className="hover:bg-accent focus-visible:bg-accent flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors focus-visible:outline-none"
+                        >
+                          <Icon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{r.title}</span>
+                            {r.subtitle && (
+                              <span className="text-muted-foreground block truncate text-xs">{r.subtitle}</span>
+                            )}
                           </div>
-                          <Badge variant="outline" className="text-[10px] shrink-0">
+                          <Badge variant="outline" className="shrink-0 text-[10px]">
                             {TYPE_LABEL_MAP[r.type] || r.type}
                           </Badge>
                         </button>
@@ -291,10 +326,16 @@ export function Header() {
                   </>
                 )}
                 {isSearching && (
-                  <div className="p-3 text-sm text-muted-foreground text-center">검색 중...</div>
+                  <div className="text-muted-foreground flex items-center justify-center gap-2 p-4 text-center text-sm">
+                    <span className="border-muted-foreground/30 border-t-muted-foreground h-4 w-4 animate-spin rounded-full border-2" />
+                    검색 중...
+                  </div>
                 )}
                 {!isSearching && !hasResults && searchQuery.length >= 2 && (
-                  <div className="p-3 text-sm text-muted-foreground text-center">검색 결과 없음</div>
+                  <div className="p-6 text-center">
+                    <p className="text-muted-foreground text-sm">검색 결과가 없습니다</p>
+                    <p className="text-muted-foreground/60 mt-1 text-xs">다른 검색어를 입력해보세요</p>
+                  </div>
                 )}
               </div>
             )}
@@ -305,7 +346,7 @@ export function Header() {
             <Button
               variant="ghost"
               size="icon"
-              className="hidden sm:inline-flex shrink-0"
+              className="hidden shrink-0 sm:inline-flex"
               onClick={() => {
                 if (isCurrentFav) removeFavorite(pathname)
                 else addFavorite({ title: pageTitle, href: pathname })
@@ -321,7 +362,14 @@ export function Header() {
           )}
 
           {/* Dark mode toggle */}
-          <Button variant="ghost" size="icon" onClick={toggleTheme} title={theme === 'dark' ? '라이트 모드' : '다크 모드'} aria-label={theme === 'dark' ? '라이트 모드' : '다크 모드'} className="shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? '라이트 모드' : '다크 모드'}
+            aria-label={theme === 'dark' ? '라이트 모드' : '다크 모드'}
+            className="shrink-0"
+          >
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
@@ -330,7 +378,7 @@ export function Header() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full shrink-0">
+              <Button variant="ghost" className="relative h-8 w-8 shrink-0 rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                 </Avatar>
@@ -340,10 +388,10 @@ export function Header() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {(user as any)?.departmentName} / {(user as any)?.positionName}
                   </p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  <p className="text-muted-foreground text-xs">{user?.email}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -363,31 +411,42 @@ export function Header() {
 
       {/* 모바일 검색 오버레이 */}
       {searchOpen && (
-        <div className="fixed inset-0 z-50 bg-background lg:hidden">
-          <div className="flex items-center gap-2 p-3 border-b">
-            <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+        <div className="bg-background fixed inset-0 z-50 lg:hidden">
+          <div className="flex items-center gap-2 border-b p-3">
+            <Search className="text-muted-foreground h-5 w-5 shrink-0" />
             <Input
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="통합 검색..."
-              className="flex-1 border-0 shadow-none focus-visible:ring-0 text-base"
+              className="flex-1 border-0 text-base shadow-none focus-visible:ring-0"
             />
-            <Button variant="ghost" size="sm" onClick={() => { setSearchOpen(false); setSearchQuery(''); setDataResults([]) }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchOpen(false)
+                setSearchQuery('')
+                setDataResults([])
+              }}
+            >
               취소
             </Button>
           </div>
-          <div className="overflow-y-auto max-h-[calc(100dvh-60px)]">
+          <div className="max-h-[calc(100dvh-60px)] overflow-y-auto">
             {menuResults.length > 0 && (
               <>
-                <div className="px-4 py-2 text-xs font-medium text-muted-foreground bg-muted/50">메뉴</div>
+                <div className="text-muted-foreground bg-muted/50 px-4 py-2 text-xs font-medium">메뉴</div>
                 {menuResults.map((r) => (
-                  <button key={r.href} onClick={() => handleSearchNavigate(r.href)}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-accent transition-colors flex items-center gap-3 border-b">
-                    <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <button
+                    key={r.href}
+                    onClick={() => handleSearchNavigate(r.href)}
+                    className="hover:bg-accent flex w-full items-center gap-3 border-b px-4 py-3 text-left text-sm transition-colors"
+                  >
+                    <Search className="text-muted-foreground h-4 w-4 shrink-0" />
                     <div className="min-w-0">
                       <div className="font-medium">{r.title}</div>
-                      <div className="text-xs text-muted-foreground">{r.href}</div>
+                      <div className="text-muted-foreground text-xs">{r.href}</div>
                     </div>
                   </button>
                 ))}
@@ -395,18 +454,21 @@ export function Header() {
             )}
             {dataResults.length > 0 && (
               <>
-                <div className="px-4 py-2 text-xs font-medium text-muted-foreground bg-muted/50">데이터</div>
+                <div className="text-muted-foreground bg-muted/50 px-4 py-2 text-xs font-medium">데이터</div>
                 {dataResults.map((r) => {
                   const Icon = TYPE_ICON_MAP[r.type] || Search
                   return (
-                    <button key={`${r.type}-${r.id}`} onClick={() => handleSearchNavigate(r.url)}
-                      className="w-full text-left px-4 py-3 text-sm hover:bg-accent transition-colors flex items-center gap-3 border-b">
-                      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
+                    <button
+                      key={`${r.type}-${r.id}`}
+                      onClick={() => handleSearchNavigate(r.url)}
+                      className="hover:bg-accent flex w-full items-center gap-3 border-b px-4 py-3 text-left text-sm transition-colors"
+                    >
+                      <Icon className="text-muted-foreground h-4 w-4 shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <div className="font-medium">{r.title}</div>
-                        <div className="text-xs text-muted-foreground">{r.subtitle}</div>
+                        <div className="text-muted-foreground text-xs">{r.subtitle}</div>
                       </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
                         {TYPE_LABEL_MAP[r.type] || r.type}
                       </Badge>
                     </button>
@@ -414,18 +476,19 @@ export function Header() {
                 })}
               </>
             )}
-            {isSearching && (
-              <div className="p-6 text-center text-sm text-muted-foreground">검색 중...</div>
-            )}
+            {isSearching && <div className="text-muted-foreground p-6 text-center text-sm">검색 중...</div>}
             {!isSearching && !hasResults && searchQuery.length >= 2 && (
-              <div className="p-6 text-center text-sm text-muted-foreground">검색 결과 없음</div>
+              <div className="text-muted-foreground p-6 text-center text-sm">검색 결과 없음</div>
             )}
             {!searchQuery && (
-              <div className="p-4 space-y-1">
-                <p className="text-xs text-muted-foreground px-2 pb-2">자주 찾는 메뉴</p>
+              <div className="space-y-1 p-4">
+                <p className="text-muted-foreground px-2 pb-2 text-xs">자주 찾는 메뉴</p>
                 {['/dashboard', '/approval/pending', '/hr/leave', '/inventory/items', '/sales/orders'].map((href) => (
-                  <button key={href} onClick={() => handleSearchNavigate(href)}
-                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent rounded-md transition-colors">
+                  <button
+                    key={href}
+                    onClick={() => handleSearchNavigate(href)}
+                    className="hover:bg-accent w-full rounded-md px-3 py-2.5 text-left text-sm transition-colors"
+                  >
                     {PAGE_TITLES[href] || href}
                   </button>
                 ))}
