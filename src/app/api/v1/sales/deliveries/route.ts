@@ -72,10 +72,8 @@ export async function POST(request: NextRequest) {
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate))
-    const movementNo = await generateDocumentNumber('SM', new Date(data.deliveryDate))
-
     const result = await prisma.$transaction(async (tx) => {
+      const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate), tx)
       const delivery = await tx.delivery.create({
         data: {
           deliveryNo,
@@ -108,6 +106,7 @@ export async function POST(request: NextRequest) {
       )
 
       // 재고이동 자동 생성 (출고)
+      const movementNo = await generateDocumentNumber('SM', new Date(data.deliveryDate), tx)
       await tx.stockMovement.create({
         data: {
           movementNo,

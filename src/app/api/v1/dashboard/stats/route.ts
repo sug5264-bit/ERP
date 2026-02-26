@@ -63,8 +63,8 @@ export async function GET(req: NextRequest) {
     for (const row of approvalDocs) {
       if (!approvalByMonth[row.month]) approvalByMonth[row.month] = { approved: 0, rejected: 0, pending: 0 }
       const count = Number(row.count)
-      if (row.status === 'APPROVED') approvalByMonth[row.month].approved = count
-      else if (row.status === 'REJECTED') approvalByMonth[row.month].rejected = count
+      if (row.status === 'APPROVED') approvalByMonth[row.month].approved += count
+      else if (row.status === 'REJECTED') approvalByMonth[row.month].rejected += count
       else approvalByMonth[row.month].pending += count
     }
     const approvalData = Object.entries(approvalByMonth)

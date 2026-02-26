@@ -61,7 +61,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
       if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-      const orderNo = await generateDocumentNumber('SO', new Date())
       const details = quotation.details.map((d, idx) => {
         const supplyAmount = Number(d.supplyAmount)
         const taxType = d.item?.taxType || 'TAXABLE'
@@ -82,6 +81,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
 
       const result = await prisma.$transaction(async (tx) => {
+        const orderNo = await generateDocumentNumber('SO', new Date(), tx)
         const order = await tx.salesOrder.create({
           data: {
             orderNo,
