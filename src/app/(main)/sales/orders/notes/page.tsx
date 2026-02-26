@@ -77,7 +77,7 @@ export default function OrderNotesPage() {
       return res.json()
     },
   })
-  const orders = ordersData?.data?.data || ordersData?.data || []
+  const orders = ordersData?.data || []
 
   const { data: attachmentsData } = useQuery({
     queryKey: ['attachments', 'SalesOrder', selectedOrderId],

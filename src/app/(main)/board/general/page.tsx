@@ -84,8 +84,12 @@ export default function GeneralBoardPage() {
     mutationFn: ({ postId, content }: { postId: string; content: string }) =>
       api.post(`/board/posts/${postId}/comments`, { content }),
     onSuccess: async (_, variables) => {
-      const res = (await api.get(`/board/posts/${variables.postId}`)) as any
-      setSelectedPost(res.data || res)
+      try {
+        const res = (await api.get(`/board/posts/${variables.postId}`)) as any
+        setSelectedPost(res.data || res)
+      } catch {
+        queryClient.invalidateQueries({ queryKey: ['board-general-posts'] })
+      }
       setNewComment('')
       toast.success('댓글이 등록되었습니다.')
     },

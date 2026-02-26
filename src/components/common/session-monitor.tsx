@@ -15,8 +15,8 @@ import { Progress } from '@/components/ui/progress'
 import { Clock } from 'lucide-react'
 
 const SESSION_MAX_AGE = 8 * 60 * 60 * 1000 // 8시간 (ms)
-const WARNING_THRESHOLD = 10 * 60 * 1000     // 만료 10분 전 경고
-const CHECK_INTERVAL = 60 * 1000             // 1분마다 체크
+const WARNING_THRESHOLD = 10 * 60 * 1000 // 만료 10분 전 경고
+const CHECK_INTERVAL = 60 * 1000 // 1분마다 체크
 
 /**
  * 세션 만료 경고 모니터
@@ -34,8 +34,9 @@ export function SessionMonitor() {
     if (!session) return null
     // NextAuth JWT의 exp를 추정: 마지막 갱신 시점 + maxAge
     // session.expires는 ISO string
-    if ((session as any).expires) {
-      return new Date((session as any).expires).getTime()
+    if ((session as any).expires && typeof (session as any).expires === 'string') {
+      const expiryTime = new Date((session as any).expires).getTime()
+      if (!isNaN(expiryTime)) return expiryTime
     }
     return null
   }, [session])
@@ -117,16 +118,14 @@ export function SessionMonitor() {
             <Clock className="h-5 w-5 text-amber-500" />
             세션 만료 경고
           </DialogTitle>
-          <DialogDescription>
-            세션이 곧 만료됩니다. 작업을 계속하시려면 세션을 연장해주세요.
-          </DialogDescription>
+          <DialogDescription>세션이 곧 만료됩니다. 작업을 계속하시려면 세션을 연장해주세요.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="text-center">
-            <span className="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+            <span className="text-2xl font-bold text-amber-600 tabular-nums dark:text-amber-400">
               {formatRemaining(remainingMs)}
             </span>
-            <p className="text-sm text-muted-foreground mt-1">후 자동 로그아웃</p>
+            <p className="text-muted-foreground mt-1 text-sm">후 자동 로그아웃</p>
           </div>
           <Progress value={progress} className="h-2" />
         </div>
@@ -134,9 +133,7 @@ export function SessionMonitor() {
           <Button variant="outline" onClick={handleLogout}>
             로그아웃
           </Button>
-          <Button onClick={handleExtend}>
-            세션 연장
-          </Button>
+          <Button onClick={handleExtend}>세션 연장</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

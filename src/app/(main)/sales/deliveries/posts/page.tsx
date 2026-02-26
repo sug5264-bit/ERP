@@ -68,7 +68,7 @@ export default function DeliveryPostsPage() {
       return res.json()
     },
   })
-  const deliveries = deliveriesData?.data?.data || deliveriesData?.data || []
+  const deliveries = deliveriesData?.data || []
 
   const { data: notesData } = useQuery({
     queryKey: ['notes', 'Delivery', selectedDeliveryId],

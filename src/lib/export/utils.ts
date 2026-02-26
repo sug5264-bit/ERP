@@ -19,6 +19,6 @@ export function triggerDownload(blob: Blob, fileName: string) {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  // Safari에서 비동기 다운로드가 완료되기 전에 revoke되는 문제 방지
-  setTimeout(() => URL.revokeObjectURL(url), 150)
+  // 대용량 파일 다운로드가 완료되기 전에 revoke되는 문제 방지
+  setTimeout(() => URL.revokeObjectURL(url), 3000)
 }

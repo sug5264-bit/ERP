@@ -4,11 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { Bell, CheckCheck, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { formatDistanceToNow } from '@/lib/format'
 import { useRouter } from 'next/navigation'
@@ -49,9 +45,7 @@ export function NotificationBell() {
         if (body.action === 'read' && body.id) {
           return {
             ...old,
-            data: old.data?.map((n: any) =>
-              n.id === body.id ? { ...n, isRead: true } : n
-            ),
+            data: old.data?.map((n: any) => (n.id === body.id ? { ...n, isRead: true } : n)),
             meta: old.meta ? { ...old.meta, totalCount: Math.max(0, (old.meta.totalCount || 1) - 1) } : old.meta,
           }
         }
@@ -79,8 +73,11 @@ export function NotificationBell() {
         queryClient.setQueryData(['notifications'], context.prev)
       }
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    onSettled: (_data, error) => {
+      // 실패 시에만 서버 데이터 재요청 (성공 시 optimistic update가 유효)
+      if (error) {
+        queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      }
     },
   })
 
@@ -100,7 +97,12 @@ export function NotificationBell() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label={unreadCount > 0 ? `알림 ${unreadCount}건` : '알림'}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={unreadCount > 0 ? `알림 ${unreadCount}건` : '알림'}
+        >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
@@ -109,7 +111,7 @@ export function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[calc(100vw-16px)] sm:w-80 p-0 max-h-[80dvh]" align="end" sideOffset={8}>
+      <PopoverContent className="max-h-[80dvh] w-[calc(100vw-16px)] p-0 sm:w-80" align="end" sideOffset={8}>
         <div className="flex items-center justify-between border-b px-4 py-3">
           <h4 className="text-sm font-semibold">알림</h4>
           <div className="flex gap-1">
@@ -128,33 +130,25 @@ export function NotificationBell() {
         </div>
         <ScrollArea className="max-h-[60dvh] sm:max-h-[400px]">
           {notifications.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              알림이 없습니다
-            </div>
+            <div className="text-muted-foreground py-8 text-center text-sm">알림이 없습니다</div>
           ) : (
             <div className="divide-y">
               {notifications.map((notif: any) => (
                 <div
                   key={notif.id}
-                  className={`flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${
+                  className={`hover:bg-muted/50 flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
                     !notif.isRead ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
                   }`}
                   onClick={() => handleClick(notif)}
                 >
-                  <span className="text-lg mt-0.5">{TYPE_ICONS[notif.type] || '🔔'}</span>
-                  <div className="flex-1 min-w-0">
+                  <span className="mt-0.5 text-lg">{TYPE_ICONS[notif.type] || '🔔'}</span>
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{notif.title}</p>
-                      {!notif.isRead && (
-                        <span className="h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-                      )}
+                      <p className="truncate text-sm font-medium">{notif.title}</p>
+                      {!notif.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {notif.message}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatDistanceToNow(notif.createdAt)}
-                    </p>
+                    <p className="text-muted-foreground mt-0.5 truncate text-xs">{notif.message}</p>
+                    <p className="text-muted-foreground mt-1 text-xs">{formatDistanceToNow(notif.createdAt)}</p>
                   </div>
                 </div>
               ))}
@@ -162,11 +156,11 @@ export function NotificationBell() {
           )}
         </ScrollArea>
         {notifications.length > 0 && (
-          <div className="border-t px-4 py-2 flex justify-center">
+          <div className="flex justify-center border-t px-4 py-2">
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-muted-foreground"
+              className="text-muted-foreground text-xs"
               onClick={() => actionMutation.mutate({ action: 'deleteAll' })}
             >
               <Trash2 className="mr-1 h-3 w-3" />
