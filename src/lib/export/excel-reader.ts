@@ -83,15 +83,18 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
       }
       // ExcelJS formula 처리
       if (val && typeof val === 'object' && 'result' in val) {
-        val = (val as any).result
+        val = (val as any).result ?? (val as any).formula ?? ''
       }
       // ExcelJS hyperlink 처리
       if (val && typeof val === 'object' && 'text' in val) {
         val = (val as any).text
       }
-      // 날짜 객체는 ISO 문자열로
+      // 날짜 객체는 로컬 날짜 문자열로 (UTC 변환 시 KST -1일 오차 방지)
       if (val instanceof Date) {
-        val = val.toISOString().split('T')[0]
+        const y = val.getFullYear()
+        const m = String(val.getMonth() + 1).padStart(2, '0')
+        const d = String(val.getDate()).padStart(2, '0')
+        val = `${y}-${m}-${d}`
       }
       // 숫자인 경우 문자열로 변환하지 않음 (그대로 유지)
       if (val != null && val !== '') {

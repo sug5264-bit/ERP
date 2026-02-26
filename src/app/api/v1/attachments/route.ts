@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return errorResponse('파일 크기가 10MB를 초과합니다.', 'FILE_TOO_LARGE')
+      return errorResponse('파일 크기가 50MB를 초과합니다.', 'FILE_TOO_LARGE')
     }
 
     await mkdir(UPLOAD_DIR, { recursive: true })

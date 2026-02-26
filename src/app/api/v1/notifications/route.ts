@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAuth, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 
 // GET: 내 알림 목록
 export async function GET(req: NextRequest) {
@@ -32,10 +32,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: 알림 생성 (시스템 내부용)
+// POST: 알림 생성 (관리자 전용)
 export async function POST(req: NextRequest) {
   try {
-    const authResult = await requireAuth()
+    const authResult = await requireAdmin()
     if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
@@ -45,8 +45,13 @@ export async function POST(req: NextRequest) {
       return errorResponse('필수 항목을 입력하세요.', 'BAD_REQUEST', 400)
     }
 
+    const VALID_TYPES = ['SYSTEM', 'APPROVAL', 'NOTICE', 'HR', 'TASK']
+    if (!VALID_TYPES.includes(type)) {
+      return errorResponse('유효하지 않은 알림 유형입니다.', 'INVALID_TYPE', 400)
+    }
+
     const notification = await prisma.notification.create({
-      data: { userId, type, title, message, relatedUrl: relatedUrl || null },
+      data: { userId, type, title: String(title).slice(0, 200), message: String(message).slice(0, 1000), relatedUrl: relatedUrl || null },
     })
 
     return successResponse(notification)

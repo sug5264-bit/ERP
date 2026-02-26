@@ -122,8 +122,13 @@ export default function AttendancePage() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['hr-attendance'],
-    queryFn: () => api.get('/hr/attendance?pageSize=50') as Promise<any>,
+    queryKey: ['hr-attendance', filterYear, filterMonth],
+    queryFn: () => {
+      const startDate = `${filterYear}-${filterMonth.padStart(2, '0')}-01`
+      const lastDay = new Date(Number(filterYear), Number(filterMonth), 0).getDate()
+      const endDate = `${filterYear}-${filterMonth.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+      return api.get(`/hr/attendance?pageSize=500&startDate=${startDate}&endDate=${endDate}`) as Promise<any>
+    },
   })
 
   const { data: empData } = useQuery({
@@ -141,20 +146,8 @@ export default function AttendancePage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const allRecords: AttendanceRow[] = data?.data || []
+  const records: AttendanceRow[] = data?.data || []
   const employees = empData?.data || []
-
-  // 월 단위 필터 적용
-  const records = useMemo(() => {
-    return allRecords.filter((r) => {
-      if (!r.workDate) return false
-      const date = new Date(r.workDate)
-      return (
-        date.getFullYear() === Number(filterYear) &&
-        date.getMonth() + 1 === Number(filterMonth)
-      )
-    })
-  }, [allRecords, filterYear, filterMonth])
 
   // 근태 통계
   const stats = useMemo(() => {

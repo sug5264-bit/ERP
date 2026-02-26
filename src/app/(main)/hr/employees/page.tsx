@@ -10,20 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatPhone } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
@@ -64,9 +52,7 @@ const columns: ColumnDef<EmployeeRow>[] = [
   {
     accessorKey: 'employeeNo',
     header: '사번',
-    cell: ({ row }) => (
-      <span className="font-mono text-sm">{row.original.employeeNo}</span>
-    ),
+    cell: ({ row }) => <span className="font-mono text-sm">{row.original.employeeNo}</span>,
   },
   {
     accessorKey: 'nameKo',
@@ -74,9 +60,7 @@ const columns: ColumnDef<EmployeeRow>[] = [
     cell: ({ row }) => (
       <div>
         <div className="font-medium">{row.original.nameKo}</div>
-        {row.original.nameEn && (
-          <div className="text-xs text-muted-foreground">{row.original.nameEn}</div>
-        )}
+        {row.original.nameEn && <div className="text-muted-foreground text-xs">{row.original.nameEn}</div>}
       </div>
     ),
   },
@@ -111,7 +95,7 @@ const columns: ColumnDef<EmployeeRow>[] = [
   {
     id: 'phone',
     header: '연락처',
-    cell: ({ row }) => row.original.phone ? formatPhone(row.original.phone) : '-',
+    cell: ({ row }) => (row.original.phone ? formatPhone(row.original.phone) : '-'),
   },
 ]
 
@@ -171,7 +155,10 @@ export default function EmployeesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/hr/employees/${id}`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['hr-employees'] }); toast.success('사원이 삭제되었습니다.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
+      toast.success('사원이 삭제되었습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -212,7 +199,7 @@ export default function EmployeesPage() {
     { header: '직급', accessor: (r) => r.position?.name || '' },
     { header: '고용형태', accessor: (r) => TYPE_MAP[r.employeeType] || r.employeeType },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
-    { header: '입사일', accessor: (r) => r.joinDate ? formatDate(r.joinDate) : '' },
+    { header: '입사일', accessor: (r) => (r.joinDate ? formatDate(r.joinDate) : '') },
     { header: '연락처', accessor: (r) => r.phone || '' },
     { header: '이메일', accessor: (r) => r.email || '' },
   ]
@@ -230,9 +217,15 @@ export default function EmployeesPage() {
   ]
 
   const importKeyMap: Record<string, string> = {
-    '사번': 'employeeNo', '이름': 'nameKo', '영문이름': 'nameEn',
-    '부서': 'department', '직급': 'position', '입사일': 'joinDate',
-    '고용형태': 'employeeType', '연락처': 'phone', '이메일': 'email',
+    사번: 'employeeNo',
+    이름: 'nameKo',
+    영문이름: 'nameEn',
+    부서: 'department',
+    직급: 'position',
+    입사일: 'joinDate',
+    고용형태: 'employeeType',
+    연락처: 'phone',
+    이메일: 'email',
   }
 
   const handleExport = (type: 'excel' | 'pdf') => {
@@ -270,28 +263,25 @@ export default function EmployeesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="사원관리"
-        description="사원 정보를 등록하고 관리합니다"
-      />
+      <PageHeader title="사원관리" description="사원 정보를 등록하고 관리합니다" />
 
       {/* 요약 통계 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <div className="rounded-lg border bg-muted/30 p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-muted-foreground">전체</p>
-          <p className="text-sm sm:text-lg font-bold">{empSummary.total}명</p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="bg-muted/30 rounded-lg border p-3 text-center sm:p-4">
+          <p className="text-muted-foreground text-[10px] sm:text-xs">전체</p>
+          <p className="text-sm font-bold sm:text-lg">{empSummary.total}명</p>
         </div>
-        <div className="rounded-lg border bg-green-50 dark:bg-green-950/30 p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-muted-foreground">재직</p>
-          <p className="text-sm sm:text-lg font-bold text-green-600 dark:text-green-500">{empSummary.active}명</p>
+        <div className="rounded-lg border bg-green-50 p-3 text-center sm:p-4 dark:bg-green-950/30">
+          <p className="text-muted-foreground text-[10px] sm:text-xs">재직</p>
+          <p className="text-sm font-bold text-green-600 sm:text-lg dark:text-green-500">{empSummary.active}명</p>
         </div>
-        <div className="rounded-lg border bg-yellow-50 dark:bg-yellow-950/30 p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-muted-foreground">휴직</p>
-          <p className="text-sm sm:text-lg font-bold text-yellow-600 dark:text-yellow-500">{empSummary.onLeave}명</p>
+        <div className="rounded-lg border bg-yellow-50 p-3 text-center sm:p-4 dark:bg-yellow-950/30">
+          <p className="text-muted-foreground text-[10px] sm:text-xs">휴직</p>
+          <p className="text-sm font-bold text-yellow-600 sm:text-lg dark:text-yellow-500">{empSummary.onLeave}명</p>
         </div>
-        <div className="rounded-lg border bg-red-50 dark:bg-red-950/30 p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-muted-foreground">퇴직</p>
-          <p className="text-sm sm:text-lg font-bold text-red-600 dark:text-red-500">{empSummary.resigned}명</p>
+        <div className="rounded-lg border bg-red-50 p-3 text-center sm:p-4 dark:bg-red-950/30">
+          <p className="text-muted-foreground text-[10px] sm:text-xs">퇴직</p>
+          <p className="text-sm font-bold text-red-600 sm:text-lg dark:text-red-500">{empSummary.resigned}명</p>
         </div>
       </div>
 
@@ -313,7 +303,11 @@ export default function EmployeesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 부서</SelectItem>
-            {departments.map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+            {departments.map((d: any) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -322,13 +316,29 @@ export default function EmployeesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 유형</SelectItem>
-            {Object.entries(TYPE_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            {Object.entries(TYPE_MAP).map(([k, v]) => (
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <div className="flex items-center gap-1.5">
-          <Input type="date" className="w-full sm:w-36" value={joinDateFrom} onChange={e => setJoinDateFrom(e.target.value)} placeholder="입사일 시작" />
-          <span className="text-xs text-muted-foreground">~</span>
-          <Input type="date" className="w-full sm:w-36" value={joinDateTo} onChange={e => setJoinDateTo(e.target.value)} placeholder="입사일 종료" />
+          <Input
+            type="date"
+            className="w-full sm:w-36"
+            value={joinDateFrom}
+            onChange={(e) => setJoinDateFrom(e.target.value)}
+            placeholder="입사일 시작"
+          />
+          <span className="text-muted-foreground text-xs">~</span>
+          <Input
+            type="date"
+            className="w-full sm:w-36"
+            value={joinDateTo}
+            onChange={(e) => setJoinDateTo(e.target.value)}
+            placeholder="입사일 종료"
+          />
         </div>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
           <Upload className="mr-1 h-4 w-4" /> 업로드
@@ -337,18 +347,22 @@ export default function EmployeesPage() {
           <DialogTrigger asChild>
             <Button>사원 등록</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
             <DialogHeader>
               <DialogTitle>신규 사원 등록</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>사번 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    사번 <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="employeeNo" required aria-required="true" placeholder="EMP001" />
                 </div>
                 <div className="space-y-2">
-                  <Label>이름 (한글) <span className="text-destructive">*</span></Label>
+                  <Label>
+                    이름 (한글) <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="nameKo" required aria-required="true" />
                 </div>
                 <div className="space-y-2">
@@ -360,37 +374,49 @@ export default function EmployeesPage() {
                   <Input name="email" type="email" />
                 </div>
                 <div className="space-y-2">
-                  <Label>부서 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    부서 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="departmentId" required>
                     <SelectTrigger>
                       <SelectValue placeholder="부서 선택" />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((d: any) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>직급 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    직급 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="positionId" required>
                     <SelectTrigger>
                       <SelectValue placeholder="직급 선택" />
                     </SelectTrigger>
                     <SelectContent>
                       {positions.map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>입사일 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    입사일 <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="joinDate" type="date" required aria-required="true" />
                 </div>
                 <div className="space-y-2">
-                  <Label>고용형태 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    고용형태 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="employeeType" required>
                     <SelectTrigger>
                       <SelectValue placeholder="선택" />
@@ -432,12 +458,36 @@ export default function EmployeesPage() {
         </Dialog>
       </div>
       <DataTable
-        columns={[...columns, { id: 'actions', header: '', cell: ({ row }: any) => (
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정"><Pencil className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(row.original.id, row.original.nameKo)} aria-label="삭제"><Trash2 className="h-4 w-4" /></Button>
-          </div>
-        ), size: 80 }]}
+        columns={[
+          ...columns,
+          {
+            id: 'actions',
+            header: '',
+            cell: ({ row }: any) => (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditTarget(row.original)}
+                  aria-label="수정"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive h-8 w-8"
+                  onClick={() => handleDelete(row.original.id, row.original.nameKo)}
+                  aria-label="삭제"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ),
+            size: 80,
+          },
+        ]}
         data={employees}
         searchColumn="nameKo"
         searchPlaceholder="이름으로 검색..."
@@ -455,19 +505,21 @@ export default function EmployeesPage() {
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['hr-employees'] })}
       />
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>사원 정보 수정</DialogTitle>
           </DialogHeader>
           {editTarget && (
             <form key={editTarget.id} onSubmit={handleUpdate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>사번</Label>
                   <Input value={editTarget.employeeNo} disabled className="bg-muted" />
                 </div>
                 <div className="space-y-2">
-                  <Label>이름 (한글) <span className="text-destructive">*</span></Label>
+                  <Label>
+                    이름 (한글) <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="nameKo" required aria-required="true" defaultValue={editTarget.nameKo} />
                 </div>
                 <div className="space-y-2">
@@ -479,37 +531,55 @@ export default function EmployeesPage() {
                   <Input name="email" type="email" defaultValue={editTarget.email || ''} />
                 </div>
                 <div className="space-y-2">
-                  <Label>부서 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    부서 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="departmentId" required defaultValue={editTarget.department?.id}>
                     <SelectTrigger>
                       <SelectValue placeholder="부서 선택" />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((d: any) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>직급 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    직급 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="positionId" required defaultValue={editTarget.position?.id}>
                     <SelectTrigger>
                       <SelectValue placeholder="직급 선택" />
                     </SelectTrigger>
                     <SelectContent>
                       {positions.map((p: any) => (
-                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>입사일 <span className="text-destructive">*</span></Label>
-                  <Input name="joinDate" type="date" required aria-required="true" defaultValue={editTarget.joinDate?.split('T')[0]} />
+                  <Label>
+                    입사일 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    name="joinDate"
+                    type="date"
+                    required
+                    aria-required="true"
+                    defaultValue={editTarget.joinDate?.split('T')[0]}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>고용형태 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    고용형태 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="employeeType" required defaultValue={editTarget.employeeType}>
                     <SelectTrigger>
                       <SelectValue placeholder="선택" />
@@ -558,7 +628,9 @@ export default function EmployeesPage() {
         description={`사원 [${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
         isPending={deleteMutation.isPending}
       />
     </div>

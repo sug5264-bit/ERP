@@ -43,6 +43,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
+    // 업로드한 사용자만 삭제 가능
+    if (attachment.uploadedBy !== authResult.session.user.id) {
+      return errorResponse('본인이 업로드한 파일만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
+    }
+
     // Delete file from filesystem
     const filePath = join(UPLOAD_DIR, attachment.filePath)
     try {

@@ -37,11 +37,11 @@ function getIp(req: NextRequest): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 정적 파일 허용
+  // 정적 파일 허용 (확장자 패턴을 명시적으로 제한하여 API 경로 우회 방지)
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.includes('.')
+    /\.(css|js|png|jpe?g|gif|svg|ico|woff2?|ttf|eot|webp|avif|map)$/i.test(pathname)
   ) {
     return NextResponse.next()
   }

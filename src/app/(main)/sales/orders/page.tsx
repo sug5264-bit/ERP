@@ -470,20 +470,24 @@ export default function OrdersPage() {
       id: 'address',
       header: '주소',
       cell: ({ row }) => (
-        <span className="max-w-[200px] truncate block" title={row.original.recipientAddress || ''}>
+        <span className="block max-w-[200px] truncate" title={row.original.recipientAddress || ''}>
           {row.original.recipientAddress || '-'}
         </span>
       ),
     },
     { id: 'requirements', header: '요구사항', cell: ({ row }) => row.original.requirements || '-' },
-    { id: 'trackingNo', header: '운송장번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span> },
+    {
+      id: 'trackingNo',
+      header: '운송장번호',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span>,
+    },
     { id: 'senderName', header: '보내는사람(업체명)', cell: ({ row }) => row.original.senderName || '-' },
     { id: 'senderPhone', header: '전화번호', cell: ({ row }) => row.original.senderPhone || '-' },
     {
       id: 'senderAddress',
       header: '주소',
       cell: ({ row }) => (
-        <span className="max-w-[200px] truncate block" title={row.original.senderAddress || ''}>
+        <span className="block max-w-[200px] truncate" title={row.original.senderAddress || ''}>
           {row.original.senderAddress || '-'}
         </span>
       ),
@@ -1845,7 +1849,9 @@ export default function OrdersPage() {
         description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
         isPending={deleteMutation.isPending}
       />
 
@@ -2146,7 +2152,9 @@ export default function OrdersPage() {
         description={`[${cancelTarget?.orderNo}]을(를) 취소하시겠습니까?`}
         confirmLabel="취소 처리"
         variant="destructive"
-        onConfirm={() => cancelTarget && cancelMutation.mutate(cancelTarget.id)}
+        onConfirm={() => {
+          if (cancelTarget) cancelMutation.mutate(cancelTarget.id)
+        }}
         isPending={cancelMutation.isPending}
       />
 
@@ -2157,7 +2165,9 @@ export default function OrdersPage() {
         description={`선택한 ${batchCancelConfirm?.length || 0}건을 취소하시겠습니까?`}
         confirmLabel="일괄 취소"
         variant="destructive"
-        onConfirm={() => batchCancelConfirm && batchMutation.mutate({ ids: batchCancelConfirm, action: 'cancel' })}
+        onConfirm={() => {
+          if (batchCancelConfirm) batchMutation.mutate({ ids: batchCancelConfirm, action: 'cancel' })
+        }}
         isPending={batchMutation.isPending}
       />
     </div>

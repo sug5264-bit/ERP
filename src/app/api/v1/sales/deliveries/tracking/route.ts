@@ -22,6 +22,16 @@ export async function POST(request: NextRequest) {
       return errorResponse('운송장 데이터가 없습니다.', 'VALIDATION_ERROR', 400)
     }
 
+    // 입력값 타입 검증
+    for (const t of trackings) {
+      if (typeof t.deliveryNo !== 'string' || typeof t.trackingNo !== 'string') {
+        return errorResponse('납품번호와 운송장번호는 문자열이어야 합니다.', 'VALIDATION_ERROR', 400)
+      }
+      if (t.carrier !== undefined && typeof t.carrier !== 'string') {
+        return errorResponse('운송사는 문자열이어야 합니다.', 'VALIDATION_ERROR', 400)
+      }
+    }
+
     let success = 0
     let failed = 0
     const errors: string[] = []

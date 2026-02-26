@@ -8,34 +8,10 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Building2, Users, ChevronRight, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
@@ -145,10 +121,7 @@ export default function OrganizationPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="부서/직급"
-        description="조직의 부서와 직급을 관리합니다"
-      />
+      <PageHeader title="부서/직급" description="조직의 부서와 직급을 관리합니다" />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -160,18 +133,22 @@ export default function OrganizationPage() {
               <DialogTrigger asChild>
                 <Button size="sm">부서 추가</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
                 <DialogHeader>
                   <DialogTitle>부서 등록</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreateDept} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>부서코드 <span className="text-destructive">*</span></Label>
+                      <Label>
+                        부서코드 <span className="text-destructive">*</span>
+                      </Label>
                       <Input name="code" required aria-required="true" placeholder="DIV-001" />
                     </div>
                     <div className="space-y-2">
-                      <Label>부서명 <span className="text-destructive">*</span></Label>
+                      <Label>
+                        부서명 <span className="text-destructive">*</span>
+                      </Label>
                       <Input name="name" required aria-required="true" />
                     </div>
                   </div>
@@ -204,7 +181,7 @@ export default function OrganizationPage() {
           </CardHeader>
           <CardContent>
             {deptLoading ? (
-              <p className="text-center text-sm text-muted-foreground">로딩 중...</p>
+              <p className="text-muted-foreground text-center text-sm">로딩 중...</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -241,7 +218,7 @@ export default function OrganizationPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8 w-8"
                           onClick={() => setDeleteDeptTarget({ id: dept.id, name: dept.name })}
                           aria-label="삭제"
                         >
@@ -252,7 +229,7 @@ export default function OrganizationPage() {
                   ))}
                   {departments.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      <TableCell colSpan={5} className="text-muted-foreground text-center">
                         등록된 부서가 없습니다.
                       </TableCell>
                     </TableRow>
@@ -273,24 +250,30 @@ export default function OrganizationPage() {
               <DialogTrigger asChild>
                 <Button size="sm">직급 추가</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
                 <DialogHeader>
                   <DialogTitle>직급 등록</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreatePos} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>직급코드 <span className="text-destructive">*</span></Label>
+                      <Label>
+                        직급코드 <span className="text-destructive">*</span>
+                      </Label>
                       <Input name="code" required aria-required="true" placeholder="POS-001" />
                     </div>
                     <div className="space-y-2">
-                      <Label>직급명 <span className="text-destructive">*</span></Label>
+                      <Label>
+                        직급명 <span className="text-destructive">*</span>
+                      </Label>
                       <Input name="name" required aria-required="true" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label>레벨 <span className="text-destructive">*</span></Label>
+                      <Label>
+                        레벨 <span className="text-destructive">*</span>
+                      </Label>
                       <Input name="level" type="number" required aria-required="true" defaultValue={1} min={1} />
                     </div>
                     <div className="space-y-2">
@@ -307,7 +290,7 @@ export default function OrganizationPage() {
           </CardHeader>
           <CardContent>
             {posLoading ? (
-              <p className="text-center text-sm text-muted-foreground">로딩 중...</p>
+              <p className="text-muted-foreground text-center text-sm">로딩 중...</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -336,7 +319,7 @@ export default function OrganizationPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive h-8 w-8"
                           onClick={() => setDeletePosTarget({ id: pos.id, name: pos.name })}
                           aria-label="삭제"
                         >
@@ -347,7 +330,7 @@ export default function OrganizationPage() {
                   ))}
                   {positions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="text-muted-foreground text-center">
                         등록된 직급이 없습니다.
                       </TableCell>
                     </TableRow>
@@ -366,7 +349,9 @@ export default function OrganizationPage() {
         description={`부서 [${deleteDeptTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteDeptTarget && deleteDeptMutation.mutate(deleteDeptTarget.id)}
+        onConfirm={() => {
+          if (deleteDeptTarget) deleteDeptMutation.mutate(deleteDeptTarget.id)
+        }}
         isPending={deleteDeptMutation.isPending}
       />
 
@@ -377,7 +362,9 @@ export default function OrganizationPage() {
         description={`직급 [${deletePosTarget?.name}]을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deletePosTarget && deletePosMutation.mutate(deletePosTarget.id)}
+        onConfirm={() => {
+          if (deletePosTarget) deletePosMutation.mutate(deletePosTarget.id)
+        }}
         isPending={deletePosMutation.isPending}
       />
     </div>

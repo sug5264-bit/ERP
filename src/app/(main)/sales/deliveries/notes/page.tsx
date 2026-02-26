@@ -298,7 +298,9 @@ export default function DeliveryNotesPage() {
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="파일 삭제"
         description="이 파일을 삭제하시겠습니까?"
-        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget)
+        }}
         variant="destructive"
       />
     </div>

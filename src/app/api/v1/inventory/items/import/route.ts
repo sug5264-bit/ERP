@@ -41,6 +41,19 @@ export async function POST(req: NextRequest) {
       부자재: 'SUBSIDIARY',
     }
 
+    const taxTypeMap: Record<string, string> = {
+      과세: 'TAXABLE',
+      면세: 'TAX_FREE',
+      영세: 'ZERO_RATE',
+    }
+    const VALID_TAX_TYPES = new Set(['TAXABLE', 'TAX_FREE', 'ZERO_RATE'])
+
+    /** 콤마 포함 숫자 문자열을 파싱 */
+    function parseNumber(val: any): number {
+      if (typeof val === 'number') return val
+      return parseFloat(String(val).replace(/,/g, ''))
+    }
+
     if (rows.length > 500) {
       return errorResponse('한 번에 최대 500건까지 업로드할 수 있습니다.', 'TOO_LARGE', 413)
     }
@@ -67,16 +80,16 @@ export async function POST(req: NextRequest) {
         }
 
         // 가격 검증
-        if (row.standardPrice !== undefined) {
-          const price = parseFloat(row.standardPrice)
+        if (row.standardPrice !== undefined && row.standardPrice !== '') {
+          const price = parseNumber(row.standardPrice)
           if (isNaN(price) || price < 0) {
             throw new Error('표준단가는 0 이상의 숫자여야 합니다.')
           }
         }
 
         // 안전재고 검증
-        if (row.safetyStock !== undefined) {
-          const stock = parseInt(row.safetyStock, 10)
+        if (row.safetyStock !== undefined && row.safetyStock !== '') {
+          const stock = parseNumber(row.safetyStock)
           if (isNaN(stock) || stock < 0) {
             throw new Error('안전재고는 0 이상의 정수여야 합니다.')
           }
@@ -88,6 +101,12 @@ export async function POST(req: NextRequest) {
           throw new Error(`유효하지 않은 품목유형입니다: ${row.itemType}`)
         }
 
+        // 과세유형 검증
+        const mappedTaxType = taxTypeMap[row.taxType] || row.taxType || 'TAXABLE'
+        if (!VALID_TAX_TYPES.has(mappedTaxType)) {
+          throw new Error(`유효하지 않은 과세유형입니다: ${row.taxType}`)
+        }
+
         if (existingCodeSet.has(itemCode)) {
           throw new Error(`품목코드 '${itemCode}'가 이미 존재합니다.`)
         }
@@ -96,16 +115,26 @@ export async function POST(req: NextRequest) {
           throw new Error(`바코드 '${row.barcode}'가 이미 존재합니다.`)
         }
 
+        // 분류(카테고리) 처리
+        let categoryId: string | undefined
+        if (row.categoryName) {
+          const catName = String(row.categoryName).trim()
+          const category = await prisma.itemCategory.findFirst({ where: { name: catName } })
+          if (category) categoryId = category.id
+        }
+
         await prisma.item.create({
           data: {
             itemCode,
             itemName,
             specification: row.specification ? String(row.specification).slice(0, 500) : undefined,
             unit: row.unit ? String(row.unit).trim().slice(0, 20) : 'EA',
-            standardPrice: row.standardPrice ? parseFloat(row.standardPrice) : 0,
-            safetyStock: row.safetyStock ? parseInt(row.safetyStock, 10) : 0,
+            standardPrice: row.standardPrice ? parseNumber(row.standardPrice) : 0,
+            safetyStock: row.safetyStock ? Math.floor(parseNumber(row.safetyStock)) : 0,
             itemType: mappedType,
+            taxType: mappedTaxType,
             barcode: row.barcode ? String(row.barcode).trim() : undefined,
+            categoryId,
           },
         })
         existingCodeSet.add(itemCode)

@@ -23,8 +23,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const existing = await prisma.salesReturn.findUnique({ where: { id } })
     if (!existing) return errorResponse('반품을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    if (existing.status === 'COMPLETED' || existing.status === 'CANCELLED') {
-      return errorResponse('완료 또는 취소된 반품은 상태를 변경할 수 없습니다.', 'INVALID_STATUS', 400)
+
+    // 상태 전이 규칙: 허용된 전환만 가능
+    const allowedTransitions: Record<string, string[]> = {
+      REQUESTED: ['APPROVED', 'REJECTED', 'CANCELLED'],
+      APPROVED: ['COMPLETED', 'CANCELLED'],
+      REJECTED: ['REQUESTED'],
+    }
+    const allowed = allowedTransitions[existing.status]
+    if (!allowed || !allowed.includes(body.status)) {
+      return errorResponse(
+        `${existing.status} 상태에서 ${body.status}(으)로 변경할 수 없습니다.`,
+        'INVALID_TRANSITION',
+        400
+      )
     }
 
     const salesReturn = await prisma.salesReturn.update({

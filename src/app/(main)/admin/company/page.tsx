@@ -11,12 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Pencil, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
@@ -143,10 +138,22 @@ export default function CompanyManagementPage() {
       header: '',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setEditTarget(row.original)}
+            aria-label="수정"
+          >
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => setDeleteTarget({ id: row.original.id, name: row.original.companyName })} aria-label="삭제">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-destructive hover:text-destructive h-8 w-8"
+            onClick={() => setDeleteTarget({ id: row.original.id, name: row.original.companyName })}
+            aria-label="삭제"
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -155,11 +162,23 @@ export default function CompanyManagementPage() {
     },
   ]
 
-  const CompanyForm = ({ onSubmit, defaults, isPending, submitLabel }: { onSubmit: (e: React.FormEvent<HTMLFormElement>) => void; defaults?: CompanyRow | null; isPending: boolean; submitLabel: string }) => (
+  const CompanyForm = ({
+    onSubmit,
+    defaults,
+    isPending,
+    submitLabel,
+  }: {
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+    defaults?: CompanyRow | null
+    isPending: boolean
+    submitLabel: string
+  }) => (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>회사명 <span className="text-destructive">*</span></Label>
+          <Label>
+            회사명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="companyName" required aria-required="true" defaultValue={defaults?.companyName || ''} />
         </div>
         <div className="space-y-2">
@@ -207,7 +226,13 @@ export default function CompanyManagementPage() {
           <Input name="bankHolder" defaultValue={defaults?.bankHolder || ''} />
         </div>
         <div className="flex items-center gap-2 pt-6">
-          <input type="checkbox" name="isDefault" id="isDefault" defaultChecked={defaults?.isDefault || false} className="h-4 w-4" />
+          <input
+            type="checkbox"
+            name="isDefault"
+            id="isDefault"
+            defaultChecked={defaults?.isDefault || false}
+            className="h-4 w-4"
+          />
           <Label htmlFor="isDefault">기본 회사로 설정</Label>
         </div>
       </div>
@@ -219,21 +244,43 @@ export default function CompanyManagementPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="회사관리" description="회사 정보를 등록하고 관리합니다. 거래명세표, 발주서 작성 시 기본 회사 정보가 연동됩니다." />
+      <PageHeader
+        title="회사관리"
+        description="회사 정보를 등록하고 관리합니다. 거래명세표, 발주서 작성 시 기본 회사 정보가 연동됩니다."
+      />
       <div className="flex items-center gap-4">
         <Button onClick={() => setCreateOpen(true)}>회사 등록</Button>
       </div>
-      <DataTable columns={columns} data={companies} searchColumn="companyName" searchPlaceholder="회사명으로 검색..." isLoading={isLoading} pageSize={50} />
+      <DataTable
+        columns={columns}
+        data={companies}
+        searchColumn="companyName"
+        searchPlaceholder="회사명으로 검색..."
+        isLoading={isLoading}
+        pageSize={50}
+      />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>회사 등록</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>회사 등록</DialogTitle>
+          </DialogHeader>
           <CompanyForm onSubmit={handleCreate} isPending={createMutation.isPending} submitLabel="등록" />
         </DialogContent>
       </Dialog>
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
-        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>회사 정보 수정</DialogTitle></DialogHeader>
-          {editTarget && <CompanyForm key={editTarget.id} onSubmit={handleUpdate} defaults={editTarget} isPending={updateMutation.isPending} submitLabel="수정" />}
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>회사 정보 수정</DialogTitle>
+          </DialogHeader>
+          {editTarget && (
+            <CompanyForm
+              key={editTarget.id}
+              onSubmit={handleUpdate}
+              defaults={editTarget}
+              isPending={updateMutation.isPending}
+              submitLabel="수정"
+            />
+          )}
         </DialogContent>
       </Dialog>
       <ConfirmDialog
@@ -243,7 +290,9 @@ export default function CompanyManagementPage() {
         description={`[${deleteTarget?.name}]을(를) 삭제하시겠습니까?`}
         confirmLabel="삭제"
         variant="destructive"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
+        }}
         isPending={deleteMutation.isPending}
       />
     </div>

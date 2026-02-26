@@ -41,6 +41,14 @@ export async function POST(request: NextRequest) {
       return errorResponse('content, relatedTable, relatedId가 필요합니다.', 'VALIDATION_ERROR')
     }
 
+    const VALID_TABLES = [
+      'salesOrder', 'quotation', 'delivery', 'salesReturn', 'partner', 'item',
+      'purchaseOrder', 'voucher', 'employee', 'project', 'recruitment',
+    ]
+    if (!VALID_TABLES.includes(relatedTable)) {
+      return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
+    }
+
     const note = await prisma.note.create({
       data: {
         content: content.trim(),

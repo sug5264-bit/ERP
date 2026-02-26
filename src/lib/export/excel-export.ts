@@ -1,6 +1,20 @@
 import type { ExportConfig } from './types'
 import { getValue, triggerDownload } from './utils'
 
+/** CJK 문자 폭을 고려한 문자열 너비 추정 */
+function estimateWidth(str: string): number {
+  let width = 0
+  for (const char of str) {
+    // CJK 한글/한자/일본어/전각 문자는 약 2칸
+    if (/[\u3000-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFFEF]/.test(char)) {
+      width += 2
+    } else {
+      width += 1
+    }
+  }
+  return width
+}
+
 export async function exportToExcel(config: ExportConfig) {
   const { default: ExcelJS } = await import('exceljs')
 
@@ -57,10 +71,13 @@ export async function exportToExcel(config: ExportConfig) {
     })
   })
 
-  // 열 너비 자동 조정
+  // 열 너비 자동 조정 (CJK 문자 폭 고려)
   columns.forEach((col, i) => {
     const column = sheet.getColumn(i + 1)
-    const maxLen = Math.max(col.header.length * 2, ...data.map((row) => String(getValue(row, col.accessor)).length))
+    const maxLen = Math.max(
+      estimateWidth(col.header),
+      ...data.map((row) => estimateWidth(String(getValue(row, col.accessor) ?? '')))
+    )
     column.width = col.width || Math.min(Math.max(maxLen + 2, 10), 40)
   })
 
