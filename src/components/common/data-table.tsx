@@ -12,23 +12,11 @@ import {
   getFilteredRowModel,
   RowSelectionState,
 } from '@tanstack/react-table'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   ChevronLeft,
   ChevronRight,
@@ -41,6 +29,10 @@ import {
   CheckCircle,
   XCircle,
   ChevronDown,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Inbox,
 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -87,35 +79,34 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
-  const selectColumn = useMemo<ColumnDef<TData, TValue>[]>(() => selectable
-    ? [
-        {
-          id: 'select',
-          header: ({ table }) => (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && 'indeterminate')
-              }
-              onCheckedChange={(value) =>
-                table.toggleAllPageRowsSelected(!!value)
-              }
-              aria-label="전체 선택"
-            />
-          ),
-          cell: ({ row }) => (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="행 선택"
-              onClick={(e) => e.stopPropagation()}
-            />
-          ),
-          enableSorting: false,
-          enableHiding: false,
-        } as ColumnDef<TData, TValue>,
-      ]
-    : [], [selectable])
+  const selectColumn = useMemo<ColumnDef<TData, TValue>[]>(
+    () =>
+      selectable
+        ? [
+            {
+              id: 'select',
+              header: ({ table }) => (
+                <Checkbox
+                  checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
+                  onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                  aria-label="전체 선택"
+                />
+              ),
+              cell: ({ row }) => (
+                <Checkbox
+                  checked={row.getIsSelected()}
+                  onCheckedChange={(value) => row.toggleSelected(!!value)}
+                  aria-label="행 선택"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ),
+              enableSorting: false,
+              enableHiding: false,
+            } as ColumnDef<TData, TValue>,
+          ]
+        : [],
+    [selectable]
+  )
 
   const allColumns = useMemo(() => [...selectColumn, ...columns], [selectColumn, columns])
 
@@ -163,12 +154,14 @@ export function DataTable<TData, TValue>({
   const allBulkActions: BulkAction<TData>[] = [
     ...bulkActions,
     ...(onBulkDelete
-      ? [{
-          label: '선택 삭제',
-          icon: <Trash2 className="mr-1.5 h-4 w-4" />,
-          variant: 'destructive' as const,
-          action: onBulkDelete,
-        }]
+      ? [
+          {
+            label: '선택 삭제',
+            icon: <Trash2 className="mr-1.5 h-4 w-4" />,
+            variant: 'destructive' as const,
+            action: onBulkDelete,
+          },
+        ]
       : []),
   ]
 
@@ -177,24 +170,21 @@ export function DataTable<TData, TValue>({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         {searchColumn && (
           <div className="relative w-full sm:max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
-              value={
-                (table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''
-              }
-              onChange={(e) =>
-                table.getColumn(searchColumn)?.setFilterValue(e.target.value)
-              }
+              value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ''}
+              onChange={(e) => table.getColumn(searchColumn)?.setFilterValue(e.target.value)}
               className="pl-9"
             />
           </div>
         )}
-        <div className="flex gap-2 shrink-0 flex-wrap">
+        <div className="flex shrink-0 flex-wrap gap-2">
           {/* 일괄 작업 버튼 */}
-          {hasSelection && allBulkActions.length > 0 && (
-            allBulkActions.length === 1 ? (
+          {hasSelection &&
+            allBulkActions.length > 0 &&
+            (allBulkActions.length === 1 ? (
               <Button
                 variant={allBulkActions[0].variant === 'destructive' ? 'destructive' : 'secondary'}
                 size="sm"
@@ -225,15 +215,10 @@ export function DataTable<TData, TValue>({
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            )
-          )}
+            ))}
           {/* 선택 해제 */}
           {hasSelection && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => table.resetRowSelection()}
-            >
+            <Button variant="ghost" size="sm" onClick={() => table.resetRowSelection()}>
               <XCircle className="mr-1 h-4 w-4" />
               선택 해제
             </Button>
@@ -265,27 +250,48 @@ export function DataTable<TData, TValue>({
           <Table className="min-w-[640px]">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="whitespace-nowrap text-xs sm:text-sm">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))}
+                <TableRow key={headerGroup.id} className="bg-muted/30 hover:bg-muted/30">
+                  {headerGroup.headers.map((header) => {
+                    const canSort = header.column.getCanSort()
+                    const sorted = header.column.getIsSorted()
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={`text-xs whitespace-nowrap sm:text-sm ${canSort ? 'hover:bg-muted/50 cursor-pointer transition-colors select-none' : ''}`}
+                        onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <div className="flex items-center gap-1">
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {canSort && (
+                              <span className="text-muted-foreground/60 ml-0.5">
+                                {sorted === 'asc' ? (
+                                  <ArrowUp className="text-foreground h-3 w-3" />
+                                ) : sorted === 'desc' ? (
+                                  <ArrowDown className="text-foreground h-3 w-3" />
+                                ) : (
+                                  <ArrowUpDown className="h-3 w-3" />
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </TableHead>
+                    )
+                  })}
                 </TableRow>
               ))}
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: Math.min(effectivePageSize, 5) }).map((_, i) => (
-                  <TableRow key={`skeleton-${i}`}>
+                  <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
                     {allColumns.map((_, j) => (
                       <TableCell key={j} className="py-2.5 sm:py-3">
-                        <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+                        <div
+                          className="bg-muted h-5 animate-pulse rounded"
+                          style={{ width: `${55 + Math.random() * 30}%` }}
+                        />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -295,29 +301,28 @@ export function DataTable<TData, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && 'selected'}
-                    className={onRowClick ? 'cursor-pointer hover:bg-muted/50 active:bg-muted/70' : ''}
+                    className={`transition-colors ${onRowClick ? 'hover:bg-muted/50 active:bg-muted/70 cursor-pointer' : 'hover:bg-muted/30'}`}
                     onClick={() => onRowClick?.(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="text-xs sm:text-sm py-2.5 sm:py-3">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+                      <TableCell key={cell.id} className="py-2.5 text-xs sm:py-3 sm:text-sm">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={allColumns.length}
-                    className="h-32 sm:h-40"
-                  >
-                    <div className="flex items-center justify-center h-full">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={allColumns.length} className="h-40 sm:h-52">
+                    <div className="flex h-full flex-col items-center justify-center gap-3">
+                      <div className="bg-muted rounded-full p-3">
+                        <Inbox className="text-muted-foreground/60 h-6 w-6" />
+                      </div>
                       <div className="text-center">
-                        <p className="text-sm font-medium text-muted-foreground">데이터가 없습니다.</p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">조건을 변경하여 다시 검색해주세요.</p>
+                        <p className="text-muted-foreground text-sm font-medium">데이터가 없습니다</p>
+                        <p className="text-muted-foreground/60 mt-1 text-xs">
+                          검색 조건을 변경하거나 새 데이터를 추가해주세요
+                        </p>
                       </div>
                     </div>
                   </TableCell>
@@ -328,14 +333,10 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-          총 {table.getFilteredRowModel().rows.length}건
-          {hasSelection && (
-            <span className="ml-1 text-primary">
-              ({selectedCount}건 선택)
-            </span>
-          )}
+      <div className="flex items-center justify-between gap-2" role="navigation" aria-label="페이지 네비게이션">
+        <p className="text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
+          총 <span className="text-foreground font-medium">{table.getFilteredRowModel().rows.length}</span>건
+          {hasSelection && <span className="text-primary ml-1.5 font-medium">({selectedCount}건 선택)</span>}
         </p>
         <div className="flex items-center gap-1.5 sm:gap-1">
           <Button
@@ -344,7 +345,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
-            aria-label="첫 페이지"
+            aria-label="첫 페이지로 이동"
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -354,12 +355,14 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
-            aria-label="이전 페이지"
+            aria-label="이전 페이지로 이동"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm px-1.5 tabular-nums">
-            {table.getPageCount() > 0 ? table.getState().pagination.pageIndex + 1 : 0}/{table.getPageCount()}
+          <span className="px-2 text-sm font-medium tabular-nums" aria-live="polite" aria-atomic="true">
+            {table.getPageCount() > 0 ? table.getState().pagination.pageIndex + 1 : 0}
+            <span className="text-muted-foreground mx-0.5 font-normal">/</span>
+            {table.getPageCount()}
           </span>
           <Button
             variant="outline"
@@ -367,7 +370,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
-            aria-label="다음 페이지"
+            aria-label="다음 페이지로 이동"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -377,7 +380,7 @@ export function DataTable<TData, TValue>({
             className="h-9 w-9 sm:h-8 sm:w-8"
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
-            aria-label="마지막 페이지"
+            aria-label="마지막 페이지로 이동"
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>

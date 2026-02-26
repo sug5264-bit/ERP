@@ -215,7 +215,7 @@ export function SidebarNav() {
   }, [setOpen])
 
   return (
-    <nav className="flex flex-col gap-1 p-2">
+    <nav className="flex flex-col gap-0.5 p-2" aria-label="메인 메뉴">
       {filteredNavItems.map((item) => (
         <NavItemComponent key={item.href} item={item} pathname={pathname} onNavigate={closeMobileSidebar} />
       ))}
@@ -243,7 +243,9 @@ const NavChildWithChildren = memo(function NavChildWithChildren({
           onClick={onNavigate}
           className={cn(
             'flex-1 rounded-md px-3 py-2 text-sm transition-colors',
-            pathname === child.href ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+            pathname === child.href
+              ? 'bg-primary/10 text-primary font-medium'
+              : 'text-muted-foreground hover:text-foreground'
           )}
         >
           {child.title}
@@ -263,7 +265,7 @@ const NavChildWithChildren = memo(function NavChildWithChildren({
                 onClick={onNavigate}
                 className={cn(
                   'rounded-md px-3 py-1.5 text-xs transition-colors',
-                  subActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+                  subActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 {sub.title}
@@ -336,7 +338,9 @@ const NavItemComponent = memo(function NavItemComponent({
                 onClick={onNavigate}
                 className={cn(
                   'rounded-md px-3 py-2 text-sm transition-colors',
-                  childActive ? 'text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+                  childActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                 )}
               >
                 {child.title}

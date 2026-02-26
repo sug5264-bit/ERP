@@ -27,9 +27,7 @@ export default function InventoryPage() {
   const balances = balancesData?.data || []
   const warehouses = warehousesData?.data || []
 
-  const totalValue = balances.reduce(
-    (s: number, b: any) => s + Number(b.quantity) * Number(b.averageCost), 0
-  )
+  const totalValue = balances.reduce((s: number, b: any) => s + Number(b.quantity) * Number(b.averageCost), 0)
   const belowSafety = balances.filter(
     (b: any) => Number(b.quantity) < (b.item?.safetyStock || 0) && b.item?.safetyStock > 0
   ).length
@@ -50,32 +48,34 @@ export default function InventoryPage() {
   ]
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">재고 모듈</h1>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="animate-fade-in-up space-y-6">
+      <h1 className="text-lg font-bold tracking-tight sm:text-2xl">재고 모듈</h1>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {cards.map((card) => (
-          <Link key={card.title} href={card.href}>
-            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
+          <Link key={card.title} href={card.href} className="focus-visible:outline-none">
+            <Card className="card-interactive h-full">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs font-medium sm:text-sm">{card.title}</CardTitle>
+                <div className="bg-muted hidden rounded-md p-1.5 sm:block">
+                  <card.icon className="text-muted-foreground h-3.5 w-3.5" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{card.value}</p>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <p className="text-lg font-bold sm:text-2xl">{card.value}</p>
               </CardContent>
             </Card>
           </Link>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         {menus.map((menu) => (
-          <Link key={menu.title} href={menu.href}>
-            <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-              <CardHeader>
-                <CardTitle className="text-base">{menu.title}</CardTitle>
+          <Link key={menu.title} href={menu.href} className="focus-visible:outline-none">
+            <Card className="card-interactive h-full">
+              <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-sm sm:text-base">{menu.title}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{menu.desc}</p>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <p className="text-muted-foreground text-xs sm:text-sm">{menu.desc}</p>
               </CardContent>
             </Card>
           </Link>

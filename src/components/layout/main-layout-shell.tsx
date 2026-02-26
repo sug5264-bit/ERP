@@ -12,11 +12,7 @@ import { KeyboardShortcutsHelp } from '@/components/common/keyboard-shortcuts-he
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
 import { useState, useCallback } from 'react'
 
-export function MainLayoutShell({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export function MainLayoutShell({ children }: { children: React.ReactNode }) {
   const { isOpen, setOpen } = useSidebarStore()
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false)
 
@@ -35,28 +31,25 @@ export function MainLayoutShell({
       {/* 접근성: 본문 바로가기 */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:text-sm"
+        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:px-4 focus:py-2 focus:text-sm"
       >
         본문 바로가기
       </a>
 
       {/* Mobile sidebar overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setOpen(false)}
-        />
-      )}
+      {isOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
 
       {/* Sidebar - mobile: 좁은 오버레이, desktop: 고정 */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r bg-background transition-transform duration-200 will-change-transform lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:duration-0 motion-reduce:duration-0',
+          'bg-background fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r transition-transform duration-200 will-change-transform motion-reduce:duration-0 lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:duration-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        role="navigation"
+        aria-label="사이드바 메뉴"
       >
         <div className="flex h-14 items-center border-b px-4">
-          <span className="text-lg font-bold">ERP</span>
+          <span className="text-lg font-bold tracking-tight">ERP</span>
         </div>
         <ScrollArea className="h-[calc(100dvh-3.5rem)]">
           <SidebarNav />
@@ -64,9 +57,13 @@ export function MainLayoutShell({
       </aside>
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
-        <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main
+          id="main-content"
+          className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-3 sm:p-6"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <BreadcrumbNav />
           {children}
         </main>

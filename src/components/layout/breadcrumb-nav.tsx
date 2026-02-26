@@ -68,7 +68,7 @@ export function BreadcrumbNav() {
   if (segments.length <= 1) return null
 
   return (
-    <Breadcrumb className="scrollbar-none mb-3 overflow-x-auto sm:mb-4">
+    <Breadcrumb className="scrollbar-none mb-3 overflow-x-auto sm:mb-4" aria-label="현재 위치">
       <BreadcrumbList className="flex-nowrap text-[13px] sm:text-sm">
         {segments.map((segment, index) => {
           const href = '/' + segments.slice(0, index + 1).join('/')
@@ -80,10 +80,12 @@ export function BreadcrumbNav() {
               {index > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage>{label}</BreadcrumbPage>
+                  <BreadcrumbPage className="text-foreground font-medium">{label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link href={href}>{label}</Link>
+                    <Link href={href} className="hover:text-foreground transition-colors">
+                      {label}
+                    </Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>

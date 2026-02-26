@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -45,6 +45,14 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --color-status-success: var(--color-success);
+  --color-status-success-muted: var(--color-success-muted);
+  --color-status-warning: var(--color-warning);
+  --color-status-warning-muted: var(--color-warning-muted);
+  --color-status-danger: var(--color-danger);
+  --color-status-danger-muted: var(--color-danger-muted);
+  --color-status-info: var(--color-info);
+  --color-status-info-muted: var(--color-info-muted);
 }
 
 :root {
@@ -60,7 +68,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(0.5 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -80,6 +88,16 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Semantic status colors */
+  --color-success: oklch(0.52 0.17 152);
+  --color-success-muted: oklch(0.96 0.02 152);
+  --color-warning: oklch(0.75 0.18 85);
+  --color-warning-muted: oklch(0.96 0.04 85);
+  --color-danger: oklch(0.58 0.22 27);
+  --color-danger-muted: oklch(0.96 0.03 27);
+  --color-info: oklch(0.55 0.18 250);
+  --color-info-muted: oklch(0.96 0.02 250);
 }
 
 .dark {
@@ -94,7 +112,7 @@
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.738 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
@@ -114,6 +132,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Semantic status colors - dark mode */
+  --color-success: oklch(0.68 0.17 152);
+  --color-success-muted: oklch(0.22 0.04 152);
+  --color-warning: oklch(0.78 0.16 85);
+  --color-warning-muted: oklch(0.22 0.04 85);
+  --color-danger: oklch(0.7 0.19 27);
+  --color-danger-muted: oklch(0.22 0.04 27);
+  --color-info: oklch(0.68 0.16 250);
+  --color-info-muted: oklch(0.22 0.04 250);
 }
 
 @layer base {
@@ -147,19 +175,19 @@
   }
 
   /* Prevent input zoom on iOS (font-size < 16px triggers zoom) */
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="search"],
-  input[type="number"],
-  input[type="tel"],
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='search'],
+  input[type='number'],
+  input[type='tel'],
   select,
   textarea {
     font-size: 16px !important;
   }
 
   /* Dialog scroll on mobile */
-  [role="dialog"] {
+  [role='dialog'] {
     max-height: 90dvh !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
@@ -168,7 +196,7 @@
   /* Tap feedback for interactive elements */
   button,
   a,
-  [role="button"] {
+  [role='button'] {
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -188,13 +216,72 @@
   display: none;
 }
 
+/* Interactive card focus & hover states */
+.card-interactive {
+  transition:
+    box-shadow 0.2s,
+    transform 0.15s;
+  cursor: pointer;
+}
+.card-interactive:hover {
+  box-shadow: 0 4px 12px oklch(0 0 0 / 8%);
+}
+.card-interactive:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.card-interactive:active {
+  transform: scale(0.985);
+}
+
+/* Status color utility classes */
+.text-status-success {
+  color: var(--color-success);
+}
+.text-status-warning {
+  color: var(--color-warning);
+}
+.text-status-danger {
+  color: var(--color-danger);
+}
+.text-status-info {
+  color: var(--color-info);
+}
+.bg-status-success-muted {
+  background-color: var(--color-success-muted);
+}
+.bg-status-warning-muted {
+  background-color: var(--color-warning-muted);
+}
+.bg-status-danger-muted {
+  background-color: var(--color-danger-muted);
+}
+.bg-status-info-muted {
+  background-color: var(--color-info-muted);
+}
+
+/* Smooth page transitions */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s ease-out;
+}
+
 /* Print styles */
 @media print {
   header,
   aside,
   nav,
   .no-print,
-  [role="dialog"],
+  [role='dialog'],
   .fixed {
     display: none !important;
   }
