@@ -53,11 +53,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
     if (!delivery) return errorResponse('납품을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    const inspectionNo = await generateDocumentNumber('QI', new Date(data.inspectionDate))
     // 불량률을 비율(0~1)로 계산 — Decimal(8,4)에 안전하게 저장
     const defectRate = data.sampleSize > 0 ? Math.min(9999.9999, (data.defectCount / data.sampleSize) * 100) : 0
 
     const result = await prisma.$transaction(async (tx) => {
+      const inspectionNo = await generateDocumentNumber('QI', new Date(data.inspectionDate), tx)
       const inspection = await tx.qualityInspection.create({
         data: {
           inspectionNo,

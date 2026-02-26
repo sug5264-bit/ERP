@@ -70,8 +70,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createStockMovementSchema.parse(body)
 
-    const movementNo = await generateDocumentNumber('STK', new Date(data.movementDate))
-
     // 창고 필수 검증
     if (data.movementType === 'INBOUND' && !data.targetWarehouseId) {
       return errorResponse('입고에는 대상 창고가 필요합니다.', 'MISSING_WAREHOUSE')
@@ -96,6 +94,7 @@ export async function POST(request: NextRequest) {
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     const result = await prisma.$transaction(async (tx) => {
+      const movementNo = await generateDocumentNumber('STK', new Date(data.movementDate), tx)
       const movement = await tx.stockMovement.create({
         data: {
           movementNo,
