@@ -105,6 +105,7 @@ const navItems: NavItem[] = [
         href: '/sales/deliveries',
         permission: 'sales.deliveries',
         children: [
+          { title: '온라인매출', href: '/sales/deliveries/online-sales', permission: 'sales.deliveries' },
           { title: '특이사항', href: '/sales/deliveries/notes', permission: 'sales.deliveries' },
           { title: '게시글', href: '/sales/deliveries/posts', permission: 'sales.deliveries' },
         ],

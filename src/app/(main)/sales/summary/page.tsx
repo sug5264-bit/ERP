@@ -6,34 +6,29 @@ import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import {
-  Globe,
-  Store,
-  TrendingUp,
-  ShoppingCart,
-  Download,
-  FileText,
-} from 'lucide-react'
+import { Globe, Store, TrendingUp, ShoppingCart, Download, FileText } from 'lucide-react'
 
 const currentYear = new Date().getFullYear()
 const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
 const months = [
   { value: '', label: '전체' },
-  { value: '1', label: '1월' }, { value: '2', label: '2월' }, { value: '3', label: '3월' },
-  { value: '4', label: '4월' }, { value: '5', label: '5월' }, { value: '6', label: '6월' },
-  { value: '7', label: '7월' }, { value: '8', label: '8월' }, { value: '9', label: '9월' },
-  { value: '10', label: '10월' }, { value: '11', label: '11월' }, { value: '12', label: '12월' },
+  { value: '1', label: '1월' },
+  { value: '2', label: '2월' },
+  { value: '3', label: '3월' },
+  { value: '4', label: '4월' },
+  { value: '5', label: '5월' },
+  { value: '6', label: '6월' },
+  { value: '7', label: '7월' },
+  { value: '8', label: '8월' },
+  { value: '9', label: '9월' },
+  { value: '10', label: '10월' },
+  { value: '11', label: '11월' },
+  { value: '12', label: '12월' },
 ]
 
 interface SummaryData {
@@ -59,9 +54,10 @@ export default function SalesSummaryPage() {
 
   const summary: SummaryData | null = data?.data || null
 
-  const onlineRatio = summary && summary.total.totalAmount > 0
-    ? Math.round((summary.online.totalAmount / summary.total.totalAmount) * 100)
-    : 0
+  const onlineRatio =
+    summary && summary.total.totalAmount > 0
+      ? Math.round((summary.online.totalAmount / summary.total.totalAmount) * 100)
+      : 0
 
   const exportItemColumns: ExportColumn[] = [
     { header: '품목코드', accessor: 'itemCode' },
@@ -97,7 +93,9 @@ export default function SalesSummaryPage() {
           </SelectTrigger>
           <SelectContent>
             {years.map((y) => (
-              <SelectItem key={y} value={String(y)}>{y}년</SelectItem>
+              <SelectItem key={y} value={String(y)}>
+                {y}년
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -107,7 +105,9 @@ export default function SalesSummaryPage() {
           </SelectTrigger>
           <SelectContent>
             {months.map((m) => (
-              <SelectItem key={m.value || 'all'} value={m.value || 'all'}>{m.label}</SelectItem>
+              <SelectItem key={m.value || 'all'} value={m.value || 'all'}>
+                {m.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -122,47 +122,53 @@ export default function SalesSummaryPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">데이터를 불러오는 중...</div>
+        <div className="text-muted-foreground py-12 text-center">데이터를 불러오는 중...</div>
       ) : !summary ? (
-        <div className="text-center py-12 text-muted-foreground">데이터가 없습니다.</div>
+        <div className="text-muted-foreground py-12 text-center">데이터가 없습니다.</div>
       ) : (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">전체 매출</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatCurrency(summary.total.totalAmount)}</div>
-                <p className="text-xs text-muted-foreground mt-1">{summary.total.count}건</p>
+                <p className="text-muted-foreground mt-1 text-xs">{summary.total.count}건</p>
               </CardContent>
             </Card>
-            <Card className="border-blue-200 bg-blue-50/30">
+            <Card className="bg-status-info-muted border-[var(--color-info)]/20">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">온라인 매출</CardTitle>
-                <Globe className="h-4 w-4 text-blue-500" />
+                <Globe className="text-status-info h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{formatCurrency(summary.online.totalAmount)}</div>
-                <p className="text-xs text-muted-foreground mt-1">{summary.online.count}건 · {onlineRatio}%</p>
+                <div className="text-status-info text-2xl font-bold">{formatCurrency(summary.online.totalAmount)}</div>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {summary.online.count}건 · {onlineRatio}%
+                </p>
               </CardContent>
             </Card>
-            <Card className="border-orange-200 bg-orange-50/30">
+            <Card className="bg-status-warning-muted border-[var(--color-warning)]/20">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">오프라인 매출</CardTitle>
-                <Store className="h-4 w-4 text-orange-500" />
+                <Store className="text-status-warning h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{formatCurrency(summary.offline.totalAmount)}</div>
-                <p className="text-xs text-muted-foreground mt-1">{summary.offline.count}건 · {100 - onlineRatio}%</p>
+                <div className="text-status-warning text-2xl font-bold">
+                  {formatCurrency(summary.offline.totalAmount)}
+                </div>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {summary.offline.count}건 · {100 - onlineRatio}%
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">평균 주문금액</CardTitle>
-                <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                <ShoppingCart className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
@@ -170,7 +176,7 @@ export default function SalesSummaryPage() {
                     ? formatCurrency(Math.round(summary.total.totalAmount / summary.total.count))
                     : '0'}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">건당 평균</p>
+                <p className="text-muted-foreground mt-1 text-xs">건당 평균</p>
               </CardContent>
             </Card>
           </div>
@@ -182,10 +188,10 @@ export default function SalesSummaryPage() {
                 <CardTitle className="text-base">채널별 매출 비율</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex h-8 rounded-lg overflow-hidden">
+                <div className="flex h-8 overflow-hidden rounded-lg">
                   {onlineRatio > 0 && (
                     <div
-                      className="bg-blue-500 flex items-center justify-center text-white text-xs font-medium"
+                      className="flex items-center justify-center bg-[var(--color-info)] text-xs font-medium text-white"
                       style={{ width: `${onlineRatio}%` }}
                     >
                       {onlineRatio > 10 ? `온라인 ${onlineRatio}%` : ''}
@@ -193,20 +199,20 @@ export default function SalesSummaryPage() {
                   )}
                   {100 - onlineRatio > 0 && (
                     <div
-                      className="bg-orange-500 flex items-center justify-center text-white text-xs font-medium"
+                      className="flex items-center justify-center bg-[var(--color-warning)] text-xs font-medium text-white"
                       style={{ width: `${100 - onlineRatio}%` }}
                     >
                       {100 - onlineRatio > 10 ? `오프라인 ${100 - onlineRatio}%` : ''}
                     </div>
                   )}
                 </div>
-                <div className="flex justify-between mt-2 text-sm">
+                <div className="mt-2 flex justify-between text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-blue-500" />
+                    <div className="h-3 w-3 rounded bg-[var(--color-info)]" />
                     <span>온라인: {formatCurrency(summary.online.totalAmount)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-orange-500" />
+                    <div className="h-3 w-3 rounded bg-[var(--color-warning)]" />
                     <span>오프라인: {formatCurrency(summary.offline.totalAmount)}</span>
                   </div>
                 </div>
@@ -224,16 +230,16 @@ export default function SalesSummaryPage() {
                 <div className="rounded-md border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/50">
+                      <tr className="bg-muted/50 border-b">
                         <th className="p-3 text-left">월</th>
                         <th className="p-3 text-right">
                           <span className="flex items-center justify-end gap-1">
-                            <div className="w-2 h-2 rounded bg-blue-500" /> 온라인
+                            <div className="h-2 w-2 rounded bg-[var(--color-info)]" /> 온라인
                           </span>
                         </th>
                         <th className="p-3 text-right">
                           <span className="flex items-center justify-end gap-1">
-                            <div className="w-2 h-2 rounded bg-orange-500" /> 오프라인
+                            <div className="h-2 w-2 rounded bg-[var(--color-warning)]" /> 오프라인
                           </span>
                         </th>
                         <th className="p-3 text-right font-semibold">합계</th>
@@ -243,8 +249,8 @@ export default function SalesSummaryPage() {
                       {summary.monthly.map((m) => (
                         <tr key={m.month} className="border-b">
                           <td className="p-3 font-medium">{m.month}</td>
-                          <td className="p-3 text-right text-blue-600 font-mono">{formatCurrency(m.online)}</td>
-                          <td className="p-3 text-right text-orange-600 font-mono">{formatCurrency(m.offline)}</td>
+                          <td className="text-status-info p-3 text-right font-mono">{formatCurrency(m.online)}</td>
+                          <td className="text-status-warning p-3 text-right font-mono">{formatCurrency(m.offline)}</td>
                           <td className="p-3 text-right font-mono font-semibold">{formatCurrency(m.total)}</td>
                         </tr>
                       ))}
@@ -252,8 +258,12 @@ export default function SalesSummaryPage() {
                     <tfoot>
                       <tr className="bg-muted/30 font-semibold">
                         <td className="p-3">합계</td>
-                        <td className="p-3 text-right text-blue-600 font-mono">{formatCurrency(summary.online.totalAmount)}</td>
-                        <td className="p-3 text-right text-orange-600 font-mono">{formatCurrency(summary.offline.totalAmount)}</td>
+                        <td className="text-status-info p-3 text-right font-mono">
+                          {formatCurrency(summary.online.totalAmount)}
+                        </td>
+                        <td className="text-status-warning p-3 text-right font-mono">
+                          {formatCurrency(summary.offline.totalAmount)}
+                        </td>
                         <td className="p-3 text-right font-mono">{formatCurrency(summary.total.totalAmount)}</td>
                       </tr>
                     </tfoot>
@@ -273,7 +283,7 @@ export default function SalesSummaryPage() {
                 <div className="rounded-md border">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b bg-muted/50">
+                      <tr className="bg-muted/50 border-b">
                         <th className="p-3 text-left">순위</th>
                         <th className="p-3 text-left">품목코드</th>
                         <th className="p-3 text-left">품목명</th>
@@ -292,8 +302,10 @@ export default function SalesSummaryPage() {
                           <td className="p-3 font-mono text-xs">{item.itemCode}</td>
                           <td className="p-3 font-medium">{item.itemName}</td>
                           <td className="p-3 text-right font-mono">{item.qty}</td>
-                          <td className="p-3 text-right text-blue-600 font-mono">{formatCurrency(item.online)}</td>
-                          <td className="p-3 text-right text-orange-600 font-mono">{formatCurrency(item.offline)}</td>
+                          <td className="text-status-info p-3 text-right font-mono">{formatCurrency(item.online)}</td>
+                          <td className="text-status-warning p-3 text-right font-mono">
+                            {formatCurrency(item.offline)}
+                          </td>
                           <td className="p-3 text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
                         </tr>
                       ))}

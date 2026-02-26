@@ -11,20 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
@@ -76,14 +64,16 @@ export default function NettingPage() {
     queryKey: ['partners-all'],
     queryFn: () => api.get('/partners?pageSize=200') as Promise<any>,
   })
-  const partners = (partnersData?.data || [])
+  const partners = partnersData?.data || []
 
   const createMutation = useMutation({
     mutationFn: (data: any) => api.post('/closing/netting', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['closing-netting'] })
       setCreateOpen(false)
-      setFormPartnerId(''); setFormAmount(''); setFormDescription('')
+      setFormPartnerId('')
+      setFormAmount('')
+      setFormDescription('')
       setFormDate(new Date().toISOString().slice(0, 10))
       toast.success('상계 내역이 등록되었습니다.')
     },
@@ -117,7 +107,8 @@ export default function NettingPage() {
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['netting-orders', year, month],
-    queryFn: () => api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`) as Promise<any>,
+    queryFn: () =>
+      api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`) as Promise<any>,
   })
 
   const { data: companyData } = useQuery({
@@ -131,9 +122,12 @@ export default function NettingPage() {
     const defaultCompany = companies.find((c: any) => c.isDefault) || companies[0]
     if (defaultCompany) {
       return {
-        name: defaultCompany.companyName, bizNo: defaultCompany.bizNo || '',
-        ceo: defaultCompany.ceoName || '', address: defaultCompany.address || '',
-        bizType: defaultCompany.bizType || '', bizItem: defaultCompany.bizCategory || '',
+        name: defaultCompany.companyName,
+        bizNo: defaultCompany.bizNo || '',
+        ceo: defaultCompany.ceoName || '',
+        address: defaultCompany.address || '',
+        bizType: defaultCompany.bizType || '',
+        bizItem: defaultCompany.bizCategory || '',
         tel: defaultCompany.phone || '',
       }
     }
@@ -143,7 +137,7 @@ export default function NettingPage() {
   const handleTransactionStatementPDF = async (order: any) => {
     let orderDetail = order
     try {
-      const res = await api.get(`/sales/orders/${order.id}`) as any
+      const res = (await api.get(`/sales/orders/${order.id}`)) as any
       orderDetail = res.data || res
     } catch {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
@@ -154,10 +148,21 @@ export default function NettingPage() {
       statementNo: orderDetail.orderNo,
       statementDate: formatDate(orderDetail.orderDate),
       supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, tel: ci.tel },
-      buyer: { name: orderDetail.partner?.partnerName || '', bizNo: orderDetail.partner?.bizNo || '', ceo: orderDetail.partner?.ceoName || '', address: orderDetail.partner?.address || '', tel: orderDetail.partner?.phone || '' },
+      buyer: {
+        name: orderDetail.partner?.partnerName || '',
+        bizNo: orderDetail.partner?.bizNo || '',
+        ceo: orderDetail.partner?.ceoName || '',
+        address: orderDetail.partner?.address || '',
+        tel: orderDetail.partner?.phone || '',
+      },
       items: (orderDetail.details || []).map((d: any, idx: number) => ({
-        no: idx + 1, itemName: d.item?.itemName || '', spec: d.item?.specification || '',
-        qty: Number(d.quantity), unitPrice: Number(d.unitPrice), amount: Number(d.supplyAmount), remark: d.remark || '',
+        no: idx + 1,
+        itemName: d.item?.itemName || '',
+        spec: d.item?.specification || '',
+        qty: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        amount: Number(d.supplyAmount),
+        remark: d.remark || '',
       })),
       totalAmount: Number(orderDetail.totalAmount),
     }
@@ -167,7 +172,10 @@ export default function NettingPage() {
 
   const orders: any[] = ordersData?.data || []
 
-  const ORDER_STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  const ORDER_STATUS_MAP: Record<
+    string,
+    { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+  > = {
     ORDERED: { label: '발주', variant: 'default' },
     IN_PROGRESS: { label: '진행중', variant: 'secondary' },
     COMPLETED: { label: '완료', variant: 'outline' },
@@ -210,11 +218,7 @@ export default function NettingPage() {
       id: 'transactionStatement',
       header: '거래명세표',
       cell: ({ row }) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleTransactionStatementPDF(row.original)}
-        >
+        <Button variant="outline" size="sm" onClick={() => handleTransactionStatementPDF(row.original)}>
           <FileText className="mr-1 h-4 w-4" />
           발행
         </Button>
@@ -242,10 +246,7 @@ export default function NettingPage() {
       accessorKey: 'partnerName',
       header: '거래처명',
       cell: ({ row }) => (
-        <button
-          className="text-left font-medium hover:underline"
-          onClick={() => openDetail(row.original)}
-        >
+        <button className="text-left font-medium hover:underline" onClick={() => openDetail(row.original)}>
           {row.original.partnerName}
         </button>
       ),
@@ -253,16 +254,12 @@ export default function NettingPage() {
     {
       accessorKey: 'receivable',
       header: '매출채권(원)',
-      cell: ({ row }) => (
-        <span className="text-blue-600">{formatCurrency(row.original.receivable)}</span>
-      ),
+      cell: ({ row }) => <span className="text-status-info">{formatCurrency(row.original.receivable)}</span>,
     },
     {
       accessorKey: 'payable',
       header: '매입채무(원)',
-      cell: ({ row }) => (
-        <span className="text-red-600">{formatCurrency(row.original.payable)}</span>
-      ),
+      cell: ({ row }) => <span className="text-status-danger">{formatCurrency(row.original.payable)}</span>,
     },
     {
       accessorKey: 'netAmount',
@@ -271,7 +268,8 @@ export default function NettingPage() {
         const net = row.original.netAmount
         return (
           <Badge variant={net >= 0 ? 'default' : 'destructive'}>
-            {net >= 0 ? '+' : ''}{formatCurrency(net)}
+            {net >= 0 ? '+' : ''}
+            {formatCurrency(net)}
           </Badge>
         )
       },
@@ -302,10 +300,7 @@ export default function NettingPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="상계내역"
-        description="월별 거래처별 매출채권/매입채무 상계 내역을 조회합니다"
-      />
+      <PageHeader title="상계내역" description="월별 거래처별 매출채권/매입채무 상계 내역을 조회합니다" />
 
       <div className="flex items-end gap-4">
         <div className="space-y-2">
@@ -316,7 +311,9 @@ export default function NettingPage() {
             </SelectTrigger>
             <SelectContent>
               {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                <SelectItem key={y} value={y.toString()}>{y}년</SelectItem>
+                <SelectItem key={y} value={y.toString()}>
+                  {y}년
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -329,7 +326,9 @@ export default function NettingPage() {
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <SelectItem key={m} value={m.toString()}>{m}월</SelectItem>
+                <SelectItem key={m} value={m.toString()}>
+                  {m}월
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -350,17 +349,18 @@ export default function NettingPage() {
           {/* 요약 카드 */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">총 매출채권</p>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalReceivable)}</p>
+              <p className="text-muted-foreground text-sm">총 매출채권</p>
+              <p className="text-status-info text-2xl font-bold">{formatCurrency(totalReceivable)}</p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">총 매입채무</p>
-              <p className="text-2xl font-bold text-red-600">{formatCurrency(totalPayable)}</p>
+              <p className="text-muted-foreground text-sm">총 매입채무</p>
+              <p className="text-status-danger text-2xl font-bold">{formatCurrency(totalPayable)}</p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">순 상계금액</p>
-              <p className={`text-2xl font-bold ${totalNet >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                {totalNet >= 0 ? '+' : ''}{formatCurrency(totalNet)}
+              <p className="text-muted-foreground text-sm">순 상계금액</p>
+              <p className={`text-2xl font-bold ${totalNet >= 0 ? 'text-status-info' : 'text-status-danger'}`}>
+                {totalNet >= 0 ? '+' : ''}
+                {formatCurrency(totalNet)}
               </p>
             </div>
           </div>
@@ -376,19 +376,20 @@ export default function NettingPage() {
 
         <TabsContent value="transactionStatement" className="space-y-6">
           <div className="rounded-lg border p-4">
-            <h3 className="text-lg font-semibold mb-1">거래명세표 발행 (발주관리 연동)</h3>
-            <p className="text-sm text-muted-foreground">
-              {year}년 {month}월 발주 내역을 기반으로 거래명세표를 발행합니다. 발주 상세정보와 거래처 정보가 자동으로 반영됩니다.
+            <h3 className="mb-1 text-lg font-semibold">거래명세표 발행 (발주관리 연동)</h3>
+            <p className="text-muted-foreground text-sm">
+              {year}년 {month}월 발주 내역을 기반으로 거래명세표를 발행합니다. 발주 상세정보와 거래처 정보가 자동으로
+              반영됩니다.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">해당 기간 발주 건수</p>
+              <p className="text-muted-foreground text-sm">해당 기간 발주 건수</p>
               <p className="text-2xl font-bold">{orders.length}건</p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-sm text-muted-foreground">발주 합계금액</p>
+              <p className="text-muted-foreground text-sm">발주 합계금액</p>
               <p className="text-2xl font-bold">
                 {formatCurrency(orders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0))}
               </p>
@@ -413,31 +414,56 @@ export default function NettingPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>거래처 <span className="text-destructive">*</span></Label>
+              <Label>
+                거래처 <span className="text-destructive">*</span>
+              </Label>
               <Select value={formPartnerId} onValueChange={setFormPartnerId}>
-                <SelectTrigger><SelectValue placeholder="거래처 선택" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="거래처 선택" />
+                </SelectTrigger>
                 <SelectContent>
                   {partners.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.partnerName}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>상계금액 <span className="text-destructive">*</span></Label>
-              <Input type="number" placeholder="0" required aria-required="true" min="1" step="1" value={formAmount} onChange={(e) => setFormAmount(e.target.value)} />
+              <Label>
+                상계금액 <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                type="number"
+                placeholder="0"
+                required
+                aria-required="true"
+                min="1"
+                step="1"
+                value={formAmount}
+                onChange={(e) => setFormAmount(e.target.value)}
+              />
             </div>
             <div className="space-y-2">
-              <Label>상계일 <span className="text-destructive">*</span></Label>
+              <Label>
+                상계일 <span className="text-destructive">*</span>
+              </Label>
               <Input type="date" aria-required="true" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>적요</Label>
-              <Textarea placeholder="상계 사유를 입력하세요" value={formDescription} onChange={(e) => setFormDescription(e.target.value)} />
+              <Textarea
+                placeholder="상계 사유를 입력하세요"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              취소
+            </Button>
             <Button onClick={handleCreateNetting} disabled={createMutation.isPending}>
               {createMutation.isPending ? '등록 중...' : '상계 등록'}
             </Button>
@@ -447,7 +473,7 @@ export default function NettingPage() {
 
       {/* 상세 Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-sm sm:max-w-xl md:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               {selectedPartner?.partnerName} - 상계 상세내역 ({year}년 {month}월)
@@ -457,26 +483,20 @@ export default function NettingPage() {
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">매출채권: </span>
-                <span className="font-medium text-blue-600">
-                  {formatCurrency(selectedPartner?.receivable || 0)}
-                </span>
+                <span className="text-status-info font-medium">{formatCurrency(selectedPartner?.receivable || 0)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">매입채무: </span>
-                <span className="font-medium text-red-600">
-                  {formatCurrency(selectedPartner?.payable || 0)}
-                </span>
+                <span className="text-status-danger font-medium">{formatCurrency(selectedPartner?.payable || 0)}</span>
               </div>
               <div>
                 <span className="text-muted-foreground">순액: </span>
-                <span className="font-bold">
-                  {formatCurrency(selectedPartner?.netAmount || 0)}
-                </span>
+                <span className="font-bold">{formatCurrency(selectedPartner?.netAmount || 0)}</span>
               </div>
             </div>
             <div className="max-h-[40vh] overflow-auto rounded-md border">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-muted">
+                <thead className="bg-muted sticky top-0">
                   <tr>
                     <th className="px-3 py-2 text-left">전표번호</th>
                     <th className="px-3 py-2 text-left">일자</th>
@@ -489,7 +509,7 @@ export default function NettingPage() {
                 </thead>
                 <tbody>
                   {selectedPartner?.details.map((d, i) => (
-                    <tr key={i} className="border-t hover:bg-muted/20">
+                    <tr key={i} className="hover:bg-muted/20 border-t">
                       <td className="px-3 py-2 font-mono text-xs">{d.voucherNo}</td>
                       <td className="px-3 py-2">{formatDate(d.voucherDate)}</td>
                       <td className="px-3 py-2">
@@ -498,18 +518,14 @@ export default function NettingPage() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2">{d.account}</td>
-                      <td className="px-3 py-2 text-right">
-                        {d.debit > 0 ? formatCurrency(d.debit) : '-'}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        {d.credit > 0 ? formatCurrency(d.credit) : '-'}
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">{d.description || '-'}</td>
+                      <td className="px-3 py-2 text-right">{d.debit > 0 ? formatCurrency(d.debit) : '-'}</td>
+                      <td className="px-3 py-2 text-right">{d.credit > 0 ? formatCurrency(d.credit) : '-'}</td>
+                      <td className="text-muted-foreground px-3 py-2">{d.description || '-'}</td>
                     </tr>
                   ))}
                   {(!selectedPartner?.details || selectedPartner.details.length === 0) && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                      <td colSpan={7} className="text-muted-foreground px-3 py-8 text-center">
                         해당 월에 거래 내역이 없습니다.
                       </td>
                     </tr>

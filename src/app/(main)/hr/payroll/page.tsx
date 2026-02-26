@@ -121,16 +121,14 @@ export default function PayrollPage() {
       id: 'totalEarnings',
       header: '총지급액',
       cell: ({ row }) => (
-        <span className="font-medium text-blue-600 dark:text-blue-500">
-          {formatCurrency(Number(row.original.totalEarnings))}
-        </span>
+        <span className="text-status-info font-medium">{formatCurrency(Number(row.original.totalEarnings))}</span>
       ),
     },
     {
       id: 'totalDeductions',
       header: '총공제액',
       cell: ({ row }) => (
-        <span className="text-red-600 dark:text-red-500">{formatCurrency(Number(row.original.totalDeductions))}</span>
+        <span className="text-status-danger">{formatCurrency(Number(row.original.totalDeductions))}</span>
       ),
     },
     {
@@ -150,17 +148,17 @@ export default function PayrollPage() {
           <p className="text-muted-foreground text-[10px] sm:text-xs">전체 건수</p>
           <p className="text-sm font-bold sm:text-lg">{summary.totalCount}건</p>
         </div>
-        <div className="rounded-lg border bg-blue-50 p-3 text-center sm:p-4 dark:bg-blue-950/30">
+        <div className="bg-status-info-muted rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">총 대상인원</p>
-          <p className="text-sm font-bold text-blue-600 sm:text-lg dark:text-blue-500">{summary.totalPersons}명</p>
+          <p className="text-status-info text-sm font-bold sm:text-lg">{summary.totalPersons}명</p>
         </div>
-        <div className="rounded-lg border bg-green-50 p-3 text-center sm:p-4 dark:bg-green-950/30">
+        <div className="bg-status-success-muted rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">확정</p>
-          <p className="text-sm font-bold text-green-600 sm:text-lg dark:text-green-500">{summary.confirmed}건</p>
+          <p className="text-status-success text-sm font-bold sm:text-lg">{summary.confirmed}건</p>
         </div>
-        <div className="rounded-lg border bg-yellow-50 p-3 text-center sm:p-4 dark:bg-yellow-950/30">
+        <div className="bg-status-warning-muted rounded-lg border p-3 text-center sm:p-4">
           <p className="text-muted-foreground text-[10px] sm:text-xs">임시</p>
-          <p className="text-sm font-bold text-yellow-600 sm:text-lg dark:text-yellow-500">{summary.draft}건</p>
+          <p className="text-status-warning text-sm font-bold sm:text-lg">{summary.draft}건</p>
         </div>
       </div>
 
@@ -228,9 +226,7 @@ export default function PayrollPage() {
                     <CardTitle className="text-muted-foreground text-xs">총지급액</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <span className="text-lg font-bold text-blue-600 dark:text-blue-500">
-                      {formatCurrency(totals.totalEarnings)}
-                    </span>
+                    <span className="text-status-info text-lg font-bold">{formatCurrency(totals.totalEarnings)}</span>
                   </CardContent>
                 </Card>
                 <Card>
@@ -238,7 +234,7 @@ export default function PayrollPage() {
                     <CardTitle className="text-muted-foreground text-xs">총공제액</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <span className="text-lg font-bold text-red-600 dark:text-red-500">
+                    <span className="text-status-danger text-lg font-bold">
                       {formatCurrency(totals.totalDeductions)}
                     </span>
                   </CardContent>

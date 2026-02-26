@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
@@ -38,11 +38,14 @@ import {
   Filter,
   RotateCcw,
   Paperclip,
+  CalendarDays,
+  Table2,
 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { RecordSubTabs } from '@/components/common/record-sub-tabs'
+import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   ORDERED: { label: '발주', variant: 'default' },
@@ -117,6 +120,10 @@ interface TrackingRow {
 
 export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<string>('ONLINE')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<{ date: string; events: CalendarEvent[] } | null>(
+    null
+  )
   const [open, setOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
@@ -677,6 +684,27 @@ export default function OrdersPage() {
     completedCount: summaryOrders.filter((o: any) => o.status === 'COMPLETED').length,
   }
 
+  // Calendar events from orders
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    const orders = activeTab === 'ONLINE' ? onlineOrders : offlineOrders
+    const statusVariant: Record<string, CalendarEvent['variant']> = {
+      ORDERED: 'info',
+      IN_PROGRESS: 'warning',
+      COMPLETED: 'success',
+      CANCELLED: 'danger',
+      COMPLAINT: 'danger',
+      EXCHANGE: 'warning',
+      RETURN: 'danger',
+    }
+    return orders.map((o: any) => ({
+      id: o.id,
+      date: o.orderDate?.split('T')[0] || '',
+      label: `${o.orderNo} ${o.partner?.partnerName || ''}`.trim(),
+      sublabel: formatCurrency(o.totalAmount || 0),
+      variant: statusVariant[o.status] || 'default',
+    }))
+  }, [activeTab, onlineOrders, offlineOrders])
+
   const offlineExportColumns: ExportColumn[] = [
     { header: '발주번호', accessor: 'orderNo' },
     { header: '발주일', accessor: (r) => (r.orderDate ? formatDate(r.orderDate) : '') },
@@ -1177,7 +1205,7 @@ export default function OrdersPage() {
                 </div>
 
                 {/* 배송 정보 (보내는사람) - 노란 영역 */}
-                <div className="rounded-md border border-yellow-200 bg-yellow-50 p-2 dark:border-yellow-800 dark:bg-yellow-900/10">
+                <div className="bg-status-warning-muted rounded-md border border-[var(--color-warning)]/20 p-2">
                   <label className="mb-1.5 block text-[11px] font-medium text-yellow-700 dark:text-yellow-400">
                     보내는사람 (업체정보 자동입력)
                   </label>
@@ -1538,14 +1566,14 @@ export default function OrdersPage() {
                 <span className="text-green-600">
                   성공: <strong>{trackingResult.success}건</strong>
                 </span>
-                <span className="text-red-600">
+                <span className="text-status-danger">
                   실패: <strong>{trackingResult.failed}건</strong>
                 </span>
               </div>
               {trackingResult.errors.length > 0 && (
                 <div className="space-y-1">
-                  <Label className="text-red-600">오류 목록</Label>
-                  <div className="max-h-32 space-y-1 overflow-y-auto text-xs text-red-600">
+                  <Label className="text-status-danger">오류 목록</Label>
+                  <div className="text-status-danger max-h-32 space-y-1 overflow-y-auto text-xs">
                     {trackingResult.errors.map((err, idx) => (
                       <p key={idx}>{err}</p>
                     ))}
@@ -1580,23 +1608,17 @@ export default function OrdersPage() {
               <p className="text-muted-foreground text-[10px] sm:text-xs">합계 금액</p>
               <p className="text-sm font-bold sm:text-lg">{formatCurrency(summaryStats.totalAmount)}</p>
             </div>
-            <div className="rounded-lg border bg-blue-50 p-3 text-center sm:p-4 dark:bg-blue-950/30">
+            <div className="bg-status-info-muted rounded-lg border p-3 text-center sm:p-4">
               <p className="text-muted-foreground text-[10px] sm:text-xs">발주</p>
-              <p className="text-sm font-bold text-blue-600 sm:text-lg dark:text-blue-500">
-                {summaryStats.orderedCount}건
-              </p>
+              <p className="text-status-info text-sm font-bold sm:text-lg">{summaryStats.orderedCount}건</p>
             </div>
-            <div className="rounded-lg border bg-yellow-50 p-3 text-center sm:p-4 dark:bg-yellow-950/30">
+            <div className="bg-status-warning-muted rounded-lg border p-3 text-center sm:p-4">
               <p className="text-muted-foreground text-[10px] sm:text-xs">진행중</p>
-              <p className="text-sm font-bold text-yellow-600 sm:text-lg dark:text-yellow-500">
-                {summaryStats.inProgressCount}건
-              </p>
+              <p className="text-status-warning text-sm font-bold sm:text-lg">{summaryStats.inProgressCount}건</p>
             </div>
-            <div className="col-span-2 rounded-lg border bg-green-50 p-3 text-center sm:col-span-1 sm:p-4 dark:bg-green-950/30">
+            <div className="bg-status-success-muted col-span-2 rounded-lg border p-3 text-center sm:col-span-1 sm:p-4">
               <p className="text-muted-foreground text-[10px] sm:text-xs">완료</p>
-              <p className="text-sm font-bold text-green-600 sm:text-lg dark:text-green-500">
-                {summaryStats.completedCount}건
-              </p>
+              <p className="text-status-success text-sm font-bold sm:text-lg">{summaryStats.completedCount}건</p>
             </div>
           </div>
 
@@ -1656,6 +1678,24 @@ export default function OrdersPage() {
             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleResetFilters} aria-label="초기화">
               <RotateCcw className="h-4 w-4" />
             </Button>
+            <div className="ml-auto flex items-center gap-1 rounded-lg border p-0.5">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7 gap-1 px-2.5 text-xs"
+                onClick={() => setViewMode('table')}
+              >
+                <Table2 className="h-3.5 w-3.5" /> 테이블
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                className="h-7 gap-1 px-2.5 text-xs"
+                onClick={() => setViewMode('calendar')}
+              >
+                <CalendarDays className="h-3.5 w-3.5" /> 캘린더
+              </Button>
+            </div>
           </div>
 
           {/* 고급 필터 (토글) */}
@@ -1716,7 +1756,47 @@ export default function OrdersPage() {
           )}
         </div>
 
-        <TabsContent value="ONLINE">
+        {viewMode === 'calendar' ? (
+          <div className="space-y-4 pt-4">
+            <CalendarView
+              events={calendarEvents}
+              onDateClick={(date, events) => setCalendarSelectedDate({ date, events })}
+              maxEventsPerCell={3}
+            />
+            <Dialog open={!!calendarSelectedDate} onOpenChange={(v) => !v && setCalendarSelectedDate(null)}>
+              <DialogContent className="max-h-[80vh] max-w-sm overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{calendarSelectedDate?.date} 발주 내역</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {calendarSelectedDate?.events.map((evt) => (
+                    <div key={evt.id} className="flex items-center justify-between rounded-md border p-3">
+                      <div>
+                        <p className="text-sm font-medium">{evt.label}</p>
+                        <p className="text-muted-foreground text-xs">{evt.sublabel}</p>
+                      </div>
+                      <Badge
+                        variant={
+                          evt.variant === 'success' ? 'default' : evt.variant === 'danger' ? 'destructive' : 'secondary'
+                        }
+                      >
+                        {evt.variant === 'success'
+                          ? '완료'
+                          : evt.variant === 'danger'
+                            ? '취소'
+                            : evt.variant === 'warning'
+                              ? '진행중'
+                              : '발주'}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        ) : null}
+
+        <TabsContent value="ONLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               {onlineCreateDialog}
@@ -1787,7 +1867,7 @@ export default function OrdersPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="OFFLINE">
+        <TabsContent value="OFFLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
             <DataTable

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
@@ -19,19 +19,23 @@ import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye } from 'lucide-react'
+import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2 } from 'lucide-react'
+import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 
 const STATUS_MAP: Record<string, string> = { PREPARING: '준비중', SHIPPED: '출하', DELIVERED: '납품완료' }
-const QUALITY_STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+const QUALITY_STATUS_MAP: Record<
+  string,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+> = {
   PASS: { label: '합격', variant: 'default' },
   CONDITIONAL_PASS: { label: '조건부합격', variant: 'secondary' },
   FAIL: { label: '불합격', variant: 'destructive' },
 }
 const GRADE_MAP: Record<string, { label: string; color: string }> = {
-  A: { label: 'A등급', color: 'text-green-600' },
-  B: { label: 'B등급', color: 'text-blue-600' },
-  C: { label: 'C등급', color: 'text-yellow-600' },
-  REJECT: { label: '불합격', color: 'text-red-600' },
+  A: { label: 'A등급', color: 'text-status-success' },
+  B: { label: 'B등급', color: 'text-status-info' },
+  C: { label: 'C등급', color: 'text-status-warning' },
+  REJECT: { label: '불합격', color: 'text-status-danger' },
 }
 
 // 삼성/하이닉스 납품 기준 검사 카테고리
@@ -52,17 +56,83 @@ const CATEGORY_LABEL_MAP: Record<string, string> = Object.fromEntries(
 
 // 기본 검사 항목 템플릿 (반도체 납품 기준)
 const DEFAULT_INSPECTION_ITEMS = [
-  { category: 'APPEARANCE', checkItem: '외관 손상 여부 (스크래치, 찍힘, 변색)', spec: '무결점', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'APPEARANCE', checkItem: '이물질 부착 여부', spec: '이물질 없음', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'DIMENSION', checkItem: '주요 치수 규격 적합성', spec: '도면 기준 ±공차 이내', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'FUNCTION', checkItem: '기능/성능 테스트 결과', spec: '사양서 기준 충족', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'RELIABILITY', checkItem: '내구성/수명 테스트', spec: '기준 수명 이상', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'PACKAGING', checkItem: '포장 상태 및 완충재', spec: '규정 포장 준수', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'PACKAGING', checkItem: '방습/정전기 방지 포장', spec: 'ESD 포장 적용', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'DOCUMENT', checkItem: '품질성적서 첨부 여부', spec: '필수 첨부', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'DOCUMENT', checkItem: '출하검사 성적서', spec: '필수 첨부', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'LABEL', checkItem: 'LOT번호/바코드 표기', spec: '규정 라벨 부착', result: 'PASS' as const, grade: 'A' as const },
-  { category: 'CLEANLINESS', checkItem: '파티클/오염도 검사', spec: 'Class 기준 이내', result: 'PASS' as const, grade: 'A' as const },
+  {
+    category: 'APPEARANCE',
+    checkItem: '외관 손상 여부 (스크래치, 찍힘, 변색)',
+    spec: '무결점',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'APPEARANCE',
+    checkItem: '이물질 부착 여부',
+    spec: '이물질 없음',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'DIMENSION',
+    checkItem: '주요 치수 규격 적합성',
+    spec: '도면 기준 ±공차 이내',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'FUNCTION',
+    checkItem: '기능/성능 테스트 결과',
+    spec: '사양서 기준 충족',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'RELIABILITY',
+    checkItem: '내구성/수명 테스트',
+    spec: '기준 수명 이상',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'PACKAGING',
+    checkItem: '포장 상태 및 완충재',
+    spec: '규정 포장 준수',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'PACKAGING',
+    checkItem: '방습/정전기 방지 포장',
+    spec: 'ESD 포장 적용',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'DOCUMENT',
+    checkItem: '품질성적서 첨부 여부',
+    spec: '필수 첨부',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'DOCUMENT',
+    checkItem: '출하검사 성적서',
+    spec: '필수 첨부',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'LABEL',
+    checkItem: 'LOT번호/바코드 표기',
+    spec: '규정 라벨 부착',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
+  {
+    category: 'CLEANLINESS',
+    checkItem: '파티클/오염도 검사',
+    spec: 'Class 기준 이내',
+    result: 'PASS' as const,
+    grade: 'A' as const,
+  },
 ]
 
 interface InspectionItemInput {
@@ -113,6 +183,10 @@ const emptyInspectionItem = (): InspectionItemInput => ({
 
 export default function DeliveriesPage() {
   const [activeTab, setActiveTab] = useState<string>('ONLINE')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<{ date: string; events: CalendarEvent[] } | null>(
+    null
+  )
 
   const handleStatementPDF = (delivery: any) => {
     const details = delivery.details || []
@@ -182,7 +256,10 @@ export default function DeliveriesPage() {
             </Button>
           )
         }
-        const qs = QUALITY_STATUS_MAP[inspection.judgement] || { label: inspection.judgement, variant: 'outline' as const }
+        const qs = QUALITY_STATUS_MAP[inspection.judgement] || {
+          label: inspection.judgement,
+          variant: 'outline' as const,
+        }
         const grade = GRADE_MAP[inspection.overallGrade]
         return (
           <div className="flex items-center gap-1">
@@ -242,7 +319,9 @@ export default function DeliveriesPage() {
       header: '품질검사',
       accessor: (r) => {
         const qi = r.qualityInspections?.[0]
-        return qi ? `${QUALITY_STATUS_MAP[qi.judgement]?.label || qi.judgement} (${GRADE_MAP[qi.overallGrade]?.label || qi.overallGrade})` : '미검사'
+        return qi
+          ? `${QUALITY_STATUS_MAP[qi.judgement]?.label || qi.judgement} (${GRADE_MAP[qi.overallGrade]?.label || qi.overallGrade})`
+          : '미검사'
       },
     },
     { header: '운송장번호', accessor: (r) => r.trackingNo || '' },
@@ -285,7 +364,7 @@ export default function DeliveriesPage() {
 
   const openQualityView = async (delivery: any) => {
     try {
-      const res = await api.get(`/sales/deliveries/${delivery.id}/quality-inspection`) as any
+      const res = (await api.get(`/sales/deliveries/${delivery.id}/quality-inspection`)) as any
       setQiViewData(res.data || res)
       setQiDelivery(delivery)
       setQiViewOpen(true)
@@ -365,6 +444,23 @@ export default function DeliveriesPage() {
   const onlineDeliveries = onlineData?.data || []
   const offlineDeliveries = offlineData?.data || []
 
+  // Calendar events
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    const deliveries = activeTab === 'ONLINE' ? onlineDeliveries : offlineDeliveries
+    const statusVariant: Record<string, CalendarEvent['variant']> = {
+      PREPARING: 'warning',
+      SHIPPED: 'info',
+      DELIVERED: 'success',
+    }
+    return deliveries.map((d: any) => ({
+      id: d.id,
+      date: d.deliveryDate?.split('T')[0] || '',
+      label: `${d.deliveryNo} ${d.partner?.partnerName || ''}`.trim(),
+      sublabel: `${STATUS_MAP[d.status] || d.status} · ${d.details?.length || 0}건`,
+      variant: statusVariant[d.status] || 'default',
+    }))
+  }, [activeTab, onlineDeliveries, offlineDeliveries])
+
   const updateDetail = (idx: number, field: string, value: any) => {
     const d = [...details]
     ;(d[idx] as any)[field] = value
@@ -426,16 +522,18 @@ export default function DeliveriesPage() {
       lotNo: form.get('lotNo') || undefined,
       judgement,
       remarks: form.get('remarks') || undefined,
-      items: qiItems.filter((i) => i.checkItem).map((i) => ({
-        category: i.category,
-        checkItem: i.checkItem,
-        spec: i.spec || undefined,
-        measuredValue: i.measuredValue || undefined,
-        result: i.result,
-        grade: i.grade,
-        defectType: i.defectType || undefined,
-        remarks: i.remarks || undefined,
-      })),
+      items: qiItems
+        .filter((i) => i.checkItem)
+        .map((i) => ({
+          category: i.category,
+          checkItem: i.checkItem,
+          spec: i.spec || undefined,
+          measuredValue: i.measuredValue || undefined,
+          result: i.result,
+          grade: i.grade,
+          defectType: i.defectType || undefined,
+          remarks: i.remarks || undefined,
+        })),
     })
   }
 
@@ -642,6 +740,9 @@ export default function DeliveriesPage() {
       <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-6xl">
         <DialogHeader>
           <DialogTitle>납품 등록 (온라인)</DialogTitle>
+          <p className="text-muted-foreground text-xs">
+            <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+          </p>
         </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           {/* 기본 정보 */}
@@ -678,7 +779,7 @@ export default function DeliveriesPage() {
           {/* 보내는분 / 받는분 정보 */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2 rounded-md border p-3">
-              <Label className="text-xs font-medium text-blue-600">보내는분 (발신)</Label>
+              <Label className="text-status-info text-xs font-medium">보내는분 (발신)</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Input
                   className="h-7 text-xs"
@@ -701,7 +802,7 @@ export default function DeliveriesPage() {
               </div>
             </div>
             <div className="space-y-2 rounded-md border p-3">
-              <Label className="text-xs font-medium text-green-600">받는분 (수신)</Label>
+              <Label className="text-status-success text-xs font-medium">받는분 (수신)</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Input className="h-7 text-xs" placeholder="받으시는 분" name="receiverName" />
                 <Input className="h-7 text-xs" placeholder="전화/핸드폰" name="receiverPhone" />
@@ -726,7 +827,16 @@ export default function DeliveriesPage() {
               </Button>
             </div>
             <div className="overflow-x-auto rounded-md border">
-              <table className="w-full min-w-[700px] text-xs">
+              <table className="w-full min-w-[700px] text-xs" style={{ tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '8%' }} />
+                </colgroup>
                 <thead>
                   <tr className="bg-muted/50 border-b">
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
@@ -737,7 +847,7 @@ export default function DeliveriesPage() {
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">금액</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">운송장번호</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">특기사항</th>
-                    <th className="w-8 px-1 py-2"></th>
+                    <th className="px-2 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -745,9 +855,9 @@ export default function DeliveriesPage() {
                     const amount = d.quantity * d.unitPrice
                     return (
                       <tr key={idx} className="border-b last:border-b-0">
-                        <td className="px-1 py-1.5">
+                        <td className="px-2 py-1.5">
                           <Select value={d.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
-                            <SelectTrigger className="h-7 min-w-[140px] text-xs">
+                            <SelectTrigger className="h-7 w-full text-xs">
                               <SelectValue placeholder="품목 선택" />
                             </SelectTrigger>
                             <SelectContent>
@@ -759,18 +869,18 @@ export default function DeliveriesPage() {
                             </SelectContent>
                           </Select>
                         </td>
-                        <td className="px-1 py-1.5">
+                        <td className="px-2 py-1.5">
                           <Input
                             type="number"
-                            className="h-7 w-[70px] text-right text-xs"
+                            className="h-7 w-full text-right text-xs"
                             value={d.quantity || ''}
                             onChange={(e) => updateDetail(idx, 'quantity', parseFloat(e.target.value) || 0)}
                           />
                         </td>
-                        <td className="px-1 py-1.5">
+                        <td className="px-2 py-1.5">
                           <Input
                             type="number"
-                            className="h-7 w-[90px] text-right text-xs"
+                            className="h-7 w-full text-right text-xs"
                             value={d.unitPrice || ''}
                             onChange={(e) => updateDetail(idx, 'unitPrice', parseFloat(e.target.value) || 0)}
                           />
@@ -778,23 +888,23 @@ export default function DeliveriesPage() {
                         <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
                           {formatCurrency(amount)}
                         </td>
-                        <td className="px-1 py-1.5">
+                        <td className="px-2 py-1.5">
                           <Input
-                            className="h-7 w-[110px] text-xs"
+                            className="h-7 w-full text-xs"
                             placeholder="운송장번호"
                             value={d.trackingNo}
                             onChange={(e) => updateDetail(idx, 'trackingNo', e.target.value)}
                           />
                         </td>
-                        <td className="px-1 py-1.5">
+                        <td className="px-2 py-1.5">
                           <Input
-                            className="h-7 w-[120px] text-xs"
+                            className="h-7 w-full text-xs"
                             placeholder="특기사항"
                             value={d.description}
                             onChange={(e) => updateDetail(idx, 'description', e.target.value)}
                           />
                         </td>
-                        <td className="px-1 py-1.5">
+                        <td className="px-2 py-1.5 text-center">
                           <Button
                             type="button"
                             variant="ghost"
@@ -850,6 +960,9 @@ export default function DeliveriesPage() {
       <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-5xl">
         <DialogHeader>
           <DialogTitle>납품 등록 (오프라인)</DialogTitle>
+          <p className="text-muted-foreground text-xs">
+            <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
+          </p>
         </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -1058,17 +1171,17 @@ export default function DeliveriesPage() {
                 <span>
                   전체: <strong>{trackingResult.total}건</strong>
                 </span>
-                <span className="text-green-600">
+                <span className="text-status-success">
                   성공: <strong>{trackingResult.success}건</strong>
                 </span>
-                <span className="text-red-600">
+                <span className="text-status-danger">
                   실패: <strong>{trackingResult.failed}건</strong>
                 </span>
               </div>
               {trackingResult.errors.length > 0 && (
                 <div className="space-y-1">
-                  <Label className="text-red-600">오류 목록</Label>
-                  <div className="max-h-32 space-y-1 overflow-y-auto text-xs text-red-600">
+                  <Label className="text-status-danger">오류 목록</Label>
+                  <div className="text-status-danger max-h-32 space-y-1 overflow-y-auto text-xs">
                     {trackingResult.errors.map((err, idx) => (
                       <p key={idx}>{err}</p>
                     ))}
@@ -1098,9 +1211,7 @@ export default function DeliveriesPage() {
         <DialogHeader>
           <DialogTitle>
             납품 품질검사 - {qiDelivery?.deliveryNo}
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              ({qiDelivery?.partner?.partnerName})
-            </span>
+            <span className="text-muted-foreground ml-2 text-sm font-normal">({qiDelivery?.partner?.partnerName})</span>
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleQiSubmit} className="space-y-4">
@@ -1172,7 +1283,10 @@ export default function DeliveriesPage() {
                 </thead>
                 <tbody>
                   {qiItems.map((item, idx) => (
-                    <tr key={idx} className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-red-50 dark:bg-red-950/20' : ''}`}>
+                    <tr
+                      key={idx}
+                      className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-status-danger-muted' : ''}`}
+                    >
                       <td className="px-1 py-1.5">
                         <Select value={item.category} onValueChange={(v) => updateQiItem(idx, 'category', v)}>
                           <SelectTrigger className="h-7 min-w-[90px] text-xs">
@@ -1213,7 +1327,9 @@ export default function DeliveriesPage() {
                       </td>
                       <td className="px-1 py-1.5 text-center">
                         <Select value={item.result} onValueChange={(v) => updateQiItem(idx, 'result', v)}>
-                          <SelectTrigger className={`h-7 w-[72px] text-xs ${item.result === 'FAIL' ? 'border-red-500 text-red-600' : item.result === 'PASS' ? 'text-green-600' : ''}`}>
+                          <SelectTrigger
+                            className={`h-7 w-[72px] text-xs ${item.result === 'FAIL' ? 'border-destructive text-status-danger' : item.result === 'PASS' ? 'text-status-success' : ''}`}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1262,9 +1378,9 @@ export default function DeliveriesPage() {
                 <tfoot>
                   <tr className="bg-muted/30 border-t">
                     <td colSpan={4} className="px-2 py-2 text-xs font-medium">
-                      검사 요약: {qiItems.length}개 항목 |
-                      PASS {qiItems.filter((i) => i.result === 'PASS').length} |
-                      FAIL <span className="text-red-600">{qiItems.filter((i) => i.result === 'FAIL').length}</span> |
+                      검사 요약: {qiItems.length}개 항목 | PASS {qiItems.filter((i) => i.result === 'PASS').length} |
+                      FAIL{' '}
+                      <span className="text-status-danger">{qiItems.filter((i) => i.result === 'FAIL').length}</span> |
                       N/A {qiItems.filter((i) => i.result === 'NA').length}
                     </td>
                     <td colSpan={4} className="px-2 py-2 text-right text-xs">
@@ -1273,8 +1389,7 @@ export default function DeliveriesPage() {
                         const grades = qiItems.map((i) => i.grade)
                         if (failCount > 0 || grades.includes('REJECT'))
                           return <Badge variant="destructive">불합격 예상</Badge>
-                        if (grades.includes('C'))
-                          return <Badge variant="secondary">조건부합격 예상</Badge>
+                        if (grades.includes('C')) return <Badge variant="secondary">조건부합격 예상</Badge>
                         return <Badge variant="default">합격 예상</Badge>
                       })()}
                     </td>
@@ -1287,12 +1402,7 @@ export default function DeliveriesPage() {
           {/* 비고 */}
           <div className="space-y-1">
             <Label className="text-xs">비고/특이사항</Label>
-            <Textarea
-              name="remarks"
-              className="text-xs"
-              rows={2}
-              placeholder="검사 관련 특이사항을 기록합니다"
-            />
+            <Textarea name="remarks" className="text-xs" rows={2} placeholder="검사 관련 특이사항을 기록합니다" />
           </div>
 
           <Button type="submit" className="w-full" disabled={qiMutation.isPending}>
@@ -1308,9 +1418,7 @@ export default function DeliveriesPage() {
     <Dialog open={qiViewOpen} onOpenChange={setQiViewOpen}>
       <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-3xl lg:max-w-5xl">
         <DialogHeader>
-          <DialogTitle>
-            품질검사 결과 - {qiDelivery?.deliveryNo}
-          </DialogTitle>
+          <DialogTitle>품질검사 결과 - {qiDelivery?.deliveryNo}</DialogTitle>
         </DialogHeader>
         {Array.isArray(qiViewData) && qiViewData.length > 0 ? (
           <div className="space-y-4">
@@ -1331,24 +1439,24 @@ export default function DeliveriesPage() {
                 </div>
 
                 {/* 검사 요약 */}
-                <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/30 p-3 sm:grid-cols-4">
+                <div className="bg-muted/30 grid grid-cols-2 gap-2 rounded-md p-3 sm:grid-cols-4">
                   <div>
-                    <Label className="text-xs text-muted-foreground">시료수</Label>
+                    <Label className="text-muted-foreground text-xs">시료수</Label>
                     <p className="text-sm font-medium">{inspection.sampleSize}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">불량수</Label>
+                    <Label className="text-muted-foreground text-xs">불량수</Label>
                     <p className="text-sm font-medium">{inspection.defectCount}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">불량률(PPM)</Label>
+                    <Label className="text-muted-foreground text-xs">불량률(PPM)</Label>
                     <p className="text-sm font-medium">
                       {Number(inspection.defectRate).toLocaleString(undefined, { maximumFractionDigits: 1 })}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">LOT번호</Label>
-                    <p className="text-sm font-medium font-mono">{inspection.lotNo || '-'}</p>
+                    <Label className="text-muted-foreground text-xs">LOT번호</Label>
+                    <p className="font-mono text-sm font-medium">{inspection.lotNo || '-'}</p>
                   </div>
                 </div>
 
@@ -1370,7 +1478,7 @@ export default function DeliveriesPage() {
                       {(inspection.items || []).map((item: any) => (
                         <tr
                           key={item.id}
-                          className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-red-50 dark:bg-red-950/20' : ''}`}
+                          className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-status-danger-muted' : ''}`}
                         >
                           <td className="px-2 py-1.5">{CATEGORY_LABEL_MAP[item.category] || item.category}</td>
                           <td className="px-2 py-1.5">{item.checkItem}</td>
@@ -1378,7 +1486,9 @@ export default function DeliveriesPage() {
                           <td className="px-2 py-1.5">{item.measuredValue || '-'}</td>
                           <td className="px-2 py-1.5 text-center">
                             <Badge
-                              variant={item.result === 'PASS' ? 'default' : item.result === 'FAIL' ? 'destructive' : 'outline'}
+                              variant={
+                                item.result === 'PASS' ? 'default' : item.result === 'FAIL' ? 'destructive' : 'outline'
+                              }
                               className="text-xs"
                             >
                               {item.result}
@@ -1387,7 +1497,7 @@ export default function DeliveriesPage() {
                           <td className={`px-2 py-1.5 text-center font-medium ${GRADE_MAP[item.grade]?.color || ''}`}>
                             {GRADE_MAP[item.grade]?.label || item.grade}
                           </td>
-                          <td className="px-2 py-1.5 text-red-600">{item.defectType || '-'}</td>
+                          <td className="text-status-danger px-2 py-1.5">{item.defectType || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1395,15 +1505,15 @@ export default function DeliveriesPage() {
                 </div>
 
                 {inspection.remarks && (
-                  <div className="rounded-md bg-muted/30 p-2 text-xs">
-                    <Label className="text-xs text-muted-foreground">비고:</Label> {inspection.remarks}
+                  <div className="bg-muted/30 rounded-md p-2 text-xs">
+                    <Label className="text-muted-foreground text-xs">비고:</Label> {inspection.remarks}
                   </div>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm py-8 text-center">품질검사 기록이 없습니다.</p>
+          <p className="text-muted-foreground py-8 text-center text-sm">품질검사 기록이 없습니다.</p>
         )}
       </DialogContent>
     </Dialog>
@@ -1413,12 +1523,59 @@ export default function DeliveriesPage() {
     <div className="space-y-6">
       <PageHeader title="납품관리" description="고객 납품 현황 및 품질검사를 관리합니다" />
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="ONLINE">온라인</TabsTrigger>
-          <TabsTrigger value="OFFLINE">오프라인</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <TabsList>
+            <TabsTrigger value="ONLINE">온라인</TabsTrigger>
+            <TabsTrigger value="OFFLINE">오프라인</TabsTrigger>
+          </TabsList>
+          <div className="flex items-center gap-1 rounded-lg border p-0.5">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 gap-1 px-2.5 text-xs"
+              onClick={() => setViewMode('table')}
+            >
+              <Table2 className="h-3.5 w-3.5" /> 테이블
+            </Button>
+            <Button
+              variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 gap-1 px-2.5 text-xs"
+              onClick={() => setViewMode('calendar')}
+            >
+              <CalendarDays className="h-3.5 w-3.5" /> 캘린더
+            </Button>
+          </div>
+        </div>
 
-        <TabsContent value="ONLINE">
+        {viewMode === 'calendar' ? (
+          <div className="space-y-4 pt-4">
+            <CalendarView
+              events={calendarEvents}
+              onDateClick={(date, events) => setCalendarSelectedDate({ date, events })}
+              maxEventsPerCell={3}
+            />
+            <Dialog open={!!calendarSelectedDate} onOpenChange={(v) => !v && setCalendarSelectedDate(null)}>
+              <DialogContent className="max-h-[80vh] max-w-sm overflow-y-auto sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>{calendarSelectedDate?.date} 납품 내역</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                  {calendarSelectedDate?.events.map((evt) => (
+                    <div key={evt.id} className="flex items-center justify-between rounded-md border p-3">
+                      <div>
+                        <p className="text-sm font-medium">{evt.label}</p>
+                        <p className="text-muted-foreground text-xs">{evt.sublabel}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        ) : null}
+
+        <TabsContent value="ONLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               {onlineCreateDialog}
@@ -1449,7 +1606,7 @@ export default function DeliveriesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="OFFLINE">
+        <TabsContent value="OFFLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
             <DataTable
