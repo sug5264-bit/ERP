@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Plus, Trash2, FileDown, Upload } from 'lucide-react'
@@ -275,13 +275,7 @@ export default function OnlineSalesPage() {
                 <Label>
                   매출일 <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  name="saleDate"
-                  type="date"
-                  required
-                  aria-required="true"
-                  defaultValue={new Date().toISOString().split('T')[0]}
-                />
+                <Input name="saleDate" type="date" required aria-required="true" defaultValue={getLocalDateString()} />
               </div>
               <div className="space-y-2">
                 <Label>

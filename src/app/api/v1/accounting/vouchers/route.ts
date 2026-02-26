@@ -95,7 +95,10 @@ export async function POST(request: NextRequest) {
     }
     const resolvedDetails = data.details.map((d) => {
       const accountSubjectId = d.accountSubjectId || accountCodeMap.get((d as any).accountCode)
-      return { ...d, accountSubjectId: accountSubjectId! }
+      if (!accountSubjectId) {
+        throw new Error('계정과목 ID가 누락된 항목이 있습니다.')
+      }
+      return { ...d, accountSubjectId }
     })
 
     // 차/대변 합계 검증 (정수 연산으로 부동소수점 오차 제거)

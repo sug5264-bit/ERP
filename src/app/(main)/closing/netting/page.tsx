@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { FileText } from 'lucide-react'
@@ -52,7 +52,7 @@ export default function NettingPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [formPartnerId, setFormPartnerId] = useState('')
   const [formAmount, setFormAmount] = useState('')
-  const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  const [formDate, setFormDate] = useState(getLocalDateString())
   const [formDescription, setFormDescription] = useState('')
 
   const { data, isLoading } = useQuery({
@@ -74,7 +74,7 @@ export default function NettingPage() {
       setFormPartnerId('')
       setFormAmount('')
       setFormDescription('')
-      setFormDate(new Date().toISOString().slice(0, 10))
+      setFormDate(getLocalDateString())
       toast.success('상계 내역이 등록되었습니다.')
     },
     onError: (err: any) => toast.error(err?.message || '등록에 실패했습니다.'),

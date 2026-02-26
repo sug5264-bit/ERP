@@ -4,16 +4,19 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Clock, CalendarOff, Briefcase } from 'lucide-react'
+import { getLocalDateString } from '@/lib/format'
 
 export default function HRPage() {
+  const today = getLocalDateString()
+
   const { data: empData } = useQuery({
     queryKey: ['hr-employees-summary'],
     queryFn: () => api.get('/hr/employees?pageSize=1') as Promise<any>,
   })
 
   const { data: attendanceData } = useQuery({
-    queryKey: ['hr-attendance-today'],
-    queryFn: () => api.get(`/hr/attendance?date=${new Date().toISOString().split('T')[0]}&pageSize=1`) as Promise<any>,
+    queryKey: ['hr-attendance-today', today],
+    queryFn: () => api.get(`/hr/attendance?date=${today}&pageSize=1`) as Promise<any>,
   })
 
   const { data: leaveData } = useQuery({

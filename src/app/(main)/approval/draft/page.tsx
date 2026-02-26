@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatDate } from '@/lib/format'
+import { formatDate, getLocalDateString } from '@/lib/format'
 import { toast } from 'sonner'
 import { Plus, Trash2, Send, FileText, ArrowRight, CheckCircle2, Clock, XCircle } from 'lucide-react'
 
@@ -378,7 +378,7 @@ export default function ApprovalDraftPage() {
                       type="date"
                       required
                       aria-required="true"
-                      defaultValue={new Date().toISOString().split('T')[0]}
+                      defaultValue={getLocalDateString()}
                     />
                   </div>
                   <div className="space-y-2">

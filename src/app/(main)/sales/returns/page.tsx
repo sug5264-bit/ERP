@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { toast } from 'sonner'
 import { Paperclip, FileText, CalendarDays, Table2 } from 'lucide-react'
 import { RecordSubTabs, savePendingData } from '@/components/common/record-sub-tabs'
@@ -333,7 +333,7 @@ export default function ReturnsPage() {
                       type="date"
                       required
                       aria-required="true"
-                      defaultValue={new Date().toISOString().slice(0, 10)}
+                      defaultValue={getLocalDateString()}
                     />
                   </div>
                   <div className="space-y-2">

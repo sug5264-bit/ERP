@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { toast } from 'sonner'
 
 interface PaymentRow {
@@ -65,7 +65,7 @@ export default function PaymentsPage() {
   // 지급 등록 폼
   const [formPartnerId, setFormPartnerId] = useState('')
   const [formAmount, setFormAmount] = useState('')
-  const [formDate, setFormDate] = useState(new Date().toISOString().slice(0, 10))
+  const [formDate, setFormDate] = useState(getLocalDateString())
   const [formDescription, setFormDescription] = useState('')
 
   const qp = new URLSearchParams()
@@ -110,7 +110,7 @@ export default function PaymentsPage() {
   const resetForm = () => {
     setFormPartnerId('')
     setFormAmount('')
-    setFormDate(new Date().toISOString().slice(0, 10))
+    setFormDate(getLocalDateString())
     setFormDescription('')
   }
 
