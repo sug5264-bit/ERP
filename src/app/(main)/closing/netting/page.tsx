@@ -302,7 +302,7 @@ export default function NettingPage() {
     <div className="space-y-6">
       <PageHeader title="상계내역" description="월별 거래처별 매출채권/매입채무 상계 내역을 조회합니다" />
 
-      <div className="flex items-end gap-4">
+      <div className="flex flex-wrap items-end gap-4">
         <div className="space-y-2">
           <Label>연도</Label>
           <Select value={year} onValueChange={setYear}>
@@ -480,7 +480,7 @@ export default function NettingPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
               <div>
                 <span className="text-muted-foreground">매출채권: </span>
                 <span className="text-status-info font-medium">{formatCurrency(selectedPartner?.receivable || 0)}</span>

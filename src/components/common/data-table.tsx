@@ -290,7 +290,7 @@ export function DataTable<TData, TValue>({
                       <TableCell key={j} className="py-2.5 sm:py-3">
                         <div
                           className="bg-muted h-5 animate-pulse rounded"
-                          style={{ width: `${55 + Math.random() * 30}%` }}
+                          style={{ width: `${55 + ((i * 7 + j * 13) % 30)}%` }}
                         />
                       </TableCell>
                     ))}

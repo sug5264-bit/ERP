@@ -16,7 +16,7 @@ import { Globe, Store, TrendingUp, ShoppingCart, Download, FileText } from 'luci
 const currentYear = new Date().getFullYear()
 const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
 const months = [
-  { value: '', label: '전체' },
+  { value: 'all', label: '전체' },
   { value: '1', label: '1월' },
   { value: '2', label: '2월' },
   { value: '3', label: '3월' },
@@ -42,10 +42,10 @@ interface SummaryData {
 
 export default function SalesSummaryPage() {
   const [year, setYear] = useState(String(currentYear))
-  const [month, setMonth] = useState('')
+  const [month, setMonth] = useState('all')
 
   const qp = new URLSearchParams({ year })
-  if (month) qp.set('month', month)
+  if (month && month !== 'all') qp.set('month', month)
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-summary', year, month],
@@ -70,7 +70,7 @@ export default function SalesSummaryPage() {
 
   const handleExport = (type: 'excel' | 'pdf') => {
     if (!summary) return
-    const periodLabel = month ? `${year}년 ${month}월` : `${year}년`
+    const periodLabel = month && month !== 'all' ? `${year}년 ${month}월` : `${year}년`
     const cfg = {
       fileName: `매출집계_${periodLabel}`,
       title: `매출집계 - ${periodLabel}`,
@@ -105,7 +105,7 @@ export default function SalesSummaryPage() {
           </SelectTrigger>
           <SelectContent>
             {months.map((m) => (
-              <SelectItem key={m.value || 'all'} value={m.value || 'all'}>
+              <SelectItem key={m.value} value={m.value}>
                 {m.label}
               </SelectItem>
             ))}
