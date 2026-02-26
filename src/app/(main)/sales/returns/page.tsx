@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
@@ -16,8 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { toast } from 'sonner'
-import { Paperclip, FileText } from 'lucide-react'
+import { Paperclip, FileText, CalendarDays, Table2 } from 'lucide-react'
 import { RecordSubTabs, savePendingData } from '@/components/common/record-sub-tabs'
+import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 
 interface ReturnRow {
   id: string
@@ -52,6 +53,10 @@ export default function ReturnsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [pendingNote, setPendingNote] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<{ date: string; events: CalendarEvent[] } | null>(
+    null
+  )
 
   const qp = new URLSearchParams({ pageSize: '50' })
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
@@ -114,6 +119,24 @@ export default function ReturnsPage() {
   const returns: ReturnRow[] = data?.data || []
   const orders = ordersData?.data || []
   const partners = partnersData?.data || []
+
+  // Calendar events
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    const reasonVariant: Record<string, CalendarEvent['variant']> = {
+      DEFECT: 'danger',
+      WRONG_ITEM: 'warning',
+      CUSTOMER_CHANGE: 'info',
+      QUALITY_ISSUE: 'danger',
+      OTHER: 'default',
+    }
+    return returns.map((r) => ({
+      id: r.id,
+      date: r.returnDate?.split('T')[0] || '',
+      label: `${r.returnNo} ${r.partner?.partnerName || ''}`.trim(),
+      sublabel: `${REASON_MAP[r.reason] || r.reason} · ${formatCurrency(r.totalAmount)}`,
+      variant: reasonVariant[r.reason] || 'default',
+    }))
+  }, [returns])
 
   const columns: ColumnDef<ReturnRow>[] = [
     {
@@ -193,14 +216,60 @@ export default function ReturnsPage() {
           </SelectContent>
         </Select>
         <Button onClick={() => setCreateOpen(true)}>반품 등록</Button>
+        <div className="ml-auto flex items-center gap-1 rounded-lg border p-0.5">
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 gap-1 px-2.5 text-xs"
+            onClick={() => setViewMode('table')}
+          >
+            <Table2 className="h-3.5 w-3.5" /> 테이블
+          </Button>
+          <Button
+            variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 gap-1 px-2.5 text-xs"
+            onClick={() => setViewMode('calendar')}
+          >
+            <CalendarDays className="h-3.5 w-3.5" /> 캘린더
+          </Button>
+        </div>
       </div>
-      <DataTable
-        columns={columns}
-        data={returns}
-        searchColumn="returnNo"
-        searchPlaceholder="반품번호로 검색..."
-        isLoading={isLoading}
-      />
+
+      {viewMode === 'calendar' ? (
+        <div className="space-y-4">
+          <CalendarView
+            events={calendarEvents}
+            onDateClick={(date, events) => setCalendarSelectedDate({ date, events })}
+            maxEventsPerCell={3}
+          />
+          <Dialog open={!!calendarSelectedDate} onOpenChange={(v) => !v && setCalendarSelectedDate(null)}>
+            <DialogContent className="max-h-[80vh] max-w-sm overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{calendarSelectedDate?.date} 반품 내역</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                {calendarSelectedDate?.events.map((evt) => (
+                  <div key={evt.id} className="flex items-center justify-between rounded-md border p-3">
+                    <div>
+                      <p className="text-sm font-medium">{evt.label}</p>
+                      <p className="text-muted-foreground text-xs">{evt.sublabel}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={returns}
+          searchColumn="returnNo"
+          searchPlaceholder="반품번호로 검색..."
+          isLoading={isLoading}
+        />
+      )}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-lg">
           <DialogHeader>

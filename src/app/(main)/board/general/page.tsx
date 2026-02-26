@@ -225,7 +225,7 @@ export default function GeneralBoardPage() {
                     {selectedPost.attachments.map((a: any) => (
                       <div
                         key={a.id || a.fileName || a}
-                        className="flex cursor-pointer items-center gap-2 text-sm text-blue-600 hover:underline"
+                        className="text-primary flex cursor-pointer items-center gap-2 text-sm hover:underline"
                       >
                         <FileText className="h-4 w-4" />
                         <span>{a.fileName || a}</span>

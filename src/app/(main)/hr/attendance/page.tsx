@@ -10,20 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
@@ -64,9 +52,7 @@ const columns: ColumnDef<AttendanceRow>[] = [
   },
   {
     header: '사번',
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.employee.employeeNo}</span>
-    ),
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.employee.employeeNo}</span>,
   },
   {
     header: '이름',
@@ -93,26 +79,24 @@ const columns: ColumnDef<AttendanceRow>[] = [
   },
   {
     header: '근무시간',
-    cell: ({ row }) =>
-      row.original.workHours != null ? `${row.original.workHours}h` : '-',
+    cell: ({ row }) => (row.original.workHours != null ? `${row.original.workHours}h` : '-'),
   },
   {
     header: '초과근무',
-    cell: ({ row }) =>
-      row.original.overtimeHours ? `${row.original.overtimeHours}h` : '-',
+    cell: ({ row }) => (row.original.overtimeHours ? `${row.original.overtimeHours}h` : '-'),
   },
 ]
 
 const exportColumns: ExportColumn[] = [
-  { header: '근무일', accessor: (r) => r.workDate ? formatDate(r.workDate) : '' },
+  { header: '근무일', accessor: (r) => (r.workDate ? formatDate(r.workDate) : '') },
   { header: '사번', accessor: (r) => r.employee?.employeeNo || '' },
   { header: '이름', accessor: (r) => r.employee?.nameKo || '' },
   { header: '부서', accessor: (r) => r.employee?.department?.name || '' },
   { header: '유형', accessor: (r) => TYPE_MAP[r.attendanceType]?.label || r.attendanceType },
   { header: '출근', accessor: (r) => r.checkInTime?.slice(11, 16) || '' },
   { header: '퇴근', accessor: (r) => r.checkOutTime?.slice(11, 16) || '' },
-  { header: '근무시간', accessor: (r) => r.workHours != null ? `${r.workHours}h` : '' },
-  { header: '초과근무', accessor: (r) => r.overtimeHours ? `${r.overtimeHours}h` : '' },
+  { header: '근무시간', accessor: (r) => (r.workHours != null ? `${r.workHours}h` : '') },
+  { header: '초과근무', accessor: (r) => (r.overtimeHours ? `${r.overtimeHours}h` : '') },
 ]
 
 export default function AttendancePage() {
@@ -164,12 +148,8 @@ export default function AttendancePage() {
     createMutation.mutate({
       employeeId: form.get('employeeId'),
       workDate: form.get('workDate'),
-      checkInTime: form.get('checkInTime')
-        ? `${form.get('workDate')}T${form.get('checkInTime')}:00`
-        : undefined,
-      checkOutTime: form.get('checkOutTime')
-        ? `${form.get('workDate')}T${form.get('checkOutTime')}:00`
-        : undefined,
+      checkInTime: form.get('checkInTime') ? `${form.get('workDate')}T${form.get('checkInTime')}:00` : undefined,
+      checkOutTime: form.get('checkOutTime') ? `${form.get('workDate')}T${form.get('checkOutTime')}:00` : undefined,
       attendanceType: form.get('attendanceType'),
       note: form.get('note') || undefined,
     })
@@ -184,10 +164,7 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="근태관리"
-        description="사원들의 출퇴근 기록을 관리합니다"
-      />
+      <PageHeader title="근태관리" description="사원들의 출퇴근 기록을 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <div className="space-y-2">
           <Label>연도</Label>
@@ -197,7 +174,9 @@ export default function AttendancePage() {
             </SelectTrigger>
             <SelectContent>
               {[currentYear - 1, currentYear, currentYear + 1].map((y) => (
-                <SelectItem key={y} value={y.toString()}>{y}년</SelectItem>
+                <SelectItem key={y} value={y.toString()}>
+                  {y}년
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -210,7 +189,9 @@ export default function AttendancePage() {
             </SelectTrigger>
             <SelectContent>
               {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                <SelectItem key={m} value={m.toString()}>{m}월</SelectItem>
+                <SelectItem key={m} value={m.toString()}>
+                  {m}월
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -219,13 +200,15 @@ export default function AttendancePage() {
           <DialogTrigger asChild>
             <Button>근태 등록</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>근태 등록</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label>사원 <span className="text-destructive">*</span></Label>
+                <Label>
+                  사원 <span className="text-destructive">*</span>
+                </Label>
                 <Select name="employeeId" required>
                   <SelectTrigger>
                     <SelectValue placeholder="사원 선택" />
@@ -239,26 +222,32 @@ export default function AttendancePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>근무일 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    근무일 <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="workDate" type="date" required aria-required="true" />
                 </div>
                 <div className="space-y-2">
-                  <Label>근태유형 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    근태유형 <span className="text-destructive">*</span>
+                  </Label>
                   <Select name="attendanceType" required>
                     <SelectTrigger>
                       <SelectValue placeholder="선택" />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(TYPE_MAP).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                        <SelectItem key={k} value={k}>
+                          {v.label}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>출근시간</Label>
                   <Input name="checkInTime" type="time" />
@@ -281,22 +270,22 @@ export default function AttendancePage() {
       </div>
 
       {/* 근태 통계 요약 바 */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">정상</p>
-          <p className="text-2xl font-bold text-green-600">{stats.normal}건</p>
+      <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
+        <div className="bg-status-success-muted rounded-lg border p-3 sm:p-4">
+          <p className="text-muted-foreground text-xs sm:text-sm">정상</p>
+          <p className="text-status-success text-lg font-bold sm:text-2xl">{stats.normal}건</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">지각</p>
-          <p className="text-2xl font-bold text-red-600">{stats.late}건</p>
+        <div className="bg-status-danger-muted rounded-lg border p-3 sm:p-4">
+          <p className="text-muted-foreground text-xs sm:text-sm">지각</p>
+          <p className="text-status-danger text-lg font-bold sm:text-2xl">{stats.late}건</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">결근</p>
-          <p className="text-2xl font-bold text-red-600">{stats.absent}건</p>
+        <div className="bg-status-danger-muted rounded-lg border p-3 sm:p-4">
+          <p className="text-muted-foreground text-xs sm:text-sm">결근</p>
+          <p className="text-status-danger text-lg font-bold sm:text-2xl">{stats.absent}건</p>
         </div>
-        <div className="rounded-lg border p-4">
-          <p className="text-sm text-muted-foreground">재택</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.remote}건</p>
+        <div className="bg-status-info-muted rounded-lg border p-3 sm:p-4">
+          <p className="text-muted-foreground text-xs sm:text-sm">재택</p>
+          <p className="text-status-info text-lg font-bold sm:text-2xl">{stats.remote}건</p>
         </div>
       </div>
 

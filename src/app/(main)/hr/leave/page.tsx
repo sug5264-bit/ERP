@@ -234,7 +234,7 @@ export default function LeavePage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="text-status-success hover:bg-status-success-muted h-7 px-2"
               onClick={(e) => {
                 e.stopPropagation()
                 handleAction(id, 'approve', employee.nameKo)
@@ -541,9 +541,9 @@ export default function LeavePage() {
                       <div
                         className={`min-w-[60px] rounded-md border px-3 py-1.5 text-center text-xs ${
                           selectedLeave.status === 'APPROVED'
-                            ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30'
+                            ? 'bg-status-success-muted border-[var(--color-success)]/20'
                             : selectedLeave.status === 'REJECTED'
-                              ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
+                              ? 'bg-status-danger-muted border-[var(--color-danger)]/20'
                               : 'bg-muted'
                         }`}
                       >
