@@ -327,8 +327,8 @@ export default function DeliveriesPage() {
           size="icon"
           className="h-8 w-8"
           onClick={() => handleStatementPDF(row.original)}
-          title="거래명세표 PDF"
-          aria-label="거래명세표 PDF 다운로드"
+          title="거래명세서 PDF"
+          aria-label="거래명세서 PDF 다운로드"
         >
           <FileDown className="h-4 w-4" />
         </Button>

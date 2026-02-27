@@ -246,7 +246,7 @@ export default function CompanyManagementPage() {
     <div className="space-y-6">
       <PageHeader
         title="회사관리"
-        description="회사 정보를 등록하고 관리합니다. 거래명세표, 발주서 작성 시 기본 회사 정보가 연동됩니다."
+        description="회사 정보를 등록하고 관리합니다. 거래명세서, 발주서 작성 시 기본 회사 정보가 연동됩니다."
       />
       <div className="flex items-center gap-4">
         <Button onClick={() => setCreateOpen(true)}>회사 등록</Button>

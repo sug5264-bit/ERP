@@ -417,7 +417,7 @@ export default function OrdersPage() {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleTransactionStatementPDF(row.original)}>
               <FileText className="mr-2 h-4 w-4" />
-              거래명세표 PDF
+              거래명세서 PDF
             </DropdownMenuItem>
             {canComplete && (
               <DropdownMenuItem onClick={() => handleEdit(row.original)}>
