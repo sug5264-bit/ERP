@@ -220,7 +220,7 @@ export default function OrdersPage() {
     toast.success('세금계산서 PDF가 다운로드되었습니다.')
   }
 
-  // 거래명세표 PDF
+  // 거래명세서 PDF
   const handleTransactionStatementPDF = async (order: any) => {
     let orderDetail = order
     try {
@@ -231,10 +231,33 @@ export default function OrdersPage() {
       return
     }
     const ci = getCompanyInfo()
+    const company = getDefaultCompany()
+    const items = (orderDetail.details || []).map((d: any, idx: number) => ({
+      no: idx + 1,
+      barcode: d.item?.barcode || '',
+      itemName: d.item?.itemName || '',
+      spec: d.item?.specification || '',
+      unit: d.item?.unit || 'EA',
+      qty: Number(d.quantity),
+      unitPrice: Number(d.unitPrice),
+      supplyAmount: Number(d.supplyAmount),
+      taxAmount: Number(d.taxAmount),
+      remark: d.remark || '',
+    }))
+    const totalQty = items.reduce((s: number, it: any) => s + it.qty, 0)
     const pdfData: TransactionStatementPDFData = {
       statementNo: orderDetail.orderNo,
       statementDate: formatDate(orderDetail.orderDate),
-      supplier: { name: ci.name, bizNo: ci.bizNo, ceo: ci.ceo, address: ci.address, tel: ci.tel },
+      supplier: {
+        name: ci.name,
+        bizNo: ci.bizNo,
+        ceo: ci.ceo,
+        address: ci.address,
+        tel: ci.tel,
+        bankName: company?.bankName || '',
+        bankAccount: company?.bankAccount || '',
+        bankHolder: company?.bankHolder || '',
+      },
       buyer: {
         name: orderDetail.partner?.partnerName || '',
         bizNo: orderDetail.partner?.bizNo || '',
@@ -242,19 +265,14 @@ export default function OrdersPage() {
         address: orderDetail.partner?.address || '',
         tel: orderDetail.partner?.phone || '',
       },
-      items: (orderDetail.details || []).map((d: any, idx: number) => ({
-        no: idx + 1,
-        itemName: d.item?.itemName || '',
-        spec: d.item?.specification || '',
-        qty: Number(d.quantity),
-        unitPrice: Number(d.unitPrice),
-        amount: Number(d.supplyAmount),
-        remark: d.remark || '',
-      })),
+      items,
+      totalQty,
+      totalSupply: Number(orderDetail.totalSupply),
+      totalTax: Number(orderDetail.totalTax),
       totalAmount: Number(orderDetail.totalAmount),
     }
     generateTransactionStatementPDF(pdfData)
-    toast.success('거래명세표 PDF가 다운로드되었습니다.')
+    toast.success('거래명세서 PDF가 다운로드되었습니다.')
   }
 
   // 발주 수정

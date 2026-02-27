@@ -28,8 +28,20 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           salesOrder: { select: { id: true, orderNo: true, orderDate: true, status: true, salesChannel: true } },
-          partner: { select: { id: true, partnerCode: true, partnerName: true } },
-          details: { include: { item: { select: { id: true, itemName: true, specification: true } } } },
+          partner: {
+            select: {
+              id: true,
+              partnerCode: true,
+              partnerName: true,
+              bizNo: true,
+              ceoName: true,
+              address: true,
+              phone: true,
+            },
+          },
+          details: {
+            include: { item: { select: { id: true, itemName: true, specification: true, barcode: true, unit: true } } },
+          },
           qualityInspections: {
             select: {
               id: true,

@@ -189,25 +189,57 @@ export default function DeliveriesPage() {
   )
 
   const handleStatementPDF = (delivery: any) => {
+    const companies = companyData?.data || []
+    const company = companies.find((c: any) => c.isDefault) || companies[0]
     const details = delivery.details || []
-    const totalAmount = details.reduce((s: number, d: any) => s + Number(d.amount), 0)
+    const items = details.map((d: any, i: number) => {
+      const amount = Number(d.amount)
+      const supplyAmount = Math.round(amount / 1.1)
+      const taxAmount = amount - supplyAmount
+      return {
+        no: i + 1,
+        barcode: d.item?.barcode || '',
+        itemName: d.item?.itemName || '',
+        spec: d.item?.specification || '',
+        unit: d.item?.unit || 'EA',
+        qty: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        supplyAmount,
+        taxAmount,
+        remark: '',
+      }
+    })
+    const totalQty = items.reduce((s: number, it: any) => s + it.qty, 0)
+    const totalSupply = items.reduce((s: number, it: any) => s + it.supplyAmount, 0)
+    const totalTax = items.reduce((s: number, it: any) => s + it.taxAmount, 0)
     const pdfData: TransactionStatementPDFData = {
       statementNo: delivery.deliveryNo,
       statementDate: formatDate(delivery.deliveryDate),
-      supplier: { name: COMPANY_NAME },
-      buyer: { name: delivery.partner?.partnerName || '' },
-      items: details.map((d: any, i: number) => ({
-        no: i + 1,
-        itemName: d.item?.itemName || '',
-        spec: d.item?.specification || '',
-        qty: Number(d.quantity),
-        unitPrice: Number(d.unitPrice),
-        amount: Number(d.amount),
-      })),
-      totalAmount,
+      supplier: {
+        name: company?.companyName || COMPANY_NAME,
+        bizNo: company?.bizNo || '',
+        ceo: company?.ceoName || '',
+        address: company?.address || '',
+        tel: company?.phone || '',
+        bankName: company?.bankName || '',
+        bankAccount: company?.bankAccount || '',
+        bankHolder: company?.bankHolder || '',
+      },
+      buyer: {
+        name: delivery.partner?.partnerName || '',
+        bizNo: delivery.partner?.bizNo || '',
+        ceo: delivery.partner?.ceoName || '',
+        address: delivery.partner?.address || '',
+        tel: delivery.partner?.phone || '',
+      },
+      items,
+      totalQty,
+      totalSupply,
+      totalTax,
+      totalAmount: totalSupply + totalTax,
     }
     generateTransactionStatementPDF(pdfData)
-    toast.success('거래명세표 PDF가 다운로드되었습니다.')
+    toast.success('거래명세서 PDF가 다운로드되었습니다.')
   }
 
   const columns: ColumnDef<any>[] = [

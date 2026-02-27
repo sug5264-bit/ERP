@@ -72,18 +72,35 @@ export interface TaxInvoicePDFData {
 export interface TransactionStatementPDFData {
   statementNo: string
   statementDate: string
-  supplier: { name: string; bizNo?: string; ceo?: string; address?: string; tel?: string }
+  supplier: {
+    name: string
+    bizNo?: string
+    ceo?: string
+    address?: string
+    tel?: string
+    bankName?: string
+    bankAccount?: string
+    bankHolder?: string
+  }
   buyer: { name: string; bizNo?: string; ceo?: string; address?: string; tel?: string }
   items: {
     no: number
+    barcode?: string
     itemName: string
     spec?: string
+    unit?: string
     qty: number
     unitPrice: number
-    amount: number
+    supplyAmount: number
+    taxAmount: number
     remark?: string
   }[]
+  totalQty: number
+  totalSupply: number
+  totalTax: number
   totalAmount: number
+  previousBalance?: number
+  nextBalance?: number
   description?: string
 }
 
@@ -323,97 +340,251 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. 거래명세표 (Transaction Statement)
+// 3. 거래명세서 (Transaction Statement) – 한국식 좌/우 복사 양식
 // ---------------------------------------------------------------------------
 
-export async function generateTransactionStatementPDF(data: TransactionStatementPDFData) {
-  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
+const STATEMENT_ITEM_ROWS = 15
 
-  let y = 15
+/** 숫자를 한글 금액으로 변환 (예: 12300 → "일만이천삼백") */
+function numberToKorean(n: number): string {
+  if (n === 0) return '영'
+  const d = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
+  const s = ['', '십', '백', '천']
+  const b = ['', '만', '억', '조']
+  let result = ''
+  let bi = 0
+  let num = Math.floor(Math.abs(n))
+  while (num > 0) {
+    const chunk = num % 10000
+    if (chunk > 0) {
+      let cs = ''
+      let c = chunk
+      for (let i = 0; c > 0; i++) {
+        const digit = c % 10
+        if (digit > 0) cs = (i > 0 && digit === 1 ? '' : d[digit]) + s[i] + cs
+        c = Math.floor(c / 10)
+      }
+      result = cs + b[bi] + result
+    }
+    num = Math.floor(num / 10000)
+    bi++
+  }
+  return result
+}
 
-  // --- 제목 ---
-  doc.setFontSize(20)
-  doc.text('거 래 명 세 표', pageWidth / 2, y, { align: 'center' })
-  y += 8
+/** 거래명세서 한 부(copy)를 지정 영역에 그리기 */
+function drawStatementCopy(
+  doc: any,
+  fontName: string,
+  data: TransactionStatementPDFData,
+  ox: number,
+  cw: number,
+  copyLabel: string
+) {
+  const rh = 6
+  const fs = 7
 
-  // --- 문서 메타정보 ---
-  doc.setFontSize(9)
-  doc.text(`문서번호: ${data.statementNo}`, PAGE_MARGIN, y)
-  doc.text(`작성일자: ${data.statementDate}`, pageWidth - PAGE_MARGIN, y, { align: 'right' })
-  y += 6
-
-  // --- 공급자 / 공급받는자 정보 ---
-  autoTable({
-    ...infoTableStyles,
-    startY: y,
-    head: [['', '공급자', '', '공급받는자']],
-    body: [
-      ['상호', data.supplier.name, '상호', data.buyer.name],
-      ['대표자', data.supplier.ceo ?? '', '대표자', data.buyer.ceo ?? ''],
-      ['사업자번호', data.supplier.bizNo ?? '', '사업자번호', data.buyer.bizNo ?? ''],
-      ['주소', data.supplier.address ?? '', '주소', data.buyer.address ?? ''],
-      ['전화', data.supplier.tel ?? '', '전화', data.buyer.tel ?? ''],
-    ],
-    columnStyles: {
-      0: { cellWidth: 25, ...labelColumnStyle },
-      1: { cellWidth: 65 },
-      2: { cellWidth: 25, ...labelColumnStyle },
-      3: { cellWidth: 65 },
-    },
-  })
-  y = getLastTableY(doc) + 6
-
-  // --- 품목 테이블 ---
-  autoTable({
-    ...itemTableStyles,
-    startY: y,
-    head: [['No', '품명', '규격', '수량', '단가', '금액', '비고']],
-    body: data.items.map((item) => [
-      String(item.no),
-      item.itemName,
-      item.spec ?? '',
-      fmtNumber(item.qty),
-      fmtNumber(item.unitPrice),
-      fmtNumber(item.amount),
-      item.remark ?? '',
-    ]),
-    columnStyles: {
-      0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 45 },
-      2: { cellWidth: 25 },
-      3: { cellWidth: 20, halign: 'right' },
-      4: { cellWidth: 25, halign: 'right' },
-      5: { cellWidth: 28, halign: 'right' },
-      6: { cellWidth: 27 },
-    },
-  })
-  y = getLastTableY(doc) + 2
-
-  // --- 합계 행 ---
-  autoTable({
-    startY: y,
-    theme: 'grid',
-    body: [['', '합 계', '', '', '', fmtNumber(data.totalAmount), '']],
-    styles: { fontSize: 9, cellPadding: 2.5 },
-    columnStyles: {
-      0: { cellWidth: 12 },
-      1: { cellWidth: 45, halign: 'center', fontStyle: 'bold', fillColor: PDF_COLORS.LIGHT_GRAY },
-      2: { cellWidth: 25 },
-      3: { cellWidth: 20 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
-      6: { cellWidth: 27 },
-    },
-    margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-  })
-  y = getLastTableY(doc) + 6
-
-  // --- 비고 ---
-  if (data.description) {
-    doc.setFontSize(9)
-    doc.text(`비고: ${data.description}`, PAGE_MARGIN, y)
+  const cell = (
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    text: string,
+    opts?: { align?: 'left' | 'center' | 'right'; fontSize?: number; fill?: boolean }
+  ) => {
+    const f = opts?.fontSize ?? fs
+    doc.setDrawColor(0, 0, 0)
+    doc.setLineWidth(0.2)
+    if (opts?.fill) {
+      doc.setFillColor(235, 235, 235)
+      doc.rect(x, y, w, h, 'FD')
+    } else {
+      doc.rect(x, y, w, h)
+    }
+    doc.setFontSize(f)
+    doc.setFont(fontName, 'normal')
+    const px = 1.5
+    const tx = opts?.align === 'center' ? x + w / 2 : opts?.align === 'right' ? x + w - px : x + px
+    const ty = y + h / 2 + f * 0.13
+    doc.text(String(text ?? ''), tx, ty, { align: opts?.align ?? 'left' })
   }
 
-  addPageNumbers(doc, fontName)
-  doc.save(`거래명세표_${data.statementNo}.pdf`)
+  let y = 7
+
+  // ═══ Title block ═══
+  doc.setLineWidth(0.5)
+  doc.setDrawColor(0, 0, 0)
+  doc.rect(ox, y, cw, 12)
+  doc.setFontSize(15)
+  doc.setFont(fontName, 'normal')
+  doc.text('거  래  명  세  서', ox + cw / 2, y + 6, { align: 'center' })
+  doc.setFontSize(7)
+  doc.text(`(${copyLabel})`, ox + cw / 2, y + 10, { align: 'center' })
+  y += 12
+
+  // ═══ Serial number ═══
+  doc.setFontSize(7)
+  doc.text(`일련번호: ${data.statementNo}`, ox + cw - 1.5, y + 4, { align: 'right' })
+  y += 5
+
+  // ═══ Company info grid ═══
+  const lw = 22
+  const halfW = Math.floor(cw / 2)
+  const lw2 = 24
+
+  // Row 1: TEL | 사업자등록번호
+  cell(ox, y, lw, rh, 'TEL', { align: 'center', fill: true })
+  cell(ox + lw, y, halfW - lw, rh, data.supplier.tel || '')
+  cell(ox + halfW, y, lw2, rh, '사업자등록번호', { align: 'center', fill: true, fontSize: 6 })
+  cell(ox + halfW + lw2, y, cw - halfW - lw2, rh, data.supplier.bizNo || '')
+  y += rh
+
+  // Row 2: 상호(법인명) | 성명
+  cell(ox, y, lw, rh, '상호(법인명)', { align: 'center', fill: true, fontSize: 6 })
+  cell(ox + lw, y, halfW - lw, rh, data.supplier.name)
+  cell(ox + halfW, y, lw2, rh, '성명', { align: 'center', fill: true })
+  cell(ox + halfW + lw2, y, cw - halfW - lw2, rh, `${data.supplier.ceo || ''}     (인)`)
+  y += rh
+
+  // Row 3: 주소
+  cell(ox, y, lw, rh, '주소', { align: 'center', fill: true })
+  cell(ox + lw, y, cw - lw, rh, data.supplier.address || '', { fontSize: 6.5 })
+  y += rh
+
+  // Row 4: 공급받는자
+  cell(ox, y, lw, rh, '공급받는자', { align: 'center', fill: true, fontSize: 6 })
+  cell(ox + lw, y, cw - lw, rh, `${data.buyer.name}  귀하`)
+  y += rh
+
+  // ═══ Amount row ═══
+  y += 0.5
+  const amountKo = numberToKorean(Math.floor(data.totalAmount))
+  const amountFmt = fmtNumber(Math.floor(data.totalAmount))
+  cell(ox, y, lw, rh + 1, '금    액', { align: 'center', fill: true, fontSize: 8 })
+  cell(ox + lw, y, cw - lw, rh + 1, `일금  ${amountKo}원정  (W${amountFmt})`, { fontSize: 7.5 })
+  y += rh + 1
+
+  // ═══ Item table ═══
+  y += 0.5
+  const colW = [17, 26, 13, 9, 11, 15, 17, 15, 16]
+  colW[colW.length - 1] += cw - colW.reduce((a, b) => a + b, 0) // 보정
+  const colH = ['바코드', '품목명', '규격', '단위', '수량', '단가', '공급가액', '부가세', '적요']
+  const colA: ('left' | 'center' | 'right')[] = [
+    'left',
+    'left',
+    'left',
+    'center',
+    'right',
+    'right',
+    'right',
+    'right',
+    'left',
+  ]
+
+  // Header row
+  let cx = ox
+  for (let i = 0; i < colW.length; i++) {
+    cell(cx, y, colW[i], rh, colH[i], { align: 'center', fill: true, fontSize: 6 })
+    cx += colW[i]
+  }
+  y += rh
+
+  // Data rows (fixed number of rows)
+  for (let r = 0; r < STATEMENT_ITEM_ROWS; r++) {
+    const item = data.items[r]
+    cx = ox
+    if (item) {
+      const vals = [
+        item.barcode || '',
+        item.itemName,
+        item.spec || '',
+        item.unit || '',
+        fmtNumber(item.qty),
+        fmtNumber(item.unitPrice),
+        fmtNumber(item.supplyAmount),
+        fmtNumber(item.taxAmount),
+        item.remark || '',
+      ]
+      for (let i = 0; i < colW.length; i++) {
+        cell(cx, y, colW[i], rh, vals[i], { align: colA[i], fontSize: 6 })
+        cx += colW[i]
+      }
+    } else {
+      for (let i = 0; i < colW.length; i++) {
+        cell(cx, y, colW[i], rh, '')
+        cx += colW[i]
+      }
+    }
+    y += rh
+  }
+
+  // ═══ Summary row ═══
+  const sumLabels = ['수량', '공급가액', 'VAT', '합계']
+  const sumValues = [
+    fmtNumber(data.totalQty),
+    fmtNumber(data.totalSupply),
+    fmtNumber(data.totalTax),
+    fmtNumber(data.totalAmount),
+  ]
+  const sumH = rh + 1
+  const sumLW = 16
+  const segW = cw / 4
+  cx = ox
+  for (let i = 0; i < 4; i++) {
+    const sw = i < 3 ? Math.floor(segW) : cw - Math.floor(segW) * 3 // 마지막 보정
+    cell(cx, y, sumLW, sumH, sumLabels[i], { align: 'center', fill: true, fontSize: 6.5 })
+    cell(cx + sumLW, y, sw - sumLW, sumH, sumValues[i], { align: 'right', fontSize: 7 })
+    cx += sw
+  }
+  y += sumH
+
+  // ═══ Bank info ═══
+  y += 2
+  doc.setFontSize(7)
+  doc.setFont(fontName, 'normal')
+  if (data.supplier.bankName) {
+    doc.text(
+      `입금계좌:  ${data.supplier.bankName}  ${data.supplier.bankAccount || ''}  ${data.supplier.bankHolder || ''}`,
+      ox + 1.5,
+      y + 2
+    )
+  }
+
+  // ═══ Previous/Next balance + Received stamp ═══
+  y += 6
+  const balLW = 12
+  const balVW = 30
+  cell(ox, y, balLW, rh, '전잔', { align: 'center', fill: true, fontSize: 6 })
+  cell(ox + balLW, y, balVW, rh, data.previousBalance != null ? fmtNumber(data.previousBalance) : '', {
+    align: 'right',
+  })
+  cell(ox + balLW + balVW, y, balLW, rh, '후잔', { align: 'center', fill: true, fontSize: 6 })
+  cell(ox + balLW * 2 + balVW, y, balVW, rh, data.nextBalance != null ? fmtNumber(data.nextBalance) : '', {
+    align: 'right',
+  })
+  cell(ox + cw - 22, y, 22, rh, '인수       (인)', { align: 'center' })
+}
+
+export async function generateTransactionStatementPDF(data: TransactionStatementPDFData) {
+  const { doc, fontName, pageWidth, pageHeight } = await createPDFDocument({ orientation: 'landscape' })
+
+  const margin = 5
+  const gap = 9
+  const copyWidth = (pageWidth - 2 * margin - gap) / 2
+
+  // Left copy (공급자 보관용)
+  drawStatementCopy(doc, fontName, data, margin, copyWidth, '공급자 보관용')
+
+  // Right copy (공급받는자 보관용)
+  drawStatementCopy(doc, fontName, data, margin + copyWidth + gap, copyWidth, '공급받는자 보관용')
+
+  // Center dashed cutting line
+  doc.setDrawColor(180, 180, 180)
+  doc.setLineWidth(0.15)
+  const centerX = pageWidth / 2
+  for (let dy = 5; dy < pageHeight - 5; dy += 4) {
+    doc.line(centerX, dy, centerX, Math.min(dy + 2, pageHeight - 5))
+  }
+
+  doc.save(`거래명세서_${data.statementNo}.pdf`)
 }
