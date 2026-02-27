@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { formatDate, formatCurrency } from '@/lib/format'
+import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import {
   generateTaxInvoicePDF,
@@ -90,7 +90,7 @@ interface OrderRow {
 }
 
 const emptyOrderRow = (company?: any): OrderRow => ({
-  orderDate: new Date().toISOString().split('T')[0],
+  orderDate: getLocalDateString(),
   barcode: '',
   orderNumber: '',
   siteName: '',
@@ -874,7 +874,7 @@ export default function OrdersPage() {
         }
         try {
           await api.post('/sales/orders', {
-            orderDate: row.orderDate || new Date().toISOString().split('T')[0],
+            orderDate: row.orderDate || getLocalDateString(),
             salesChannel: activeTab,
             vatIncluded: true,
             siteName: row.siteName || undefined,
@@ -974,7 +974,7 @@ export default function OrdersPage() {
       }
       try {
         await api.post('/sales/orders', {
-          orderDate: row.orderDate || new Date().toISOString().split('T')[0],
+          orderDate: row.orderDate || getLocalDateString(),
           salesChannel: activeTab,
           vatIncluded: true,
           siteName: row.siteName || undefined,

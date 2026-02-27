@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { formatDate, formatCurrency } from '@/lib/format'
+import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
@@ -627,7 +627,7 @@ export default function DeliveriesPage() {
       let failCount = 0
       const failReasons: string[] = []
       const normalize = (s: any) => (s ? String(s).trim().toLowerCase() : '')
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDateString()
       for (const row of rows) {
         const orderNoVal = normalize(row.orderNo)
         const order = orders.find((o: any) => normalize(o.orderNo) === orderNoVal)
@@ -1226,7 +1226,7 @@ export default function DeliveriesPage() {
                 type="date"
                 required
                 className="h-8 text-xs"
-                defaultValue={new Date().toISOString().split('T')[0]}
+                defaultValue={getLocalDateString()}
               />
             </div>
             <div className="space-y-1">
