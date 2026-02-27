@@ -235,7 +235,7 @@ export default function NettingPage() {
     },
     {
       id: 'transactionStatement',
-      header: '거래명세표',
+      header: '거래명세서',
       cell: ({ row }) => (
         <Button variant="outline" size="sm" onClick={() => handleTransactionStatementPDF(row.original)}>
           <FileText className="mr-1 h-4 w-4" />
@@ -360,7 +360,7 @@ export default function NettingPage() {
           <TabsTrigger value="netting">상계내역</TabsTrigger>
           <TabsTrigger value="transactionStatement">
             <FileText className="mr-1 h-4 w-4" />
-            거래명세표 발행
+            거래명세서 발행
           </TabsTrigger>
         </TabsList>
 
@@ -395,9 +395,9 @@ export default function NettingPage() {
 
         <TabsContent value="transactionStatement" className="space-y-6">
           <div className="rounded-lg border p-4">
-            <h3 className="mb-1 text-lg font-semibold">거래명세표 발행 (발주관리 연동)</h3>
+            <h3 className="mb-1 text-lg font-semibold">거래명세서 발행 (발주관리 연동)</h3>
             <p className="text-muted-foreground text-sm">
-              {year}년 {month}월 발주 내역을 기반으로 거래명세표를 발행합니다. 발주 상세정보와 거래처 정보가 자동으로
+              {year}년 {month}월 발주 내역을 기반으로 거래명세서를 발행합니다. 발주 상세정보와 거래처 정보가 자동으로
               반영됩니다.
             </p>
           </div>
