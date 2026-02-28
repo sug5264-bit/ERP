@@ -20,7 +20,7 @@ export function PageHeader({ title, description, createHref, createLabel = 'ì‹ ê
       <div className="flex shrink-0 items-center gap-2">
         {actions}
         {createHref && (
-          <Button size="sm" asChild className="sm:size-default">
+          <Button size="sm" asChild className="sm:size-default shadow-sm">
             <Link href={createHref}>
               <Plus className="mr-1.5 h-4 w-4" />
               {createLabel}
