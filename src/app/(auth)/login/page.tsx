@@ -51,8 +51,7 @@ function LoginForm() {
       } else {
         setError('로그인 응답을 처리할 수 없습니다.')
       }
-    } catch (err) {
-      console.error('[Login] Error:', err)
+    } catch {
       setError('로그인 중 오류가 발생했습니다. 네트워크를 확인하세요.')
     } finally {
       setIsLoading(false)

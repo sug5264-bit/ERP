@@ -21,19 +21,14 @@ interface PermissionGuardProps {
  *   <Button>사원 등록</Button>
  * </PermissionGuard>
  */
-export function PermissionGuard({
-  module,
-  action,
-  children,
-  fallback = null,
-}: PermissionGuardProps) {
+export function PermissionGuard({ module, action, children, fallback = null }: PermissionGuardProps) {
   const { data: session } = useSession()
 
   if (!session?.user) return fallback
 
-  const user = session.user as any
-  const permissions = user.permissions || []
-  const roles = user.roles || []
+  const user = session.user as Record<string, unknown>
+  const permissions = (user.permissions as { module: string; action: string }[]) || []
+  const roles = (user.roles as string[]) || []
 
   if (!checkClientPermission(permissions, roles, module, action)) {
     return fallback
@@ -49,10 +44,10 @@ export function usePermission(module: string, action: Action): boolean {
   const { data: session } = useSession()
   if (!session?.user) return false
 
-  const user = session.user as any
+  const user = session.user as Record<string, unknown>
   return checkClientPermission(
-    user.permissions || [],
-    user.roles || [],
+    (user.permissions as { module: string; action: string }[]) || [],
+    (user.roles as string[]) || [],
     module,
     action
   )

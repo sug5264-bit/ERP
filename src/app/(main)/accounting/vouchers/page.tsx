@@ -97,7 +97,7 @@ export default function VouchersPage() {
   if (typeFilter && typeFilter !== 'all') qp.set('voucherType', typeFilter)
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['accounting-vouchers', typeFilter, statusFilter],
     queryFn: () => api.get(`/accounting/vouchers?${qp.toString()}`) as Promise<any>,
   })
@@ -368,6 +368,8 @@ export default function VouchersPage() {
         searchColumn="voucherNo"
         searchPlaceholder="전표번호로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />

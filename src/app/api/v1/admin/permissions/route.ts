@@ -8,6 +8,7 @@ export async function GET() {
 
     const permissions = await prisma.permission.findMany({
       orderBy: [{ module: 'asc' }, { action: 'asc' }],
+      take: 500,
     })
 
     return successResponse(permissions)

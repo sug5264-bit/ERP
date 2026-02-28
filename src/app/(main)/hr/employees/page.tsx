@@ -116,25 +116,25 @@ export default function EmployeesPage() {
   if (joinDateFrom) queryParams.set('joinDateFrom', joinDateFrom)
   if (joinDateTo) queryParams.set('joinDateTo', joinDateTo)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['hr-employees', statusFilter, deptFilter, typeFilter, joinDateFrom, joinDateTo],
-    queryFn: () => api.get(`/hr/employees?${queryParams.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/hr/employees?${queryParams.toString()}`) as Promise<{ data: EmployeeRow[] }>,
   })
 
   const { data: deptData } = useQuery({
     queryKey: ['hr-departments'],
-    queryFn: () => api.get('/hr/departments') as Promise<any>,
-    staleTime: 30 * 60 * 1000, // 부서 데이터는 자주 변경되지 않음
+    queryFn: () => api.get('/hr/departments') as Promise<{ data: { id: string; name: string }[] }>,
+    staleTime: 30 * 60 * 1000,
   })
 
   const { data: posData } = useQuery({
     queryKey: ['hr-positions'],
-    queryFn: () => api.get('/hr/positions') as Promise<any>,
-    staleTime: 30 * 60 * 1000, // 직급 데이터는 자주 변경되지 않음
+    queryFn: () => api.get('/hr/positions') as Promise<{ data: { id: string; name: string }[] }>,
+    staleTime: 30 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/employees', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/employees', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
       setOpen(false)
@@ -144,7 +144,7 @@ export default function EmployeesPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/hr/employees/${id}`, body),
+    mutationFn: ({ id, ...body }: { id: string; [key: string]: unknown }) => api.put(`/hr/employees/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] })
       setEditTarget(null)
@@ -189,8 +189,8 @@ export default function EmployeesPage() {
   }
 
   const employees: EmployeeRow[] = data?.data || []
-  const departments = deptData?.data || []
-  const positions = posData?.data || []
+  const departments: { id: string; name: string }[] = deptData?.data || []
+  const positions: { id: string; name: string }[] = posData?.data || []
 
   const exportColumns: ExportColumn[] = [
     { header: '사번', accessor: 'employeeNo' },
@@ -303,7 +303,7 @@ export default function EmployeesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 부서</SelectItem>
-            {departments.map((d: any) => (
+            {departments.map((d: { id: string; name: string }) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.name}
               </SelectItem>
@@ -385,7 +385,7 @@ export default function EmployeesPage() {
                       <SelectValue placeholder="부서 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((d: any) => (
+                      {departments.map((d: { id: string; name: string }) => (
                         <SelectItem key={d.id} value={d.id}>
                           {d.name}
                         </SelectItem>
@@ -402,7 +402,7 @@ export default function EmployeesPage() {
                       <SelectValue placeholder="직급 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((p: any) => (
+                      {positions.map((p: { id: string; name: string }) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
                         </SelectItem>
@@ -466,13 +466,13 @@ export default function EmployeesPage() {
           {
             id: 'actions',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setEditTarget(row.original)}
+                  onClick={() => setEditTarget(row.original as EmployeeRow)}
                   aria-label="수정"
                 >
                   <Pencil className="h-4 w-4" />
@@ -481,7 +481,7 @@ export default function EmployeesPage() {
                   variant="ghost"
                   size="icon"
                   className="text-destructive hover:text-destructive h-8 w-8"
-                  onClick={() => handleDelete(row.original.id, row.original.nameKo)}
+                  onClick={() => handleDelete((row.original as EmployeeRow).id, (row.original as EmployeeRow).nameKo)}
                   aria-label="삭제"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -495,6 +495,8 @@ export default function EmployeesPage() {
         searchColumn="nameKo"
         searchPlaceholder="이름으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
       <ExcelImportDialog
@@ -542,7 +544,7 @@ export default function EmployeesPage() {
                       <SelectValue placeholder="부서 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((d: any) => (
+                      {departments.map((d: { id: string; name: string }) => (
                         <SelectItem key={d.id} value={d.id}>
                           {d.name}
                         </SelectItem>
@@ -559,7 +561,7 @@ export default function EmployeesPage() {
                       <SelectValue placeholder="직급 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((p: any) => (
+                      {positions.map((p: { id: string; name: string }) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
                         </SelectItem>

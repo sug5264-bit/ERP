@@ -19,7 +19,7 @@ export async function register() {
       const count = Number(missingColumns[0]?.cnt ?? 0)
 
       if (count < 5) {
-        console.warn('[instrumentation] Missing columns detected. Running schema sync...')
+        console.info('[instrumentation] Missing columns detected. Running schema sync...')
 
         // 누락된 컬럼만 추가 (IF NOT EXISTS 패턴)
         const columns: [string, string][] = [
@@ -57,7 +57,7 @@ export async function register() {
           // already nullable
         }
 
-        console.log('[instrumentation] Schema sync completed.')
+        console.info('[instrumentation] Schema sync completed.')
       }
 
       await prisma.$disconnect()

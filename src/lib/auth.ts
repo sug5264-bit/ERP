@@ -4,6 +4,7 @@ import { compare } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { checkRateLimit, incrementRateLimit, resetRateLimit } from '@/lib/rate-limit'
 import { authConfig } from '@/lib/auth.config'
+import { logger } from '@/lib/logger'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -20,7 +21,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const password = credentials?.password
 
           if (!username || !password) {
-            console.error('[Auth] Missing credentials')
+            logger.warn('Login attempt with missing credentials')
             return null
           }
 
@@ -31,7 +32,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const rateLimitKey = `login:${usernameStr}`
           const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000)
           if (!rateCheck.allowed) {
-            console.warn(`[Auth] Rate limit exceeded for user: ${usernameStr}`)
+            logger.warn('Login rate limit exceeded', { module: 'auth', action: 'login' })
             return null
           }
 
@@ -60,13 +61,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (!user) {
             incrementRateLimit(rateLimitKey)
-            console.warn(`[Auth] User not found: ${usernameStr}`)
+            logger.warn('Login failed: user not found', { module: 'auth', action: 'login' })
             return null
           }
 
           if (!user.isActive) {
             incrementRateLimit(rateLimitKey)
-            console.warn(`[Auth] User inactive: ${usernameStr}`)
+            logger.warn('Login failed: user inactive', { module: 'auth', action: 'login', userId: user.id })
             return null
           }
 
@@ -74,7 +75,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (!isPasswordValid) {
             incrementRateLimit(rateLimitKey)
-            console.warn(`[Auth] Invalid password for user: ${usernameStr}`)
+            logger.warn('Login failed: invalid password', { module: 'auth', action: 'login', userId: user.id })
             return null
           }
 
@@ -94,7 +95,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }))
           )
 
-          console.log(`[Auth] Login successful: ${usernameStr}`)
+          logger.info('Login successful', { module: 'auth', action: 'login', userId: user.id })
 
           return {
             id: user.id,
@@ -108,7 +109,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             positionName: user.employee?.position?.name ?? null,
           }
         } catch (error) {
-          console.error('[Auth] Authorize error:', error)
+          logger.error('Auth authorize error', {
+            module: 'auth',
+            error: error instanceof Error ? error.message : String(error),
+          })
           return null
         }
       },

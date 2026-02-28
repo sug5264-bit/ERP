@@ -113,7 +113,7 @@ export default function PartnersPage() {
   if (startDate) qp.set('startDate', startDate)
   if (endDate) qp.set('endDate', endDate)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['partners', typeFilter, startDate, endDate],
     queryFn: () => api.get(`/partners?${qp.toString()}`) as Promise<any>,
   })
@@ -443,6 +443,8 @@ export default function PartnersPage() {
         searchColumn="partnerName"
         searchPlaceholder="거래처명으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
