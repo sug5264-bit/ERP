@@ -12,7 +12,9 @@ import { APP_NAME } from '@/lib/constants'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  const rawCallback = searchParams.get('callbackUrl') || '/dashboard'
+  // 오픈 리다이렉트 방지: 내부 경로만 허용
+  const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/dashboard'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

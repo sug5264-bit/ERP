@@ -129,7 +129,10 @@ export const labelColumnStyle = {
 // ---------------------------------------------------------------------------
 // 숫자 포맷
 // ---------------------------------------------------------------------------
-export const fmtNumber = (n: number) => n.toLocaleString('ko-KR')
+export const fmtNumber = (n: number | null | undefined) => {
+  if (n == null || isNaN(n)) return '0'
+  return n.toLocaleString('ko-KR')
+}
 
 // ---------------------------------------------------------------------------
 // 날짜 포맷 (출력일용)

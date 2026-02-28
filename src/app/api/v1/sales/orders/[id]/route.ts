@@ -107,10 +107,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           select: { id: true, taxType: true },
         })
         const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
+        const isVatIncluded = body.vatIncluded !== undefined ? body.vatIncluded : order.vatIncluded
         const details = body.details.map((d: any, idx: number) => {
           const supplyAmount = Math.round(d.quantity * d.unitPrice)
           const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
-          const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+          const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
           const deliveredQty = existingDelivered.get(d.itemId) || 0
           const remainingQty = Math.max(0, d.quantity - deliveredQty)
           return {
@@ -171,6 +172,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
           where: { qualityInspection: { deliveryId: { in: deliveryIds } } },
         })
         await tx.qualityInspection.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
+        // 재고이동 관련 데이터 삭제 (납품에 연결된 StockMovement)
+        const stockMovements = await tx.stockMovement.findMany({
+          where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
+          select: { id: true },
+        })
+        if (stockMovements.length > 0) {
+          const smIds = stockMovements.map((sm) => sm.id)
+          await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: smIds } } })
+          await tx.stockMovement.deleteMany({ where: { id: { in: smIds } } })
+        }
         await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
         await tx.delivery.deleteMany({ where: { salesOrderId: id } })
       }

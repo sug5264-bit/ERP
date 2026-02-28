@@ -50,39 +50,40 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const data = createSalesReturnSchema.parse(body)
-    const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate))
-
     // 반품 상세가 있으면 totalAmount를 자동 계산
     const details = data.details || []
     const computedTotal =
       details.length > 0 ? details.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0) : data.totalAmount
 
-    const salesReturn = await prisma.salesReturn.create({
-      data: {
-        returnNo,
-        returnDate: new Date(data.returnDate),
-        salesOrderId: data.salesOrderId,
-        partnerId: data.partnerId,
-        reason: data.reason,
-        reasonDetail: data.reasonDetail || null,
-        totalAmount: computedTotal,
-        ...(details.length > 0 && {
-          details: {
-            create: details.map((d) => ({
-              itemId: d.itemId,
-              quantity: d.quantity,
-              unitPrice: d.unitPrice,
-              amount: Math.round(d.quantity * d.unitPrice),
-              remark: d.remark || null,
-            })),
-          },
-        }),
-      },
-      include: {
-        salesOrder: { select: { id: true, orderNo: true } },
-        partner: { select: { id: true, partnerName: true } },
-        details: { include: { item: { select: { id: true, itemName: true } } } },
-      },
+    const salesReturn = await prisma.$transaction(async (tx) => {
+      const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate), tx)
+      return tx.salesReturn.create({
+        data: {
+          returnNo,
+          returnDate: new Date(data.returnDate),
+          salesOrderId: data.salesOrderId,
+          partnerId: data.partnerId,
+          reason: data.reason,
+          reasonDetail: data.reasonDetail || null,
+          totalAmount: computedTotal,
+          ...(details.length > 0 && {
+            details: {
+              create: details.map((d) => ({
+                itemId: d.itemId,
+                quantity: d.quantity,
+                unitPrice: d.unitPrice,
+                amount: Math.round(d.quantity * d.unitPrice),
+                remark: d.remark || null,
+              })),
+            },
+          }),
+        },
+        include: {
+          salesOrder: { select: { id: true, orderNo: true } },
+          partner: { select: { id: true, partnerName: true } },
+          details: { include: { item: { select: { id: true, itemName: true } } } },
+        },
+      })
     })
 
     return successResponse(salesReturn)

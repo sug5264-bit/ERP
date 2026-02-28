@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
 
     const yearStart = new Date(new Date().getFullYear(), 0, 1)
     const sixMonthsAgo = new Date()
+    sixMonthsAgo.setDate(1) // 날짜 오버플로 방지 (예: 3월31일 - 6개월 → 잘못된 날짜)
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
     // 모든 DB 쿼리를 병렬 실행 (순차 → 병렬로 ~3-5x 빠름)

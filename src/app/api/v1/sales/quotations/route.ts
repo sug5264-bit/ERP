@@ -49,7 +49,6 @@ export async function POST(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const body = await request.json()
     const data = createQuotationSchema.parse(body)
-    const quotationNo = await generateDocumentNumber('QT', new Date(data.quotationDate))
     const employee = await prisma.employee.findFirst({
       where: { user: { id: authResult.session.user.id } },
       select: { id: true },
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
     const taxTypeMap = new Map(itemsInfo.map((i) => [i.id, i.taxType]))
 
     const details = data.details.map((d, idx) => {
-      const supplyAmount = d.quantity * d.unitPrice
+      const supplyAmount = Math.round(d.quantity * d.unitPrice)
       const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
       const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
       return {
@@ -82,20 +81,23 @@ export async function POST(request: NextRequest) {
     const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
     const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
 
-    const quotation = await prisma.quotation.create({
-      data: {
-        quotationNo,
-        quotationDate: new Date(data.quotationDate),
-        partnerId: data.partnerId,
-        validUntil: data.validUntil ? new Date(data.validUntil) : null,
-        totalSupply,
-        totalTax,
-        totalAmount: totalSupply + totalTax,
-        employeeId: employee.id,
-        description: data.description || null,
-        details: { create: details },
-      },
-      include: { partner: true, details: { include: { item: true } } },
+    const quotation = await prisma.$transaction(async (tx) => {
+      const quotationNo = await generateDocumentNumber('QT', new Date(data.quotationDate), tx)
+      return tx.quotation.create({
+        data: {
+          quotationNo,
+          quotationDate: new Date(data.quotationDate),
+          partnerId: data.partnerId,
+          validUntil: data.validUntil ? new Date(data.validUntil) : null,
+          totalSupply,
+          totalTax,
+          totalAmount: totalSupply + totalTax,
+          employeeId: employee.id,
+          description: data.description || null,
+          details: { create: details },
+        },
+        include: { partner: true, details: { include: { item: true } } },
+      })
     })
     return successResponse(quotation)
   } catch (error) {

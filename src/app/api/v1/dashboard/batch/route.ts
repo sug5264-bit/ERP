@@ -10,6 +10,7 @@ export async function GET() {
     const now = new Date()
     const yearStart = new Date(now.getFullYear(), 0, 1)
     const sixMonthsAgo = new Date()
+    sixMonthsAgo.setDate(1) // 날짜 오버플로 방지
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
     // 이번 달 / 지난 달 기간 계산 (트렌드용)
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)

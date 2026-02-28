@@ -63,13 +63,23 @@ export async function GET(request: NextRequest) {
       orderedQtyMap.set(d.itemId, Number(d._sum.remainingQty ?? 0))
     }
 
+    // 품목별 전체 재고 합계 (수주잔량은 품목 단위이므로 비율로 분배)
+    const itemTotalStockMap = new Map<string, number>()
+    for (const b of balances) {
+      itemTotalStockMap.set(b.itemId, (itemTotalStockMap.get(b.itemId) || 0) + Number(b.quantity))
+    }
+
     const result = balances.map((b) => {
       const currentQty = Number(b.quantity)
       const orderedQty = orderedQtyMap.get(b.itemId) || 0
-      const availableQty = Math.max(0, currentQty - orderedQty)
+      const totalStock = itemTotalStockMap.get(b.itemId) || 0
+      // 가용재고를 창고 비율로 분배 (이중차감 방지)
+      const totalAvailable = Math.max(0, totalStock - orderedQty)
+      const ratio = totalStock > 0 ? currentQty / totalStock : 0
+      const availableQty = Math.round(totalAvailable * ratio)
       return {
         ...b,
-        orderedQty,
+        orderedQty: totalStock > 0 ? Math.round(orderedQty * ratio) : 0,
         availableQty,
       }
     })

@@ -184,7 +184,7 @@ export default function FinancialStatementsPage() {
                   {renderSection('EQUITY', '자본')}
                   <div className="flex justify-between border-t-2 pt-2 font-bold">
                     <span>부채 및 자본 합계</span>
-                    <span className="font-mono">{formatCurrency(totalLiabilities + totalEquity)}</span>
+                    <span className="font-mono">{formatCurrency(totalLiabilities + totalEquity + netIncome)}</span>
                   </div>
                 </CardContent>
               </Card>

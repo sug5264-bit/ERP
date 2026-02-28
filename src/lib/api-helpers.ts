@@ -74,6 +74,24 @@ export function handleApiError(error: unknown) {
     return errorResponse(prismaMessage, 'DATABASE_ERROR', 400)
   }
 
+  // 비즈니스 로직 에러 (트랜잭션 내부에서 throw된 사용자 메시지)
+  if (error instanceof Error) {
+    const msg = error.message
+    if (
+      msg.includes('부족합니다') ||
+      msg.includes('올바르지 않습니다') ||
+      msg.includes('필요합니다') ||
+      msg.includes('없습니다') ||
+      msg.includes('초과') ||
+      msg.includes('0보다') ||
+      msg.includes('할 수 없습니다') ||
+      msg.includes('이미 존재') ||
+      msg.includes('일치하지 않습니다')
+    ) {
+      return errorResponse(msg, 'BUSINESS_ERROR', 400)
+    }
+  }
+
   // 일반 에러는 내부 정보 노출 방지 (로그에만 상세 기록)
   if (error instanceof Error) {
     logger.error('API Error', {

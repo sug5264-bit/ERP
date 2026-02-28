@@ -66,10 +66,10 @@ const columns: ColumnDef<MovementRow>[] = [
   },
   { header: '출고창고', cell: ({ row }) => row.original.sourceWarehouse?.name || '-' },
   { header: '입고창고', cell: ({ row }) => row.original.targetWarehouse?.name || '-' },
-  { header: '품목수', cell: ({ row }) => `${row.original.details.length}건` },
+  { header: '품목수', cell: ({ row }) => `${row.original.details?.length || 0}건` },
   {
     header: '합계금액',
-    cell: ({ row }) => formatCurrency(row.original.details.reduce((s, d) => s + Number(d.amount), 0)),
+    cell: ({ row }) => formatCurrency((row.original.details || []).reduce((s, d) => s + Number(d.amount), 0)),
   },
 ]
 
