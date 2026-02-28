@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-import { Suspense } from 'react'
+import { Suspense, useMemo, memo } from 'react'
 
 // recharts lazy load (번들 사이즈 ~200KB 절감)
 const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
@@ -87,33 +87,51 @@ const KPI_CARDS = [
   },
 ] as const
 
+interface RecentOrder {
+  id: string
+  orderNo: string
+  totalAmount: number | string
+  partner?: { partnerName: string }
+}
+
+interface Notice {
+  id: string
+  title: string
+  isPinned: boolean
+  createdAt: string
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession()
 
   // 대시보드 전체 데이터 단일 요청 (5개 HTTP 요청 → 1개)
   const { data: dashData, isLoading } = useQuery({
     queryKey: ['dashboard-batch'],
-    queryFn: () => api.get('/dashboard/batch') as Promise<any>,
+    queryFn: () => api.get('/dashboard/batch') as Promise<{ data: Record<string, unknown> }>,
     staleTime: 60 * 1000,
   })
 
-  const kpi = dashData?.data?.kpi
-  const kpiValues: Record<string, number> = {
-    emp: kpi?.empCount || 0,
-    item: kpi?.itemCount || 0,
-    approval: kpi?.approvalCount || 0,
-    leave: kpi?.leaveCount || 0,
-    stock: kpi?.stockAlertCount || 0,
-  }
+  const dd = dashData?.data as Record<string, unknown> | undefined
+  const kpi = dd?.kpi as Record<string, number> | undefined
+  const kpiValues: Record<string, number> = useMemo(
+    () => ({
+      emp: kpi?.empCount || 0,
+      item: kpi?.itemCount || 0,
+      approval: kpi?.approvalCount || 0,
+      leave: kpi?.leaveCount || 0,
+      stock: kpi?.stockAlertCount || 0,
+    }),
+    [kpi]
+  )
 
-  const trends = dashData?.data?.trends
+  const trends = dd?.trends as Record<string, Record<string, number>> | undefined
   const salesTrend = trends?.salesAmount?.change ?? 0
   const orderTrend = trends?.orderCount?.change ?? 0
-  const todayOrders = trends?.todayOrders ?? 0
+  const todayOrders = (trends?.todayOrders as unknown as number) ?? 0
   const thisMonthAmount = trends?.salesAmount?.current ?? 0
 
-  const recentOrders = dashData?.data?.recentOrders || []
-  const notices = dashData?.data?.notices || []
+  const recentOrders = (dd?.recentOrders as RecentOrder[]) || []
+  const notices = (dd?.notices as Notice[]) || []
 
   const greeting = getGreeting()
 
@@ -193,7 +211,20 @@ export default function DashboardPage() {
       </Card>
 
       {/* Charts (lazy loaded) */}
-      <Suspense>
+      <Suspense
+        fallback={
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i}>
+                <CardContent className="space-y-3 p-4 sm:p-6">
+                  <div className="skeleton-shimmer h-5 w-32" />
+                  <div className="skeleton-shimmer h-[250px]" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        }
+      >
         <DashboardCharts
           salesSummary={dashData?.data?.salesSummary ? { data: dashData.data.salesSummary } : undefined}
           dashStats={dashData?.data?.stats ? { data: dashData.data.stats } : undefined}
@@ -219,7 +250,7 @@ export default function DashboardPage() {
               <EmptyState icon={ShoppingCart} message="발주 데이터가 없습니다" />
             ) : (
               <div className="space-y-0">
-                {recentOrders.slice(0, 5).map((o: any, idx: number) => (
+                {recentOrders.slice(0, 5).map((o, idx) => (
                   <div
                     key={o.id}
                     className={`hover:bg-muted/30 flex items-center justify-between rounded-sm px-1 py-2.5 text-xs transition-colors sm:text-sm ${idx < Math.min(recentOrders.length, 5) - 1 ? 'border-b' : ''}`}
@@ -255,7 +286,7 @@ export default function DashboardPage() {
               <EmptyState icon={ClipboardList} message="공지사항이 없습니다" />
             ) : (
               <div className="space-y-0">
-                {notices.slice(0, 5).map((n: any, idx: number) => (
+                {notices.slice(0, 5).map((n, idx) => (
                   <div
                     key={n.id}
                     className={`hover:bg-muted/30 flex items-center justify-between rounded-sm px-1 py-2.5 text-xs transition-colors sm:text-sm ${idx < Math.min(notices.length, 5) - 1 ? 'border-b' : ''}`}
@@ -284,7 +315,7 @@ export default function DashboardPage() {
 
 // ─── Sub Components ───
 
-function TrendItem({
+const TrendItem = memo(function TrendItem({
   label,
   value,
   trend,
@@ -316,9 +347,9 @@ function TrendItem({
       )}
     </div>
   )
-}
+})
 
-function EmptyState({ icon: Icon, message }: { icon: typeof ShoppingCart; message: string }) {
+const EmptyState = memo(function EmptyState({ icon: Icon, message }: { icon: typeof ShoppingCart; message: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-10">
       <div className="bg-muted rounded-full p-3">
@@ -327,7 +358,7 @@ function EmptyState({ icon: Icon, message }: { icon: typeof ShoppingCart; messag
       <p className="text-muted-foreground text-sm">{message}</p>
     </div>
   )
-}
+})
 
 function getGreeting(): string {
   const hour = new Date().getHours()

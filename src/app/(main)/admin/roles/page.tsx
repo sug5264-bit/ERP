@@ -99,7 +99,12 @@ export default function RolesPage() {
   const [formDescription, setFormDescription] = useState('')
   const [formPermissionIds, setFormPermissionIds] = useState<Set<string>>(new Set())
 
-  const { data: rolesData, isLoading } = useQuery({
+  const {
+    data: rolesData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ['admin-roles'],
     queryFn: () => api.get('/admin/roles') as Promise<any>,
   })
@@ -367,6 +372,8 @@ export default function RolesPage() {
         searchColumn="name"
         searchPlaceholder="역할명으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
       />
 

@@ -36,7 +36,7 @@ export function ExcelImportDialog({
   onSuccess,
 }: ExcelImportDialogProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [parsedRows, setParsedRows] = useState<Record<string, any>[]>([])
+  const [parsedRows, setParsedRows] = useState<Record<string, unknown>[]>([])
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<ImportResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -62,8 +62,8 @@ export function ExcelImportDialog({
     try {
       const rows = await readExcelFile(f, keyMap)
       setParsedRows(rows)
-    } catch (err: any) {
-      toast.error(err.message || '파일을 읽을 수 없습니다.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '파일을 읽을 수 없습니다.')
       reset()
     }
   }
@@ -77,12 +77,12 @@ export function ExcelImportDialog({
     setImporting(true)
     try {
       // 이미 파싱된 데이터를 재사용 (파일을 다시 읽지 않음)
-      const res = (await api.post(apiEndpoint, { rows: parsedRows })) as any
-      const body = res.data ?? res
+      const res = (await api.post(apiEndpoint, { rows: parsedRows })) as { data?: Record<string, unknown> }
+      const body = (res.data ?? res) as Record<string, unknown>
       const importResult: ImportResult = {
-        success: body.success || 0,
-        failed: body.failed || 0,
-        errors: body.errors || [],
+        success: (body.success as number) || 0,
+        failed: (body.failed as number) || 0,
+        errors: (body.errors as { row: number; message: string }[]) || [],
       }
       setResult(importResult)
       if (importResult.success > 0) {
@@ -92,8 +92,8 @@ export function ExcelImportDialog({
       if (importResult.failed > 0) {
         toast.error(`${importResult.failed}건 실패`)
       }
-    } catch (err: any) {
-      toast.error(err.message || '업로드에 실패했습니다.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '업로드에 실패했습니다.')
     } finally {
       setImporting(false)
     }

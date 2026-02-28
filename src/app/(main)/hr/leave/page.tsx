@@ -82,7 +82,7 @@ export default function LeavePage() {
   const queryParams = new URLSearchParams({ pageSize: '50' })
   if (statusFilter && statusFilter !== 'all') queryParams.set('status', statusFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['hr-leave', statusFilter],
     queryFn: () => api.get(`/hr/leave?${queryParams.toString()}`) as Promise<any>,
   })
@@ -475,6 +475,8 @@ export default function LeavePage() {
         columns={columns}
         data={leaves}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         selectable
         onSelectionChange={(rows) => setSelectedRows(rows as LeaveRow[])}

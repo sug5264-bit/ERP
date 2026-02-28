@@ -11,6 +11,23 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 
+interface Notification {
+  id: string
+  type: string
+  title: string
+  message: string
+  isRead: boolean
+  relatedUrl: string | null
+  createdAt: string
+}
+
+interface NotificationsResponse {
+  data?: {
+    notifications: Notification[]
+    unreadCount: number
+  }
+}
+
 const TYPE_ICONS: Record<string, string> = {
   APPROVAL: '📋',
   LEAVE: '🏖️',
@@ -28,29 +45,29 @@ export function NotificationBell() {
 
   const { data } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => api.get(`/notifications?pageSize=${isMobile ? 15 : 30}`) as Promise<any>,
+    queryFn: () => api.get(`/notifications?pageSize=${isMobile ? 15 : 30}`) as Promise<NotificationsResponse>,
     refetchInterval: isMobile ? 60000 : 30000,
     refetchIntervalInBackground: false,
   })
 
   const actionMutation = useMutation({
-    mutationFn: (body: any) => api.put('/notifications', body),
+    mutationFn: (body: { action: string; id?: string }) => api.put('/notifications', body),
     onMutate: async (body) => {
       await queryClient.cancelQueries({ queryKey: ['notifications'] })
       const prev = queryClient.getQueryData(['notifications'])
 
       // Optimistic update
-      queryClient.setQueryData(['notifications'], (old: any) => {
+      queryClient.setQueryData(['notifications'], (old: NotificationsResponse | undefined) => {
         if (!old?.data) return old
         const notifs = old.data.notifications || []
         const unread = old.data.unreadCount || 0
         if (body.action === 'read' && body.id) {
-          const wasUnread = notifs.find((n: any) => n.id === body.id && !n.isRead)
+          const wasUnread = notifs.find((n) => n.id === body.id && !n.isRead)
           return {
             ...old,
             data: {
               ...old.data,
-              notifications: notifs.map((n: any) => (n.id === body.id ? { ...n, isRead: true } : n)),
+              notifications: notifs.map((n) => (n.id === body.id ? { ...n, isRead: true } : n)),
               unreadCount: wasUnread ? Math.max(0, unread - 1) : unread,
             },
           }
@@ -60,7 +77,7 @@ export function NotificationBell() {
             ...old,
             data: {
               ...old.data,
-              notifications: notifs.map((n: any) => ({ ...n, isRead: true })),
+              notifications: notifs.map((n) => ({ ...n, isRead: true })),
               unreadCount: 0,
             },
           }
@@ -70,7 +87,7 @@ export function NotificationBell() {
             ...old,
             data: {
               ...old.data,
-              notifications: notifs.filter((n: any) => !n.isRead),
+              notifications: notifs.filter((n) => !n.isRead),
             },
           }
         }
@@ -95,7 +112,7 @@ export function NotificationBell() {
   const notifications = data?.data?.notifications || []
   const unreadCount = data?.data?.unreadCount || 0
 
-  const handleClick = (notif: any) => {
+  const handleClick = (notif: Notification) => {
     if (!notif.isRead) {
       actionMutation.mutate({ action: 'read', id: notif.id })
     }
@@ -144,10 +161,11 @@ export function NotificationBell() {
             <div className="text-muted-foreground py-8 text-center text-sm">알림이 없습니다</div>
           ) : (
             <div className="divide-y">
-              {notifications.map((notif: any) => (
-                <div
+              {notifications.map((notif) => (
+                <button
                   key={notif.id}
-                  className={`hover:bg-muted/50 flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors ${
+                  type="button"
+                  className={`hover:bg-muted/50 flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors ${
                     !notif.isRead ? 'bg-primary/5' : ''
                   }`}
                   onClick={() => handleClick(notif)}
@@ -161,7 +179,7 @@ export function NotificationBell() {
                     <p className="text-muted-foreground mt-0.5 truncate text-xs">{notif.message}</p>
                     <p className="text-muted-foreground mt-1 text-xs">{formatDistanceToNow(notif.createdAt)}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

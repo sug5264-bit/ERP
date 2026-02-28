@@ -10,20 +10,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 
 interface CodeRow {
@@ -51,9 +39,7 @@ const columns: ColumnDef<CodeRow>[] = [
   {
     accessorKey: 'groupCode',
     header: '그룹코드',
-    cell: ({ row }) => (
-      <Badge variant="outline">{row.original.groupCode}</Badge>
-    ),
+    cell: ({ row }) => <Badge variant="outline">{row.original.groupCode}</Badge>,
   },
   {
     accessorKey: 'code',
@@ -88,7 +74,7 @@ export default function CodesPage() {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-codes', selectedGroup],
     queryFn: () =>
       api.get(
@@ -122,10 +108,7 @@ export default function CodesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="코드관리"
-        description="시스템 공통 코드를 관리합니다"
-      />
+      <PageHeader title="코드관리" description="시스템 공통 코드를 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={selectedGroup} onValueChange={setSelectedGroup}>
           <SelectTrigger className="w-48">
@@ -144,22 +127,28 @@ export default function CodesPage() {
           <DialogTrigger asChild>
             <Button>코드 등록</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>공통코드 등록</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label>그룹코드 <span className="text-destructive">*</span></Label>
+                <Label>
+                  그룹코드 <span className="text-destructive">*</span>
+                </Label>
                 <Input name="groupCode" required aria-required="true" placeholder="BANK" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>코드 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    코드 <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="code" required aria-required="true" />
                 </div>
                 <div className="space-y-2">
-                  <Label>코드명 <span className="text-destructive">*</span></Label>
+                  <Label>
+                    코드명 <span className="text-destructive">*</span>
+                  </Label>
                   <Input name="name" required aria-required="true" />
                 </div>
               </div>
@@ -184,6 +173,8 @@ export default function CodesPage() {
         searchColumn="name"
         searchPlaceholder="코드명으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
       />
     </div>

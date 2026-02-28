@@ -105,7 +105,7 @@ export default function AttendancePage() {
   const [filterMonth, setFilterMonth] = useState(currentMonth.toString())
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['hr-attendance', filterYear, filterMonth],
     queryFn: () => {
       const startDate = `${filterYear}-${filterMonth.padStart(2, '0')}-01`
@@ -293,6 +293,8 @@ export default function AttendancePage() {
         columns={columns}
         data={records}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         searchColumn="workDate"
         searchPlaceholder="근무일로 검색..."

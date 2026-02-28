@@ -57,7 +57,7 @@ export default function ApprovalPendingPage() {
   const [batchConfirm, setBatchConfirm] = useState<{ action: string; label: string; ids: string[] } | null>(null)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-pending'],
     queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=50') as Promise<any>,
   })
@@ -136,6 +136,8 @@ export default function ApprovalPendingPage() {
         searchColumn="title"
         searchPlaceholder="제목으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
         selectable

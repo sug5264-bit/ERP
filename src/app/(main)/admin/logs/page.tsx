@@ -8,13 +8,7 @@ import { DataTable } from '@/components/common/data-table'
 import { PageHeader } from '@/components/common/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDateTime } from '@/lib/format'
 
 interface LogRow {
@@ -47,11 +41,7 @@ const columns: ColumnDef<LogRow>[] = [
   {
     accessorKey: 'action',
     header: '작업',
-    cell: ({ row }) => (
-      <Badge variant={ACTION_COLORS[row.original.action] || 'outline'}>
-        {row.original.action}
-      </Badge>
-    ),
+    cell: ({ row }) => <Badge variant={ACTION_COLORS[row.original.action] || 'outline'}>{row.original.action}</Badge>,
   },
   {
     accessorKey: 'tableName',
@@ -60,9 +50,7 @@ const columns: ColumnDef<LogRow>[] = [
   {
     accessorKey: 'recordId',
     header: '레코드 ID',
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">{row.original.recordId.slice(0, 8)}...</span>
-    ),
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.recordId.slice(0, 8)}...</span>,
   },
   {
     accessorKey: 'ipAddress',
@@ -79,20 +67,16 @@ export default function LogsPage() {
   if (action && action !== 'all') queryParams.set('action', action)
   if (tableName) queryParams.set('tableName', tableName)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-logs', action, tableName],
-    queryFn: () =>
-      api.get(`/admin/logs?${queryParams.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/admin/logs?${queryParams.toString()}`) as Promise<any>,
   })
 
   const logs: LogRow[] = data?.data || []
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="감사로그"
-        description="시스템 사용 기록을 조회합니다"
-      />
+      <PageHeader title="감사로그" description="시스템 사용 기록을 조회합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={action} onValueChange={setAction}>
           <SelectTrigger className="w-40">
@@ -116,6 +100,8 @@ export default function LogsPage() {
         columns={columns}
         data={logs}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
       />
     </div>

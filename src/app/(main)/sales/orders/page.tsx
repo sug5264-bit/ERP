@@ -89,7 +89,7 @@ interface OrderRow {
   specialNote: string
 }
 
-const emptyOrderRow = (company?: any): OrderRow => ({
+const emptyOrderRow = (company?: { companyName?: string; phone?: string; address?: string }): OrderRow => ({
   orderDate: getLocalDateString(),
   barcode: '',
   orderNumber: '',

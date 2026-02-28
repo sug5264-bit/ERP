@@ -150,8 +150,8 @@ export function middleware(request: NextRequest) {
 
     // API 읽기(GET): 1분에 60회
     if (!pathname.startsWith('/api/auth') && method === 'GET') {
-      const { ok, resetAt } = rateLimitCheck(`read:${ip}`, 60_000, 60)
-      if (!ok) {
+      const rlResult = rateLimitCheck(`read:${ip}`, 60_000, 60)
+      if (!rlResult.ok) {
         return NextResponse.json(
           {
             success: false,
@@ -160,13 +160,15 @@ export function middleware(request: NextRequest) {
           {
             status: 429,
             headers: {
-              'Retry-After': String(Math.ceil((resetAt - Date.now()) / 1000)),
+              'Retry-After': String(Math.ceil((rlResult.resetAt - Date.now()) / 1000)),
               'X-RateLimit-Remaining': '0',
               'X-Request-Id': requestId,
             },
           }
         )
       }
+      requestHeaders.set('x-ratelimit-remaining', String(rlResult.remaining))
+      requestHeaders.set('x-ratelimit-limit', '60')
     }
 
     // 공개 API 경로 허용

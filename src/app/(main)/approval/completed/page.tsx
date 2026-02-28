@@ -48,7 +48,7 @@ export default function ApprovalCompletedPage() {
   const qp = new URLSearchParams({ pageSize: '50', filter: 'myDrafts' })
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-completed', statusFilter],
     queryFn: () => api.get(`/approval/documents?${qp}`) as Promise<any>,
   })
@@ -87,6 +87,8 @@ export default function ApprovalCompletedPage() {
         searchColumn="title"
         searchPlaceholder="제목으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

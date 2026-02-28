@@ -30,7 +30,7 @@ export default function WarehousesPage() {
   const [deleteTarget, setDeleteTarget] = useState<WarehouseRow | null>(null)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['inventory-warehouses'],
     queryFn: () => api.get('/inventory/warehouses') as Promise<any>,
   })

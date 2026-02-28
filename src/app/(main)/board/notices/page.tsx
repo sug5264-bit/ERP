@@ -57,7 +57,7 @@ export default function NoticesPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['board-notices'],
     queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=50') as Promise<any>,
   })
@@ -176,6 +176,8 @@ export default function NoticesPage() {
         searchColumn="title"
         searchPlaceholder="제목으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

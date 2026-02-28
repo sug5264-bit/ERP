@@ -25,6 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         comments: {
           include: { author: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'asc' },
+          take: 200,
         },
       },
     })

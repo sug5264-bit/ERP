@@ -453,6 +453,54 @@ tr[data-state='selected'] {
   --normal-border: var(--border);
 }
 
+/* ─── Sidebar Scrollbar ─── */
+aside .overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(0.8 0 0) transparent;
+}
+aside .overflow-y-auto::-webkit-scrollbar {
+  width: 4px;
+}
+aside .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.8 0 0);
+  border-radius: 2px;
+}
+aside .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dark aside .overflow-y-auto {
+  scrollbar-color: oklch(0.35 0 0) transparent;
+}
+.dark aside .overflow-y-auto::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0 0);
+}
+
+/* ─── Dialog Backdrop Blur ─── */
+[data-state='open'][role='dialog'] {
+  animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Popover Enter ─── */
+[data-state='open'][data-side] {
+  animation: fade-in-up 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Empty State Pattern ─── */
+.empty-state-icon {
+  background: linear-gradient(135deg, var(--muted) 0%, oklch(0.94 0 0) 100%);
+}
+.dark .empty-state-icon {
+  background: linear-gradient(135deg, var(--muted) 0%, oklch(0.25 0 0) 100%);
+}
+
+/* ─── Data Table Striped Rows ─── */
+.table-striped tbody tr:nth-child(even) {
+  background-color: oklch(0.98 0 0);
+}
+.dark .table-striped tbody tr:nth-child(even) {
+  background-color: oklch(0.18 0 0);
+}
+
 /* Print styles */
 @media print {
   header,

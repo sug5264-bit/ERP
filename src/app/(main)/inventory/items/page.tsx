@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
@@ -119,18 +119,18 @@ export default function ItemsPage() {
   if (startDate) qp.set('startDate', startDate)
   if (endDate) qp.set('endDate', endDate)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['inventory-items', typeFilter, search, startDate, endDate],
-    queryFn: () => api.get(`/inventory/items?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/inventory/items?${qp.toString()}`) as Promise<{ data: ItemRow[] }>,
   })
 
   const { data: categoriesData } = useQuery({
     queryKey: ['inventory-categories'],
-    queryFn: () => api.get('/inventory/categories') as Promise<any>,
+    queryFn: () => api.get('/inventory/categories') as Promise<{ data: { id: string; name: string }[] }>,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/inventory/items', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/inventory/items', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
       setOpen(false)
@@ -140,7 +140,7 @@ export default function ItemsPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/inventory/items/${id}`, body),
+    mutationFn: ({ id, ...body }: { id: string; [key: string]: unknown }) => api.put(`/inventory/items/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
       setEditTarget(null)
@@ -182,21 +182,24 @@ export default function ItemsPage() {
   }
 
   const items: ItemRow[] = data?.data || []
-  const categories = categoriesData?.data || []
+  const categories: { id: string; name: string }[] = categoriesData?.data || []
 
-  const exportColumns: ExportColumn[] = [
-    { header: '품목코드', accessor: 'itemCode' },
-    { header: '품목명', accessor: 'itemName' },
-    { header: '구분', accessor: (r) => ITEM_TYPE_MAP[r.itemType] || r.itemType },
-    { header: '과세구분', accessor: (r) => TAX_TYPE_MAP[r.taxType] || '과세' },
-    { header: '분류', accessor: (r) => r.category?.name || '' },
-    { header: '바코드', accessor: 'barcode' },
-    { header: '규격', accessor: 'specification' },
-    { header: '단위', accessor: 'unit' },
-    { header: '기준가', accessor: (r) => Number(r.standardPrice) },
-    { header: '안전재고', accessor: (r) => Number(r.safetyStock) },
-    { header: '상태', accessor: (r) => (r.isActive ? '활성' : '비활성') },
-  ]
+  const exportColumns: ExportColumn[] = useMemo(
+    () => [
+      { header: '품목코드', accessor: 'itemCode' },
+      { header: '품목명', accessor: 'itemName' },
+      { header: '구분', accessor: (r) => ITEM_TYPE_MAP[r.itemType] || r.itemType },
+      { header: '과세구분', accessor: (r) => TAX_TYPE_MAP[r.taxType] || '과세' },
+      { header: '분류', accessor: (r) => r.category?.name || '' },
+      { header: '바코드', accessor: 'barcode' },
+      { header: '규격', accessor: 'specification' },
+      { header: '단위', accessor: 'unit' },
+      { header: '기준가', accessor: (r) => Number(r.standardPrice) },
+      { header: '안전재고', accessor: (r) => Number(r.safetyStock) },
+      { header: '상태', accessor: (r) => (r.isActive ? '활성' : '비활성') },
+    ],
+    []
+  )
 
   const importTemplateColumns: TemplateColumn[] = [
     { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
@@ -354,7 +357,7 @@ export default function ItemsPage() {
                   <Label>분류</Label>
                   <Input name="categoryName" placeholder="분류명 입력 (예: 전자부품)" list="category-list" />
                   <datalist id="category-list">
-                    {categories.map((c: any) => (
+                    {categories.map((c: { id: string; name: string }) => (
                       <option key={c.id} value={c.name} />
                     ))}
                   </datalist>
@@ -397,13 +400,13 @@ export default function ItemsPage() {
           {
             id: 'actions',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setEditTarget(row.original)}
+                  onClick={() => setEditTarget(row.original as ItemRow)}
                   aria-label="수정"
                 >
                   <Pencil className="h-4 w-4" />
@@ -412,7 +415,7 @@ export default function ItemsPage() {
                   variant="ghost"
                   size="icon"
                   className="text-destructive hover:text-destructive h-8 w-8"
-                  onClick={() => handleDelete(row.original.id, row.original.itemName)}
+                  onClick={() => handleDelete((row.original as ItemRow).id, (row.original as ItemRow).itemName)}
                   aria-label="삭제"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -424,6 +427,8 @@ export default function ItemsPage() {
         ]}
         data={items}
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         selectable
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
@@ -450,11 +455,12 @@ export default function ItemsPage() {
               let success = 0
               const failed: string[] = []
               for (const row of rows) {
+                const r = row as ItemRow
                 try {
-                  await api.delete(`/inventory/items/${(row as any).id}`)
+                  await api.delete(`/inventory/items/${r.id}`)
                   success++
                 } catch {
-                  failed.push((row as any).itemName || (row as any).id)
+                  failed.push(r.itemName || r.id)
                 }
               }
               queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
@@ -542,7 +548,7 @@ export default function ItemsPage() {
                     defaultValue={editTarget.category?.name || ''}
                   />
                   <datalist id="category-list-edit">
-                    {categories.map((c: any) => (
+                    {categories.map((c: { id: string; name: string }) => (
                       <option key={c.id} value={c.name} />
                     ))}
                   </datalist>

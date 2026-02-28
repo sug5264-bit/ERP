@@ -102,7 +102,7 @@ export default function ApprovalDraftPage() {
   )
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-my-drafts'],
     queryFn: () => api.get('/approval/documents?filter=myDrafts&pageSize=50') as Promise<any>,
   })
@@ -512,6 +512,8 @@ export default function ApprovalDraftPage() {
         searchColumn="title"
         searchPlaceholder="제목으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

@@ -70,25 +70,25 @@ export default function UsersPage() {
   const [formDepartmentId, setFormDepartmentId] = useState('')
   const [formPositionId, setFormPositionId] = useState('')
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-users'],
-    queryFn: () => api.get('/admin/users?pageSize=100') as Promise<any>,
+    queryFn: () => api.get('/admin/users?pageSize=100') as Promise<{ data: UserRow[] }>,
   })
 
   const { data: rolesData } = useQuery({
     queryKey: ['admin-roles'],
-    queryFn: () => api.get('/admin/roles?pageSize=100') as Promise<any>,
+    queryFn: () => api.get('/admin/roles?pageSize=100') as Promise<{ data: RoleItem[] }>,
   })
 
   const { data: departmentsData } = useQuery({
     queryKey: ['hr-departments'],
-    queryFn: () => api.get('/hr/departments?pageSize=100') as Promise<any>,
+    queryFn: () => api.get('/hr/departments?pageSize=100') as Promise<{ data: DepartmentItem[] }>,
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: positionsData } = useQuery({
     queryKey: ['hr-positions'],
-    queryFn: () => api.get('/hr/positions?pageSize=100') as Promise<any>,
+    queryFn: () => api.get('/hr/positions?pageSize=100') as Promise<{ data: PositionItem[] }>,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -98,20 +98,20 @@ export default function UsersPage() {
   const positions: PositionItem[] = positionsData?.data || []
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/admin/users', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/admin/users', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setCreateOpen(false)
       resetForm()
       toast.success('사용자가 생성되었습니다.')
     },
-    onError: (err: any) => {
-      toast.error(err?.message || '사용자 생성에 실패했습니다.')
+    onError: (err: Error) => {
+      toast.error(err.message || '사용자 생성에 실패했습니다.')
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/admin/users/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => api.put(`/admin/users/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setEditOpen(false)
@@ -119,8 +119,8 @@ export default function UsersPage() {
       resetForm()
       toast.success('사용자 정보가 수정되었습니다.')
     },
-    onError: (err: any) => {
-      toast.error(err?.message || '사용자 수정에 실패했습니다.')
+    onError: (err: Error) => {
+      toast.error(err.message || '사용자 수정에 실패했습니다.')
     },
   })
 
@@ -132,8 +132,8 @@ export default function UsersPage() {
       setSelectedUser(null)
       toast.success('사용자가 삭제되었습니다.')
     },
-    onError: (err: any) => {
-      toast.error(err?.message || '사용자 삭제에 실패했습니다.')
+    onError: (err: Error) => {
+      toast.error(err.message || '사용자 삭제에 실패했습니다.')
     },
   })
 
@@ -187,17 +187,17 @@ export default function UsersPage() {
 
   const handleUpdate = () => {
     if (!selectedUser) return
-    const data: any = {
+    const updateData: Record<string, unknown> = {
       username: formUsername,
       email: formEmail,
       name: formName,
       isActive: formIsActive,
       roleIds: formRoleIds,
     }
-    if (formPassword) data.password = formPassword
-    if (formDepartmentId) data.departmentId = formDepartmentId
-    if (formPositionId) data.positionId = formPositionId
-    updateMutation.mutate({ id: selectedUser.id, data })
+    if (formPassword) updateData.password = formPassword
+    if (formDepartmentId) updateData.departmentId = formDepartmentId
+    if (formPositionId) updateData.positionId = formPositionId
+    updateMutation.mutate({ id: selectedUser.id, data: updateData })
   }
 
   const handleDelete = () => {
@@ -301,6 +301,8 @@ export default function UsersPage() {
         searchColumn="name"
         searchPlaceholder="이름으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
       />
 
       {/* 생성 Dialog */}
