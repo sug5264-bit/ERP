@@ -41,26 +41,37 @@ export function NotificationBell() {
 
       // Optimistic update
       queryClient.setQueryData(['notifications'], (old: any) => {
-        if (!old) return old
+        if (!old?.data) return old
+        const notifs = old.data.notifications || []
+        const unread = old.data.unreadCount || 0
         if (body.action === 'read' && body.id) {
+          const wasUnread = notifs.find((n: any) => n.id === body.id && !n.isRead)
           return {
             ...old,
-            data: old.data?.map((n: any) => (n.id === body.id ? { ...n, isRead: true } : n)),
-            meta: old.meta ? { ...old.meta, totalCount: Math.max(0, (old.meta.totalCount || 1) - 1) } : old.meta,
+            data: {
+              ...old.data,
+              notifications: notifs.map((n: any) => (n.id === body.id ? { ...n, isRead: true } : n)),
+              unreadCount: wasUnread ? Math.max(0, unread - 1) : unread,
+            },
           }
         }
         if (body.action === 'readAll') {
           return {
             ...old,
-            data: old.data?.map((n: any) => ({ ...n, isRead: true })),
-            meta: old.meta ? { ...old.meta, totalCount: 0 } : old.meta,
+            data: {
+              ...old.data,
+              notifications: notifs.map((n: any) => ({ ...n, isRead: true })),
+              unreadCount: 0,
+            },
           }
         }
         if (body.action === 'deleteAll') {
           return {
             ...old,
-            data: old.data?.filter((n: any) => !n.isRead),
-            meta: old.meta ? { ...old.meta, totalCount: old.meta.totalCount } : old.meta,
+            data: {
+              ...old.data,
+              notifications: notifs.filter((n: any) => !n.isRead),
+            },
           }
         }
         return old
@@ -81,8 +92,8 @@ export function NotificationBell() {
     },
   })
 
-  const notifications = data?.data || []
-  const unreadCount = data?.meta?.totalCount || 0
+  const notifications = data?.data?.notifications || []
+  const unreadCount = data?.data?.unreadCount || 0
 
   const handleClick = (notif: any) => {
     if (!notif.isRead) {

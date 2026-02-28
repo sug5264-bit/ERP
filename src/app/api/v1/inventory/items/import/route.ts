@@ -18,21 +18,41 @@ export async function POST(req: NextRequest) {
       return errorResponse('업로드할 데이터가 없습니다.', 'EMPTY_DATA')
     }
 
+    if (rows.length > 500) {
+      return errorResponse('한 번에 최대 500건까지 업로드할 수 있습니다.', 'TOO_LARGE', 413)
+    }
+
     let success = 0
     let failed = 0
     const errors: { row: number; message: string }[] = []
 
-    // 배치 중복 검사: N+1 쿼리 제거 (N번 → 2번)
-    const allCodes = rows.filter((r: any) => r.itemCode).map((r: any) => String(r.itemCode))
-    const allBarcodes = rows.filter((r: any) => r.barcode).map((r: any) => String(r.barcode))
-    const [existingItems, existingBarcodes] = await Promise.all([
+    // 배치 중복 검사: N+1 쿼리 제거 (N번 → 3번)
+    const allCodes = rows
+      .filter((r: Record<string, unknown>) => r.itemCode)
+      .map((r: Record<string, unknown>) => String(r.itemCode))
+    const allBarcodes = rows
+      .filter((r: Record<string, unknown>) => r.barcode)
+      .map((r: Record<string, unknown>) => String(r.barcode))
+    const allCategoryNames = [
+      ...new Set(
+        rows
+          .filter((r: Record<string, unknown>) => r.categoryName)
+          .map((r: Record<string, unknown>) => String(r.categoryName).trim())
+      ),
+    ]
+
+    const [existingItems, existingBarcodes, categories] = await Promise.all([
       prisma.item.findMany({ where: { itemCode: { in: allCodes } }, select: { itemCode: true } }),
       allBarcodes.length > 0
         ? prisma.item.findMany({ where: { barcode: { in: allBarcodes } }, select: { barcode: true } })
         : Promise.resolve([]),
+      allCategoryNames.length > 0
+        ? prisma.itemCategory.findMany({ where: { name: { in: allCategoryNames } }, select: { id: true, name: true } })
+        : Promise.resolve([]),
     ])
     const existingCodeSet = new Set(existingItems.map((i) => i.itemCode))
     const existingBarcodeSet = new Set(existingBarcodes.map((i) => i.barcode))
+    const categoryMap = new Map(categories.map((c) => [c.name, c.id]))
 
     const itemTypeMap: Record<string, string> = {
       상품: 'GOODS',
@@ -49,20 +69,17 @@ export async function POST(req: NextRequest) {
     const VALID_TAX_TYPES = new Set(['TAXABLE', 'TAX_FREE', 'ZERO_RATE'])
 
     /** 콤마 포함 숫자 문자열을 파싱 */
-    function parseNumber(val: any): number {
+    function parseNumber(val: unknown): number {
       if (typeof val === 'number') return val
-      return parseFloat(String(val).replace(/,/g, ''))
-    }
-
-    if (rows.length > 500) {
-      return errorResponse('한 번에 최대 500건까지 업로드할 수 있습니다.', 'TOO_LARGE', 413)
+      const parsed = parseFloat(String(val).replace(/,/g, ''))
+      return Number.isFinite(parsed) ? parsed : NaN
     }
 
     const ITEM_CODE_RE = /^[A-Za-z0-9-]{1,50}$/
     const VALID_TYPES = new Set(['GOODS', 'PRODUCT', 'RAW_MATERIAL', 'SUBSIDIARY'])
 
     for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]
+      const row = rows[i] as Record<string, unknown>
       const rowNum = i + 2
       try {
         if (!row.itemCode || !row.itemName) {
@@ -96,15 +113,17 @@ export async function POST(req: NextRequest) {
         }
 
         // 품목유형 검증
-        const mappedType = itemTypeMap[row.itemType] || row.itemType || 'GOODS'
+        const rawItemType = String(row.itemType || '')
+        const mappedType = itemTypeMap[rawItemType] || rawItemType || 'GOODS'
         if (!VALID_TYPES.has(mappedType)) {
-          throw new Error(`유효하지 않은 품목유형입니다: ${row.itemType}`)
+          throw new Error(`유효하지 않은 품목유형입니다: ${rawItemType}`)
         }
 
         // 과세유형 검증
-        const mappedTaxType = taxTypeMap[row.taxType] || row.taxType || 'TAXABLE'
+        const rawTaxType = String(row.taxType || '')
+        const mappedTaxType = taxTypeMap[rawTaxType] || rawTaxType || 'TAXABLE'
         if (!VALID_TAX_TYPES.has(mappedTaxType)) {
-          throw new Error(`유효하지 않은 과세유형입니다: ${row.taxType}`)
+          throw new Error(`유효하지 않은 과세유형입니다: ${rawTaxType}`)
         }
 
         if (existingCodeSet.has(itemCode)) {
@@ -115,12 +134,11 @@ export async function POST(req: NextRequest) {
           throw new Error(`바코드 '${row.barcode}'가 이미 존재합니다.`)
         }
 
-        // 분류(카테고리) 처리
+        // 분류(카테고리) 처리 — 배치 조회된 Map에서 조회 (N+1 해결)
         let categoryId: string | undefined
         if (row.categoryName) {
           const catName = String(row.categoryName).trim()
-          const category = await prisma.itemCategory.findFirst({ where: { name: catName } })
-          if (category) categoryId = category.id
+          categoryId = categoryMap.get(catName)
         }
 
         await prisma.item.create({
@@ -131,8 +149,8 @@ export async function POST(req: NextRequest) {
             unit: row.unit ? String(row.unit).trim().slice(0, 20) : 'EA',
             standardPrice: row.standardPrice ? parseNumber(row.standardPrice) : 0,
             safetyStock: row.safetyStock ? Math.floor(parseNumber(row.safetyStock)) : 0,
-            itemType: mappedType,
-            taxType: mappedTaxType,
+            itemType: mappedType as 'GOODS' | 'PRODUCT' | 'RAW_MATERIAL' | 'SUBSIDIARY',
+            taxType: mappedTaxType as 'TAXABLE' | 'TAX_FREE' | 'ZERO_RATE',
             barcode: row.barcode ? String(row.barcode).trim() : undefined,
             categoryId,
           },

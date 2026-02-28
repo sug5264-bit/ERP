@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { APP_NAME } from '@/lib/constants'
-import { AlertCircle, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
+import { APP_NAME, COMPANY_NAME } from '@/lib/constants'
+import { AlertCircle, Eye, EyeOff, Loader2, Shield, Lock } from 'lucide-react'
 
 function LoginForm() {
   const router = useRouter()
@@ -136,9 +136,13 @@ function LoginForm() {
           </form>
         </CardContent>
       </Card>
-      <p className="text-muted-foreground mt-6 text-center text-xs">
-        보안 접속 중 &middot; 무단 접근 시 법적 조치가 취해질 수 있습니다
-      </p>
+      <div className="mt-6 text-center">
+        <p className="text-muted-foreground flex items-center justify-center gap-1.5 text-xs">
+          <Lock className="h-3 w-3" />
+          보안 접속 중 &middot; {COMPANY_NAME}
+        </p>
+        <p className="text-muted-foreground/60 mt-1 text-[11px]">무단 접근 시 법적 조치가 취해질 수 있습니다</p>
+      </div>
     </div>
   )
 }

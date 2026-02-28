@@ -59,6 +59,13 @@ const pathLabels: Record<string, string> = {
   logs: '감사로그',
   new: '신규',
   edit: '수정',
+  closing: '마감',
+  netting: '상계내역',
+  payments: '대금지급',
+  projects: '프로젝트',
+  mypage: '마이페이지',
+  'online-sales': '온라인매출',
+  'stock-balance': '재고잔고',
 }
 
 export function BreadcrumbNav() {

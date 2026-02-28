@@ -57,8 +57,12 @@ export function ConfirmDialog({
           <Button
             variant={variant === 'destructive' ? 'destructive' : 'default'}
             onClick={async () => {
-              await onConfirm()
-              onOpenChange(false)
+              try {
+                await onConfirm()
+                onOpenChange(false)
+              } catch {
+                // onConfirm 실패 시 다이얼로그 유지 (에러는 호출측에서 처리)
+              }
             }}
             disabled={isPending}
           >

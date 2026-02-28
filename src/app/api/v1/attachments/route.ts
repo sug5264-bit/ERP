@@ -66,6 +66,7 @@ export async function GET(request: NextRequest) {
     const attachments = await prisma.attachment.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      take: 100, // 과도한 데이터 반환 방지
     })
 
     return successResponse(attachments)

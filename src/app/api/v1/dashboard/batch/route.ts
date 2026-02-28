@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { successResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
+import { logger } from '@/lib/logger'
 
 // GET: 대시보드 전체 데이터를 단일 요청으로 통합 (5개 HTTP 요청 → 1개)
 export async function GET() {
@@ -165,7 +166,8 @@ export async function GET() {
         WHERE sb.quantity <= i."safetyStock" AND i."safetyStock" > 0
       `
       stockAlertCount = Number(result[0]?.count ?? 0)
-    } catch {
+    } catch (err) {
+      logger.warn('Stock alert count query failed', { error: err instanceof Error ? err.message : String(err) })
       stockAlertCount = 0
     }
 
