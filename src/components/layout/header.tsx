@@ -111,11 +111,14 @@ export function Header() {
   const isMobile = useIsMobile()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [dataResults, setDataResults] = useState<any[]>([])
+  const [dataResults, setDataResults] = useState<
+    { type: string; id: string; url: string; title: string; subtitle?: string }[]
+  >([])
   const [isSearching, setIsSearching] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const searchContainerRef = useRef<HTMLDivElement>(null)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const user = session?.user
   const initials = user?.name
@@ -141,9 +144,10 @@ export function Header() {
     )
   }, [searchQuery])
 
-  // 데이터 검색 (debounced)
+  // 데이터 검색 (debounced + AbortController로 race condition 방지)
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    if (abortControllerRef.current) abortControllerRef.current.abort()
 
     if (!searchQuery.trim() || searchQuery.length < 2) {
       setDataResults([])
@@ -153,24 +157,32 @@ export function Header() {
 
     setIsSearching(true)
     searchTimerRef.current = setTimeout(async () => {
+      const controller = new AbortController()
+      abortControllerRef.current = controller
       try {
         const res = await api.get(`/search?q=${encodeURIComponent(searchQuery)}&limit=3`)
+        if (controller.signal.aborted) return
         if (res.data?.results) {
-          const all: any[] = []
+          const all: { type: string; id: string; url: string; title: string; subtitle?: string }[] = []
           for (const items of Object.values(res.data.results)) {
             if (Array.isArray(items)) all.push(...items)
           }
           setDataResults(all.slice(0, 8))
         }
       } catch {
-        setDataResults([])
+        if (!controller.signal.aborted) {
+          setDataResults([])
+        }
       } finally {
-        setIsSearching(false)
+        if (!controller.signal.aborted) {
+          setIsSearching(false)
+        }
       }
     }, 300)
 
     return () => {
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+      if (abortControllerRef.current) abortControllerRef.current.abort()
     }
   }, [searchQuery])
 
@@ -389,7 +401,8 @@ export function Header() {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{user?.name}</p>
                   <p className="text-muted-foreground text-xs">
-                    {(user as any)?.departmentName} / {(user as any)?.positionName}
+                    {(user as Record<string, unknown>)?.departmentName as string} /{' '}
+                    {(user as Record<string, unknown>)?.positionName as string}
                   </p>
                   <p className="text-muted-foreground text-xs">{user?.email}</p>
                 </div>

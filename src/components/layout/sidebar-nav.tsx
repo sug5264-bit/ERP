@@ -172,15 +172,14 @@ export function SidebarNav() {
   const { data: session } = useSession()
   const setOpen = useSidebarStore((s) => s.setOpen)
 
-  const userPermissions = (session?.user as any)?.permissions || []
-  const userRoles = (session?.user as any)?.roles || []
+  const userRecord = session?.user as Record<string, unknown> | undefined
+  const userPermissions = (userRecord?.permissions as { module: string; action: string }[]) || []
+  const userRoles = (userRecord?.roles as string[]) || []
   const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 
   const hasPermission = useCallback(
     (module: string) =>
-      userPermissions.some(
-        (p: any) => (p.module === module || p.module.startsWith(module + '.')) && p.action === 'read'
-      ),
+      userPermissions.some((p) => (p.module === module || p.module.startsWith(module + '.')) && p.action === 'read'),
     [userPermissions]
   )
 
@@ -191,14 +190,14 @@ export function SidebarNav() {
         if (isAdmin) return item
 
         // 모듈 전체 권한 보유 시 모든 하위 페이지 표시
-        const hasModuleAccess = userPermissions.some((p: any) => p.module === item.module && p.action === 'read')
+        const hasModuleAccess = userPermissions.some((p) => p.module === item.module && p.action === 'read')
         if (hasModuleAccess) return item
 
         // 하위 페이지별 권한 체크
         if (item.children) {
           const filteredChildren = item.children.filter((child) => {
             if (!child.permission) return hasModuleAccess
-            return userPermissions.some((p: any) => p.module === child.permission && p.action === 'read')
+            return userPermissions.some((p) => p.module === child.permission && p.action === 'read')
           })
           if (filteredChildren.length === 0) return null
           return { ...item, children: filteredChildren }

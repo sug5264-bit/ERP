@@ -32,10 +32,10 @@ export function SessionMonitor() {
 
   const getExpiryTime = useCallback(() => {
     if (!session) return null
-    // NextAuth JWT의 exp를 추정: 마지막 갱신 시점 + maxAge
-    // session.expires는 ISO string
-    if ((session as any).expires && typeof (session as any).expires === 'string') {
-      const expiryTime = new Date((session as any).expires).getTime()
+    // NextAuth JWT의 exp를 추정: session.expires는 ISO string
+    const sessionRecord = session as unknown as Record<string, unknown>
+    if (sessionRecord.expires && typeof sessionRecord.expires === 'string') {
+      const expiryTime = new Date(sessionRecord.expires).getTime()
       if (!isNaN(expiryTime)) return expiryTime
     }
     return null

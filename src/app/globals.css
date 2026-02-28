@@ -424,6 +424,35 @@ tr.table-row-hover {
   box-shadow: 0 1px 0 var(--border);
 }
 
+/* ─── Badge Pulse (알림 뱃지) ─── */
+@keyframes badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+.animate-badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+/* ─── Selected Row ─── */
+tr[data-state='selected'] {
+  background-color: oklch(0.55 0.18 250 / 8%);
+}
+.dark tr[data-state='selected'] {
+  background-color: oklch(0.55 0.18 250 / 15%);
+}
+
+/* ─── Toast Container ─── */
+[data-sonner-toaster] {
+  --normal-bg: var(--popover);
+  --normal-text: var(--popover-foreground);
+  --normal-border: var(--border);
+}
+
 /* Print styles */
 @media print {
   header,

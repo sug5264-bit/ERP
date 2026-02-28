@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
@@ -34,12 +34,10 @@ export async function GET(req: NextRequest) {
       }),
     ])
 
-    return NextResponse.json({
-      success: true,
-      data: notifications,
-      meta: { page: 1, pageSize, totalCount, totalPages: Math.ceil(totalCount / pageSize) },
-      unreadCount,
-    })
+    return successResponse(
+      { notifications, unreadCount },
+      { page: 1, pageSize, totalCount, totalPages: Math.ceil(totalCount / pageSize) }
+    )
   } catch (error) {
     return handleApiError(error)
   }

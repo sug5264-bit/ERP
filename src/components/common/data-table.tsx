@@ -33,6 +33,8 @@ import {
   ArrowUp,
   ArrowDown,
   Inbox,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -52,6 +54,8 @@ interface DataTableProps<TData, TValue> {
   pageSize?: number
   onExport?: { excel?: () => void; pdf?: () => void; csv?: () => void }
   isLoading?: boolean
+  isError?: boolean
+  onRetry?: () => void
   onRowClick?: (row: TData) => void
   selectable?: boolean
   onBulkDelete?: (selectedRows: TData[]) => void
@@ -67,6 +71,8 @@ export function DataTable<TData, TValue>({
   pageSize = 20,
   onExport,
   isLoading,
+  isError,
+  onRetry,
   onRowClick,
   selectable,
   onBulkDelete,
@@ -284,7 +290,29 @@ export function DataTable<TData, TValue>({
               ))}
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isError ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={allColumns.length} className="h-40 sm:h-52">
+                    <div className="animate-fade-in flex h-full flex-col items-center justify-center gap-3">
+                      <div className="bg-destructive/10 rounded-full p-3">
+                        <AlertCircle className="text-destructive h-6 w-6" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium">데이터를 불러오지 못했습니다</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          네트워크 연결을 확인하거나 다시 시도해주세요
+                        </p>
+                      </div>
+                      {onRetry && (
+                        <Button variant="outline" size="sm" onClick={onRetry}>
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                          다시 시도
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : isLoading ? (
                 Array.from({ length: Math.min(effectivePageSize, 5) }).map((_, i) => (
                   <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
                     {allColumns.map((_, j) => (
