@@ -1,6 +1,9 @@
 /**
- * 구조화된 로깅 시스템
- * JSON 형식, 트레이스 ID 지원
+ * 구조화된 로깅 시스템 (대기업 운영용)
+ * - JSON 형식 출력 (ELK, CloudWatch 등 로그 수집기 호환)
+ * - 트레이스 ID 지원 (분산 추적)
+ * - 요청 컨텍스트 자동 전파
+ * - 환경별 로그 레벨 제어
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -9,7 +12,10 @@ interface LogEntry {
   timestamp: string
   level: LogLevel
   message: string
+  service: string
+  environment: string
   traceId?: string
+  requestId?: string
   userId?: string
   module?: string
   action?: string
@@ -25,6 +31,8 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 }
 
 const MIN_LEVEL = LOG_LEVELS[(process.env.LOG_LEVEL as LogLevel) || 'info'] ?? 1
+const SERVICE_NAME = process.env.SERVICE_NAME || 'erp-system'
+const ENVIRONMENT = process.env.NODE_ENV || 'development'
 
 function generateTraceId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -41,6 +49,8 @@ function log(level: LogLevel, message: string, meta?: Record<string, unknown>) {
     timestamp: new Date().toISOString(),
     level,
     message,
+    service: SERVICE_NAME,
+    environment: ENVIRONMENT,
     ...meta,
   }
 
@@ -65,7 +75,7 @@ export const logger = {
   error: (message: string, meta?: Record<string, unknown>) => log('error', message, meta),
 
   /** API 요청 컨텍스트가 있는 로거 생성 */
-  withContext(context: { traceId?: string; userId?: string; module?: string }) {
+  withContext(context: { traceId?: string; requestId?: string; userId?: string; module?: string }) {
     const traceId = context.traceId || generateTraceId()
     return {
       debug: (message: string, meta?: Record<string, unknown>) =>
@@ -76,6 +86,22 @@ export const logger = {
         log('error', message, { traceId, ...context, ...meta }),
       traceId,
     }
+  },
+
+  /** 비즈니스 이벤트 로깅 (감사/컴플라이언스용) */
+  audit(event: string, meta: Record<string, unknown>) {
+    log('info', event, { type: 'AUDIT', ...meta })
+  },
+
+  /** 성능 측정 로깅 */
+  perf(operation: string, durationMs: number, meta?: Record<string, unknown>) {
+    const level: LogLevel = durationMs > 1000 ? 'warn' : 'info'
+    log(level, `Performance: ${operation}`, {
+      type: 'PERF',
+      operation,
+      durationMs,
+      ...meta,
+    })
   },
 
   generateTraceId,

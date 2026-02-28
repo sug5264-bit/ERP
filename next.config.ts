@@ -16,7 +16,7 @@ const securityHeaders = [
   },
   // HTTPS 강제 (프로덕션)
   ...(process.env.NODE_ENV === 'production'
-    ? [{ key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' }]
+    ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }]
     : []),
   // Content Security Policy
   {
@@ -34,8 +34,12 @@ const securityHeaders = [
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
+      'upgrade-insecure-requests',
     ].join('; '),
   },
+  // Cross-Origin 보안 정책
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
 ]
 
 const nextConfig: NextConfig = {
@@ -49,13 +53,19 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
-      // API 응답: 캐시 금지 (민감 데이터)
+      // API 응답: 캐시 금지 (민감 데이터) + CORS 보안
       {
         source: '/api/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
           { key: 'Pragma', value: 'no-cache' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
         ],
+      },
+      // 헬스체크는 캐시 허용 (모니터링 부하 감소)
+      {
+        source: '/api/health',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, max-age=0' }],
       },
       // 정적 자산: 장기 캐시
       {
@@ -98,6 +108,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // 압축 활성화
   compress: true,
+  // 서버 외부 패키지 (standalone 빌드 시 누락 방지)
+  serverExternalPackages: ['bcryptjs'],
 }
 
 export default nextConfig

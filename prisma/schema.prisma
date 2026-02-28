@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["metrics"]
 }
 
 datasource db {
@@ -161,6 +162,7 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
@@ -312,6 +314,7 @@ model EmployeeHistory {
   employee Employee @relation(fields: [employeeId], references: [id])
 
   @@index([employeeId])
+  @@index([employeeId, effectiveDate])
   @@map("employee_histories")
 }
 
@@ -443,6 +446,9 @@ model Recruitment {
 
   applicants Applicant[]
 
+  @@index([status])
+  @@index([departmentId])
+  @@index([startDate, endDate])
   @@map("recruitments")
 }
 
@@ -460,6 +466,7 @@ model Applicant {
   recruitment Recruitment @relation(fields: [recruitmentId], references: [id])
 
   @@index([recruitmentId])
+  @@index([status])
   @@map("applicants")
 }
 
@@ -570,6 +577,8 @@ model VoucherDetail {
 
   @@index([voucherId])
   @@index([accountSubjectId])
+  @@index([partnerId])
+  @@index([costCenterId])
   @@map("voucher_details")
 }
 
@@ -933,6 +942,8 @@ model QuotationDetail {
   quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
   item      Item      @relation(fields: [itemId], references: [id])
 
+  @@index([quotationId])
+  @@index([itemId])
   @@map("quotation_details")
 }
 
@@ -1019,6 +1030,7 @@ model SalesOrderDetail {
 
   @@index([salesOrderId])
   @@index([itemId])
+  @@index([itemId, remainingQty])
   @@map("sales_order_details")
 }
 
@@ -1042,6 +1054,8 @@ model Delivery {
 
   @@index([deliveryDate])
   @@index([salesOrderId])
+  @@index([partnerId])
+  @@index([status])
   @@index([qualityStatus])
   @@map("deliveries")
 }
@@ -1059,6 +1073,7 @@ model DeliveryDetail {
   item     Item     @relation(fields: [itemId], references: [id])
 
   @@index([deliveryId])
+  @@index([itemId])
   @@map("delivery_details")
 }
 
@@ -1107,6 +1122,7 @@ model SalesReturnDetail {
   item            Item        @relation(fields: [itemId], references: [id])
 
   @@index([salesReturnId])
+  @@index([itemId])
   @@map("sales_return_details")
 }
 
@@ -1214,6 +1230,8 @@ model PurchaseRequest {
   details    PurchaseRequestDetail[]
 
   @@index([requestDate])
+  @@index([status])
+  @@index([departmentId])
   @@map("purchase_requests")
 }
 
@@ -1228,6 +1246,8 @@ model PurchaseRequestDetail {
   purchaseRequest PurchaseRequest @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
   item            Item            @relation(fields: [itemId], references: [id])
 
+  @@index([purchaseRequestId])
+  @@index([itemId])
   @@map("purchase_request_details")
 }
 
@@ -1280,6 +1300,7 @@ model PurchaseOrderDetail {
   item          Item          @relation(fields: [itemId], references: [id])
 
   @@index([purchaseOrderId])
+  @@index([itemId])
   @@map("purchase_order_details")
 }
 
@@ -1298,6 +1319,8 @@ model Receiving {
   details       ReceivingDetail[]
 
   @@index([receivingDate])
+  @@index([purchaseOrderId])
+  @@index([partnerId])
   @@map("receivings")
 }
 
@@ -1317,6 +1340,7 @@ model ReceivingDetail {
   item      Item      @relation(fields: [itemId], references: [id])
 
   @@index([receivingId])
+  @@index([itemId])
   @@map("receiving_details")
 }
 
@@ -1334,6 +1358,9 @@ model PurchasePayment {
 
   partner Partner @relation(fields: [partnerId], references: [id])
 
+  @@index([partnerId])
+  @@index([paymentDate])
+  @@index([status])
   @@map("purchase_payments")
 }
 

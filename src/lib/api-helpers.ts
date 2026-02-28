@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
 import { hasPermission } from '@/lib/rbac'
@@ -42,6 +43,68 @@ interface SessionUser {
 export interface AuthResult {
   session: { user: SessionUser }
 }
+
+// ─── Request ID 생성 ───
+let requestCounter = 0
+
+export function generateRequestId(): string {
+  const ts = Date.now().toString(36)
+  const seq = (requestCounter++ & 0xffff).toString(36).padStart(3, '0')
+  const rand = Math.random().toString(36).slice(2, 6)
+  return `${ts}-${seq}-${rand}`
+}
+
+/** 요청에서 Request ID 추출 또는 생성 */
+export function getRequestId(req?: NextRequest | Request): string {
+  const fromHeader = req?.headers?.get('x-request-id')
+  return fromHeader || generateRequestId()
+}
+
+// ─── API 요청 성능 메트릭 ───
+interface ApiMetrics {
+  totalRequests: number
+  errorCount: number
+  avgResponseTime: number
+  maxResponseTime: number
+  statusCodes: Record<number, number>
+  lastReset: number
+}
+
+const apiMetrics: ApiMetrics = {
+  totalRequests: 0,
+  errorCount: 0,
+  avgResponseTime: 0,
+  maxResponseTime: 0,
+  statusCodes: {},
+  lastReset: Date.now(),
+}
+
+export function getApiMetrics(): ApiMetrics & { uptimeMinutes: number } {
+  return {
+    ...apiMetrics,
+    statusCodes: { ...apiMetrics.statusCodes },
+    uptimeMinutes: Math.round((Date.now() - apiMetrics.lastReset) / 60_000),
+  }
+}
+
+export function resetApiMetrics(): void {
+  apiMetrics.totalRequests = 0
+  apiMetrics.errorCount = 0
+  apiMetrics.avgResponseTime = 0
+  apiMetrics.maxResponseTime = 0
+  apiMetrics.statusCodes = {}
+  apiMetrics.lastReset = Date.now()
+}
+
+function recordMetric(status: number, durationMs: number): void {
+  apiMetrics.totalRequests++
+  apiMetrics.statusCodes[status] = (apiMetrics.statusCodes[status] || 0) + 1
+  if (status >= 400) apiMetrics.errorCount++
+  apiMetrics.avgResponseTime += (durationMs - apiMetrics.avgResponseTime) / apiMetrics.totalRequests
+  if (durationMs > apiMetrics.maxResponseTime) apiMetrics.maxResponseTime = durationMs
+}
+
+// ─── 응답 헬퍼 ───
 
 export function successResponse<T>(data: T, meta?: ApiResponse['meta'], options?: { cache?: string }) {
   const headers: Record<string, string> = {}
@@ -229,5 +292,70 @@ export function buildMeta(page: number, pageSize: number, totalCount: number) {
     pageSize,
     totalCount,
     totalPages: Math.ceil(totalCount / pageSize),
+  }
+}
+
+// ─── API 핸들러 래퍼 (요청 추적 + 성능 측정 + 에러 핸들링) ───
+
+type ApiHandler = (req: NextRequest, ctx?: any) => Promise<NextResponse>
+
+/**
+ * API Route 핸들러를 래핑하여 요청 추적, 성능 측정, 에러 핸들링을 자동화합니다.
+ *
+ * @example
+ * export const GET = withApiHandler(async (req) => {
+ *   const authResult = await requireAuth()
+ *   if (isErrorResponse(authResult)) return authResult
+ *   return successResponse({ message: 'ok' })
+ * })
+ */
+export function withApiHandler(handler: ApiHandler): ApiHandler {
+  return async (req: NextRequest, ctx?: any) => {
+    const requestId = getRequestId(req)
+    const startTime = performance.now()
+    const method = req.method
+    const path = req.nextUrl.pathname
+
+    try {
+      const response = await handler(req, ctx)
+      const duration = Math.round(performance.now() - startTime)
+
+      // 성능 메트릭 기록
+      recordMetric(response.status, duration)
+
+      // 응답 헤더에 요청 ID 및 처리 시간 추가
+      response.headers.set('X-Request-Id', requestId)
+      response.headers.set('X-Response-Time', `${duration}ms`)
+
+      // 느린 API 경고 (500ms 이상)
+      if (duration > 500) {
+        logger.warn('Slow API response', {
+          requestId,
+          method,
+          path,
+          status: response.status,
+          duration: `${duration}ms`,
+        })
+      }
+
+      return response
+    } catch (error) {
+      const duration = Math.round(performance.now() - startTime)
+      recordMetric(500, duration)
+
+      logger.error('Unhandled API error', {
+        requestId,
+        method,
+        path,
+        duration: `${duration}ms`,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      })
+
+      const response = handleApiError(error)
+      response.headers.set('X-Request-Id', requestId)
+      response.headers.set('X-Response-Time', `${duration}ms`)
+      return response
+    }
   }
 }
