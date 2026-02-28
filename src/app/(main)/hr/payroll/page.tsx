@@ -114,7 +114,12 @@ export default function PayrollPage() {
 
   const detailColumns: ColumnDef<any>[] = [
     { accessorKey: 'employee.employeeNo', header: '사번', id: 'empNo' },
-    { id: 'name', header: '이름', cell: ({ row }) => row.original.employee?.nameKo || '-' },
+    {
+      id: 'name',
+      accessorFn: (row: any) => row.employee?.nameKo || '',
+      header: '이름',
+      cell: ({ row }) => row.original.employee?.nameKo || '-',
+    },
     { id: 'dept', header: '부서', cell: ({ row }) => row.original.employee?.department?.name || '-' },
     { id: 'baseSalary', header: '기본급', cell: ({ row }) => formatCurrency(Number(row.original.baseSalary)) },
     {

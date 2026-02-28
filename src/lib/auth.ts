@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { checkRateLimit, resetRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, incrementRateLimit, resetRateLimit } from '@/lib/rate-limit'
 import { authConfig } from '@/lib/auth.config'
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -59,11 +59,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           })
 
           if (!user) {
+            incrementRateLimit(rateLimitKey)
             console.warn(`[Auth] User not found: ${usernameStr}`)
             return null
           }
 
           if (!user.isActive) {
+            incrementRateLimit(rateLimitKey)
             console.warn(`[Auth] User inactive: ${usernameStr}`)
             return null
           }
@@ -71,6 +73,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const isPasswordValid = await compare(passwordStr, user.passwordHash)
 
           if (!isPasswordValid) {
+            incrementRateLimit(rateLimitKey)
             console.warn(`[Auth] Invalid password for user: ${usernameStr}`)
             return null
           }

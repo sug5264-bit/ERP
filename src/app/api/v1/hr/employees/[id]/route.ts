@@ -60,9 +60,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const validated = updateEmployeeSchema.parse(body)
 
     const updateData: any = { ...validated }
-    if (validated.joinDate !== undefined) updateData.joinDate = validated.joinDate ? new Date(validated.joinDate) : null
-    if (validated.birthDate !== undefined) updateData.birthDate = validated.birthDate ? new Date(validated.birthDate) : null
-    if (validated.resignDate !== undefined) updateData.resignDate = validated.resignDate ? new Date(validated.resignDate) : null
+    if (validated.joinDate !== undefined) {
+      if (!validated.joinDate) return errorResponse('입사일은 필수 항목입니다.', 'VALIDATION_ERROR', 400)
+      updateData.joinDate = new Date(validated.joinDate)
+    }
+    if (validated.birthDate !== undefined)
+      updateData.birthDate = validated.birthDate ? new Date(validated.birthDate) : null
+    if (validated.resignDate !== undefined)
+      updateData.resignDate = validated.resignDate ? new Date(validated.resignDate) : null
 
     const employee = await prisma.employee.update({
       where: { id },

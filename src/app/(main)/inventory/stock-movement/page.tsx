@@ -105,7 +105,8 @@ export default function StockMovementPage() {
     mutationFn: (body: any) => api.post('/inventory/stock-movement', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock-movement'] })
-      queryClient.invalidateQueries({ queryKey: ['inventory-balances'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-balances-summary'] })
       setOpen(false)
       setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
       toast.success('입출고가 등록되었습니다.')
@@ -117,7 +118,8 @@ export default function StockMovementPage() {
     mutationFn: (id: string) => api.delete(`/inventory/stock-movement/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock-movement'] })
-      queryClient.invalidateQueries({ queryKey: ['inventory-balances'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-stock-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory-balances-summary'] })
       toast.success('입출고 내역이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

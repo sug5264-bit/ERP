@@ -2,9 +2,18 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, requireAuth, isErrorResponse, successResponse } from '@/lib/api-helpers'
 import { readFile, unlink } from 'fs/promises'
-import { join } from 'path'
+import { join, resolve } from 'path'
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
+const UPLOAD_DIR = resolve(process.cwd(), 'uploads', 'attachments')
+
+/** 경로 순회 방지: 최종 경로가 UPLOAD_DIR 안에 있는지 검증 */
+function safePath(fileName: string): string {
+  const full = resolve(UPLOAD_DIR, fileName)
+  if (!full.startsWith(UPLOAD_DIR)) {
+    throw new Error('잘못된 파일 경로입니다.')
+  }
+  return full
+}
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -17,7 +26,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
-    const filePath = join(UPLOAD_DIR, attachment.filePath)
+    const filePath = safePath(attachment.filePath)
     const fileBuffer = await readFile(filePath)
 
     return new Response(fileBuffer, {
@@ -49,7 +58,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     }
 
     // Delete file from filesystem
-    const filePath = join(UPLOAD_DIR, attachment.filePath)
+    const filePath = safePath(attachment.filePath)
     try {
       await unlink(filePath)
     } catch {

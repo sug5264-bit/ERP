@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
 
     const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0)
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999)
 
     // 거래처별 매출채권(1100 debit)과 매입채무(2100 credit) 집계
     const details = await prisma.voucherDetail.findMany({

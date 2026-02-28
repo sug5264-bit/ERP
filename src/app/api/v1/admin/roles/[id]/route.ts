@@ -115,8 +115,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return errorResponse('해당 역할에 할당된 사용자가 있어 삭제할 수 없습니다.', 'CONFLICT', 409)
     }
 
-    await prisma.rolePermission.deleteMany({ where: { roleId: id } })
-    await prisma.role.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      await tx.rolePermission.deleteMany({ where: { roleId: id } })
+      await tx.role.delete({ where: { id } })
+    })
 
     return successResponse({ deleted: true })
   } catch (error) {

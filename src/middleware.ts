@@ -4,16 +4,25 @@ import type { NextRequest } from 'next/server'
 const publicPaths = ['/login', '/api/auth']
 
 // ─── In-memory Rate Limiter (프록시용 경량 버전) ───
-interface RLEntry { count: number; resetAt: number }
+interface RLEntry {
+  count: number
+  resetAt: number
+}
 const rlStore = new Map<string, RLEntry>()
 let lastClean = Date.now()
 
-function rateLimitCheck(key: string, windowMs: number, max: number): { ok: boolean; remaining: number; resetAt: number } {
+function rateLimitCheck(
+  key: string,
+  windowMs: number,
+  max: number
+): { ok: boolean; remaining: number; resetAt: number } {
   const now = Date.now()
   // 1분마다 만료 엔트리 정리
   if (now - lastClean > 60_000) {
     lastClean = now
-    for (const [k, v] of rlStore) { if (now > v.resetAt) rlStore.delete(k) }
+    for (const [k, v] of rlStore) {
+      if (now > v.resetAt) rlStore.delete(k)
+    }
   }
 
   const entry = rlStore.get(key)
@@ -29,9 +38,7 @@ function rateLimitCheck(key: string, windowMs: number, max: number): { ok: boole
 }
 
 function getIp(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
+  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown'
 }
 
 export function middleware(request: NextRequest) {
@@ -56,7 +63,10 @@ export function middleware(request: NextRequest) {
       const { ok, resetAt } = rateLimitCheck(`login:${ip}`, 15 * 60 * 1000, 10)
       if (!ok) {
         return NextResponse.json(
-          { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 로그인 시도입니다. 15분 후 다시 시도해주세요.' } },
+          {
+            success: false,
+            error: { code: 'RATE_LIMIT', message: '너무 많은 로그인 시도입니다. 15분 후 다시 시도해주세요.' },
+          },
           {
             status: 429,
             headers: {
@@ -73,7 +83,10 @@ export function middleware(request: NextRequest) {
       const { ok, resetAt } = rateLimitCheck(`mut:${ip}`, 60_000, 30)
       if (!ok) {
         return NextResponse.json(
-          { success: false, error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } },
+          {
+            success: false,
+            error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+          },
           {
             status: 429,
             headers: {
@@ -90,7 +103,10 @@ export function middleware(request: NextRequest) {
       const { ok, resetAt } = rateLimitCheck(`read:${ip}`, 60_000, 60)
       if (!ok) {
         return NextResponse.json(
-          { success: false, error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } },
+          {
+            success: false,
+            error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+          },
           {
             status: 429,
             headers: {
@@ -115,8 +131,7 @@ export function middleware(request: NextRequest) {
 
   // NextAuth 세션 토큰 쿠키 확인
   const token =
-    request.cookies.get('authjs.session-token')?.value ||
-    request.cookies.get('__Secure-authjs.session-token')?.value
+    request.cookies.get('authjs.session-token')?.value || request.cookies.get('__Secure-authjs.session-token')?.value
 
   if (!token) {
     const loginUrl = new URL('/login', request.url)
@@ -124,15 +139,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // 보안 헤더 적용
-  const response = NextResponse.next()
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-  response.headers.set('X-Frame-Options', 'DENY')
-  response.headers.set('X-XSS-Protection', '1; mode=block')
-  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
-  return response
+  // 보안 헤더는 next.config.ts headers()에서 일괄 관리
+  return NextResponse.next()
 }
 
 export const config = {

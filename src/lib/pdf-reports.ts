@@ -179,10 +179,8 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
   autoTable({
     ...summaryTableStyles,
     startY: y,
-    head: [['합계금액', '공급가액', '세액', '총액']],
-    body: [
-      [fmtNumber(data.totalAmount), fmtNumber(data.totalSupply), fmtNumber(data.totalTax), fmtNumber(data.totalAmount)],
-    ],
+    head: [['공급가액', '세액', '합계금액']],
+    body: [[fmtNumber(data.totalSupply), fmtNumber(data.totalTax), fmtNumber(data.totalAmount)]],
     columnStyles: {
       0: { halign: 'right' as const, fontStyle: 'bold' as const },
     },
@@ -572,18 +570,32 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
   const gap = 9
   const copyWidth = (pageWidth - 2 * margin - gap) / 2
 
-  // Left copy (공급자 보관용)
-  drawStatementCopy(doc, fontName, data, margin, copyWidth, '공급자 보관용')
+  // 15행 초과 시 페이지 분할
+  const totalPages = Math.ceil(data.items.length / STATEMENT_ITEM_ROWS) || 1
+  for (let page = 0; page < totalPages; page++) {
+    if (page > 0) doc.addPage('a4', 'landscape')
+    const pageItems = data.items.slice(page * STATEMENT_ITEM_ROWS, (page + 1) * STATEMENT_ITEM_ROWS)
+    const isLastPage = page === totalPages - 1
+    const pageData: TransactionStatementPDFData = {
+      ...data,
+      items: pageItems,
+      // 합계는 마지막 페이지에서만 표시, 중간 페이지는 0으로
+      totalQty: isLastPage ? data.totalQty : 0,
+      totalSupply: isLastPage ? data.totalSupply : 0,
+      totalTax: isLastPage ? data.totalTax : 0,
+      totalAmount: isLastPage ? data.totalAmount : 0,
+    }
 
-  // Right copy (공급받는자 보관용)
-  drawStatementCopy(doc, fontName, data, margin + copyWidth + gap, copyWidth, '공급받는자 보관용')
+    drawStatementCopy(doc, fontName, pageData, margin, copyWidth, '공급자 보관용')
+    drawStatementCopy(doc, fontName, pageData, margin + copyWidth + gap, copyWidth, '공급받는자 보관용')
 
-  // Center dashed cutting line
-  doc.setDrawColor(180, 180, 180)
-  doc.setLineWidth(0.15)
-  const centerX = pageWidth / 2
-  for (let dy = 5; dy < pageHeight - 5; dy += 4) {
-    doc.line(centerX, dy, centerX, Math.min(dy + 2, pageHeight - 5))
+    // Center dashed cutting line
+    doc.setDrawColor(180, 180, 180)
+    doc.setLineWidth(0.15)
+    const centerX = pageWidth / 2
+    for (let dy = 5; dy < pageHeight - 5; dy += 4) {
+      doc.line(centerX, dy, centerX, Math.min(dy + 2, pageHeight - 5))
+    }
   }
 
   doc.save(`거래명세서_${data.statementNo}.pdf`)

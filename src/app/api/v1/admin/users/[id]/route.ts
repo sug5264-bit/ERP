@@ -123,11 +123,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return errorResponse('자기 자신을 삭제할 수 없습니다.', 'SELF_DELETE', 400)
     }
 
-    // 비활성화로 처리 (연관 데이터 보존)
-    await prisma.$transaction(async (tx) => {
-      await tx.userRole.deleteMany({ where: { userId: id } })
-      await tx.user.update({ where: { id }, data: { isActive: false } })
-    })
+    // 비활성화로 처리 (역할 포함 연관 데이터 보존)
+    await prisma.user.update({ where: { id }, data: { isActive: false } })
 
     return successResponse({ message: '사용자가 비활성화되었습니다.' })
   } catch (error) {
