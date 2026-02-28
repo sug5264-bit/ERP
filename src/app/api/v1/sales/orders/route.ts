@@ -89,13 +89,12 @@ export async function POST(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const body = await request.json()
     const data = createSalesOrderSchema.parse(body)
-    const orderNo = await generateDocumentNumber('SO', new Date(data.orderDate))
-
     // 세션에서 employeeId를 직접 가져오고, 없으면 DB 조회로 폴백
     let employeeId = authResult.session.user.employeeId
     if (!employeeId) {
       const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
-      if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다. 관리자에게 사원 연결을 요청하세요.', 'NOT_FOUND', 404)
+      if (!employee)
+        return errorResponse('사원 정보를 찾을 수 없습니다. 관리자에게 사원 연결을 요청하세요.', 'NOT_FOUND', 404)
       employeeId = employee.id
     }
 
@@ -160,6 +159,7 @@ export async function POST(request: NextRequest) {
     const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
 
     const result = await prisma.$transaction(async (tx) => {
+      const orderNo = await generateDocumentNumber('SO', new Date(data.orderDate), tx)
       const order = await tx.salesOrder.create({
         data: {
           orderNo,

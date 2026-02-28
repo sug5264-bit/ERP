@@ -19,12 +19,7 @@ async function request(method: string, url: string, data?: any) {
     'X-Requested-With': 'XMLHttpRequest',
   }
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
-  const options: RequestInit = { method, headers, signal: controller.signal }
-  if (data !== undefined) {
-    options.body = JSON.stringify(data)
-  }
+  const body = data !== undefined ? JSON.stringify(data) : undefined
 
   // 변경 요청(POST/PUT/PATCH/DELETE)은 중복 실행 방지를 위해 재시도하지 않음
   const isMutation = method !== 'GET'
@@ -32,8 +27,15 @@ async function request(method: string, url: string, data?: any) {
   let lastError: unknown
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
     try {
-      const res = await fetch(`${BASE_URL}${url}`, options)
+      const res = await fetch(`${BASE_URL}${url}`, {
+        method,
+        headers,
+        signal: controller.signal,
+        body,
+      })
 
       // 401 → 세션 만료
       if (res.status === 401) {

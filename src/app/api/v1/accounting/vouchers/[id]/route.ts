@@ -64,15 +64,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         where: { id: authResult.session.user.id },
         select: { employeeId: true },
       })
+      if (!user?.employeeId) {
+        return errorResponse('사원 정보가 연결되어 있지 않습니다. 승인 권한을 확인하세요.', 'NO_EMPLOYEE')
+      }
       // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
-      if (user?.employeeId && user.employeeId === existing.createdById) {
+      if (user.employeeId === existing.createdById) {
         return errorResponse('작성자는 승인할 수 없습니다.', 'FORBIDDEN', 403)
       }
       const voucher = await prisma.voucher.update({
         where: { id },
         data: {
           status: 'APPROVED',
-          approvedById: user?.employeeId || undefined,
+          approvedById: user.employeeId,
         },
       })
       return successResponse(voucher)
@@ -84,11 +87,13 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const detailsSchema = createVoucherSchema.shape.details
       const parsedDetails = detailsSchema.parse(body.details)
 
-      const totalDebit = parsedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0) / 100
-      const totalCredit = parsedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0) / 100
-      if (totalDebit !== totalCredit) {
+      const totalDebitCents = parsedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0)
+      const totalCreditCents = parsedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0)
+      if (totalDebitCents !== totalCreditCents) {
         return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
       }
+      const totalDebit = totalDebitCents / 100
+      const totalCredit = totalCreditCents / 100
 
       const voucher = await prisma.$transaction(async (tx) => {
         await tx.voucherDetail.deleteMany({ where: { voucherId: id } })

@@ -13,6 +13,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const authResult = await requirePermissionCheck('board', 'read')
     if (isErrorResponse(authResult)) return authResult
     const { id } = await params
+    const existing = await prisma.post.findUnique({ where: { id }, select: { isActive: true } })
+    if (!existing) return errorResponse('게시글을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (!existing.isActive) return errorResponse('삭제된 게시글입니다.', 'NOT_FOUND', 404)
     const post = await prisma.post.update({
       where: { id },
       data: { viewCount: { increment: 1 } },

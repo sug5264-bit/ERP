@@ -101,12 +101,14 @@ export async function POST(request: NextRequest) {
       return { ...d, accountSubjectId }
     })
 
-    // 차/대변 합계 검증 (정수 연산으로 부동소수점 오차 제거)
-    const totalDebit = resolvedDetails.reduce((sum, d) => sum + Math.round(d.debitAmount * 100), 0) / 100
-    const totalCredit = resolvedDetails.reduce((sum, d) => sum + Math.round(d.creditAmount * 100), 0) / 100
-    if (totalDebit !== totalCredit) {
+    // 차/대변 합계 검증 (정수(원) 비교로 부동소수점 오차 완전 제거)
+    const totalDebitCents = resolvedDetails.reduce((sum, d) => sum + Math.round(d.debitAmount * 100), 0)
+    const totalCreditCents = resolvedDetails.reduce((sum, d) => sum + Math.round(d.creditAmount * 100), 0)
+    if (totalDebitCents !== totalCreditCents) {
       return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
     }
+    const totalDebit = totalDebitCents / 100
+    const totalCredit = totalCreditCents / 100
 
     // 활성 회계연도 조회
     const voucherDate = new Date(data.voucherDate)

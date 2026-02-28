@@ -1,6 +1,13 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, requireAuth, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requireAuth,
+  requireAdmin,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 
 // GET: 내 알림 목록
 export async function GET(req: NextRequest) {
@@ -15,18 +22,24 @@ export async function GET(req: NextRequest) {
     const where: any = { userId: authResult.session.user.id }
     if (unreadOnly) where.isRead = false
 
-    const [notifications, unreadCount] = await Promise.all([
+    const [notifications, totalCount, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: pageSize,
       }),
+      prisma.notification.count({ where }),
       prisma.notification.count({
         where: { userId: authResult.session.user.id, isRead: false },
       }),
     ])
 
-    return successResponse(notifications, { page: 1, pageSize, totalCount: unreadCount, totalPages: 1 })
+    return NextResponse.json({
+      success: true,
+      data: notifications,
+      meta: { page: 1, pageSize, totalCount, totalPages: Math.ceil(totalCount / pageSize) },
+      unreadCount,
+    })
   } catch (error) {
     return handleApiError(error)
   }
@@ -51,7 +64,13 @@ export async function POST(req: NextRequest) {
     }
 
     const notification = await prisma.notification.create({
-      data: { userId, type, title: String(title).slice(0, 200), message: String(message).slice(0, 1000), relatedUrl: relatedUrl || null },
+      data: {
+        userId,
+        type,
+        title: String(title).slice(0, 200),
+        message: String(message).slice(0, 1000),
+        relatedUrl: relatedUrl || null,
+      },
     })
 
     return successResponse(notification)
