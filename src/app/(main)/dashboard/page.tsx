@@ -17,6 +17,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  ArrowRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -30,8 +31,8 @@ const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
       {[1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardContent className="space-y-3 p-4 sm:p-6">
-            <div className="bg-muted h-5 w-32 animate-pulse rounded" />
-            <div className="bg-muted/30 h-[250px] animate-pulse rounded" />
+            <div className="skeleton-shimmer h-5 w-32" />
+            <div className="skeleton-shimmer h-[250px]" />
           </CardContent>
         </Card>
       ))}
@@ -39,22 +40,71 @@ const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
   ),
 })
 
+function KpiSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Card key={i} className={i === 5 ? 'col-span-2 sm:col-span-1' : ''}>
+          <CardContent className="space-y-3 p-3 sm:p-6">
+            <div className="skeleton-shimmer h-4 w-16" />
+            <div className="skeleton-shimmer h-8 w-20" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+const KPI_CARDS = [
+  { key: 'emp', href: '/hr/employees', label: '전체 사원', unit: '명', Icon: Users, bg: '', color: '' },
+  { key: 'item', href: '/inventory/items', label: '등록 품목', unit: '건', Icon: Package, bg: '', color: '' },
+  {
+    key: 'approval',
+    href: '/approval/pending',
+    label: '결재 대기',
+    unit: '건',
+    Icon: FileText,
+    bg: 'bg-status-warning-muted',
+    color: 'text-status-warning',
+  },
+  {
+    key: 'leave',
+    href: '/hr/leave',
+    label: '휴가 대기',
+    unit: '건',
+    Icon: CalendarOff,
+    bg: 'bg-status-info-muted',
+    color: 'text-status-info',
+  },
+  {
+    key: 'stock',
+    href: '/inventory/stock-status',
+    label: '재고 부족',
+    unit: '건',
+    Icon: Package,
+    bg: 'bg-status-danger-muted',
+    color: 'text-status-danger',
+  },
+] as const
+
 export default function DashboardPage() {
   const { data: session } = useSession()
 
   // 대시보드 전체 데이터 단일 요청 (5개 HTTP 요청 → 1개)
-  const { data: dashData } = useQuery({
+  const { data: dashData, isLoading } = useQuery({
     queryKey: ['dashboard-batch'],
     queryFn: () => api.get('/dashboard/batch') as Promise<any>,
     staleTime: 60 * 1000,
   })
 
   const kpi = dashData?.data?.kpi
-  const empCount = kpi?.empCount || 0
-  const itemCount = kpi?.itemCount || 0
-  const pendingApproval = kpi?.approvalCount || 0
-  const alertCount = kpi?.stockAlertCount || 0
-  const pendingLeaves = kpi?.leaveCount || 0
+  const kpiValues: Record<string, number> = {
+    emp: kpi?.empCount || 0,
+    item: kpi?.itemCount || 0,
+    approval: kpi?.approvalCount || 0,
+    leave: kpi?.leaveCount || 0,
+    stock: kpi?.stockAlertCount || 0,
+  }
 
   const trends = dashData?.data?.trends
   const salesTrend = trends?.salesAmount?.change ?? 0
@@ -65,147 +115,79 @@ export default function DashboardPage() {
   const recentOrders = dashData?.data?.recentOrders || []
   const notices = dashData?.data?.notices || []
 
+  const greeting = getGreeting()
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader title={`안녕하세요, ${session?.user?.name || '사용자'}님`} description="웰그린 ERP 대시보드입니다" />
+      <PageHeader
+        title={`${greeting}, ${session?.user?.name || '사용자'}님`}
+        description="오늘의 주요 현황을 한눈에 확인하세요"
+      />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-5">
-        <Link href="/hr/employees" className="focus-visible:outline-none">
-          <Card className="card-interactive h-full">
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
-              <CardTitle className="text-xs font-medium sm:text-sm">전체 사원</CardTitle>
-              <div className="bg-muted hidden rounded-md p-1.5 sm:block">
-                <Users className="text-muted-foreground h-3.5 w-3.5" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-              <div className="text-lg font-bold sm:text-2xl">
-                {empCount}
-                <span className="text-muted-foreground ml-0.5 text-sm font-normal">명</span>
-              </div>
-              {trends?.newEmployees && trends.newEmployees.current > 0 && (
-                <p className="text-status-success mt-0.5 text-[10px] sm:text-xs">
-                  이번 달 +{trends.newEmployees.current}명
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/inventory/items" className="focus-visible:outline-none">
-          <Card className="card-interactive h-full">
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
-              <CardTitle className="text-xs font-medium sm:text-sm">등록 품목</CardTitle>
-              <div className="bg-muted hidden rounded-md p-1.5 sm:block">
-                <Package className="text-muted-foreground h-3.5 w-3.5" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-              <div className="text-lg font-bold sm:text-2xl">
-                {itemCount}
-                <span className="text-muted-foreground ml-0.5 text-sm font-normal">건</span>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/approval/pending" className="focus-visible:outline-none">
-          <Card className="card-interactive h-full">
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
-              <CardTitle className="text-xs font-medium sm:text-sm">결재 대기</CardTitle>
-              <div className="bg-status-warning-muted hidden rounded-md p-1.5 sm:block">
-                <FileText className="text-status-warning h-3.5 w-3.5" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-              <div className={`text-lg font-bold sm:text-2xl ${pendingApproval > 0 ? 'text-status-warning' : ''}`}>
-                {pendingApproval}
-                <span className="text-muted-foreground ml-0.5 text-sm font-normal">건</span>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/hr/leave" className="focus-visible:outline-none">
-          <Card className="card-interactive h-full">
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
-              <CardTitle className="text-xs font-medium sm:text-sm">휴가 대기</CardTitle>
-              <div className="bg-status-info-muted hidden rounded-md p-1.5 sm:block">
-                <CalendarOff className="text-status-info h-3.5 w-3.5" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-              <div className={`text-lg font-bold sm:text-2xl ${pendingLeaves > 0 ? 'text-status-info' : ''}`}>
-                {pendingLeaves}
-                <span className="text-muted-foreground ml-0.5 text-sm font-normal">건</span>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/inventory/stock-status" className="col-span-2 focus-visible:outline-none sm:col-span-1">
-          <Card className="card-interactive h-full">
-            <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
-              <CardTitle className="text-xs font-medium sm:text-sm">재고 부족</CardTitle>
-              <div className="bg-status-danger-muted hidden rounded-md p-1.5 sm:block">
-                <Package className="text-status-danger h-3.5 w-3.5" />
-              </div>
-            </CardHeader>
-            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-              <div className={`text-lg font-bold sm:text-2xl ${alertCount > 0 ? 'text-status-danger' : ''}`}>
-                {alertCount}
-                <span className="text-muted-foreground ml-0.5 text-sm font-normal">건</span>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
+      {isLoading ? (
+        <KpiSkeleton />
+      ) : (
+        <div className="stagger-children grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-5">
+          {KPI_CARDS.map((card, idx) => {
+            const value = kpiValues[card.key]
+            const hasAlert = value > 0 && card.color
+            return (
+              <Link
+                key={card.key}
+                href={card.href}
+                className={`focus-visible:outline-none ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
+              >
+                <Card className="card-interactive h-full">
+                  <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
+                    <CardTitle className="text-xs font-medium sm:text-sm">{card.label}</CardTitle>
+                    <div className={`hidden rounded-md p-1.5 sm:block ${card.bg || 'bg-muted'}`}>
+                      <card.Icon className={`h-3.5 w-3.5 ${card.color || 'text-muted-foreground'}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                    <div className={`animate-count-up text-lg font-bold sm:text-2xl ${hasAlert ? card.color : ''}`}>
+                      {value.toLocaleString()}
+                      <span className="text-muted-foreground ml-0.5 text-sm font-normal">{card.unit}</span>
+                    </div>
+                    {card.key === 'emp' && trends?.newEmployees && trends.newEmployees.current > 0 && (
+                      <p className="text-status-success mt-0.5 text-[10px] sm:text-xs">
+                        이번 달 +{trends.newEmployees.current}명
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
+        </div>
+      )}
 
       {/* 매출 트렌드 요약 */}
-      <Card>
+      <Card className="animate-fade-in-up">
         <CardContent className="p-3 sm:p-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
-            <div>
-              <p className="text-muted-foreground text-xs">이번 달 매출</p>
-              <p className="mt-1 text-base font-bold sm:text-xl">{formatCurrency(thisMonthAmount)}</p>
-              {salesTrend !== 0 && (
-                <div
-                  className={`mt-1 flex items-center gap-1 text-xs font-medium ${salesTrend > 0 ? 'text-status-success' : 'text-status-danger'}`}
-                >
-                  {salesTrend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  전월 대비 {salesTrend > 0 ? '+' : ''}
-                  {salesTrend}%
-                </div>
-              )}
-              {salesTrend === 0 && (
-                <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                  <Minus className="h-3 w-3" />
-                  전월 동일
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">이번 달 발주</p>
-              <p className="mt-1 text-base font-bold sm:text-xl">{trends?.orderCount?.current ?? 0}건</p>
-              {orderTrend !== 0 && (
-                <div
-                  className={`mt-1 flex items-center gap-1 text-xs font-medium ${orderTrend > 0 ? 'text-status-success' : 'text-status-danger'}`}
-                >
-                  {orderTrend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                  전월 대비 {orderTrend > 0 ? '+' : ''}
-                  {orderTrend}%
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">오늘 발주</p>
-              <p className="mt-1 text-base font-bold sm:text-xl">{todayOrders}건</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">발주 평균 금액</p>
-              <p className="mt-1 text-base font-bold sm:text-xl">
-                {(trends?.orderCount?.current ?? 0) > 0
+            <TrendItem
+              label="이번 달 매출"
+              value={formatCurrency(thisMonthAmount)}
+              trend={salesTrend}
+              trendLabel="전월 대비"
+            />
+            <TrendItem
+              label="이번 달 발주"
+              value={`${trends?.orderCount?.current ?? 0}건`}
+              trend={orderTrend}
+              trendLabel="전월 대비"
+            />
+            <TrendItem label="오늘 발주" value={`${todayOrders}건`} />
+            <TrendItem
+              label="발주 평균 금액"
+              value={
+                (trends?.orderCount?.current ?? 0) > 0
                   ? formatCurrency(Math.round(thisMonthAmount / (trends?.orderCount?.current || 1)))
-                  : '-'}
-              </p>
-            </div>
+                  : '-'
+              }
+            />
           </div>
         </CardContent>
       </Card>
@@ -220,29 +202,27 @@ export default function DashboardPage() {
 
       {/* Lists */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-        <Card>
+        {/* 최근 발주 */}
+        <Card className="animate-fade-in-up">
           <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <ShoppingCart className="h-4 w-4" /> 최근 발주
             </CardTitle>
             <Link href="/sales/orders">
               <Button variant="ghost" size="sm" className="hover:text-primary text-xs">
-                더보기 &rarr;
+                더보기 <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {recentOrders.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-10">
-                <ShoppingCart className="text-muted-foreground/30 h-8 w-8" />
-                <p className="text-muted-foreground text-sm">발주 데이터가 없습니다</p>
-              </div>
+              <EmptyState icon={ShoppingCart} message="발주 데이터가 없습니다" />
             ) : (
               <div className="space-y-0">
                 {recentOrders.slice(0, 5).map((o: any, idx: number) => (
                   <div
                     key={o.id}
-                    className={`flex items-center justify-between py-2.5 text-xs sm:text-sm ${idx < Math.min(recentOrders.length, 5) - 1 ? 'border-b' : ''}`}
+                    className={`hover:bg-muted/30 flex items-center justify-between rounded-sm px-1 py-2.5 text-xs transition-colors sm:text-sm ${idx < Math.min(recentOrders.length, 5) - 1 ? 'border-b' : ''}`}
                   >
                     <div className="mr-2 flex-1 truncate">
                       <span className="text-muted-foreground mr-1.5 font-mono text-xs sm:mr-2">{o.orderNo}</span>
@@ -258,32 +238,34 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* 공지사항 */}
+        <Card className="animate-fade-in-up">
           <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
               <ClipboardList className="h-4 w-4" /> 공지사항
             </CardTitle>
             <Link href="/board/notices">
               <Button variant="ghost" size="sm" className="hover:text-primary text-xs">
-                더보기 &rarr;
+                더보기 <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </Link>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {notices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-10">
-                <ClipboardList className="text-muted-foreground/30 h-8 w-8" />
-                <p className="text-muted-foreground text-sm">공지사항이 없습니다</p>
-              </div>
+              <EmptyState icon={ClipboardList} message="공지사항이 없습니다" />
             ) : (
               <div className="space-y-0">
                 {notices.slice(0, 5).map((n: any, idx: number) => (
                   <div
                     key={n.id}
-                    className={`flex items-center justify-between py-2.5 text-xs sm:text-sm ${idx < Math.min(notices.length, 5) - 1 ? 'border-b' : ''}`}
+                    className={`hover:bg-muted/30 flex items-center justify-between rounded-sm px-1 py-2.5 text-xs transition-colors sm:text-sm ${idx < Math.min(notices.length, 5) - 1 ? 'border-b' : ''}`}
                   >
                     <span className="flex-1 truncate">
-                      {n.isPinned && <span className="text-status-danger mr-1 font-semibold">[필독]</span>}
+                      {n.isPinned && (
+                        <span className="bg-status-danger-muted text-status-danger mr-1 inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-semibold">
+                          필독
+                        </span>
+                      )}
                       {n.title}
                     </span>
                     <span className="text-muted-foreground ml-2 text-xs whitespace-nowrap tabular-nums">
@@ -298,4 +280,58 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+}
+
+// ─── Sub Components ───
+
+function TrendItem({
+  label,
+  value,
+  trend,
+  trendLabel,
+}: {
+  label: string
+  value: string
+  trend?: number
+  trendLabel?: string
+}) {
+  return (
+    <div>
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="mt-1 text-base font-bold sm:text-xl">{value}</p>
+      {trend !== undefined && trend !== 0 && (
+        <div
+          className={`mt-1 flex items-center gap-1 text-xs font-medium ${trend > 0 ? 'text-status-success' : 'text-status-danger'}`}
+        >
+          {trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+          {trendLabel} {trend > 0 ? '+' : ''}
+          {trend}%
+        </div>
+      )}
+      {trend !== undefined && trend === 0 && (
+        <div className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
+          <Minus className="h-3 w-3" />
+          전월 동일
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EmptyState({ icon: Icon, message }: { icon: typeof ShoppingCart; message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-10">
+      <div className="bg-muted rounded-full p-3">
+        <Icon className="text-muted-foreground/40 h-6 w-6" />
+      </div>
+      <p className="text-muted-foreground text-sm">{message}</p>
+    </div>
+  )
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour < 12) return '좋은 아침이에요'
+  if (hour < 18) return '안녕하세요'
+  return '수고하셨습니다'
 }

@@ -244,10 +244,10 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {/* Table with horizontal scroll on mobile */}
+      {/* Table with horizontal scroll on mobile + sticky headers */}
       <div className="relative rounded-md border">
-        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <Table className="min-w-[640px]">
+        <div className="max-h-[70vh] overflow-x-auto overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <Table className="table-sticky-header min-w-[640px]">
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id} className="bg-muted/30 hover:bg-muted/30">
@@ -259,6 +259,7 @@ export function DataTable<TData, TValue>({
                         key={header.id}
                         className={`text-xs whitespace-nowrap sm:text-sm ${canSort ? 'hover:bg-muted/50 cursor-pointer transition-colors select-none' : ''}`}
                         onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                        aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
                       >
                         {header.isPlaceholder ? null : (
                           <div className="flex items-center gap-1">
@@ -288,10 +289,7 @@ export function DataTable<TData, TValue>({
                   <TableRow key={`skeleton-${i}`} className="hover:bg-transparent">
                     {allColumns.map((_, j) => (
                       <TableCell key={j} className="py-2.5 sm:py-3">
-                        <div
-                          className="bg-muted h-5 animate-pulse rounded"
-                          style={{ width: `${55 + ((i * 7 + j * 13) % 30)}%` }}
-                        />
+                        <div className="skeleton-shimmer h-5" style={{ width: `${55 + ((i * 7 + j * 13) % 30)}%` }} />
                       </TableCell>
                     ))}
                   </TableRow>
@@ -301,7 +299,7 @@ export function DataTable<TData, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && 'selected'}
-                    className={`transition-colors ${onRowClick ? 'hover:bg-muted/50 active:bg-muted/70 cursor-pointer' : 'hover:bg-muted/30'}`}
+                    className={`table-row-hover transition-colors ${onRowClick ? 'hover:bg-muted/50 active:bg-muted/70 cursor-pointer' : 'hover:bg-muted/30'}`}
                     onClick={() => onRowClick?.(row.original)}
                   >
                     {row.getVisibleCells().map((cell) => (
@@ -314,7 +312,7 @@ export function DataTable<TData, TValue>({
               ) : (
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={allColumns.length} className="h-40 sm:h-52">
-                    <div className="flex h-full flex-col items-center justify-center gap-3">
+                    <div className="animate-fade-in flex h-full flex-col items-center justify-center gap-3">
                       <div className="bg-muted rounded-full p-3">
                         <Inbox className="text-muted-foreground/60 h-6 w-6" />
                       </div>

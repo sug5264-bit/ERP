@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { APP_NAME } from '@/lib/constants'
+import { AlertCircle, Eye, EyeOff, Loader2, Shield } from 'lucide-react'
 
 function LoginForm() {
   const router = useRouter()
@@ -15,10 +16,12 @@ function LoginForm() {
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard'
   // 오픈 리다이렉트 방지: 내부 경로만 허용
   const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/dashboard'
+  const sessionExpired = searchParams.get('error') === 'session_expired'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState(sessionExpired ? '세션이 만료되었습니다. 다시 로그인해주세요.' : '')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,51 +60,97 @@ function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">{APP_NAME}</CardTitle>
-        <CardDescription>계정에 로그인하세요</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <div className="bg-destructive/10 text-destructive rounded-md p-3 text-sm">{error}</div>}
-          <div className="space-y-2">
-            <Label htmlFor="username">아이디</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="admin"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+    <div className="animate-scale-in w-full max-w-md px-4">
+      <Card className="border-0 shadow-xl sm:border">
+        <CardHeader className="space-y-3 pb-2 text-center">
+          <div className="bg-primary text-primary-foreground mx-auto flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg">
+            <Shield className="h-7 w-7" />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">비밀번호</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="비밀번호를 입력하세요"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-            />
+          <div>
+            <CardTitle className="text-2xl font-bold tracking-tight">{APP_NAME}</CardTitle>
+            <CardDescription className="mt-1">계정에 로그인하여 시작하세요</CardDescription>
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? '로그인 중...' : '로그인'}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div
+                className="animate-scale-in bg-destructive/10 text-destructive flex items-start gap-2 rounded-lg p-3 text-sm"
+                role="alert"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="username">아이디</Label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="사용자 아이디를 입력하세요"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+                disabled={isLoading}
+                autoComplete="username"
+                autoFocus
+                aria-required="true"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">비밀번호</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="비밀번호를 입력하세요"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                  aria-required="true"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-muted-foreground hover:text-foreground absolute top-0 right-0 flex h-full w-10 items-center justify-center transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <Button type="submit" className="h-11 w-full text-sm font-semibold" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  로그인 중...
+                </>
+              ) : (
+                '로그인'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+      <p className="text-muted-foreground mt-6 text-center text-xs">
+        보안 접속 중 &middot; 무단 접근 시 법적 조치가 취해질 수 있습니다
+      </p>
+    </div>
   )
 }
 
 export default function LoginPage() {
   return (
     <Suspense
-      fallback={<div className="text-muted-foreground flex min-h-screen items-center justify-center">로딩 중...</div>}
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="loading-spinner" />
+        </div>
+      }
     >
       <LoginForm />
     </Suspense>

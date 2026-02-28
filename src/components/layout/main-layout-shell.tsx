@@ -37,19 +37,29 @@ export function MainLayoutShell({ children }: { children: React.ReactNode }) {
       </a>
 
       {/* Mobile sidebar overlay */}
-      {isOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />}
+      {isOpen && (
+        <div
+          className="animate-fade-in fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
 
       {/* Sidebar - mobile: 좁은 오버레이, desktop: 고정 */}
       <aside
         className={cn(
-          'bg-background fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r transition-transform duration-200 will-change-transform motion-reduce:duration-0 lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:duration-0',
+          'bg-background fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r shadow-xl transition-transform duration-200 will-change-transform motion-reduce:duration-0 lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none lg:duration-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         role="navigation"
         aria-label="사이드바 메뉴"
       >
         <div className="flex h-14 items-center border-b px-4">
-          <span className="text-lg font-bold tracking-tight">ERP</span>
+          <div className="flex items-center gap-2">
+            <div className="bg-primary text-primary-foreground flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold">
+              E
+            </div>
+            <span className="text-lg font-bold tracking-tight">ERP</span>
+          </div>
         </div>
         <ScrollArea className="h-[calc(100dvh-3.5rem)]">
           <SidebarNav />

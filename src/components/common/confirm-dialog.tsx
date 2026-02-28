@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Loader2 } from 'lucide-react'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -38,17 +38,19 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false} className="max-w-sm">
         <DialogHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {variant === 'destructive' && (
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
+              <div className="bg-destructive/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                <AlertTriangle className="text-destructive h-5 w-5" />
               </div>
             )}
-            <DialogTitle>{title}</DialogTitle>
+            <div>
+              <DialogTitle>{title}</DialogTitle>
+              <DialogDescription className="mt-1">{description}</DialogDescription>
+            </div>
           </div>
-          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             {cancelLabel}
           </Button>
@@ -60,7 +62,14 @@ export function ConfirmDialog({
             }}
             disabled={isPending}
           >
-            {isPending ? '처리 중...' : confirmLabel}
+            {isPending ? (
+              <>
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                처리 중...
+              </>
+            ) : (
+              confirmLabel
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
