@@ -3,13 +3,30 @@ import type { NextAuthConfig } from 'next-auth'
 /**
  * Edge Runtime 호환 auth 설정 (middleware용)
  * Prisma, bcryptjs 등 Node.js 전용 모듈을 import하지 않음
+ *
+ * 대기업 보안 정책 반영:
+ * - JWT 세션 8시간 (업무 시간 기준)
+ * - 쿠키 보안 속성 강화
+ * - 세션에 loginAt 타임스탬프 포함
  */
 export const authConfig: NextAuthConfig = {
   trustHost: true,
   providers: [], // middleware에서는 provider 불필요 (JWT 검증만)
   session: {
     strategy: 'jwt',
-    maxAge: 8 * 60 * 60, // 8시간
+    maxAge: 8 * 60 * 60, // 8시간 (업무 시간)
+    updateAge: 60 * 60, // 1시간마다 토큰 갱신
+  },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' ? '__Secure-authjs.session-token' : 'authjs.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
   },
   pages: {
     signIn: '/login',
@@ -31,7 +48,7 @@ export const authConfig: NextAuthConfig = {
       }
       return baseUrl
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         token.roles = (user as any).roles
@@ -40,7 +57,14 @@ export const authConfig: NextAuthConfig = {
         token.employeeName = (user as any).employeeName
         token.departmentName = (user as any).departmentName
         token.positionName = (user as any).positionName
+        token.loginAt = Date.now()
       }
+
+      // 세션 갱신 시 타임스탬프 업데이트
+      if (trigger === 'update') {
+        token.lastActivity = Date.now()
+      }
+
       return token
     },
     async session({ session, token }) {

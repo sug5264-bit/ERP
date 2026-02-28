@@ -79,8 +79,8 @@ describe('formatPhone', () => {
     expect(formatPhone('01012345678')).toBe('010-1234-5678')
   })
 
-  it('10자리 전화번호 형식화 (02-XXX-XXXX)', () => {
-    expect(formatPhone('0212345678')).toBe('021-234-5678')
+  it('10자리 전화번호 형식화 (02-XXXX-XXXX)', () => {
+    expect(formatPhone('0212345678')).toBe('02-1234-5678')
   })
 
   it('이미 형식화된 번호에서 숫자 추출 후 재형식화', () => {
