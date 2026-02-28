@@ -152,10 +152,19 @@ export async function POST(request: NextRequest) {
               where: { itemId: detail.itemId, warehouseId: data.targetWarehouseId },
             })
             if (existing) {
+              // 가중평균단가 계산
+              const oldQty = Number(existing.quantity)
+              const oldCost = Number(existing.averageCost)
+              const newQty = detail.quantity
+              const newPrice = detail.unitPrice || 0
+              const totalQty = oldQty + newQty
+              const newAvgCost =
+                totalQty > 0 ? Math.round(((oldQty * oldCost + newQty * newPrice) / totalQty) * 100) / 100 : 0
               await tx.stockBalance.update({
                 where: { id: existing.id },
                 data: {
                   quantity: { increment: detail.quantity },
+                  averageCost: newAvgCost,
                   lastMovementDate: movementDate,
                 },
               })

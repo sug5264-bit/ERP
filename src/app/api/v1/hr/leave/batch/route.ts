@@ -51,9 +51,18 @@ export async function POST(req: NextRequest) {
             data: { status: newStatus },
           })
 
-          // 승인 시 LeaveBalance 업데이트 (단건 승인과 동일 로직)
+          // 승인 시 LeaveBalance 업데이트 (잔여일 검증 포함)
           if (newStatus === 'APPROVED') {
             const year = new Date(leave.startDate).getFullYear()
+            const balance = await tx.leaveBalance.findFirst({
+              where: { employeeId: leave.employeeId, year },
+            })
+            if (!balance) {
+              throw new Error('해당 연도의 휴가 잔여일 정보가 없습니다.')
+            }
+            if (Number(balance.remainingDays) < Number(leave.days)) {
+              throw new Error(`잔여 휴가일수(${balance.remainingDays}일)가 부족합니다.`)
+            }
             await tx.leaveBalance.updateMany({
               where: { employeeId: leave.employeeId, year },
               data: {

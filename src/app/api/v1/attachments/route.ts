@@ -8,6 +8,42 @@ import { randomUUID } from 'crypto'
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
+const VALID_TABLES = [
+  'salesOrder',
+  'quotation',
+  'delivery',
+  'salesReturn',
+  'partner',
+  'item',
+  'purchaseOrder',
+  'voucher',
+  'employee',
+  'project',
+  'recruitment',
+]
+
+/** 허용된 확장자만 업로드 가능 */
+const ALLOWED_EXTENSIONS = new Set([
+  'pdf',
+  'xlsx',
+  'xls',
+  'csv',
+  'doc',
+  'docx',
+  'ppt',
+  'pptx',
+  'txt',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'bmp',
+  'webp',
+  'zip',
+  'rar',
+  '7z',
+])
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth()
@@ -19,6 +55,9 @@ export async function GET(request: NextRequest) {
 
     if (!relatedTable) {
       return errorResponse('relatedTable이 필요합니다.', 'VALIDATION_ERROR')
+    }
+    if (!VALID_TABLES.includes(relatedTable)) {
+      return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
     }
 
     const where: any = { relatedTable }
@@ -49,13 +88,20 @@ export async function POST(request: NextRequest) {
       return errorResponse('file, relatedTable, relatedId가 필요합니다.', 'VALIDATION_ERROR')
     }
 
+    if (!VALID_TABLES.includes(relatedTable)) {
+      return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
+    }
+
     if (file.size > MAX_FILE_SIZE) {
       return errorResponse('파일 크기가 50MB를 초과합니다.', 'FILE_TOO_LARGE')
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true })
+    const ext = file.name.includes('.') ? (file.name.split('.').pop() || '').toLowerCase() : ''
+    if (!ext || !ALLOWED_EXTENSIONS.has(ext)) {
+      return errorResponse('허용되지 않는 파일 형식입니다.', 'INVALID_FILE_TYPE', 400)
+    }
 
-    const ext = file.name.split('.').pop() || ''
+    await mkdir(UPLOAD_DIR, { recursive: true })
     const uniqueName = `${randomUUID()}.${ext}`
     const filePath = join(UPLOAD_DIR, uniqueName)
 

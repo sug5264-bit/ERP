@@ -75,7 +75,9 @@ export async function POST(req: NextRequest) {
         return errorResponse('퇴근 시간은 출근 시간 이후여야 합니다.', 'BAD_REQUEST', 400)
       }
       const diff = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60)
-      workHours = Math.max(0, diff - 1) // 점심 1시간 제외
+      // 6시간 이상 근무 시에만 점심 1시간 차감 (근로기준법 기준)
+      const lunchDeduction = diff >= 6 ? 1 : 0
+      workHours = Math.max(0, diff - lunchDeduction)
       overtimeHours = Math.max(0, workHours - 8)
     }
 

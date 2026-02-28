@@ -15,21 +15,44 @@ import { formatDate, formatCurrency } from '@/lib/format'
 import { ArrowLeft } from 'lucide-react'
 
 const ACCOUNT_TYPE_MAP: Record<string, string> = {
-  ASSET: '자산', LIABILITY: '부채', EQUITY: '자본', REVENUE: '수익', EXPENSE: '비용',
+  ASSET: '자산',
+  LIABILITY: '부채',
+  EQUITY: '자본',
+  REVENUE: '수익',
+  EXPENSE: '비용',
 }
 
-interface LedgerSummary { id: string; code: string; nameKo: string; accountType: string; totalDebit: number; totalCredit: number }
+interface LedgerSummary {
+  id: string
+  code: string
+  nameKo: string
+  accountType: string
+  totalDebit: number
+  totalCredit: number
+}
 interface LedgerDetail {
-  id: string; debitAmount: number; creditAmount: number; description: string | null
+  id: string
+  debitAmount: number
+  creditAmount: number
+  description: string | null
   voucher: { voucherNo: string; voucherDate: string; voucherType: string; description: string | null }
   partner: { partnerName: string } | null
 }
 
 const detailColumns: ColumnDef<LedgerDetail>[] = [
-  { header: '전표번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.voucher.voucherNo}</span> },
+  {
+    header: '전표번호',
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.voucher.voucherNo}</span>,
+  },
   { header: '일자', cell: ({ row }) => formatDate(row.original.voucher.voucherDate) },
-  { header: '차변', cell: ({ row }) => Number(row.original.debitAmount) > 0 ? formatCurrency(row.original.debitAmount) : '-' },
-  { header: '대변', cell: ({ row }) => Number(row.original.creditAmount) > 0 ? formatCurrency(row.original.creditAmount) : '-' },
+  {
+    header: '차변',
+    cell: ({ row }) => (Number(row.original.debitAmount) > 0 ? formatCurrency(row.original.debitAmount) : '-'),
+  },
+  {
+    header: '대변',
+    cell: ({ row }) => (Number(row.original.creditAmount) > 0 ? formatCurrency(row.original.creditAmount) : '-'),
+  },
   { header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
   { header: '적요', cell: ({ row }) => row.original.description || row.original.voucher.description || '-' },
 ]
@@ -64,8 +87,12 @@ export default function LedgerPage() {
             <ArrowLeft className="mr-1 h-4 w-4" /> 뒤로
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{account?.code} - {account?.nameKo}</h1>
-            <p className="text-sm text-muted-foreground">총계정원장 상세 ({ACCOUNT_TYPE_MAP[account?.accountType] || ''})</p>
+            <h1 className="text-2xl font-bold">
+              {account?.code} - {account?.nameKo}
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              총계정원장 상세 ({ACCOUNT_TYPE_MAP[account?.accountType] || ''})
+            </p>
           </div>
         </div>
         <DataTable columns={detailColumns} data={details} isLoading={isLoading} pageSize={100} />
@@ -92,10 +119,12 @@ export default function LedgerPage() {
             const credit = items.reduce((s, i) => s + Number(i.totalCredit), 0)
             return (
               <Card key={key}>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">{label}</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">{label}</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <div className="text-xs text-muted-foreground">차변: {formatCurrency(debit)}</div>
-                  <div className="text-xs text-muted-foreground">대변: {formatCurrency(credit)}</div>
+                  <div className="text-muted-foreground text-xs">차변: {formatCurrency(debit)}</div>
+                  <div className="text-muted-foreground text-xs">대변: {formatCurrency(credit)}</div>
                 </CardContent>
               </Card>
             )
@@ -105,31 +134,68 @@ export default function LedgerPage() {
       <div className="rounded-md border">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50">
-              <th className="p-3 text-left">계정코드</th><th className="p-3 text-left">계정과목</th><th className="p-3 text-left">구분</th>
-              <th className="p-3 text-right">차변 합계</th><th className="p-3 text-right">대변 합계</th><th className="p-3 text-right">잔액</th>
+            <tr className="bg-muted/50 border-b">
+              <th className="p-3 text-left">계정코드</th>
+              <th className="p-3 text-left">계정과목</th>
+              <th className="p-3 text-left">구분</th>
+              <th className="p-3 text-right">차변 합계</th>
+              <th className="p-3 text-right">대변 합계</th>
+              <th className="p-3 text-right">잔액</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">로딩 중...</td></tr>
+              <tr>
+                <td colSpan={6} className="text-muted-foreground p-8 text-center">
+                  로딩 중...
+                </td>
+              </tr>
             ) : summaries.length === 0 ? (
-              <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">데이터가 없습니다.</td></tr>
-            ) : summaries.map((row) => {
-              const balance = Number(row.totalDebit) - Number(row.totalCredit)
-              return (
-                <tr key={row.id} className="border-b cursor-pointer hover:bg-muted/50" onClick={() => setSelectedAccountId(row.id)}>
-                  <td className="p-3 font-mono">{row.code}</td>
-                  <td className="p-3 font-medium">{row.nameKo}</td>
-                  <td className="p-3"><Badge variant="outline">{ACCOUNT_TYPE_MAP[row.accountType]}</Badge></td>
-                  <td className="p-3 text-right">{formatCurrency(row.totalDebit)}</td>
-                  <td className="p-3 text-right">{formatCurrency(row.totalCredit)}</td>
-                  <td className="p-3 text-right">
-                    <span className={balance < 0 ? 'text-destructive' : ''}>{formatCurrency(Math.abs(balance))}{balance < 0 ? ' (대)' : balance > 0 ? ' (차)' : ''}</span>
-                  </td>
-                </tr>
-              )
-            })}
+              <tr>
+                <td colSpan={6} className="text-muted-foreground p-8 text-center">
+                  데이터가 없습니다.
+                </td>
+              </tr>
+            ) : (
+              summaries.map((row) => {
+                // 계정 유형에 따라 정상 잔액 방향이 다름
+                const isDebitNormal = ['ASSET', 'EXPENSE'].includes(row.accountType)
+                const balance = isDebitNormal
+                  ? Number(row.totalDebit) - Number(row.totalCredit)
+                  : Number(row.totalCredit) - Number(row.totalDebit)
+                return (
+                  <tr
+                    key={row.id}
+                    className="hover:bg-muted/50 cursor-pointer border-b"
+                    onClick={() => setSelectedAccountId(row.id)}
+                  >
+                    <td className="p-3 font-mono">{row.code}</td>
+                    <td className="p-3 font-medium">{row.nameKo}</td>
+                    <td className="p-3">
+                      <Badge variant="outline">{ACCOUNT_TYPE_MAP[row.accountType]}</Badge>
+                    </td>
+                    <td className="p-3 text-right">{formatCurrency(row.totalDebit)}</td>
+                    <td className="p-3 text-right">{formatCurrency(row.totalCredit)}</td>
+                    <td className="p-3 text-right">
+                      <span className={balance < 0 ? 'text-destructive' : ''}>
+                        {formatCurrency(Math.abs(balance))}
+                        {isDebitNormal
+                          ? balance > 0
+                            ? ' (차)'
+                            : balance < 0
+                              ? ' (대)'
+                              : ''
+                          : balance > 0
+                            ? ' (대)'
+                            : balance < 0
+                              ? ' (차)'
+                              : ''}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>

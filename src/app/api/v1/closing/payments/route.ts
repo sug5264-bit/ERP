@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
 
     const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0)
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999)
 
     // 대금지급 전표 (PAYMENT 타입) 조회
     const vouchers = await prisma.voucher.findMany({

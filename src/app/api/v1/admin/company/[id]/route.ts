@@ -54,6 +54,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
+    const company = await prisma.company.findUnique({ where: { id }, select: { isDefault: true } })
+    if (!company) return errorResponse('회사 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (company.isDefault) return errorResponse('기본 회사는 삭제할 수 없습니다.', 'FORBIDDEN', 403)
     await prisma.company.delete({ where: { id } })
     return successResponse({ message: '회사 정보가 삭제되었습니다.' })
   } catch (error) {

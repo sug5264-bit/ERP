@@ -78,43 +78,44 @@ export async function POST(request: NextRequest) {
     const taxAmount = data.items.reduce((s, i) => s + i.taxAmount, 0)
     const totalAmount = supplyAmount + taxAmount
 
-    const invoiceNo = await generateDocumentNumber('TI', new Date(data.issueDate))
-
-    const invoice = await prisma.taxInvoice.create({
-      data: {
-        invoiceNo,
-        issueDate: new Date(data.issueDate),
-        invoiceType: data.invoiceType,
-        supplierBizNo: data.supplierBizNo,
-        supplierName: data.supplierName,
-        supplierCeo: data.supplierCeo,
-        supplierAddress: data.supplierAddress,
-        supplierBizType: data.supplierBizType,
-        supplierBizCategory: data.supplierBizCategory,
-        buyerBizNo: data.buyerBizNo,
-        buyerName: data.buyerName,
-        buyerCeo: data.buyerCeo,
-        buyerAddress: data.buyerAddress,
-        buyerBizType: data.buyerBizType,
-        buyerBizCategory: data.buyerBizCategory,
-        supplyAmount,
-        taxAmount,
-        totalAmount,
-        partnerId: data.partnerId || null,
-        voucherId: data.voucherId || null,
-        items: {
-          create: data.items.map((item) => ({
-            itemDate: new Date(item.itemDate),
-            itemName: item.itemName,
-            specification: item.specification,
-            qty: item.qty,
-            unitPrice: item.unitPrice,
-            supplyAmount: item.supplyAmount,
-            taxAmount: item.taxAmount,
-          })),
+    const invoice = await prisma.$transaction(async (tx) => {
+      const invoiceNo = await generateDocumentNumber('TI', new Date(data.issueDate), tx)
+      return tx.taxInvoice.create({
+        data: {
+          invoiceNo,
+          issueDate: new Date(data.issueDate),
+          invoiceType: data.invoiceType,
+          supplierBizNo: data.supplierBizNo,
+          supplierName: data.supplierName,
+          supplierCeo: data.supplierCeo,
+          supplierAddress: data.supplierAddress,
+          supplierBizType: data.supplierBizType,
+          supplierBizCategory: data.supplierBizCategory,
+          buyerBizNo: data.buyerBizNo,
+          buyerName: data.buyerName,
+          buyerCeo: data.buyerCeo,
+          buyerAddress: data.buyerAddress,
+          buyerBizType: data.buyerBizType,
+          buyerBizCategory: data.buyerBizCategory,
+          supplyAmount,
+          taxAmount,
+          totalAmount,
+          partnerId: data.partnerId || null,
+          voucherId: data.voucherId || null,
+          items: {
+            create: data.items.map((item) => ({
+              itemDate: new Date(item.itemDate),
+              itemName: item.itemName,
+              specification: item.specification,
+              qty: item.qty,
+              unitPrice: item.unitPrice,
+              supplyAmount: item.supplyAmount,
+              taxAmount: item.taxAmount,
+            })),
+          },
         },
-      },
-      include: { items: true },
+        include: { items: true },
+      })
     })
 
     return successResponse(invoice)
