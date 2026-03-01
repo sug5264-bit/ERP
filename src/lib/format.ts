@@ -12,14 +12,24 @@ export function formatCurrency(amount: number | string | null | undefined): stri
 
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return ''
-  const d = typeof date === 'string' ? parseISO(date) : date
-  return format(d, 'yyyy-MM-dd')
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date
+    if (isNaN(d.getTime())) return ''
+    return format(d, 'yyyy-MM-dd')
+  } catch {
+    return ''
+  }
 }
 
 export function formatDateTime(date: string | Date | null | undefined): string {
   if (!date) return ''
-  const d = typeof date === 'string' ? parseISO(date) : date
-  return format(d, 'yyyy-MM-dd HH:mm', { locale: ko })
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date
+    if (isNaN(d.getTime())) return ''
+    return format(d, 'yyyy-MM-dd HH:mm', { locale: ko })
+  } catch {
+    return ''
+  }
 }
 
 export function formatPhone(phone: string | null | undefined): string {
@@ -53,6 +63,11 @@ export function getLocalDateString(date?: Date): string {
 
 export function formatDistanceToNow(date: string | Date | null | undefined): string {
   if (!date) return ''
-  const d = typeof date === 'string' ? parseISO(date) : date
-  return fDistanceToNow(d, { addSuffix: true, locale: ko })
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date
+    if (isNaN(d.getTime())) return ''
+    return fDistanceToNow(d, { addSuffix: true, locale: ko })
+  } catch {
+    return ''
+  }
 }

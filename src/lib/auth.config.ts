@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from 'next-auth'
+import type { JWT } from 'next-auth/jwt'
 
 /**
  * Edge Runtime 호환 auth 설정 (middleware용)
@@ -51,12 +52,12 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
-        token.roles = (user as any).roles
-        token.permissions = (user as any).permissions
-        token.employeeId = (user as any).employeeId
-        token.employeeName = (user as any).employeeName
-        token.departmentName = (user as any).departmentName
-        token.positionName = (user as any).positionName
+        token.roles = user.roles
+        token.permissions = user.permissions
+        token.employeeId = user.employeeId
+        token.employeeName = user.employeeName
+        token.departmentName = user.departmentName
+        token.positionName = user.positionName
         token.loginAt = Date.now()
       }
 
@@ -67,15 +68,16 @@ export const authConfig: NextAuthConfig = {
 
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token: rawToken }) {
+      const token = rawToken as JWT
       if (token && session.user) {
-        session.user.id = token.id as string
-        ;(session.user as any).roles = token.roles
-        ;(session.user as any).permissions = token.permissions
-        ;(session.user as any).employeeId = token.employeeId
-        ;(session.user as any).employeeName = token.employeeName
-        ;(session.user as any).departmentName = token.departmentName
-        ;(session.user as any).positionName = token.positionName
+        session.user.id = token.id
+        session.user.roles = token.roles
+        session.user.permissions = token.permissions
+        session.user.employeeId = token.employeeId
+        session.user.employeeName = token.employeeName
+        session.user.departmentName = token.departmentName
+        session.user.positionName = token.positionName
       }
       return session
     },

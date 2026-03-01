@@ -7,7 +7,7 @@ export const createVoucherSchema = z.object({
     .min(1, '전표일자를 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   voucherType: z.enum(['RECEIPT', 'PAYMENT', 'TRANSFER', 'PURCHASE', 'SALES']),
-  description: z.string().optional(),
+  description: z.string().max(1000).optional(),
   details: z
     .array(
       z
@@ -17,7 +17,7 @@ export const createVoucherSchema = z.object({
           debitAmount: z.number().min(0).default(0),
           creditAmount: z.number().min(0).default(0),
           partnerId: z.string().optional(),
-          description: z.string().optional(),
+          description: z.string().max(500).optional(),
           costCenterId: z.string().optional(),
         })
         .refine((d) => d.accountSubjectId || d.accountCode, { message: '계정과목 ID 또는 코드를 입력하세요' })

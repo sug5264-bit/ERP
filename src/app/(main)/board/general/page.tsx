@@ -84,6 +84,7 @@ export default function GeneralBoardPage() {
     mutationFn: (id: string) => api.delete(`/board/posts/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board-general'] })
+      setDeleteTarget(null)
       toast.success('게시글이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

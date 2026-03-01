@@ -17,8 +17,11 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const now = new Date()
-    const year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
-    const month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
+    let year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
+    let month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
+    // 범위 검증
+    if (year < 2000 || year > 2100) year = now.getFullYear()
+    if (month < 1 || month > 12) month = now.getMonth() + 1
 
     const startDate = new Date(year, month - 1, 1)
     const endDate = new Date(year, month, 0, 23, 59, 59, 999)

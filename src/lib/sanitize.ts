@@ -79,6 +79,10 @@ export function sanitizeFileName(name: string): string {
   if (RESERVED_NAMES.test(sanitized)) {
     sanitized = `_${sanitized}`
   }
+  // 빈 결과 방지
+  if (!sanitized) {
+    sanitized = 'unnamed_file'
+  }
   return sanitized
 }
 

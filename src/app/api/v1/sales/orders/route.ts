@@ -41,14 +41,22 @@ export async function GET(request: NextRequest) {
     // 거래처 필터
     const partnerId = sp.get('partnerId')
     if (partnerId) where.partnerId = partnerId
-    // 금액 범위 필터
+    // 금액 범위 필터 (NaN 방지)
     const minAmount = sp.get('minAmount')
     const maxAmount = sp.get('maxAmount')
     if (minAmount || maxAmount) {
       const amountRange: { gte?: number; lte?: number } = {}
-      if (minAmount) amountRange.gte = Number(minAmount)
-      if (maxAmount) amountRange.lte = Number(maxAmount)
-      where.totalAmount = amountRange
+      if (minAmount) {
+        const n = Number(minAmount)
+        if (!isNaN(n)) amountRange.gte = n
+      }
+      if (maxAmount) {
+        const n = Number(maxAmount)
+        if (!isNaN(n)) amountRange.lte = n
+      }
+      if (amountRange.gte !== undefined || amountRange.lte !== undefined) {
+        where.totalAmount = amountRange
+      }
     }
     // 통합 검색 (발주번호 또는 거래처명)
     const rawSearch = sp.get('search')

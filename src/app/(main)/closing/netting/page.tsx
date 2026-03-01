@@ -40,6 +40,57 @@ interface NettingRow {
   details: NettingDetail[]
 }
 
+interface CompanyRecord {
+  isDefault?: boolean
+  companyName: string
+  bizNo?: string
+  ceoName?: string
+  address?: string
+  bizType?: string
+  bizCategory?: string
+  phone?: string
+  bankName?: string
+  bankAccount?: string
+  bankHolder?: string
+}
+
+interface PartnerRecord {
+  id: string
+  partnerName: string
+}
+
+interface OrderRow {
+  id: string
+  orderNo: string
+  orderDate: string
+  totalSupply: number
+  totalTax: number
+  totalAmount: number
+  status: string
+  partner?: {
+    partnerName: string
+    bizNo?: string
+    ceoName?: string
+    address?: string
+    phone?: string
+  }
+  details?: OrderDetailItem[]
+}
+
+interface OrderDetailItem {
+  item?: {
+    barcode?: string
+    itemName?: string
+    specification?: string
+    unit?: string
+  }
+  quantity: number
+  unitPrice: number
+  supplyAmount: number
+  taxAmount: number
+  remark?: string
+}
+
 const currentYear = new Date().getFullYear()
 const currentMonth = new Date().getMonth() + 1
 
@@ -67,7 +118,7 @@ export default function NettingPage() {
   const partners = partnersData?.data || []
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/closing/netting', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/closing/netting', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['closing-netting'] })
       setCreateOpen(false)
@@ -77,7 +128,7 @@ export default function NettingPage() {
       setFormDate(getLocalDateString())
       toast.success('상계 내역이 등록되었습니다.')
     },
-    onError: (err: any) => toast.error(err?.message || '등록에 실패했습니다.'),
+    onError: (err: Error) => toast.error(err?.message || '등록에 실패했습니다.'),
   })
 
   const handleCreateNetting = () => {
@@ -118,8 +169,8 @@ export default function NettingPage() {
   })
 
   const getCompanyInfo = () => {
-    const companies = companyData?.data || []
-    const defaultCompany = companies.find((c: any) => c.isDefault) || companies[0]
+    const companies: CompanyRecord[] = companyData?.data || []
+    const defaultCompany = companies.find((c: CompanyRecord) => c.isDefault) || companies[0]
     if (defaultCompany) {
       return {
         name: defaultCompany.companyName,
@@ -134,19 +185,19 @@ export default function NettingPage() {
     return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
   }
 
-  const handleTransactionStatementPDF = async (order: any) => {
-    let orderDetail = order
+  const handleTransactionStatementPDF = async (order: OrderRow) => {
+    let orderDetail: OrderRow = order
     try {
-      const res = (await api.get(`/sales/orders/${order.id}`)) as any
-      orderDetail = res.data || res
+      const res = (await api.get(`/sales/orders/${order.id}`)) as Record<string, unknown>
+      orderDetail = (res.data || res) as OrderRow
     } catch {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
       return
     }
     const ci = getCompanyInfo()
-    const companies = companyData?.data || []
-    const company = companies.find((c: any) => c.isDefault) || companies[0]
-    const items = (orderDetail.details || []).map((d: any, idx: number) => ({
+    const companies: CompanyRecord[] = companyData?.data || []
+    const company = companies.find((c: CompanyRecord) => c.isDefault) || companies[0]
+    const items = (orderDetail.details || []).map((d: OrderDetailItem, idx: number) => ({
       no: idx + 1,
       barcode: d.item?.barcode || '',
       itemName: d.item?.itemName || '',
@@ -158,7 +209,7 @@ export default function NettingPage() {
       taxAmount: Number(d.taxAmount),
       remark: d.remark || '',
     }))
-    const totalQty = items.reduce((s: number, it: any) => s + it.qty, 0)
+    const totalQty = items.reduce((s: number, it: { qty: number }) => s + it.qty, 0)
     const pdfData: TransactionStatementPDFData = {
       statementNo: orderDetail.orderNo,
       statementDate: formatDate(orderDetail.orderDate),
@@ -189,7 +240,7 @@ export default function NettingPage() {
     toast.success('거래명세서 PDF가 다운로드되었습니다.')
   }
 
-  const orders: any[] = ordersData?.data || []
+  const orders: OrderRow[] = ordersData?.data || []
 
   const ORDER_STATUS_MAP: Record<
     string,
@@ -204,7 +255,7 @@ export default function NettingPage() {
     RETURN: { label: '반품', variant: 'destructive' },
   }
 
-  const orderColumns: ColumnDef<any>[] = [
+  const orderColumns: ColumnDef<OrderRow>[] = [
     {
       accessorKey: 'orderNo',
       header: '발주번호',
@@ -410,7 +461,7 @@ export default function NettingPage() {
             <div className="rounded-lg border p-4">
               <p className="text-muted-foreground text-sm">발주 합계금액</p>
               <p className="text-2xl font-bold">
-                {formatCurrency(orders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0))}
+                {formatCurrency(orders.reduce((sum: number, o: OrderRow) => sum + Number(o.totalAmount || 0), 0))}
               </p>
             </div>
           </div>
@@ -441,7 +492,7 @@ export default function NettingPage() {
                   <SelectValue placeholder="거래처 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {partners.map((p: any) => (
+                  {partners.map((p: PartnerRecord) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.partnerName}
                     </SelectItem>

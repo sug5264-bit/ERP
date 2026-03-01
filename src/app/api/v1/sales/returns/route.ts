@@ -52,10 +52,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = createSalesReturnSchema.parse(body)
 
-    // 반품 거래처가 발주 거래처와 일치하는지 검증
+    // 발주 존재 확인 및 거래처 일치 검증
     const salesOrder = await prisma.salesOrder.findUnique({
       where: { id: data.salesOrderId },
-      select: { partnerId: true },
+      select: { id: true, partnerId: true, status: true },
     })
     if (!salesOrder) {
       return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     const salesReturn = await prisma.$transaction(async (tx) => {
       const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate), tx)
-      return tx.salesReturn.create({
+      const created = await tx.salesReturn.create({
         data: {
           returnNo,
           returnDate: new Date(data.returnDate),
@@ -98,6 +98,30 @@ export async function POST(req: NextRequest) {
           details: { include: { item: { select: { id: true, itemName: true } } } },
         },
       })
+
+      // 반품 시 재고 복원 (입고 처리) 및 발주 잔량 복원
+      if (details.length > 0) {
+        for (const d of details) {
+          // 발주 상세의 납품수량 감소, 잔량 증가
+          await tx.salesOrderDetail.updateMany({
+            where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
+            data: { deliveredQty: { decrement: d.quantity }, remainingQty: { increment: d.quantity } },
+          })
+          // 재고 잔량 복원 (기본 창고에 입고)
+          const existingBalance = await tx.stockBalance.findFirst({
+            where: { itemId: d.itemId },
+            orderBy: { quantity: 'desc' },
+          })
+          if (existingBalance) {
+            await tx.stockBalance.update({
+              where: { id: existingBalance.id },
+              data: { quantity: { increment: d.quantity } },
+            })
+          }
+        }
+      }
+
+      return created
     })
 
     return successResponse(salesReturn)
