@@ -81,13 +81,14 @@ async function request(method: string, url: string, data?: unknown) {
         // 429 → Rate Limit
         if (res.status === 429) {
           const retryAfter = res.headers.get('Retry-After')
-          const waitTime = retryAfter ? parseInt(retryAfter, 10) * 1000 : 60000
+          const parsedRetry = retryAfter ? parseInt(retryAfter, 10) : NaN
+          const waitTime = isFinite(parsedRetry) && parsedRetry > 0 ? parsedRetry * 1000 : 60000
           clearTimeout(timeoutId)
           throw new RateLimitError('요청이 너무 많습니다. 잠시 후 다시 시도해주세요.', waitTime)
         }
 
-        const json = await res.json()
         clearTimeout(timeoutId)
+        const json = await res.json()
 
         if (!res.ok) {
           let message = json?.error?.message || '요청 처리 중 오류가 발생했습니다.'

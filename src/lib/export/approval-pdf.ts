@@ -1,4 +1,5 @@
 import { createPDFDocument, addPageNumbers, getLastTableY, PDF_COLORS, fmtPrintDate } from './pdf-base'
+import { sanitizeFileName } from '@/lib/sanitize'
 
 interface ApprovalDocExport {
   documentNo: string
@@ -157,5 +158,5 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   addPageNumbers(pdf, fontName, { prefix: `출력일: ${fmtPrintDate()}`, bottomOffset: 10 })
 
   // 다운로드
-  pdf.save(`${doc.documentNo}_${doc.title}.pdf`)
+  pdf.save(sanitizeFileName(`${doc.documentNo}_${doc.title}`) + '.pdf')
 }

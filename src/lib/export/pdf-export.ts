@@ -1,6 +1,7 @@
 import type { ExportConfig } from './types'
 import { getValue } from './utils'
 import { createPDFDocument, addPageNumbers, PDF_COLORS, defaultHeadStyles, fmtPrintDate } from './pdf-base'
+import { sanitizeFileName } from '@/lib/sanitize'
 
 export async function exportToPDF(config: ExportConfig) {
   const { fileName, title, columns, data } = config
@@ -46,5 +47,5 @@ export async function exportToPDF(config: ExportConfig) {
   // 페이지 번호
   addPageNumbers(doc, fontName)
 
-  doc.save(`${fileName}.pdf`)
+  doc.save(sanitizeFileName(fileName) + '.pdf')
 }
