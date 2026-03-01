@@ -5,9 +5,9 @@ export const createVoucherSchema = z.object({
   voucherDate: z
     .string()
     .min(1, '전표일자를 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   voucherType: z.enum(['RECEIPT', 'PAYMENT', 'TRANSFER', 'PURCHASE', 'SALES']),
-  description: z.string().optional(),
+  description: z.string().max(1000).optional(),
   details: z
     .array(
       z
@@ -17,7 +17,7 @@ export const createVoucherSchema = z.object({
           debitAmount: z.number().min(0).default(0),
           creditAmount: z.number().min(0).default(0),
           partnerId: z.string().optional(),
-          description: z.string().optional(),
+          description: z.string().max(500).optional(),
           costCenterId: z.string().optional(),
         })
         .refine((d) => d.accountSubjectId || d.accountCode, { message: '계정과목 ID 또는 코드를 입력하세요' })
@@ -33,7 +33,7 @@ export const createTaxInvoiceSchema = z.object({
   issueDate: z
     .string()
     .min(1, '발행일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   invoiceType: z.enum(['SALES', 'PURCHASE']),
   supplierBizNo: z.string().min(1, '공급자 사업자번호를 입력하세요').max(20),
   supplierName: z.string().min(1, '공급자명을 입력하세요').max(200),
@@ -83,21 +83,23 @@ export const createAccountSubjectSchema = z.object({
 export const createBudgetSchema = z.object({
   fiscalYearId: z.string().min(1, '회계연도를 선택하세요'),
   departmentId: z.string().min(1, '부서를 선택하세요'),
-  details: z.array(
-    z.object({
-      accountSubjectId: z.string().min(1),
-      month01: z.number().min(0).default(0),
-      month02: z.number().min(0).default(0),
-      month03: z.number().min(0).default(0),
-      month04: z.number().min(0).default(0),
-      month05: z.number().min(0).default(0),
-      month06: z.number().min(0).default(0),
-      month07: z.number().min(0).default(0),
-      month08: z.number().min(0).default(0),
-      month09: z.number().min(0).default(0),
-      month10: z.number().min(0).default(0),
-      month11: z.number().min(0).default(0),
-      month12: z.number().min(0).default(0),
-    })
-  ).min(1, '최소 1개 이상의 예산 항목이 필요합니다'),
+  details: z
+    .array(
+      z.object({
+        accountSubjectId: z.string().min(1),
+        month01: z.number().min(0).default(0),
+        month02: z.number().min(0).default(0),
+        month03: z.number().min(0).default(0),
+        month04: z.number().min(0).default(0),
+        month05: z.number().min(0).default(0),
+        month06: z.number().min(0).default(0),
+        month07: z.number().min(0).default(0),
+        month08: z.number().min(0).default(0),
+        month09: z.number().min(0).default(0),
+        month10: z.number().min(0).default(0),
+        month11: z.number().min(0).default(0),
+        month12: z.number().min(0).default(0),
+      })
+    )
+    .min(1, '최소 1개 이상의 예산 항목이 필요합니다'),
 })

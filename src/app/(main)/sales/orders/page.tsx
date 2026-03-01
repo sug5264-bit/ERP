@@ -433,6 +433,7 @@ export default function OrdersPage() {
     mutationFn: (id: string) => api.put(`/sales/orders/${id}`, { action: 'cancel' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setCancelTarget(null)
       toast.success('발주가 취소 처리되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -442,6 +443,7 @@ export default function OrdersPage() {
     mutationFn: (id: string) => api.delete(`/sales/orders/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setDeleteTarget(null)
       toast.success('발주가 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

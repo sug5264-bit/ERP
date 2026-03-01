@@ -12,11 +12,11 @@ export const createQuotationSchema = z.object({
   quotationDate: z
     .string()
     .min(1, '견적일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
   validUntil: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}/)
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .nullable()
     .or(z.literal('')),
@@ -29,12 +29,12 @@ export const createSalesOrderSchema = z.object({
   orderDate: z
     .string()
     .min(1, '수주일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   partnerId: z.string().max(50).optional().nullable(),
   quotationId: z.string().max(50).optional().nullable(),
   deliveryDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}/)
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .nullable()
     .or(z.literal('')),
@@ -64,7 +64,7 @@ export const createDeliverySchema = z.object({
   deliveryDate: z
     .string()
     .min(1, '납품일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
   deliveryAddress: z.string().max(500).optional().nullable(),
   trackingNo: z.string().max(100).optional().nullable(),
@@ -86,7 +86,7 @@ export const createSalesReturnSchema = z.object({
   returnDate: z
     .string()
     .min(1, '반품일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
   reason: z.enum(['DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER']).optional().default('OTHER'),
@@ -111,7 +111,7 @@ export const createQualityInspectionSchema = z.object({
   inspectionDate: z
     .string()
     .min(1, '검사일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   inspectorName: z.string().min(1, '검사자명을 입력하세요').max(100),
   overallGrade: z.enum(['A', 'B', 'C', 'REJECT']).default('A'),
   sampleSize: z.number().int().min(0).max(999_999).default(0),
@@ -156,6 +156,6 @@ export const createNettingSchema = z.object({
   nettingDate: z
     .string()
     .min(1, '상계일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   description: z.string().max(1000).optional().nullable(),
 })

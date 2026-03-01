@@ -77,9 +77,12 @@ export async function POST(request: NextRequest) {
 
     const salesOrder = await prisma.salesOrder.findUnique({
       where: { id: data.salesOrderId },
-      select: { id: true, partnerId: true },
+      select: { id: true, partnerId: true, status: true },
     })
     if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (salesOrder.status === 'CANCELLED')
+      return errorResponse('취소된 수주에는 납품을 생성할 수 없습니다.', 'INVALID_STATUS', 400)
+    if (salesOrder.status === 'COMPLETED') return errorResponse('이미 완료된 수주입니다.', 'INVALID_STATUS', 400)
     if (!salesOrder.partnerId) return errorResponse('수주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
