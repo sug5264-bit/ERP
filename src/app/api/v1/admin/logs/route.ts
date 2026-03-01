@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const tableName = searchParams.get('tableName')
     const action = searchParams.get('action')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (tableName) where.tableName = tableName
     if (action) where.action = action
 

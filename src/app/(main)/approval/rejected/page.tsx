@@ -13,7 +13,36 @@ import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { CheckCircle2, Clock, XCircle } from 'lucide-react'
 
-const columns: ColumnDef<any>[] = [
+interface RejectedDocRow {
+  id: string
+  documentNo: string
+  title: string
+  draftDate: string
+  urgency: string
+  currentStep: number
+  totalSteps: number
+  status: string
+  drafter?: { nameKo: string }
+  content?: {
+    docType?: string
+    purpose?: string
+    amount?: number | string
+    period?: string
+    department?: string
+    body?: string
+    [key: string]: unknown
+  }
+  steps?: {
+    id: string
+    status: string
+    approvalType: string
+    comment?: string
+    actionDate?: string
+    approver?: { nameKo: string; position?: { name: string } }
+  }[]
+}
+
+const columns: ColumnDef<RejectedDocRow>[] = [
   {
     accessorKey: 'documentNo',
     header: '문서번호',
@@ -47,17 +76,17 @@ const columns: ColumnDef<any>[] = [
 
 export default function RejectedPage() {
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [selectedDoc, setSelectedDoc] = useState<RejectedDocRow | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['approval-rejected'],
-    queryFn: () => api.get('/approval/documents?filter=myDrafts&status=REJECTED&pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/approval/documents?filter=myDrafts&status=REJECTED&pageSize=50'),
   })
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: RejectedDocRow) => {
     try {
-      const res = (await api.get(`/approval/documents/${row.id}`)) as any
-      setSelectedDoc(res.data || res)
+      const res = (await api.get(`/approval/documents/${row.id}`)) as Record<string, unknown>
+      setSelectedDoc((res.data || res) as RejectedDocRow)
       setDetailOpen(true)
     } catch {
       toast.error('문서를 불러올 수 없습니다.')
@@ -127,33 +156,45 @@ export default function RejectedPage() {
               <div className="space-y-3 rounded-md border p-4">
                 <h4 className="text-sm font-semibold">결재선</h4>
                 <div className="space-y-2">
-                  {(selectedDoc.steps || []).map((step: any, idx: number) => (
-                    <div key={step.id} className="flex items-center gap-3 border-b py-1 text-sm last:border-0">
-                      <span className="text-muted-foreground w-6 text-center font-medium">{idx + 1}</span>
-                      {getStepStatusIcon(step.status)}
-                      <span className="flex-1 font-medium">
-                        {step.approver?.nameKo || '-'}
-                        <span className="text-muted-foreground ml-1 font-normal">
-                          ({step.approver?.position?.name || '-'})
+                  {(selectedDoc.steps || []).map(
+                    (
+                      step: {
+                        id: string
+                        status: string
+                        approvalType: string
+                        comment?: string
+                        actionDate?: string
+                        approver?: { nameKo: string; position?: { name: string } }
+                      },
+                      idx: number
+                    ) => (
+                      <div key={step.id} className="flex items-center gap-3 border-b py-1 text-sm last:border-0">
+                        <span className="text-muted-foreground w-6 text-center font-medium">{idx + 1}</span>
+                        {getStepStatusIcon(step.status)}
+                        <span className="flex-1 font-medium">
+                          {step.approver?.nameKo || '-'}
+                          <span className="text-muted-foreground ml-1 font-normal">
+                            ({step.approver?.position?.name || '-'})
+                          </span>
                         </span>
-                      </span>
-                      <Badge
-                        variant={
-                          step.status === 'APPROVED'
-                            ? 'default'
-                            : step.status === 'REJECTED'
-                              ? 'destructive'
-                              : 'outline'
-                        }
-                      >
-                        {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
-                      </Badge>
-                      {step.comment && <span className="text-destructive text-xs">사유: {step.comment}</span>}
-                      {step.actionDate && (
-                        <span className="text-muted-foreground text-xs">{formatDate(step.actionDate)}</span>
-                      )}
-                    </div>
-                  ))}
+                        <Badge
+                          variant={
+                            step.status === 'APPROVED'
+                              ? 'default'
+                              : step.status === 'REJECTED'
+                                ? 'destructive'
+                                : 'outline'
+                          }
+                        >
+                          {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
+                        </Badge>
+                        {step.comment && <span className="text-destructive text-xs">사유: {step.comment}</span>}
+                        {step.actionDate && (
+                          <span className="text-muted-foreground text-xs">{formatDate(step.actionDate)}</span>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             </div>

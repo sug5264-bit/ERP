@@ -47,6 +47,99 @@ import { Textarea } from '@/components/ui/textarea'
 import { RecordSubTabs } from '@/components/common/record-sub-tabs'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 
+interface PartnerOption {
+  id: string
+  partnerName: string
+  partnerCode: string
+  bizNo?: string
+  ceoName?: string
+  address?: string
+  phone?: string
+}
+
+interface ItemOption {
+  id: string
+  itemCode: string
+  itemName: string
+  barcode?: string
+  taxType?: string
+  specification?: string
+  storageTemp?: string | null
+  manufacturer?: string | null
+  unit?: string
+  standardPrice?: number
+}
+
+interface CompanyOption {
+  id: string
+  companyName: string
+  bizNo: string
+  ceoName: string
+  address: string
+  phone: string
+  isDefault: boolean
+  bizType?: string
+  bizCategory?: string
+  bankName?: string
+  bankAccount?: string
+  bankHolder?: string
+}
+
+interface OrderDetailItem {
+  item?: ItemOption & { barcode?: string }
+  itemId?: string
+  quantity: number
+  unitPrice: number
+  supplyAmount?: number
+  taxAmount?: number
+  remark?: string
+}
+
+interface SalesOrder {
+  id: string
+  orderNo: string
+  orderDate: string
+  deliveryDate?: string
+  status: string
+  totalAmount: number
+  totalSupply?: number
+  totalTax?: number
+  partnerId?: string
+  partner?: PartnerOption
+  details?: OrderDetailItem[]
+  siteName?: string
+  ordererName?: string
+  recipientName?: string
+  ordererContact?: string
+  recipientContact?: string
+  recipientZipCode?: string
+  recipientAddress?: string
+  requirements?: string
+  trackingNo?: string
+  senderName?: string
+  senderPhone?: string
+  senderAddress?: string
+  shippingCost?: number
+  specialNote?: string
+  vatIncluded?: boolean
+  dispatchInfo?: string
+  receivedBy?: string
+  description?: string
+  salesChannel?: string
+}
+
+interface TrackingResultData {
+  total: number
+  success: number
+  failed: number
+  errors: string[]
+}
+
+interface BatchResultData {
+  success: number
+  failed: number
+}
+
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   ORDERED: { label: '발주', variant: 'default' },
   IN_PROGRESS: { label: '진행중', variant: 'secondary' },
@@ -159,7 +252,7 @@ export default function OrdersPage() {
   // 캐싱된 회사 정보에서 기본 회사 가져오기
   const getCompanyInfo = () => {
     const companies = companyData?.data || []
-    const defaultCompany = companies.find((c: any) => c.isDefault) || companies[0]
+    const defaultCompany = companies.find((c) => c.isDefault) || companies[0]
     if (defaultCompany) {
       return {
         name: defaultCompany.companyName,
@@ -174,11 +267,11 @@ export default function OrdersPage() {
     return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
   }
 
-  const handleTaxInvoicePDF = async (order: any) => {
-    let orderDetail = order
+  const handleTaxInvoicePDF = async (order: SalesOrder) => {
+    let orderDetail = order as SalesOrder
     try {
-      const res = (await api.get(`/sales/orders/${order.id}`)) as any
-      orderDetail = res.data || res
+      const res = (await api.get(`/sales/orders/${order.id}`)) as { data?: SalesOrder }
+      orderDetail = res.data || (res as unknown as SalesOrder)
     } catch {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
       return
@@ -202,7 +295,7 @@ export default function OrdersPage() {
         ceo: orderDetail.partner?.ceoName || '',
         address: orderDetail.partner?.address || '',
       },
-      items: (orderDetail.details || []).map((d: any) => ({
+      items: (orderDetail.details || []).map((d) => ({
         month: String(orderDate.getMonth() + 1),
         day: String(orderDate.getDate()),
         itemName: d.item?.itemName || '',
@@ -221,18 +314,18 @@ export default function OrdersPage() {
   }
 
   // 거래명세서 PDF
-  const handleTransactionStatementPDF = async (order: any) => {
-    let orderDetail = order
+  const handleTransactionStatementPDF = async (order: SalesOrder) => {
+    let orderDetail = order as SalesOrder
     try {
-      const res = (await api.get(`/sales/orders/${order.id}`)) as any
-      orderDetail = res.data || res
+      const res = (await api.get(`/sales/orders/${order.id}`)) as { data?: SalesOrder }
+      orderDetail = res.data || (res as unknown as SalesOrder)
     } catch {
       toast.error('주문 상세 정보를 불러올 수 없습니다.')
       return
     }
     const ci = getCompanyInfo()
     const company = getDefaultCompany()
-    const items = (orderDetail.details || []).map((d: any, idx: number) => ({
+    const items = (orderDetail.details || []).map((d, idx) => ({
       no: idx + 1,
       barcode: d.item?.barcode || '',
       itemName: d.item?.itemName || '',
@@ -244,7 +337,7 @@ export default function OrdersPage() {
       taxAmount: Number(d.taxAmount),
       remark: d.remark || '',
     }))
-    const totalQty = items.reduce((s: number, it: any) => s + it.qty, 0)
+    const totalQty = items.reduce((s: number, it) => s + it.qty, 0)
     const pdfData: TransactionStatementPDFData = {
       statementNo: orderDetail.orderNo,
       statementDate: formatDate(orderDetail.orderDate),
@@ -276,10 +369,11 @@ export default function OrdersPage() {
   }
 
   // 발주 수정
-  const [editTarget, setEditTarget] = useState<any>(null)
+  const [editTarget, setEditTarget] = useState<SalesOrder | null>(null)
   const [editDetails, setEditDetails] = useState<Detail[]>([])
   const editMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/sales/orders/${id}`, { action: 'update', ...body }),
+    mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
+      api.put(`/sales/orders/${id}`, { action: 'update', ...body }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       setEditTarget(null)
@@ -287,14 +381,14 @@ export default function OrdersPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
-  const handleEdit = async (order: any) => {
+  const handleEdit = async (order: SalesOrder) => {
     try {
-      const res = (await api.get(`/sales/orders/${order.id}`)) as any
-      const detail = res.data || res
+      const res = (await api.get(`/sales/orders/${order.id}`)) as { data?: SalesOrder }
+      const detail = res.data || (res as unknown as SalesOrder)
       setEditTarget(detail)
       setEditDetails(
-        (detail.details || []).map((d: any) => ({
-          itemId: d.itemId || d.item?.id,
+        (detail.details || []).map((d) => ({
+          itemId: d.itemId || d.item?.id || '',
           quantity: Number(d.quantity),
           unitPrice: Number(d.unitPrice),
           carrier: '',
@@ -323,7 +417,7 @@ export default function OrdersPage() {
   }
 
   // 완료 처리 (배차정보/담당자 필요)
-  const [completeTarget, setCompleteTarget] = useState<any>(null)
+  const [completeTarget, setCompleteTarget] = useState<SalesOrder | null>(null)
   const completeMutation = useMutation({
     mutationFn: ({ id, dispatchInfo, receivedBy }: { id: string; dispatchInfo: string; receivedBy: string }) =>
       api.put(`/sales/orders/${id}`, { action: 'complete', dispatchInfo, receivedBy }),
@@ -355,8 +449,9 @@ export default function OrdersPage() {
 
   const trackingMutation = useMutation({
     mutationFn: (body: { trackings: TrackingRow[] }) => api.post('/sales/deliveries/tracking', body),
-    onSuccess: (res: any) => {
-      const result = res.data || res
+    onSuccess: (res: unknown) => {
+      const resTyped = res as { data?: TrackingResultData } & TrackingResultData
+      const result = resTyped.data || resTyped
       setTrackingResult(result)
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
@@ -366,9 +461,10 @@ export default function OrdersPage() {
   })
 
   const batchMutation = useMutation({
-    mutationFn: (body: any) => api.post('/sales/orders/batch', body),
-    onSuccess: (res: any) => {
-      const result = res.data || res
+    mutationFn: (body: Record<string, unknown>) => api.post('/sales/orders/batch', body),
+    onSuccess: (res: unknown) => {
+      const resTyped = res as { data?: BatchResultData } & BatchResultData
+      const result = resTyped.data || resTyped
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       setBatchCompleteOpen(false)
       setBatchCompleteIds([])
@@ -396,7 +492,7 @@ export default function OrdersPage() {
     setShowAdvancedFilter(false)
   }
 
-  const actionsColumn: ColumnDef<any> = {
+  const actionsColumn: ColumnDef<SalesOrder> = {
     id: 'actions',
     header: '',
     cell: ({ row }) => {
@@ -454,7 +550,7 @@ export default function OrdersPage() {
     },
   }
 
-  const onlineColumns: ColumnDef<any>[] = [
+  const onlineColumns: ColumnDef<SalesOrder>[] = [
     { id: 'orderDate', header: '주문일', cell: ({ row }) => formatDate(row.original.orderDate) },
     {
       id: 'barcode',
@@ -534,7 +630,7 @@ export default function OrdersPage() {
     actionsColumn,
   ]
 
-  const offlineColumns: ColumnDef<any>[] = [
+  const offlineColumns: ColumnDef<SalesOrder>[] = [
     {
       accessorKey: 'orderNo',
       header: '발주번호',
@@ -643,7 +739,7 @@ export default function OrdersPage() {
       partnerFilter,
       searchKeyword,
     ],
-    queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<any>,
+    queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<{ data: SalesOrder[] }>,
   })
   const { data: offlineData, isLoading: offlineLoading } = useQuery({
     queryKey: [
@@ -657,26 +753,26 @@ export default function OrdersPage() {
       partnerFilter,
       searchKeyword,
     ],
-    queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<any>,
+    queryFn: () => api.get(`/sales/orders?${qpOffline}`) as Promise<{ data: SalesOrder[] }>,
   })
   const { data: partnersData } = useQuery({
     queryKey: ['partners-sales'],
-    queryFn: () => api.get('/partners?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/partners?pageSize=500') as Promise<{ data: PartnerOption[] }>,
     staleTime: 10 * 60 * 1000,
   })
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
-    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<{ data: ItemOption[] }>,
     staleTime: 10 * 60 * 1000,
   })
   const { data: companyData } = useQuery({
     queryKey: ['admin-company'],
-    queryFn: () => api.get('/admin/company') as Promise<any>,
+    queryFn: () => api.get('/admin/company') as Promise<{ data: CompanyOption[] }>,
     staleTime: 30 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/sales/orders', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/sales/orders', body),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       setOpen(false)
@@ -696,10 +792,10 @@ export default function OrdersPage() {
   const summaryOrders = activeTab === 'ONLINE' ? onlineOrders : offlineOrders
   const summaryStats = {
     totalCount: summaryOrders.length,
-    totalAmount: summaryOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount || 0), 0),
-    orderedCount: summaryOrders.filter((o: any) => o.status === 'ORDERED').length,
-    inProgressCount: summaryOrders.filter((o: any) => o.status === 'IN_PROGRESS').length,
-    completedCount: summaryOrders.filter((o: any) => o.status === 'COMPLETED').length,
+    totalAmount: summaryOrders.reduce((sum: number, o) => sum + Number(o.totalAmount || 0), 0),
+    orderedCount: summaryOrders.filter((o) => o.status === 'ORDERED').length,
+    inProgressCount: summaryOrders.filter((o) => o.status === 'IN_PROGRESS').length,
+    completedCount: summaryOrders.filter((o) => o.status === 'COMPLETED').length,
   }
 
   // Calendar events from orders
@@ -714,7 +810,7 @@ export default function OrdersPage() {
       EXCHANGE: 'warning',
       RETURN: 'danger',
     }
-    return orders.map((o: any) => ({
+    return orders.map((o) => ({
       id: o.id,
       date: o.orderDate?.split('T')[0] || '',
       label: `${o.orderNo} ${o.partner?.partnerName || ''}`.trim(),
@@ -725,34 +821,178 @@ export default function OrdersPage() {
 
   const offlineExportColumns: ExportColumn[] = [
     { header: '발주번호', accessor: 'orderNo' },
-    { header: '발주일', accessor: (r) => (r.orderDate ? formatDate(r.orderDate) : '') },
-    { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
-    { header: '납기일', accessor: (r) => (r.deliveryDate ? formatDate(r.deliveryDate) : '') },
-    { header: '합계(부가세 포함)', accessor: (r) => (r.totalAmount ? formatCurrency(r.totalAmount) : '') },
-    { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
+    {
+      header: '발주일',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.orderDate ? formatDate(o.orderDate) : ''
+      },
+    },
+    {
+      header: '거래처',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.partner?.partnerName || ''
+      },
+    },
+    {
+      header: '납기일',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.deliveryDate ? formatDate(o.deliveryDate) : ''
+      },
+    },
+    {
+      header: '합계(부가세 포함)',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.totalAmount ? formatCurrency(o.totalAmount) : ''
+      },
+    },
+    {
+      header: '상태',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return STATUS_MAP[o.status]?.label || o.status
+      },
+    },
   ]
 
   const onlineExportColumns: ExportColumn[] = [
-    { header: '주문일', accessor: (r) => (r.orderDate ? formatDate(r.orderDate) : '') },
-    { header: '상품바코드', accessor: (r) => r.details?.[0]?.item?.barcode || '' },
+    {
+      header: '주문일',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.orderDate ? formatDate(o.orderDate) : ''
+      },
+    },
+    {
+      header: '상품바코드',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.details?.[0]?.item?.barcode || ''
+      },
+    },
     { header: '주문번호', accessor: 'orderNo' },
-    { header: '사이트명', accessor: (r) => r.siteName || '' },
-    { header: '상품명', accessor: (r) => r.details?.[0]?.item?.itemName || '' },
-    { header: '수량', accessor: (r) => (r.details?.[0] ? Number(r.details[0].quantity) : '') },
-    { header: '주문자', accessor: (r) => r.ordererName || '' },
-    { header: '수취인', accessor: (r) => r.recipientName || '' },
-    { header: '주문자 연락처', accessor: (r) => r.ordererContact || '' },
-    { header: '수취인 연락처', accessor: (r) => r.recipientContact || '' },
-    { header: '우편번호', accessor: (r) => r.recipientZipCode || '' },
-    { header: '주소', accessor: (r) => r.recipientAddress || '' },
-    { header: '요구사항', accessor: (r) => r.requirements || '' },
-    { header: '운송장번호', accessor: (r) => r.trackingNo || '' },
-    { header: '보내는사람(업체명)', accessor: (r) => r.senderName || '' },
-    { header: '전화번호', accessor: (r) => r.senderPhone || '' },
-    { header: '보내는사람 주소', accessor: (r) => r.senderAddress || '' },
-    { header: '운임', accessor: (r) => (r.shippingCost ? formatCurrency(r.shippingCost) : '') },
-    { header: '특기사항', accessor: (r) => r.specialNote || '' },
-    { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
+    {
+      header: '사이트명',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.siteName || ''
+      },
+    },
+    {
+      header: '상품명',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.details?.[0]?.item?.itemName || ''
+      },
+    },
+    {
+      header: '수량',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.details?.[0] ? Number(o.details[0].quantity) : ''
+      },
+    },
+    {
+      header: '주문자',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.ordererName || ''
+      },
+    },
+    {
+      header: '수취인',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.recipientName || ''
+      },
+    },
+    {
+      header: '주문자 연락처',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.ordererContact || ''
+      },
+    },
+    {
+      header: '수취인 연락처',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.recipientContact || ''
+      },
+    },
+    {
+      header: '우편번호',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.recipientZipCode || ''
+      },
+    },
+    {
+      header: '주소',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.recipientAddress || ''
+      },
+    },
+    {
+      header: '요구사항',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.requirements || ''
+      },
+    },
+    {
+      header: '운송장번호',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.trackingNo || ''
+      },
+    },
+    {
+      header: '보내는사람(업체명)',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.senderName || ''
+      },
+    },
+    {
+      header: '전화번호',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.senderPhone || ''
+      },
+    },
+    {
+      header: '보내는사람 주소',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.senderAddress || ''
+      },
+    },
+    {
+      header: '운임',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.shippingCost ? formatCurrency(o.shippingCost) : ''
+      },
+    },
+    {
+      header: '특기사항',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return o.specialNote || ''
+      },
+    },
+    {
+      header: '상태',
+      accessor: (r) => {
+        const o = r as unknown as SalesOrder
+        return STATUS_MAP[o.status]?.label || o.status
+      },
+    },
   ]
 
   const handleExport = (type: 'excel' | 'pdf') => {
@@ -763,16 +1003,16 @@ export default function OrdersPage() {
       fileName: `발주목록_${tabLabel}`,
       title: `발주관리 목록 (${tabLabel})`,
       columns: cols,
-      data: currentOrders,
+      data: currentOrders as unknown as Record<string, unknown>[],
     }
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
-  const updateDetail = (idx: number, field: string, value: any) => {
+  const updateDetail = (idx: number, field: keyof Detail, value: string | number) => {
     const d = [...details]
-    ;(d[idx] as any)[field] = value
+    ;(d[idx] as Record<keyof Detail, string | number>)[field] = value
     setDetails(d)
   }
 
@@ -868,20 +1108,20 @@ export default function OrdersPage() {
       let successCount = 0
       let failCount = 0
       const failReasons: string[] = []
-      const normalize = (s: any) => (s ? String(s).trim().toLowerCase() : '')
+      const normalize = (s: unknown) => (s ? String(s).trim().toLowerCase() : '')
       for (const row of rows) {
         const barcodeVal = normalize(row.barcode)
         const productVal = normalize(row.productName)
         // 품목 매칭: 바코드(정확) → 품목명(포함) → 품목코드(포함)
         const item =
           items.find(
-            (it: any) =>
+            (it) =>
               (barcodeVal && normalize(it.barcode) === barcodeVal) ||
               (productVal && normalize(it.itemName) === productVal) ||
               (productVal && normalize(it.itemCode) === productVal)
           ) ||
           items.find(
-            (it: any) =>
+            (it) =>
               (productVal && normalize(it.itemName).includes(productVal)) ||
               (productVal && normalize(it.itemCode).includes(productVal))
           )
@@ -918,9 +1158,9 @@ export default function OrdersPage() {
             ],
           })
           successCount++
-        } catch (err: any) {
+        } catch (err: unknown) {
           failCount++
-          failReasons.push(err?.message || '알 수 없는 오류')
+          failReasons.push(err instanceof Error ? err.message : '알 수 없는 오류')
         }
       }
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
@@ -931,8 +1171,8 @@ export default function OrdersPage() {
       } else {
         toast.success(`${successCount}건 등록 완료`)
       }
-    } catch (err: any) {
-      toast.error(err.message || '엑셀 파일을 읽을 수 없습니다.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '엑셀 파일을 읽을 수 없습니다.')
     }
     if (orderImportFileRef.current) orderImportFileRef.current.value = ''
   }
@@ -960,12 +1200,12 @@ export default function OrdersPage() {
 
   const getDefaultCompany = () => {
     const companies = companyData?.data || []
-    return companies.find((c: any) => c.isDefault) || companies[0] || null
+    return companies.find((c) => c.isDefault) || companies[0] || null
   }
 
-  const updateOrderRow = (idx: number, field: keyof OrderRow, value: any) => {
+  const updateOrderRow = (idx: number, field: keyof OrderRow, value: string | number) => {
     const rows = [...orderRows]
-    ;(rows[idx] as any)[field] = value
+    ;(rows[idx] as Record<keyof OrderRow, string | number>)[field] = value
     setOrderRows(rows)
   }
 
@@ -984,7 +1224,7 @@ export default function OrdersPage() {
     let failCount = 0
     const failReasons: string[] = []
     for (const row of orderRows) {
-      const item = items.find((it: any) => it.id === row.itemId)
+      const item = items.find((it) => it.id === row.itemId)
       if (!item) {
         failCount++
         failReasons.push(`품목 ID "${row.itemId}" 미매칭`)
@@ -1014,9 +1254,9 @@ export default function OrdersPage() {
           ],
         })
         successCount++
-      } catch (err: any) {
+      } catch (err: unknown) {
         failCount++
-        failReasons.push(err?.message || '알 수 없는 오류')
+        failReasons.push(err instanceof Error ? err.message : '알 수 없는 오류')
       }
     }
     queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
@@ -1110,7 +1350,7 @@ export default function OrdersPage() {
                     <Select
                       value={row.itemId || ''}
                       onValueChange={(v) => {
-                        const selectedItem = items.find((it: any) => it.id === v)
+                        const selectedItem = items.find((it) => it.id === v)
                         updateOrderRow(idx, 'itemId', v)
                         updateOrderRow(idx, 'productName', selectedItem?.itemName || '')
                         if (selectedItem?.barcode && !row.barcode) {
@@ -1122,7 +1362,7 @@ export default function OrdersPage() {
                         <SelectValue placeholder="품목 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {items.map((it: any) => (
+                        {items.map((it) => (
                           <SelectItem key={it.id} value={it.id}>
                             {it.itemCode} - {it.itemName}
                           </SelectItem>
@@ -1337,10 +1577,10 @@ export default function OrdersPage() {
                   </div>
                   {partners
                     .filter(
-                      (p: any) =>
+                      (p) =>
                         !createPartnerSearch || p.partnerName.toLowerCase().includes(createPartnerSearch.toLowerCase())
                     )
-                    .map((p: any) => (
+                    .map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.partnerName}
                       </SelectItem>
@@ -1404,7 +1644,7 @@ export default function OrdersPage() {
                 <tbody>
                   {details.map((d, idx) => {
                     const supply = d.quantity * d.unitPrice
-                    const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const itemTaxType = items.find((it) => it.id === d.itemId)?.taxType || 'TAXABLE'
                     const tax = vatIncluded && itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
                       <tr key={idx} className="border-b last:border-b-0">
@@ -1414,7 +1654,7 @@ export default function OrdersPage() {
                               <SelectValue placeholder="품목 선택" />
                             </SelectTrigger>
                             <SelectContent>
-                              {items.map((it: any) => (
+                              {items.map((it) => (
                                 <SelectItem key={it.id} value={it.id}>
                                   {it.itemCode} - {it.itemName}
                                 </SelectItem>
@@ -1481,7 +1721,7 @@ export default function OrdersPage() {
                       {formatCurrency(
                         details.reduce((s, d) => {
                           const sup = d.quantity * d.unitPrice
-                          const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                          const tt = items.find((it) => it.id === d.itemId)?.taxType || 'TAXABLE'
                           return s + (vatIncluded && tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0)
                         }, 0)
                       )}
@@ -1490,7 +1730,7 @@ export default function OrdersPage() {
                       {formatCurrency(
                         details.reduce((s, d) => {
                           const sup = d.quantity * d.unitPrice
-                          const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                          const tt = items.find((it) => it.id === d.itemId)?.taxType || 'TAXABLE'
                           const tx = vatIncluded && tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0
                           return s + sup + tx
                         }, 0)
@@ -1727,7 +1967,7 @@ export default function OrdersPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">전체</SelectItem>
-                    {partners.map((p: any) => (
+                    {partners.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.partnerName}
                       </SelectItem>
@@ -1844,7 +2084,7 @@ export default function OrdersPage() {
               onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
               onBulkDelete={(rows) => {
                 if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) {
-                  Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`)))
+                  Promise.all(rows.map((r) => api.delete(`/sales/orders/${r.id}`)))
                     .then(() => {
                       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
                       toast.success('삭제되었습니다.')
@@ -1861,7 +2101,7 @@ export default function OrdersPage() {
                       fileName: '선택_발주목록',
                       title: '발주관리 선택 목록',
                       columns: activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns,
-                      data: rows,
+                      data: rows as unknown as Record<string, unknown>[],
                     })
                     toast.success('선택한 항목이 다운로드되었습니다.')
                   },
@@ -1870,13 +2110,13 @@ export default function OrdersPage() {
                   label: '일괄 취소',
                   icon: <XCircle className="mr-1.5 h-4 w-4" />,
                   variant: 'destructive',
-                  action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)),
+                  action: (rows) => setBatchCancelConfirm(rows.map((r) => r.id)),
                 },
                 {
                   label: '일괄 완료',
                   icon: <CheckCircle className="mr-1.5 h-4 w-4" />,
                   action: (rows) => {
-                    setBatchCompleteIds(rows.map((r: any) => r.id))
+                    setBatchCompleteIds(rows.map((r) => r.id))
                     setBatchCompleteOpen(true)
                   },
                 },
@@ -1899,7 +2139,7 @@ export default function OrdersPage() {
               onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
               onBulkDelete={(rows) => {
                 if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) {
-                  Promise.all(rows.map((r: any) => api.delete(`/sales/orders/${r.id}`)))
+                  Promise.all(rows.map((r) => api.delete(`/sales/orders/${r.id}`)))
                     .then(() => {
                       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
                       toast.success('삭제되었습니다.')
@@ -1916,7 +2156,7 @@ export default function OrdersPage() {
                       fileName: '선택_발주목록',
                       title: '발주관리 선택 목록',
                       columns: activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns,
-                      data: rows,
+                      data: rows as unknown as Record<string, unknown>[],
                     })
                     toast.success('선택한 항목이 다운로드되었습니다.')
                   },
@@ -1925,13 +2165,13 @@ export default function OrdersPage() {
                   label: '일괄 취소',
                   icon: <XCircle className="mr-1.5 h-4 w-4" />,
                   variant: 'destructive',
-                  action: (rows) => setBatchCancelConfirm(rows.map((r: any) => r.id)),
+                  action: (rows) => setBatchCancelConfirm(rows.map((r) => r.id)),
                 },
                 {
                   label: '일괄 완료',
                   icon: <CheckCircle className="mr-1.5 h-4 w-4" />,
                   action: (rows) => {
-                    setBatchCompleteIds(rows.map((r: any) => r.id))
+                    setBatchCompleteIds(rows.map((r) => r.id))
                     setBatchCompleteOpen(true)
                   },
                 },
@@ -1996,7 +2236,7 @@ export default function OrdersPage() {
                           <SelectValue placeholder="선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          {partners.map((p: any) => (
+                          {partners.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.partnerName}
                             </SelectItem>
@@ -2051,7 +2291,7 @@ export default function OrdersPage() {
                     <div className="space-y-3">
                       {editDetails.map((d, idx) => {
                         const supply = d.quantity * d.unitPrice
-                        const editItemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                        const editItemTaxType = items.find((it) => it.id === d.itemId)?.taxType || 'TAXABLE'
                         const editVat = editTarget?.vatIncluded !== false
                         const editTax = editVat && editItemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                         return (
@@ -2084,7 +2324,7 @@ export default function OrdersPage() {
                                 <SelectValue placeholder="품목 선택" />
                               </SelectTrigger>
                               <SelectContent className="max-w-[calc(100vw-4rem)]">
-                                {items.map((it: any) => (
+                                {items.map((it) => (
                                   <SelectItem key={it.id} value={it.id}>
                                     <span className="truncate">
                                       {it.itemCode} - {it.itemName}
@@ -2159,7 +2399,7 @@ export default function OrdersPage() {
                 toast.error('배차정보와 담당자를 입력해주세요.')
                 return
               }
-              completeMutation.mutate({ id: completeTarget.id, dispatchInfo, receivedBy })
+              if (completeTarget) completeMutation.mutate({ id: completeTarget.id, dispatchInfo, receivedBy })
             }}
             className="space-y-4"
           >

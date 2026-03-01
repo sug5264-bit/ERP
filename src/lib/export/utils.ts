@@ -4,20 +4,16 @@
  * - triggerDownload: Blob 기반 브라우저 파일 다운로드
  */
 
+import type { ExportRow } from './types'
+
 /** 행 데이터에서 accessor(문자열 경로 또는 함수)를 사용해 값 추출 */
-export function getValue(
-  row: Record<string, unknown>,
-  accessor: string | ((row: Record<string, unknown>) => unknown)
-): unknown {
+export function getValue(row: ExportRow, accessor: string | ((row: ExportRow) => unknown)): unknown {
   if (typeof accessor === 'function') return accessor(row)
   return (
-    accessor.split('.').reduce(
-      (obj: Record<string, unknown> | undefined, key) => {
-        if (obj == null) return undefined
-        return obj[key] as Record<string, unknown> | undefined
-      },
-      row as Record<string, unknown>
-    ) ?? ''
+    accessor.split('.').reduce((obj: ExportRow | undefined, key) => {
+      if (obj == null) return undefined
+      return obj[key] as ExportRow | undefined
+    }, row as ExportRow) ?? ''
   )
 }
 

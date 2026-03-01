@@ -36,7 +36,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from 'lucide-react'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 
 export interface BulkAction<TData> {
@@ -151,6 +151,26 @@ export function DataTable<TData, TValue>({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowSelection, onSelectionChange])
+
+  // 키보드 페이지 네비게이션
+  const handleKeyNav = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.altKey && e.key === 'ArrowLeft' && table.getCanPreviousPage()) {
+        e.preventDefault()
+        table.previousPage()
+      } else if (e.altKey && e.key === 'ArrowRight' && table.getCanNextPage()) {
+        e.preventDefault()
+        table.nextPage()
+      }
+    },
+    [table]
+  )
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyNav)
+    return () => document.removeEventListener('keydown', handleKeyNav)
+  }, [handleKeyNav])
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const selectedRows = table.getFilteredSelectedRowModel().rows.map((row) => row.original)
@@ -362,6 +382,9 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between gap-2" role="navigation" aria-label="페이지 네비게이션">
         <p className="text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
           총 <span className="text-foreground font-medium">{table.getFilteredRowModel().rows.length}</span>건
+          {table.getFilteredRowModel().rows.length !== data.length && (
+            <span className="ml-1 opacity-60">/ {data.length}건 중</span>
+          )}
           {hasSelection && <span className="text-primary ml-1.5 font-medium">({selectedCount}건 선택)</span>}
         </p>
         <div className="flex items-center gap-1.5 sm:gap-1">

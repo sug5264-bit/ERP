@@ -47,16 +47,16 @@ export default function OrganizationPage() {
 
   const { data: deptData, isLoading: deptLoading } = useQuery({
     queryKey: ['hr-departments'],
-    queryFn: () => api.get('/hr/departments') as Promise<any>,
+    queryFn: () => api.get('/hr/departments'),
   })
 
   const { data: posData, isLoading: posLoading } = useQuery({
     queryKey: ['hr-positions'],
-    queryFn: () => api.get('/hr/positions') as Promise<any>,
+    queryFn: () => api.get('/hr/positions'),
   })
 
   const createDeptMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/departments', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/departments', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-departments'] })
       setDeptOpen(false)
@@ -66,7 +66,7 @@ export default function OrganizationPage() {
   })
 
   const createPosMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/positions', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/positions', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-positions'] })
       setPosOpen(false)

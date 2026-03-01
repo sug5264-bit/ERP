@@ -22,18 +22,19 @@ export async function GET(req: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (employeeId) where.employeeId = employeeId
     if (startDate || endDate) {
-      where.workDate = {}
+      const dateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const sd = new Date(startDate)
-        if (!isNaN(sd.getTime())) where.workDate.gte = sd
+        if (!isNaN(sd.getTime())) dateRange.gte = sd
       }
       if (endDate) {
         const ed = new Date(endDate)
-        if (!isNaN(ed.getTime())) where.workDate.lte = ed
+        if (!isNaN(ed.getTime())) dateRange.lte = ed
       }
+      where.workDate = dateRange
     }
 
     const [records, totalCount] = await Promise.all([

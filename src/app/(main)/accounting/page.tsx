@@ -10,23 +10,29 @@ import Link from 'next/link'
 export default function AccountingPage() {
   const { data: vouchersData } = useQuery({
     queryKey: ['accounting-vouchers-summary'],
-    queryFn: () => api.get('/accounting/vouchers?pageSize=5') as Promise<any>,
+    queryFn: () => api.get('/accounting/vouchers?pageSize=5'),
   })
 
   const { data: ledgerData } = useQuery({
     queryKey: ['accounting-ledger-summary'],
-    queryFn: () => api.get('/accounting/ledger') as Promise<any>,
+    queryFn: () => api.get('/accounting/ledger'),
   })
 
   const voucherCount = vouchersData?.meta?.totalCount || 0
   const accounts = ledgerData?.data || []
 
   const totalRevenue = accounts
-    .filter((a: any) => a.accountType === 'REVENUE')
-    .reduce((s: number, a: any) => s + (Number(a.totalCredit) - Number(a.totalDebit)), 0)
+    .filter((a: { accountType: string }) => a.accountType === 'REVENUE')
+    .reduce(
+      (s: number, a: { totalCredit: number; totalDebit: number }) => s + (Number(a.totalCredit) - Number(a.totalDebit)),
+      0
+    )
   const totalExpense = accounts
-    .filter((a: any) => a.accountType === 'EXPENSE')
-    .reduce((s: number, a: any) => s + (Number(a.totalDebit) - Number(a.totalCredit)), 0)
+    .filter((a: { accountType: string }) => a.accountType === 'EXPENSE')
+    .reduce(
+      (s: number, a: { totalDebit: number; totalCredit: number }) => s + (Number(a.totalDebit) - Number(a.totalCredit)),
+      0
+    )
 
   const cards = [
     { title: '총 전표 수', value: `${voucherCount}건`, icon: FileText, href: '/accounting/vouchers' },

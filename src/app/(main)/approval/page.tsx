@@ -11,11 +11,11 @@ import Link from 'next/link'
 export default function ApprovalPage() {
   const { data: drafts } = useQuery({
     queryKey: ['approval-drafts-summary'],
-    queryFn: () => api.get('/approval/documents?filter=myDrafts&pageSize=5') as Promise<any>,
+    queryFn: () => api.get('/approval/documents?filter=myDrafts&pageSize=5'),
   })
   const { data: pending } = useQuery({
     queryKey: ['approval-pending-summary'],
-    queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=5') as Promise<any>,
+    queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=5'),
   })
 
   const draftCount = drafts?.meta?.totalCount || 0
@@ -89,12 +89,14 @@ export default function ApprovalPage() {
               </div>
             ) : (
               <ul className="space-y-2">
-                {(drafts?.data || []).map((d: any) => (
-                  <li key={d.id} className="flex items-center justify-between border-b pb-2 text-sm">
-                    <span>{d.title}</span>
-                    <span className="text-muted-foreground">{d.status}</span>
-                  </li>
-                ))}
+                {(drafts?.data || []).map(
+                  (d: { id: string; title: string; status: string; drafter?: { nameKo: string } }) => (
+                    <li key={d.id} className="flex items-center justify-between border-b pb-2 text-sm">
+                      <span>{d.title}</span>
+                      <span className="text-muted-foreground">{d.status}</span>
+                    </li>
+                  )
+                )}
               </ul>
             )}
           </CardContent>
@@ -115,12 +117,14 @@ export default function ApprovalPage() {
               </div>
             ) : (
               <ul className="space-y-2">
-                {(pending?.data || []).map((d: any) => (
-                  <li key={d.id} className="flex items-center justify-between border-b pb-2 text-sm">
-                    <span>{d.title}</span>
-                    <span className="text-muted-foreground">{d.drafter?.nameKo}</span>
-                  </li>
-                ))}
+                {(pending?.data || []).map(
+                  (d: { id: string; title: string; status: string; drafter?: { nameKo: string } }) => (
+                    <li key={d.id} className="flex items-center justify-between border-b pb-2 text-sm">
+                      <span>{d.title}</span>
+                      <span className="text-muted-foreground">{d.drafter?.nameKo}</span>
+                    </li>
+                  )
+                )}
               </ul>
             )}
           </CardContent>

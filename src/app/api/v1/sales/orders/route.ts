@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     const status = sp.get('status')
     if (status) where.status = status
     const salesChannel = sp.get('salesChannel')
@@ -27,15 +27,16 @@ export async function GET(request: NextRequest) {
     const startDate = sp.get('startDate')
     const endDate = sp.get('endDate')
     if (startDate || endDate) {
-      where.orderDate = {}
+      const dateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const d = new Date(startDate)
-        if (!isNaN(d.getTime())) where.orderDate.gte = d
+        if (!isNaN(d.getTime())) dateRange.gte = d
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) where.orderDate.lte = d
+        if (!isNaN(d.getTime())) dateRange.lte = d
       }
+      where.orderDate = dateRange
     }
     // 거래처 필터
     const partnerId = sp.get('partnerId')
@@ -44,9 +45,10 @@ export async function GET(request: NextRequest) {
     const minAmount = sp.get('minAmount')
     const maxAmount = sp.get('maxAmount')
     if (minAmount || maxAmount) {
-      where.totalAmount = {}
-      if (minAmount) where.totalAmount.gte = Number(minAmount)
-      if (maxAmount) where.totalAmount.lte = Number(maxAmount)
+      const amountRange: { gte?: number; lte?: number } = {}
+      if (minAmount) amountRange.gte = Number(minAmount)
+      if (maxAmount) amountRange.lte = Number(maxAmount)
+      where.totalAmount = amountRange
     }
     // 통합 검색 (발주번호 또는 거래처명)
     const rawSearch = sp.get('search')

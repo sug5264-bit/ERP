@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
     }
 
-    const where: any = { relatedTable }
+    const where: Record<string, unknown> = { relatedTable }
     if (relatedId) where.relatedId = relatedId
 
     const attachments = await prisma.attachment.findMany({

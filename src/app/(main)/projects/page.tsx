@@ -36,7 +36,22 @@ const TASK_STATUS: Record<string, string> = {
 }
 const PRIORITY_MAP: Record<string, string> = { URGENT: '긴급', HIGH: '높음', NORMAL: '보통', LOW: '낮음' }
 
-const columns: ColumnDef<any>[] = [
+interface ProjectRow {
+  id: string
+  projectCode: string
+  projectName: string
+  startDate: string
+  endDate?: string
+  progress: number
+  status: string
+  budget?: number
+  description?: string
+  department?: { name: string }
+  members?: { id: string; role: string; employee?: { nameKo: string } }[]
+  tasks?: { id: string; taskName: string; status: string; priority: string; progress: number }[]
+}
+
+const columns: ColumnDef<ProjectRow>[] = [
   {
     accessorKey: 'projectCode',
     header: '코드',
@@ -78,23 +93,23 @@ const columns: ColumnDef<any>[] = [
 export default function ProjectsPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [selectedProject, setSelectedProject] = useState<ProjectRow | null>(null)
   const [taskOpen, setTaskOpen] = useState(false)
   const [memberOpen, setMemberOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['projects'],
-    queryFn: () => api.get('/projects?pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/projects?pageSize=50'),
   })
   const { data: deptData } = useQuery({
     queryKey: ['departments'],
-    queryFn: () => api.get('/hr/departments') as Promise<any>,
+    queryFn: () => api.get('/hr/departments'),
     staleTime: 5 * 60 * 1000,
   })
   const { data: empData } = useQuery({
     queryKey: ['employees-all'],
-    queryFn: () => api.get('/hr/employees?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/hr/employees?pageSize=500'),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -102,7 +117,7 @@ export default function ProjectsPage() {
   const employees = empData?.data || []
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/projects', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/projects', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       setOpen(false)
@@ -112,7 +127,7 @@ export default function ProjectsPage() {
   })
 
   const taskMutation = useMutation({
-    mutationFn: ({ projectId, body }: { projectId: string; body: any }) =>
+    mutationFn: ({ projectId, body }: { projectId: string; body: Record<string, unknown> }) =>
       api.post(`/projects/${projectId}/tasks`, body),
     onSuccess: () => {
       refreshDetail()
@@ -123,7 +138,7 @@ export default function ProjectsPage() {
   })
 
   const memberMutation = useMutation({
-    mutationFn: ({ projectId, body }: { projectId: string; body: any }) =>
+    mutationFn: ({ projectId, body }: { projectId: string; body: Record<string, unknown> }) =>
       api.post(`/projects/${projectId}/members`, body),
     onSuccess: () => {
       refreshDetail()
@@ -135,8 +150,8 @@ export default function ProjectsPage() {
 
   const refreshDetail = async () => {
     if (selectedProject) {
-      const res = (await api.get(`/projects/${selectedProject.id}`)) as any
-      setSelectedProject(res.data || res)
+      const res = (await api.get(`/projects/${selectedProject.id}`)) as Record<string, unknown>
+      setSelectedProject((res.data || res) as ProjectRow)
     }
   }
 
@@ -155,10 +170,10 @@ export default function ProjectsPage() {
     })
   }
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: ProjectRow) => {
     try {
-      const res = (await api.get(`/projects/${row.id}`)) as any
-      const data = res.data || res
+      const res = (await api.get(`/projects/${row.id}`)) as Record<string, unknown>
+      const data = (res.data || res) as ProjectRow
       if (data) {
         setSelectedProject(data)
         setDetailOpen(true)
@@ -170,6 +185,7 @@ export default function ProjectsPage() {
 
   const handleAddTask = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!selectedProject) return
     const form = new FormData(e.currentTarget)
     taskMutation.mutate({
       projectId: selectedProject.id,
@@ -186,6 +202,7 @@ export default function ProjectsPage() {
 
   const handleAddMember = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!selectedProject) return
     const form = new FormData(e.currentTarget)
     memberMutation.mutate({
       projectId: selectedProject.id,
@@ -228,7 +245,7 @@ export default function ProjectsPage() {
                       <SelectValue placeholder="부서 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((d: any) => (
+                      {departments.map((d: { id: string; name: string }) => (
                         <SelectItem key={d.id} value={d.id}>
                           {d.name}
                         </SelectItem>
@@ -245,7 +262,7 @@ export default function ProjectsPage() {
                       <SelectValue placeholder="PM 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {employees.map((e: any) => (
+                      {employees.map((e: { id: string; nameKo: string }) => (
                         <SelectItem key={e.id} value={e.id}>
                           {e.nameKo}
                         </SelectItem>
@@ -355,25 +372,27 @@ export default function ProjectsPage() {
                     <p className="text-muted-foreground p-4 text-center text-sm">등록된 작업이 없습니다.</p>
                   ) : (
                     <div className="divide-y rounded-md border">
-                      {(selectedProject.tasks || []).map((t: any) => (
-                        <div key={t.id} className="flex items-center justify-between p-3 text-sm">
-                          <div className="flex-1">
-                            <span className="font-medium">{t.taskName}</span>
-                            <span className="text-muted-foreground ml-2 text-xs">
-                              {PRIORITY_MAP[t.priority] || t.priority}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex w-24 items-center gap-1">
-                              <Progress value={Number(t.progress)} className="h-1.5" />
-                              <span className="text-xs">{Number(t.progress)}%</span>
+                      {(selectedProject.tasks || []).map(
+                        (t: { id: string; taskName: string; status: string; priority: string; progress: number }) => (
+                          <div key={t.id} className="flex items-center justify-between p-3 text-sm">
+                            <div className="flex-1">
+                              <span className="font-medium">{t.taskName}</span>
+                              <span className="text-muted-foreground ml-2 text-xs">
+                                {PRIORITY_MAP[t.priority] || t.priority}
+                              </span>
                             </div>
-                            <Badge variant="outline" className="text-xs">
-                              {TASK_STATUS[t.status] || t.status}
-                            </Badge>
+                            <div className="flex items-center gap-3">
+                              <div className="flex w-24 items-center gap-1">
+                                <Progress value={Number(t.progress)} className="h-1.5" />
+                                <span className="text-xs">{Number(t.progress)}%</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {TASK_STATUS[t.status] || t.status}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -388,14 +407,16 @@ export default function ProjectsPage() {
                     </div>
                   ) : (
                     <div className="divide-y rounded-md border">
-                      {(selectedProject.members || []).map((m: any) => (
-                        <div key={m.id} className="flex items-center justify-between p-3 text-sm">
-                          <span>{m.employee?.nameKo || '-'}</span>
-                          <Badge variant="outline">
-                            {m.role === 'PM' ? 'PM' : m.role === 'REVIEWER' ? '검토자' : '멤버'}
-                          </Badge>
-                        </div>
-                      ))}
+                      {(selectedProject.members || []).map(
+                        (m: { id: string; role: string; employee?: { nameKo: string } }) => (
+                          <div key={m.id} className="flex items-center justify-between p-3 text-sm">
+                            <span>{m.employee?.nameKo || '-'}</span>
+                            <Badge variant="outline">
+                              {m.role === 'PM' ? 'PM' : m.role === 'REVIEWER' ? '검토자' : '멤버'}
+                            </Badge>
+                          </div>
+                        )
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -425,7 +446,7 @@ export default function ProjectsPage() {
                     <SelectValue placeholder="선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((e: any) => (
+                    {employees.map((e: { id: string; nameKo: string }) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.nameKo}
                       </SelectItem>
@@ -482,7 +503,7 @@ export default function ProjectsPage() {
                   <SelectValue placeholder="사원 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {employees.map((e: any) => (
+                  {employees.map((e: { id: string; nameKo: string }) => (
                     <SelectItem key={e.id} value={e.id}>
                       {e.nameKo}
                     </SelectItem>

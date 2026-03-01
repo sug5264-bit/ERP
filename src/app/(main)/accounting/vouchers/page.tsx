@@ -99,16 +99,16 @@ export default function VouchersPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['accounting-vouchers', typeFilter, statusFilter],
-    queryFn: () => api.get(`/accounting/vouchers?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/accounting/vouchers?${qp.toString()}`),
   })
   const { data: accountsData } = useQuery({
     queryKey: ['accounting-accounts'],
-    queryFn: () => api.get('/accounting/accounts') as Promise<any>,
+    queryFn: () => api.get('/accounting/accounts'),
     staleTime: 10 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/accounting/vouchers', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/accounting/vouchers', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] })
       setOpen(false)
@@ -162,9 +162,9 @@ export default function VouchersPage() {
     if (details.length <= 2) return
     setDetails(details.filter((_, i) => i !== idx))
   }
-  const updateLine = (idx: number, field: string, value: any) => {
+  const updateLine = (idx: number, field: keyof DetailLine, value: string | number) => {
     const n = [...details]
-    ;(n[idx] as any)[field] = value
+    ;(n[idx] as unknown as Record<string, string | number>)[field] = value
     setDetails(n)
   }
 
@@ -283,7 +283,7 @@ export default function VouchersPage() {
                         onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}
                       >
                         <option value="">계정과목 선택</option>
-                        {accounts.map((a: any) => (
+                        {accounts.map((a: { id: string; code: string; nameKo: string }) => (
                           <option key={a.id} value={a.id}>
                             {a.code} - {a.nameKo}
                           </option>
@@ -350,7 +350,7 @@ export default function VouchersPage() {
           {
             id: 'delete',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <Button
                 variant="ghost"
                 size="icon"

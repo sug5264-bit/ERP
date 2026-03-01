@@ -1,6 +1,9 @@
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ExportRow = Record<string, any>
+
 export interface ExportColumn {
   header: string
-  accessor: string | ((row: any) => any)
+  accessor: string | ((row: ExportRow) => unknown)
   width?: number
 }
 
@@ -9,7 +12,7 @@ export interface ExportConfig {
   sheetName?: string
   title?: string
   columns: ExportColumn[]
-  data: any[]
+  data: ExportRow[]
 }
 
 export interface TemplateColumn {

@@ -18,7 +18,18 @@ import { toast } from 'sonner'
 import { Eye, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
-const columns: ColumnDef<any>[] = [
+interface NoticeRow {
+  id: string
+  title: string
+  content: string
+  isPinned: boolean
+  createdAt: string
+  viewCount: number
+  author?: { name: string }
+  comments?: { id: string; content: string; createdAt: string; author?: { name: string } }[]
+}
+
+const columns: ColumnDef<NoticeRow>[] = [
   {
     id: 'pinned',
     header: '',
@@ -52,24 +63,26 @@ const columns: ColumnDef<any>[] = [
 export default function NoticesPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedPost, setSelectedPost] = useState<any>(null)
+  const [selectedPost, setSelectedPost] = useState<NoticeRow | null>(null)
   const [isPinned, setIsPinned] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['board-notices'],
-    queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=50'),
   })
   const { data: boardsData } = useQuery({
     queryKey: ['boards'],
-    queryFn: () => api.get('/board/boards') as Promise<any>,
+    queryFn: () => api.get('/board/boards'),
   })
 
-  const noticeBoard = (boardsData?.data || []).find((b: any) => b.boardCode === 'NOTICE')
+  const noticeBoard = (boardsData?.data || []).find((b: { boardCode: string }) => b.boardCode === 'NOTICE') as
+    | { id: string; boardCode: string }
+    | undefined
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/board/posts', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/board/posts', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board-notices'] })
       setOpen(false)
@@ -103,10 +116,10 @@ export default function NoticesPage() {
     createMutation.mutate({ boardId: noticeBoard.id, title: form.get('title'), content: form.get('content'), isPinned })
   }
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: NoticeRow) => {
     try {
-      const res = (await api.get(`/board/posts/${row.id}`)) as any
-      setSelectedPost(res.data || res)
+      const res = (await api.get(`/board/posts/${row.id}`)) as Record<string, unknown>
+      setSelectedPost((res.data || res) as NoticeRow)
       setDetailOpen(true)
     } catch {
       toast.error('게시글을 불러올 수 없습니다.')
@@ -158,12 +171,12 @@ export default function NoticesPage() {
           {
             id: 'delete',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-destructive hover:text-destructive h-8 w-8"
-                onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)}
+                onClick={(e) => handleDelete(e, row.original.id, row.original.title)}
                 aria-label="삭제"
               >
                 <Trash2 className="h-4 w-4" />
@@ -197,18 +210,20 @@ export default function NoticesPage() {
               <div className="min-h-[200px] rounded-md border p-4 text-sm whitespace-pre-wrap">
                 {selectedPost.content}
               </div>
-              {selectedPost.comments?.length > 0 && (
+              {(selectedPost.comments?.length ?? 0) > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">댓글 ({selectedPost.comments.length})</Label>
-                  {selectedPost.comments.map((c: any) => (
-                    <div key={c.id} className="rounded border p-2 text-sm">
-                      <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
-                        <span className="text-foreground font-medium">{c.author?.name}</span>
-                        <span>{formatDate(c.createdAt)}</span>
+                  <Label className="text-sm font-medium">댓글 ({selectedPost.comments?.length})</Label>
+                  {selectedPost.comments?.map(
+                    (c: { id: string; content: string; createdAt: string; author?: { name: string } }) => (
+                      <div key={c.id} className="rounded border p-2 text-sm">
+                        <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
+                          <span className="text-foreground font-medium">{c.author?.name}</span>
+                          <span>{formatDate(c.createdAt)}</span>
+                        </div>
+                        <p>{c.content}</p>
                       </div>
-                      <p>{c.content}</p>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               )}
             </div>

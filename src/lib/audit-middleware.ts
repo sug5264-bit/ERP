@@ -15,8 +15,8 @@ const METHOD_AUDIT_ACTION: Record<string, AuditAction> = {
 
 interface AuditOptions {
   tableName: string
-  getRecordId?: (req: NextRequest, response: any) => string | undefined
-  getOldValue?: (req: Request) => Promise<any>
+  getRecordId?: (req: NextRequest, response: Record<string, unknown>) => string | undefined
+  getOldValue?: (req: Request) => Promise<unknown>
   action?: AuditAction
 }
 
@@ -36,9 +36,9 @@ interface AuditOptions {
  */
 export function withAuditLog(
   options: AuditOptions,
-  handler: (req: NextRequest, ...args: any[]) => Promise<NextResponse>
+  handler: (req: NextRequest, ...args: unknown[]) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, ...args: any[]): Promise<NextResponse> => {
+  return async (req: NextRequest, ...args: unknown[]): Promise<NextResponse> => {
     const method = req.method
     const auditAction = options.action || METHOD_AUDIT_ACTION[method]
 
@@ -49,7 +49,7 @@ export function withAuditLog(
 
     // 변경 전 값 캡처 (UPDATE/DELETE 시)
     // getOldValue에 cloned request를 전달하여 원본 body 보존
-    let oldValue: any = undefined
+    let oldValue: unknown = undefined
     if ((auditAction === 'UPDATE' || auditAction === 'DELETE') && options.getOldValue) {
       try {
         oldValue = await options.getOldValue(req.clone())
@@ -67,15 +67,13 @@ export function withAuditLog(
 
       // response body에서 recordId 추출
       let recordId: string | undefined
-      let newValue: any = undefined
+      let newValue: unknown = undefined
 
       try {
         const cloned = response.clone()
         const body = await cloned.json()
         if (body.success && body.data) {
-          recordId = options.getRecordId
-            ? options.getRecordId(req, body.data)
-            : body.data.id
+          recordId = options.getRecordId ? options.getRecordId(req, body.data) : body.data.id
           newValue = { id: recordId }
         }
       } catch {

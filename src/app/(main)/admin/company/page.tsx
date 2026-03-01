@@ -41,11 +41,11 @@ export default function CompanyManagementPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-companies'],
-    queryFn: () => api.get('/admin/company') as Promise<any>,
+    queryFn: () => api.get('/admin/company') as Promise<{ data: CompanyRow[] }>,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/admin/company', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/admin/company', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       setCreateOpen(false)
@@ -55,7 +55,7 @@ export default function CompanyManagementPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/admin/company/${id}`, body),
+    mutationFn: ({ id, ...body }: { id: string; [key: string]: unknown }) => api.put(`/admin/company/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
       setEditTarget(null)

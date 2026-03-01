@@ -372,7 +372,7 @@ function numberToKorean(n: number): string {
 
 /** 거래명세서 한 부(copy)를 지정 영역에 그리기 */
 function drawStatementCopy(
-  doc: any,
+  doc: InstanceType<typeof import('jspdf').jsPDF>,
   fontName: string,
   data: TransactionStatementPDFData,
   ox: number,

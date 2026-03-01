@@ -16,7 +16,36 @@ import { toast } from 'sonner'
 import { CheckCircle, XCircle, CheckCheck } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
-const columns: ColumnDef<any>[] = [
+interface PendingDocRow {
+  id: string
+  documentNo: string
+  title: string
+  draftDate: string
+  urgency: string
+  currentStep: number
+  totalSteps: number
+  status: string
+  drafter?: { nameKo: string; department?: { name: string } }
+  content?: {
+    docType?: string
+    purpose?: string
+    amount?: number | string
+    period?: string
+    department?: string
+    body?: string
+    [key: string]: unknown
+  }
+  steps?: {
+    id: string
+    status: string
+    approvalType: string
+    comment?: string
+    actionDate?: string
+    approver?: { nameKo: string; position?: { name: string } }
+  }[]
+}
+
+const columns: ColumnDef<PendingDocRow>[] = [
   {
     accessorKey: 'documentNo',
     header: '문서번호',
@@ -51,19 +80,20 @@ const columns: ColumnDef<any>[] = [
 
 export default function ApprovalPendingPage() {
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [selectedDoc, setSelectedDoc] = useState<PendingDocRow | null>(null)
   const [comment, setComment] = useState('')
-  const [selectedRows, setSelectedRows] = useState<any[]>([])
+  const [selectedRows, setSelectedRows] = useState<PendingDocRow[]>([])
   const [batchConfirm, setBatchConfirm] = useState<{ action: string; label: string; ids: string[] } | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-pending'],
-    queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=50'),
   })
 
   const actionMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: any }) => api.put(`/approval/documents/${id}`, body),
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api.put(`/approval/documents/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
       setDetailOpen(false)
@@ -74,22 +104,23 @@ export default function ApprovalPendingPage() {
   })
 
   const batchMutation = useMutation({
-    mutationFn: (body: any) => api.post('/approval/batch', body) as Promise<any>,
-    onSuccess: (res: any) => {
+    mutationFn: (body: Record<string, unknown>) => api.post('/approval/batch', body),
+    onSuccess: (res: unknown) => {
       queryClient.invalidateQueries({ queryKey: ['approval-pending'] })
-      const d = res?.data || res
-      const successCount = d?.successCount ?? 0
-      const failCount = d?.failCount ?? 0
+      const d = (res as Record<string, unknown>)?.data || res
+      const result = d as Record<string, unknown>
+      const successCount = result?.successCount ?? 0
+      const failCount = Number(result?.failCount ?? 0)
       toast.success(`${successCount}건 처리 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
       setSelectedRows([])
     },
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: PendingDocRow) => {
     try {
-      const res = (await api.get(`/approval/documents/${row.id}`)) as any
-      setSelectedDoc(res.data || res)
+      const res = (await api.get(`/approval/documents/${row.id}`)) as Record<string, unknown>
+      setSelectedDoc((res.data || res) as PendingDocRow)
       setDetailOpen(true)
     } catch {
       toast.error('문서를 불러올 수 없습니다.')
@@ -141,7 +172,7 @@ export default function ApprovalPendingPage() {
         pageSize={50}
         onRowClick={handleRowClick}
         selectable
-        onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
+        onSelectionChange={(rows) => setSelectedRows(rows as PendingDocRow[])}
       />
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
@@ -171,23 +202,39 @@ export default function ApprovalPendingPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-medium sm:text-sm">결재선</Label>
-                {(selectedDoc.steps || []).map((step: any, idx: number) => (
-                  <div key={step.id} className="flex items-center gap-2 text-xs sm:text-sm">
-                    <span className="w-5 shrink-0">{idx + 1}.</span>
-                    <span className="flex-1 truncate">
-                      {step.approver?.nameKo || '-'}{' '}
-                      <span className="text-muted-foreground">({step.approver?.position?.name || '-'})</span>
-                    </span>
-                    <Badge
-                      variant={
-                        step.status === 'APPROVED' ? 'default' : step.status === 'REJECTED' ? 'destructive' : 'outline'
-                      }
-                      className="shrink-0 text-xs"
-                    >
-                      {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
-                    </Badge>
-                  </div>
-                ))}
+                {(selectedDoc.steps || []).map(
+                  (
+                    step: {
+                      id: string
+                      status: string
+                      approvalType: string
+                      comment?: string
+                      actionDate?: string
+                      approver?: { nameKo: string; position?: { name: string } }
+                    },
+                    idx: number
+                  ) => (
+                    <div key={step.id} className="flex items-center gap-2 text-xs sm:text-sm">
+                      <span className="w-5 shrink-0">{idx + 1}.</span>
+                      <span className="flex-1 truncate">
+                        {step.approver?.nameKo || '-'}{' '}
+                        <span className="text-muted-foreground">({step.approver?.position?.name || '-'})</span>
+                      </span>
+                      <Badge
+                        variant={
+                          step.status === 'APPROVED'
+                            ? 'default'
+                            : step.status === 'REJECTED'
+                              ? 'destructive'
+                              : 'outline'
+                        }
+                        className="shrink-0 text-xs"
+                      >
+                        {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
+                      </Badge>
+                    </div>
+                  )
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-xs sm:text-sm">의견</Label>

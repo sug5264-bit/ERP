@@ -16,7 +16,7 @@ interface LogRow {
   tableName: string
   recordId: string
   action: string
-  changes: any
+  changes: Record<string, unknown> | null
   ipAddress: string | null
   createdAt: string
   user: { name: string; email: string } | null

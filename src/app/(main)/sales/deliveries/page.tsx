@@ -135,6 +135,98 @@ const DEFAULT_INSPECTION_ITEMS = [
   },
 ]
 
+interface CompanyOption {
+  id: string
+  companyName: string
+  bizNo: string
+  ceoName: string
+  address: string
+  phone: string
+  bankName?: string
+  bankAccount?: string
+  bankHolder?: string
+  isDefault: boolean
+}
+
+interface OrderOption {
+  id: string
+  orderNo: string
+  partner?: { partnerName: string } | null
+}
+
+interface ItemOption {
+  id: string
+  itemCode: string
+  itemName: string
+  specification?: string
+  unit?: string
+}
+
+interface DeliveryDetailRow {
+  item?: { id: string; itemName: string; barcode?: string; specification?: string; unit?: string; itemCode?: string }
+  quantity: number
+  unitPrice: number
+  amount: number
+}
+
+interface QualityInspectionRow {
+  id: string
+  inspectionNo: string
+  judgement: string
+  overallGrade: string
+  inspectionDate: string
+  inspectorName: string
+  sampleSize: number
+  defectCount: number
+  defectRate: number
+  lotNo?: string
+  remarks?: string
+  items?: QualityInspectionItemRow[]
+}
+
+interface QualityInspectionItemRow {
+  id: string
+  category: string
+  checkItem: string
+  spec?: string
+  measuredValue?: string
+  result: string
+  grade: string
+  defectType?: string
+  remarks?: string
+}
+
+interface DeliveryRow {
+  id: string
+  deliveryNo: string
+  deliveryDate: string
+  deliveryAddress?: string
+  status: string
+  carrier?: string
+  trackingNo?: string
+  partner?: { partnerName: string; bizNo?: string; ceoName?: string; address?: string; phone?: string }
+  salesOrder?: { orderNo: string }
+  details?: DeliveryDetailRow[]
+  qualityInspections?: QualityInspectionRow[]
+}
+
+interface StatementItem {
+  no: number
+  barcode: string
+  itemName: string
+  spec: string
+  unit: string
+  qty: number
+  unitPrice: number
+  supplyAmount: number
+  taxAmount: number
+  remark: string
+}
+
+interface ApiListResponse<T> {
+  data: T[]
+}
+
 interface InspectionItemInput {
   category: string
   checkItem: string
@@ -188,11 +280,11 @@ export default function DeliveriesPage() {
     null
   )
 
-  const handleStatementPDF = (delivery: any) => {
-    const companies = companyData?.data || []
-    const company = companies.find((c: any) => c.isDefault) || companies[0]
+  const handleStatementPDF = (delivery: DeliveryRow) => {
+    const companies: CompanyOption[] = companyData?.data || []
+    const company = companies.find((c) => c.isDefault) || companies[0]
     const details = delivery.details || []
-    const items = details.map((d: any, i: number) => {
+    const items: StatementItem[] = details.map((d: DeliveryDetailRow, i: number) => {
       const amount = Number(d.amount)
       const supplyAmount = Math.round(amount / 1.1)
       const taxAmount = amount - supplyAmount
@@ -209,9 +301,9 @@ export default function DeliveriesPage() {
         remark: '',
       }
     })
-    const totalQty = items.reduce((s: number, it: any) => s + it.qty, 0)
-    const totalSupply = items.reduce((s: number, it: any) => s + it.supplyAmount, 0)
-    const totalTax = items.reduce((s: number, it: any) => s + it.taxAmount, 0)
+    const totalQty = items.reduce((s, it) => s + it.qty, 0)
+    const totalSupply = items.reduce((s, it) => s + it.supplyAmount, 0)
+    const totalTax = items.reduce((s, it) => s + it.taxAmount, 0)
     const pdfData: TransactionStatementPDFData = {
       statementNo: delivery.deliveryNo,
       statementDate: formatDate(delivery.deliveryDate),
@@ -242,7 +334,7 @@ export default function DeliveriesPage() {
     toast.success('거래명세서 PDF가 다운로드되었습니다.')
   }
 
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<DeliveryRow>[] = [
     {
       accessorKey: 'deliveryNo',
       header: '납품번호',
@@ -261,7 +353,9 @@ export default function DeliveriesPage() {
       header: '합계',
       cell: ({ row }) => (
         <span className="font-medium">
-          {formatCurrency(row.original.details?.reduce((s: number, d: any) => s + Number(d.amount), 0) || 0)}
+          {formatCurrency(
+            row.original.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0
+          )}
         </span>
       ),
     },
@@ -344,7 +438,8 @@ export default function DeliveriesPage() {
     { header: '품목수', accessor: (r) => `${r.details?.length || 0}건` },
     {
       header: '합계',
-      accessor: (r) => formatCurrency(r.details?.reduce((s: number, d: any) => s + Number(d.amount), 0) || 0),
+      accessor: (r) =>
+        formatCurrency(r.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0),
     },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status] || r.status },
     {
@@ -377,11 +472,11 @@ export default function DeliveriesPage() {
   // 품질검사 state
   const [qiOpen, setQiOpen] = useState(false)
   const [qiViewOpen, setQiViewOpen] = useState(false)
-  const [qiDelivery, setQiDelivery] = useState<any>(null)
+  const [qiDelivery, setQiDelivery] = useState<DeliveryRow | null>(null)
   const [qiItems, setQiItems] = useState<InspectionItemInput[]>([])
-  const [qiViewData, setQiViewData] = useState<any>(null)
+  const [qiViewData, setQiViewData] = useState<QualityInspectionRow[] | null>(null)
 
-  const openQualityInspection = (delivery: any) => {
+  const openQualityInspection = (delivery: DeliveryRow) => {
     setQiDelivery(delivery)
     setQiItems(
       DEFAULT_INSPECTION_ITEMS.map((item) => ({
@@ -394,10 +489,11 @@ export default function DeliveriesPage() {
     setQiOpen(true)
   }
 
-  const openQualityView = async (delivery: any) => {
+  const openQualityView = async (delivery: DeliveryRow) => {
     try {
-      const res = (await api.get(`/sales/deliveries/${delivery.id}/quality-inspection`)) as any
-      setQiViewData(res.data || res)
+      const res = await api.get(`/sales/deliveries/${delivery.id}/quality-inspection`)
+      const parsed = res as { data?: QualityInspectionRow[] } | QualityInspectionRow[]
+      setQiViewData(Array.isArray(parsed) ? parsed : parsed.data || [])
       setQiDelivery(delivery)
       setQiViewOpen(true)
     } catch {
@@ -408,36 +504,38 @@ export default function DeliveriesPage() {
   // Fetch deliveries filtered by salesChannel (ONLINE or OFFLINE)
   const { data: onlineData, isLoading: onlineLoading } = useQuery({
     queryKey: ['sales-deliveries', 'ONLINE'],
-    queryFn: () => api.get('/sales/deliveries?pageSize=50&salesChannel=ONLINE') as Promise<any>,
+    queryFn: () =>
+      api.get('/sales/deliveries?pageSize=50&salesChannel=ONLINE') as Promise<ApiListResponse<DeliveryRow>>,
   })
   const { data: offlineData, isLoading: offlineLoading } = useQuery({
     queryKey: ['sales-deliveries', 'OFFLINE'],
-    queryFn: () => api.get('/sales/deliveries?pageSize=50&salesChannel=OFFLINE') as Promise<any>,
+    queryFn: () =>
+      api.get('/sales/deliveries?pageSize=50&salesChannel=OFFLINE') as Promise<ApiListResponse<DeliveryRow>>,
   })
 
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-active'],
-    queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<any>,
+    queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<ApiListResponse<OrderOption>>,
     staleTime: 5 * 60 * 1000,
   })
   const { data: partnersData } = useQuery({
     queryKey: ['partners-sales'],
-    queryFn: () => api.get('/partners?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/partners?pageSize=500') as Promise<ApiListResponse<{ id: string; partnerName: string }>>,
     staleTime: 10 * 60 * 1000,
   })
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
-    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<ApiListResponse<ItemOption>>,
     staleTime: 10 * 60 * 1000,
   })
   const { data: companyData } = useQuery({
     queryKey: ['admin-company'],
-    queryFn: () => api.get('/admin/company') as Promise<any>,
+    queryFn: () => api.get('/admin/company') as Promise<ApiListResponse<CompanyOption>>,
     staleTime: 30 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/sales/deliveries', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/sales/deliveries', body),
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       setOpen(false)
@@ -449,8 +547,15 @@ export default function DeliveriesPage() {
 
   const trackingMutation = useMutation({
     mutationFn: (body: { trackings: TrackingRow[] }) => api.post('/sales/deliveries/tracking', body),
-    onSuccess: (res: any) => {
-      const result = res.data || res
+    onSuccess: (res: unknown) => {
+      const parsed = res as {
+        data?: { total: number; success: number; failed: number; errors: string[] }
+        total?: number
+        success?: number
+        failed?: number
+        errors?: string[]
+      }
+      const result = parsed.data || (parsed as { total: number; success: number; failed: number; errors: string[] })
       setTrackingResult(result)
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       toast.success(`운송장 업로드 완료: 성공 ${result.success}건, 실패 ${result.failed}건`)
@@ -459,7 +564,8 @@ export default function DeliveriesPage() {
   })
 
   const qiMutation = useMutation({
-    mutationFn: (body: any) => api.post(`/sales/deliveries/${body.deliveryId}/quality-inspection`, body),
+    mutationFn: (body: Record<string, unknown> & { deliveryId: string }) =>
+      api.post(`/sales/deliveries/${body.deliveryId}/quality-inspection`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       setQiOpen(false)
@@ -484,7 +590,7 @@ export default function DeliveriesPage() {
       SHIPPED: 'info',
       DELIVERED: 'success',
     }
-    return deliveries.map((d: any) => ({
+    return deliveries.map((d: DeliveryRow) => ({
       id: d.id,
       date: d.deliveryDate?.split('T')[0] || '',
       label: `${d.deliveryNo} ${d.partner?.partnerName || ''}`.trim(),
@@ -493,15 +599,15 @@ export default function DeliveriesPage() {
     }))
   }, [activeTab, onlineDeliveries, offlineDeliveries])
 
-  const updateDetail = (idx: number, field: string, value: any) => {
+  const updateDetail = (idx: number, field: keyof Detail, value: string | number) => {
     const d = [...details]
-    ;(d[idx] as any)[field] = value
+    ;(d[idx] as Record<keyof Detail, string | number>)[field] = value
     setDetails(d)
   }
 
-  const updateQiItem = (idx: number, field: string, value: any) => {
+  const updateQiItem = (idx: number, field: keyof InspectionItemInput, value: string) => {
     const items = [...qiItems]
-    ;(items[idx] as any)[field] = value
+    ;(items[idx] as Record<keyof InspectionItemInput, string>)[field] = value
     // FAIL이면 grade를 REJECT로 자동 변경
     if (field === 'result' && value === 'FAIL') {
       items[idx].grade = 'REJECT'
@@ -584,7 +690,7 @@ export default function DeliveriesPage() {
   const handleDeliveryTemplateDownload = () => {
     // 회사 정보 가져오기
     const companies = companyData?.data || []
-    const company = companies.find((c: any) => c.isDefault) || companies[0]
+    const company = companies.find((c: CompanyOption) => c.isDefault) || companies[0]
     const senderName = company?.companyName || ''
     const senderPhone = company?.phone || ''
     const senderAddress = company?.address || ''
@@ -658,23 +764,23 @@ export default function DeliveriesPage() {
       let successCount = 0
       let failCount = 0
       const failReasons: string[] = []
-      const normalize = (s: any) => (s ? String(s).trim().toLowerCase() : '')
+      const normalize = (s: unknown) => (s ? String(s).trim().toLowerCase() : '')
       const today = getLocalDateString()
       for (const row of rows) {
         const orderNoVal = normalize(row.orderNo)
-        const order = orders.find((o: any) => normalize(o.orderNo) === orderNoVal)
+        const order = orders.find((o: OrderOption) => normalize(o.orderNo) === orderNoVal)
         const nameVal = normalize(row.itemName)
         const codeVal = normalize(row.itemCode)
         // 품목 매칭: 품목명(정확) → 품목코드(정확) → 부분 포함
         const item =
           items.find(
-            (it: any) =>
+            (it: ItemOption) =>
               (nameVal && normalize(it.itemName) === nameVal) ||
               (nameVal && normalize(it.itemCode) === nameVal) ||
               (codeVal && normalize(it.itemCode) === codeVal)
           ) ||
           items.find(
-            (it: any) =>
+            (it: ItemOption) =>
               (nameVal && normalize(it.itemName).includes(nameVal)) ||
               (codeVal && normalize(it.itemName).includes(codeVal))
           )
@@ -697,9 +803,9 @@ export default function DeliveriesPage() {
             details: [{ itemId: item.id, quantity: Number(row.quantity) || 1, unitPrice: Number(row.unitPrice) || 0 }],
           })
           successCount++
-        } catch (err: any) {
+        } catch (err: unknown) {
           failCount++
-          failReasons.push(err?.message || `납품 생성 실패`)
+          failReasons.push(err instanceof Error ? err.message : `납품 생성 실패`)
         }
       }
       queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
@@ -710,8 +816,8 @@ export default function DeliveriesPage() {
       } else {
         toast.success(`${successCount}건 등록 완료${failCount > 0 ? `, ${failCount}건 실패` : ''}`)
       }
-    } catch (err: any) {
-      toast.error(err.message || '엑셀 파일을 읽을 수 없습니다.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '엑셀 파일을 읽을 수 없습니다.')
     }
     if (deliveryImportFileRef.current) deliveryImportFileRef.current.value = ''
   }
@@ -754,7 +860,7 @@ export default function DeliveriesPage() {
   // 회사 정보 (보내는분 자동 채움)
   const companyInfo = (() => {
     const companies = companyData?.data || []
-    return companies.find((c: any) => c.isDefault) || companies[0] || {}
+    return companies.find((c: CompanyOption) => c.isDefault) || companies[0] || {}
   })()
 
   // ── 온라인: 택배 양식 (보내는분/받는분 + 내품 테이블) ──
@@ -794,7 +900,7 @@ export default function DeliveriesPage() {
                   <SelectValue placeholder="발주 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {orders.map((o: any) => (
+                  {orders.map((o: OrderOption) => (
                     <SelectItem key={o.id} value={o.id}>
                       {o.orderNo} - {o.partner?.partnerName}
                     </SelectItem>
@@ -893,7 +999,7 @@ export default function DeliveriesPage() {
                               <SelectValue placeholder="품목 선택" />
                             </SelectTrigger>
                             <SelectContent>
-                              {items.map((it: any) => (
+                              {items.map((it: ItemOption) => (
                                 <SelectItem key={it.id} value={it.id}>
                                   {it.itemCode} - {it.itemName}
                                 </SelectItem>
@@ -1013,7 +1119,7 @@ export default function DeliveriesPage() {
                   <SelectValue placeholder="발주 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  {orders.map((o: any) => (
+                  {orders.map((o: OrderOption) => (
                     <SelectItem key={o.id} value={o.id}>
                       {o.orderNo} - {o.partner?.partnerName}
                     </SelectItem>
@@ -1065,7 +1171,7 @@ export default function DeliveriesPage() {
                               <SelectValue placeholder="품목 선택" />
                             </SelectTrigger>
                             <SelectContent>
-                              {items.map((it: any) => (
+                              {items.map((it: ItemOption) => (
                                 <SelectItem key={it.id} value={it.id}>
                                   {it.itemCode} - {it.itemName}
                                 </SelectItem>
@@ -1454,7 +1560,7 @@ export default function DeliveriesPage() {
         </DialogHeader>
         {Array.isArray(qiViewData) && qiViewData.length > 0 ? (
           <div className="space-y-4">
-            {qiViewData.map((inspection: any) => (
+            {qiViewData.map((inspection: QualityInspectionRow) => (
               <div key={inspection.id} className="space-y-3 rounded-md border p-4">
                 {/* 검사 헤더 */}
                 <div className="flex flex-wrap items-center gap-3">
@@ -1507,7 +1613,7 @@ export default function DeliveriesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(inspection.items || []).map((item: any) => (
+                      {(inspection.items || []).map((item: QualityInspectionItemRow) => (
                         <tr
                           key={item.id}
                           className={`border-b last:border-b-0 ${item.result === 'FAIL' ? 'bg-status-danger-muted' : ''}`}

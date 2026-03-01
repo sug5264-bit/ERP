@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const where: any = { isActive: true }
+    const where: Record<string, unknown> = { isActive: true }
     const boardId = sp.get('boardId')
     if (boardId) where.boardId = boardId
     const boardCode = sp.get('boardCode')

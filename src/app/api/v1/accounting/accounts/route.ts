@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const parentId = searchParams.get('parentId')
     const rawSearch = searchParams.get('search')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (accountType) where.accountType = accountType
     if (parentId) where.parentId = parentId
     if (rawSearch) {

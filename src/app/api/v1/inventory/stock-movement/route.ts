@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     const movementType = sp.get('movementType')
     if (movementType) where.movementType = movementType
     const warehouseId = sp.get('warehouseId')
@@ -30,15 +30,16 @@ export async function GET(request: NextRequest) {
     const startDate = sp.get('startDate')
     const endDate = sp.get('endDate')
     if (startDate || endDate) {
-      where.movementDate = {}
+      const dateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const d = new Date(startDate)
-        if (!isNaN(d.getTime())) where.movementDate.gte = d
+        if (!isNaN(d.getTime())) dateRange.gte = d
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) where.movementDate.lte = d
+        if (!isNaN(d.getTime())) dateRange.lte = d
       }
+      where.movementDate = dateRange
     }
 
     const [movements, totalCount] = await Promise.all([

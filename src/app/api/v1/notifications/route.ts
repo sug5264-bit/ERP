@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
     const pageSize = Math.min(50, parseInt(searchParams.get('pageSize') || '20'))
 
-    const where: any = { userId: authResult.session.user.id }
+    const where: Record<string, unknown> = { userId: authResult.session.user.id }
     if (unreadOnly) where.isRead = false
 
     const [notifications, totalCount, unreadCount] = await Promise.all([

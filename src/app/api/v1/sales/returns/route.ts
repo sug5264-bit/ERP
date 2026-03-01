@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     const sp = req.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     const status = sp.get('status')
     if (status) where.status = status
 

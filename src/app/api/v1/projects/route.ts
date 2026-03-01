@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const { page, pageSize, skip } = getPaginationParams(sp)
     const rawSearch = sp.get('search') || ''
     const status = sp.get('status') || ''
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (rawSearch) {
       const search = sanitizeSearchQuery(rawSearch)
       where.projectName = { contains: search, mode: 'insensitive' }

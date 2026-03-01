@@ -12,18 +12,18 @@ import { formatDate } from '@/lib/format'
 export default function BoardPage() {
   const { data: notices } = useQuery({
     queryKey: ['board-notices-summary'],
-    queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=5') as Promise<any>,
+    queryFn: () => api.get('/board/posts?boardCode=NOTICE&pageSize=5'),
   })
   const { data: general } = useQuery({
     queryKey: ['board-general-summary'],
-    queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=5') as Promise<any>,
+    queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=5'),
   })
   const { data: messages } = useQuery({
     queryKey: ['board-messages-summary'],
-    queryFn: () => api.get('/board/messages?box=received&pageSize=5') as Promise<any>,
+    queryFn: () => api.get('/board/messages?box=received&pageSize=5'),
   })
 
-  const unreadCount = (messages?.data || []).filter((m: any) => !m.isRead).length
+  const unreadCount = (messages?.data || []).filter((m: { isRead: boolean }) => !m.isRead).length
 
   return (
     <div className="space-y-6">
@@ -80,15 +80,25 @@ export default function BoardPage() {
               <p className="text-muted-foreground text-sm">공지사항이 없습니다.</p>
             ) : (
               <ul className="space-y-2">
-                {(notices?.data || []).slice(0, 5).map((p: any) => (
-                  <li key={p.id} className="flex items-center justify-between border-b pb-2 text-sm">
-                    <span className="flex-1 truncate">
-                      {p.isPinned && <span className="text-destructive mr-1">[필독]</span>}
-                      {p.title}
-                    </span>
-                    <span className="text-muted-foreground ml-2 text-xs">{formatDate(p.createdAt)}</span>
-                  </li>
-                ))}
+                {(notices?.data || [])
+                  .slice(0, 5)
+                  .map(
+                    (p: {
+                      id: string
+                      title: string
+                      isPinned?: boolean
+                      createdAt: string
+                      author?: { name: string }
+                    }) => (
+                      <li key={p.id} className="flex items-center justify-between border-b pb-2 text-sm">
+                        <span className="flex-1 truncate">
+                          {p.isPinned && <span className="text-destructive mr-1">[필독]</span>}
+                          {p.title}
+                        </span>
+                        <span className="text-muted-foreground ml-2 text-xs">{formatDate(p.createdAt)}</span>
+                      </li>
+                    )
+                  )}
               </ul>
             )}
           </CardContent>
@@ -107,14 +117,24 @@ export default function BoardPage() {
               <p className="text-muted-foreground text-sm">게시글이 없습니다.</p>
             ) : (
               <ul className="space-y-2">
-                {(general?.data || []).slice(0, 5).map((p: any) => (
-                  <li key={p.id} className="flex items-center justify-between border-b pb-2 text-sm">
-                    <span className="flex-1 truncate">{p.title}</span>
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      {p.author?.name} · {formatDate(p.createdAt)}
-                    </span>
-                  </li>
-                ))}
+                {(general?.data || [])
+                  .slice(0, 5)
+                  .map(
+                    (p: {
+                      id: string
+                      title: string
+                      isPinned?: boolean
+                      createdAt: string
+                      author?: { name: string }
+                    }) => (
+                      <li key={p.id} className="flex items-center justify-between border-b pb-2 text-sm">
+                        <span className="flex-1 truncate">{p.title}</span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {p.author?.name} · {formatDate(p.createdAt)}
+                        </span>
+                      </li>
+                    )
+                  )}
               </ul>
             )}
           </CardContent>

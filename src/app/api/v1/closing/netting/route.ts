@@ -52,7 +52,15 @@ export async function GET(req: NextRequest) {
         receivable: number
         payable: number
         netAmount: number
-        details: any[]
+        details: {
+          voucherNo: string
+          voucherDate: Date
+          voucherType: string
+          account: string
+          debit: number
+          credit: number
+          description: string | null
+        }[]
       }
     > = {}
 

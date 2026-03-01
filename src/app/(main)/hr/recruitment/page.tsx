@@ -62,21 +62,21 @@ export default function RecruitmentPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['hr-recruitment', statusFilter],
-    queryFn: () => api.get(`/hr/recruitment?${qp}`) as Promise<any>,
+    queryFn: () => api.get(`/hr/recruitment?${qp}`),
   })
 
   const { data: deptData } = useQuery({
     queryKey: ['hr-departments'],
-    queryFn: () => api.get('/hr/departments') as Promise<any>,
+    queryFn: () => api.get('/hr/departments'),
   })
 
   const { data: posData } = useQuery({
     queryKey: ['hr-positions'],
-    queryFn: () => api.get('/hr/positions') as Promise<any>,
+    queryFn: () => api.get('/hr/positions'),
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/recruitment', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/recruitment', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-recruitment'] })
       setOpen(false)
@@ -86,7 +86,7 @@ export default function RecruitmentPage() {
   })
 
   const actionMutation = useMutation({
-    mutationFn: (body: any) => api.put('/hr/recruitment', body),
+    mutationFn: (body: Record<string, unknown>) => api.put('/hr/recruitment', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-recruitment'] })
       setApplicantOpen(false)
@@ -109,8 +109,8 @@ export default function RecruitmentPage() {
   const departments = deptData?.data || []
   const positions = posData?.data || []
 
-  const getDeptName = (id: string) => departments.find((d: any) => d.id === id)?.name || '-'
-  const getPosName = (id: string) => positions.find((p: any) => p.id === id)?.name || '-'
+  const getDeptName = (id: string) => departments.find((d: { id: string; name: string }) => d.id === id)?.name || '-'
+  const getPosName = (id: string) => positions.find((p: { id: string; name: string }) => p.id === id)?.name || '-'
 
   const columns: ColumnDef<RecruitmentRow>[] = [
     {
@@ -157,7 +157,7 @@ export default function RecruitmentPage() {
     })
   }
 
-  const handleRowClick = (row: any) => {
+  const handleRowClick = (row: RecruitmentRow) => {
     setSelected(row)
     setDetailOpen(true)
   }
@@ -189,7 +189,7 @@ export default function RecruitmentPage() {
   // 상세보기를 위해 지원자 포함 데이터 다시 조회
   const { data: detailData } = useQuery({
     queryKey: ['hr-recruitment-detail', selected?.id],
-    queryFn: () => api.get(`/hr/recruitment/${selected?.id}`) as Promise<any>,
+    queryFn: () => api.get(`/hr/recruitment/${selected?.id}`),
     enabled: !!selected?.id,
   })
 
@@ -239,7 +239,7 @@ export default function RecruitmentPage() {
                       <SelectValue placeholder="부서 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map((d: any) => (
+                      {departments.map((d: { id: string; name: string }) => (
                         <SelectItem key={d.id} value={d.id}>
                           {d.name}
                         </SelectItem>
@@ -256,7 +256,7 @@ export default function RecruitmentPage() {
                       <SelectValue placeholder="직급 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {positions.map((p: any) => (
+                      {positions.map((p: { id: string; name: string }) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
                         </SelectItem>
@@ -392,7 +392,7 @@ export default function RecruitmentPage() {
                   <p className="text-muted-foreground text-sm">지원자가 없습니다.</p>
                 ) : (
                   <div className="space-y-2">
-                    {selected.applicants.map((app: any) => (
+                    {selected.applicants.map((app: { id: string; name?: string; status: string }) => (
                       <div key={app.id} className="flex items-center gap-2 border-b pb-2 text-sm last:border-0">
                         <span className="flex-1 font-medium">{app.name || app.id}</span>
                         <Badge variant={APPLICANT_STATUS[app.status]?.variant || 'outline'}>

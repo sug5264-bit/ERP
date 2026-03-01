@@ -18,7 +18,15 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
-const columns: ColumnDef<any>[] = [
+interface PayrollRow {
+  id: string
+  payPeriod: string
+  payDate: string
+  status: string
+  _count: { details: number }
+}
+
+const columns: ColumnDef<PayrollRow>[] = [
   { accessorKey: 'payPeriod', header: '급여기간' },
   { id: 'payDate', header: '지급일', cell: ({ row }) => formatDate(row.original.payDate) },
   { id: 'count', header: '대상인원', cell: ({ row }) => `${row.original._count?.details || 0}명` },
@@ -33,13 +41,13 @@ const columns: ColumnDef<any>[] = [
 export default function PayrollPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedPayroll, setSelectedPayroll] = useState<any>(null)
+  const [selectedPayroll, setSelectedPayroll] = useState<Record<string, unknown> | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['payroll'],
-    queryFn: () => api.get('/payroll?pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/payroll?pageSize=50'),
   })
 
   const payrollList = data?.data || []
@@ -47,9 +55,9 @@ export default function PayrollPage() {
   // 요약 통계
   const summary = {
     totalCount: payrollList.length,
-    confirmed: payrollList.filter((p: any) => p.status === 'CONFIRMED').length,
-    draft: payrollList.filter((p: any) => p.status !== 'CONFIRMED').length,
-    totalPersons: payrollList.reduce((s: number, p: any) => s + (p._count?.details || 0), 0),
+    confirmed: payrollList.filter((p: PayrollRow) => p.status === 'CONFIRMED').length,
+    draft: payrollList.filter((p: PayrollRow) => p.status !== 'CONFIRMED').length,
+    totalPersons: payrollList.reduce((s: number, p: PayrollRow) => s + (p._count?.details || 0), 0),
   }
 
   const exportColumns: ExportColumn[] = [
@@ -67,7 +75,7 @@ export default function PayrollPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/payroll', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/payroll', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll'] })
       setOpen(false)
@@ -92,19 +100,19 @@ export default function PayrollPage() {
     createMutation.mutate({ payPeriod: form.get('payPeriod'), payDate: form.get('payDate') })
   }
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: PayrollRow) => {
     try {
-      const res = (await api.get(`/payroll/${row.id}`)) as any
-      setSelectedPayroll(res.data || res)
+      const res = (await api.get(`/payroll/${row.id}`)) as Record<string, unknown>
+      setSelectedPayroll((res.data || res) as Record<string, unknown>)
       setDetailOpen(true)
     } catch {
       toast.error('급여 데이터를 불러올 수 없습니다.')
     }
   }
 
-  const details = selectedPayroll?.details || []
+  const details = (selectedPayroll?.details || []) as Record<string, unknown>[]
   const totals = details.reduce(
-    (acc: any, d: any) => ({
+    (acc: { totalEarnings: number; totalDeductions: number; netPay: number }, d: Record<string, unknown>) => ({
       totalEarnings: acc.totalEarnings + Number(d.totalEarnings || 0),
       totalDeductions: acc.totalDeductions + Number(d.totalDeductions || 0),
       netPay: acc.netPay + Number(d.netPay || 0),
@@ -112,15 +120,24 @@ export default function PayrollPage() {
     { totalEarnings: 0, totalDeductions: 0, netPay: 0 }
   )
 
-  const detailColumns: ColumnDef<any>[] = [
+  const detailColumns: ColumnDef<Record<string, unknown>>[] = [
     { accessorKey: 'employee.employeeNo', header: '사번', id: 'empNo' },
     {
       id: 'name',
-      accessorFn: (row: any) => row.employee?.nameKo || '',
+      accessorFn: (row) => (row.employee as Record<string, unknown>)?.nameKo || '',
       header: '이름',
-      cell: ({ row }) => row.original.employee?.nameKo || '-',
+      cell: ({ row }) => (row.original.employee as Record<string, string> | undefined)?.nameKo || '-',
     },
-    { id: 'dept', header: '부서', cell: ({ row }) => row.original.employee?.department?.name || '-' },
+    {
+      id: 'dept',
+      header: '부서',
+      cell: ({ row }) =>
+        (
+          (row.original.employee as Record<string, unknown> | undefined)?.department as
+            | Record<string, string>
+            | undefined
+        )?.name || '-',
+    },
     { id: 'baseSalary', header: '기본급', cell: ({ row }) => formatCurrency(Number(row.original.baseSalary)) },
     {
       id: 'totalEarnings',
@@ -213,7 +230,7 @@ export default function PayrollPage() {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedPayroll?.payPeriod} 급여명세</DialogTitle>
+            <DialogTitle>{String(selectedPayroll?.payPeriod ?? '')} 급여명세</DialogTitle>
           </DialogHeader>
           {selectedPayroll && (
             <div className="space-y-4">
@@ -277,7 +294,7 @@ export default function PayrollPage() {
         description={`${selectedPayroll?.payPeriod} 급여를 확정하시겠습니까? 확정 후에는 수정할 수 없습니다.`}
         confirmLabel="확정"
         onConfirm={() => {
-          if (selectedPayroll) confirmMutation.mutate(selectedPayroll.id)
+          if (selectedPayroll) confirmMutation.mutate(selectedPayroll.id as string)
         }}
         isPending={confirmMutation.isPending}
       />

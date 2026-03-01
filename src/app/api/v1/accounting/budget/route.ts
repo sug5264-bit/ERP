@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const fiscalYearId = searchParams.get('fiscalYearId')
     const departmentId = searchParams.get('departmentId')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (fiscalYearId) where.fiscalYearId = fiscalYearId
     if (departmentId) where.departmentId = departmentId
 

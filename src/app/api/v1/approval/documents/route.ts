@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     const status = sp.get('status')
     if (status) where.status = status
     const drafterId = sp.get('drafterId')
@@ -90,13 +90,14 @@ export async function GET(request: NextRequest) {
       ])
       const totalCount = Number(countResult[0]?.count || 0)
       const ids = docIds.map((d) => d.id)
-      const items = ids.length > 0
-        ? await prisma.approvalDocument.findMany({
-            where: { id: { in: ids } },
-            include: includeFields,
-            orderBy: { createdAt: 'desc' },
-          })
-        : []
+      const items =
+        ids.length > 0
+          ? await prisma.approvalDocument.findMany({
+              where: { id: { in: ids } },
+              include: includeFields,
+              orderBy: { createdAt: 'desc' },
+            })
+          : []
       return successResponse(items, buildMeta(page, pageSize, totalCount))
     }
 

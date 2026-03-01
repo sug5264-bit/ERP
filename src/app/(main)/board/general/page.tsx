@@ -16,7 +16,19 @@ import { toast } from 'sonner'
 import { Eye, FileText, MessageCircle, Paperclip, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
-const columns: ColumnDef<any>[] = [
+interface PostRow {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+  viewCount: number
+  author?: { name: string }
+  comments?: { id: string; content: string; createdAt: string; author?: { name: string } }[]
+  attachments?: { id?: string; fileName?: string }[]
+  fileName?: string
+}
+
+const columns: ColumnDef<PostRow>[] = [
   {
     header: '제목',
     accessorKey: 'title',
@@ -39,7 +51,7 @@ const columns: ColumnDef<any>[] = [
 export default function GeneralBoardPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedPost, setSelectedPost] = useState<any>(null)
+  const [selectedPost, setSelectedPost] = useState<PostRow | null>(null)
   const [newComment, setNewComment] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [attachments, setAttachments] = useState<File[]>([])
@@ -47,17 +59,19 @@ export default function GeneralBoardPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['board-general'],
-    queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=50'),
   })
   const { data: boardsData } = useQuery({
     queryKey: ['boards'],
-    queryFn: () => api.get('/board/boards') as Promise<any>,
+    queryFn: () => api.get('/board/boards'),
   })
 
-  const generalBoard = (boardsData?.data || []).find((b: any) => b.boardCode === 'GENERAL')
+  const generalBoard = (boardsData?.data || []).find((b: { boardCode: string }) => b.boardCode === 'GENERAL') as
+    | { id: string; boardCode: string }
+    | undefined
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/board/posts', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/board/posts', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['board-general'] })
       setOpen(false)
@@ -85,8 +99,8 @@ export default function GeneralBoardPage() {
       api.post(`/board/posts/${postId}/comments`, { content }),
     onSuccess: async (_, variables) => {
       try {
-        const res = (await api.get(`/board/posts/${variables.postId}`)) as any
-        setSelectedPost(res.data || res)
+        const res = (await api.get(`/board/posts/${variables.postId}`)) as Record<string, unknown>
+        setSelectedPost((res.data || res) as PostRow)
       } catch {
         queryClient.invalidateQueries({ queryKey: ['board-general-posts'] })
       }
@@ -104,7 +118,7 @@ export default function GeneralBoardPage() {
       return
     }
 
-    const postData: any = {
+    const postData: Record<string, unknown> = {
       boardId: generalBoard.id,
       title: form.get('title'),
       content: form.get('content'),
@@ -114,10 +128,10 @@ export default function GeneralBoardPage() {
     createMutation.mutate(postData)
   }
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: PostRow) => {
     try {
-      const res = (await api.get(`/board/posts/${row.id}`)) as any
-      setSelectedPost(res.data || res)
+      const res = (await api.get(`/board/posts/${row.id}`)) as Record<string, unknown>
+      setSelectedPost((res.data || res) as PostRow)
       setDetailOpen(true)
     } catch {
       toast.error('게시글을 불러올 수 없습니다.')
@@ -181,12 +195,12 @@ export default function GeneralBoardPage() {
           {
             id: 'delete',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <Button
                 variant="ghost"
                 size="icon"
                 className="text-destructive hover:text-destructive h-8 w-8"
-                onClick={(e: any) => handleDelete(e, row.original.id, row.original.title)}
+                onClick={(e) => handleDelete(e, row.original.id, row.original.title)}
                 aria-label="삭제"
               >
                 <Trash2 className="h-4 w-4" />
@@ -222,13 +236,13 @@ export default function GeneralBoardPage() {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">첨부파일</Label>
                   <div className="space-y-1">
-                    {selectedPost.attachments.map((a: any) => (
+                    {selectedPost.attachments.map((a: { id?: string; fileName?: string }) => (
                       <div
-                        key={a.id || a.fileName || a}
+                        key={typeof a === 'string' ? a : a.id || a.fileName || ''}
                         className="text-primary flex cursor-pointer items-center gap-2 text-sm hover:underline"
                       >
                         <FileText className="h-4 w-4" />
-                        <span>{a.fileName || a}</span>
+                        <span>{typeof a === 'string' ? a : a.fileName || ''}</span>
                       </div>
                     ))}
                   </div>
@@ -244,15 +258,17 @@ export default function GeneralBoardPage() {
                 <Label className="flex items-center gap-1 text-sm font-medium">
                   <MessageCircle className="h-4 w-4" /> 댓글 ({selectedPost.comments?.length || 0})
                 </Label>
-                {(selectedPost.comments || []).map((c: any) => (
-                  <div key={c.id} className="rounded border p-2 text-sm">
-                    <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
-                      <span className="text-foreground font-medium">{c.author?.name}</span>
-                      <span>{formatDate(c.createdAt)}</span>
+                {(selectedPost.comments || []).map(
+                  (c: { id: string; content: string; createdAt: string; author?: { name: string } }) => (
+                    <div key={c.id} className="rounded border p-2 text-sm">
+                      <div className="text-muted-foreground mb-1 flex items-center gap-2 text-xs">
+                        <span className="text-foreground font-medium">{c.author?.name}</span>
+                        <span>{formatDate(c.createdAt)}</span>
+                      </div>
+                      <p>{c.content}</p>
                     </div>
-                    <p>{c.content}</p>
-                  </div>
-                ))}
+                  )
+                )}
                 <div className="flex gap-2">
                   <Input
                     value={newComment}

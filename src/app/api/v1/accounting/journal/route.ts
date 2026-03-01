@@ -21,18 +21,19 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const accountSubjectId = searchParams.get('accountSubjectId')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (accountSubjectId) where.accountSubjectId = accountSubjectId
     if (startDate || endDate) {
-      where.voucher = { voucherDate: {} }
+      const voucherDateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const d = new Date(startDate)
-        if (!isNaN(d.getTime())) where.voucher.voucherDate.gte = d
+        if (!isNaN(d.getTime())) voucherDateRange.gte = d
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) where.voucher.voucherDate.lte = d
+        if (!isNaN(d.getTime())) voucherDateRange.lte = d
       }
+      where.voucher = { voucherDate: voucherDateRange }
     }
 
     const [details, totalCount] = await Promise.all([

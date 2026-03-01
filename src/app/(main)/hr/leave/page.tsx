@@ -63,7 +63,7 @@ interface ApprovalStep {
 export default function LeavePage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedLeave, setSelectedLeave] = useState<any>(null)
+  const [selectedLeave, setSelectedLeave] = useState<LeaveRow | null>(null)
   const [approvalComment, setApprovalComment] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [selectedRows, setSelectedRows] = useState<LeaveRow[]>([])
@@ -84,17 +84,17 @@ export default function LeavePage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['hr-leave', statusFilter],
-    queryFn: () => api.get(`/hr/leave?${queryParams.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/hr/leave?${queryParams.toString()}`),
   })
 
   const { data: empData } = useQuery({
     queryKey: ['hr-employees-list'],
-    queryFn: () => api.get('/hr/employees?pageSize=500&status=ACTIVE') as Promise<any>,
+    queryFn: () => api.get('/hr/employees?pageSize=500&status=ACTIVE'),
     staleTime: 5 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/leave', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/leave', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       setOpen(false)
@@ -119,11 +119,14 @@ export default function LeavePage() {
   })
 
   const batchMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/leave/batch', body) as Promise<any>,
-    onSuccess: (res: any) => {
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/leave/batch', body),
+    onSuccess: (res: unknown) => {
       queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
-      const d = res?.data || res
-      toast.success(`${d.successCount}건 처리 완료${d.failCount > 0 ? `, ${d.failCount}건 실패` : ''}`)
+      const d = (res as Record<string, unknown>)?.data || res
+      const result = d as Record<string, unknown>
+      toast.success(
+        `${result.successCount}건 처리 완료${(result.failCount as number) > 0 ? `, ${result.failCount}건 실패` : ''}`
+      )
       setSelectedRows([])
     },
     onError: (err: Error) => toast.error(err.message),
@@ -311,7 +314,7 @@ export default function LeavePage() {
                         <SelectValue placeholder="사원 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {employees.map((e: any) => (
+                        {employees.map((e: { id: string; employeeNo: string; nameKo: string }) => (
                           <SelectItem key={e.id} value={e.id}>
                             {e.employeeNo} - {e.nameKo}
                           </SelectItem>
@@ -377,7 +380,8 @@ export default function LeavePage() {
                         <div className="font-medium">{s.lineLabel || `${idx + 1}차`}</div>
                         <div className="text-muted-foreground max-w-[80px] truncate">
                           {s.approverId
-                            ? employees.find((e: any) => e.id === s.approverId)?.nameKo || '선택됨'
+                            ? employees.find((e: { id: string; nameKo: string }) => e.id === s.approverId)?.nameKo ||
+                              '선택됨'
                             : '미지정'}
                         </div>
                       </div>
@@ -404,11 +408,18 @@ export default function LeavePage() {
                           <SelectValue placeholder="결재자 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          {employees.map((e: any) => (
-                            <SelectItem key={e.id} value={e.id}>
-                              {e.nameKo} ({e.position?.name || '-'} / {e.department?.name || '-'})
-                            </SelectItem>
-                          ))}
+                          {employees.map(
+                            (e: {
+                              id: string
+                              nameKo: string
+                              position?: { name: string } | null
+                              department?: { name: string } | null
+                            }) => (
+                              <SelectItem key={e.id} value={e.id}>
+                                {e.nameKo} ({e.position?.name || '-'} / {e.department?.name || '-'})
+                              </SelectItem>
+                            )
+                          )}
                         </SelectContent>
                       </Select>
                       <Select

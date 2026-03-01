@@ -51,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (role.isSystem) return errorResponse('시스템 역할은 수정할 수 없습니다.', 'FORBIDDEN', 403)
 
     // 역할 기본 정보 + 권한 재할당을 트랜잭션으로 원자적 처리
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
 

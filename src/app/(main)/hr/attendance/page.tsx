@@ -111,17 +111,17 @@ export default function AttendancePage() {
       const startDate = `${filterYear}-${filterMonth.padStart(2, '0')}-01`
       const lastDay = new Date(Number(filterYear), Number(filterMonth), 0).getDate()
       const endDate = `${filterYear}-${filterMonth.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-      return api.get(`/hr/attendance?pageSize=500&startDate=${startDate}&endDate=${endDate}`) as Promise<any>
+      return api.get(`/hr/attendance?pageSize=500&startDate=${startDate}&endDate=${endDate}`)
     },
   })
 
   const { data: empData } = useQuery({
     queryKey: ['hr-employees-list'],
-    queryFn: () => api.get('/hr/employees?pageSize=500&status=ACTIVE') as Promise<any>,
+    queryFn: () => api.get('/hr/employees?pageSize=500&status=ACTIVE'),
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/hr/attendance', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/hr/attendance', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hr-attendance'] })
       setOpen(false)
@@ -214,7 +214,7 @@ export default function AttendancePage() {
                     <SelectValue placeholder="사원 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((e: any) => (
+                    {employees.map((e: { id: string; employeeNo: string; nameKo: string }) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.employeeNo} - {e.nameKo}
                       </SelectItem>

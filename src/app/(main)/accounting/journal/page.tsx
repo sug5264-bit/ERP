@@ -9,9 +9,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
 
 interface JournalRow {
@@ -26,17 +24,38 @@ interface JournalRow {
 }
 
 const TYPE_MAP: Record<string, string> = {
-  RECEIPT: '입금', PAYMENT: '출금', TRANSFER: '대체', PURCHASE: '매입', SALES: '매출',
+  RECEIPT: '입금',
+  PAYMENT: '출금',
+  TRANSFER: '대체',
+  PURCHASE: '매입',
+  SALES: '매출',
 }
 
 const columns: ColumnDef<JournalRow>[] = [
-  { header: '전표번호', cell: ({ row }) => <span className="font-mono text-xs">{row.original.voucher.voucherNo}</span> },
+  {
+    header: '전표번호',
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.voucher.voucherNo}</span>,
+  },
   { header: '전표일자', cell: ({ row }) => formatDate(row.original.voucher.voucherDate) },
-  { header: '유형', cell: ({ row }) => <Badge variant="outline">{TYPE_MAP[row.original.voucher.voucherType] || row.original.voucher.voucherType}</Badge> },
-  { header: '계정코드', cell: ({ row }) => <span className="font-mono text-xs">{row.original.accountSubject.code}</span> },
+  {
+    header: '유형',
+    cell: ({ row }) => (
+      <Badge variant="outline">{TYPE_MAP[row.original.voucher.voucherType] || row.original.voucher.voucherType}</Badge>
+    ),
+  },
+  {
+    header: '계정코드',
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.accountSubject.code}</span>,
+  },
   { header: '계정과목', cell: ({ row }) => row.original.accountSubject.nameKo },
-  { header: '차변', cell: ({ row }) => Number(row.original.debitAmount) > 0 ? formatCurrency(row.original.debitAmount) : '-' },
-  { header: '대변', cell: ({ row }) => Number(row.original.creditAmount) > 0 ? formatCurrency(row.original.creditAmount) : '-' },
+  {
+    header: '차변',
+    cell: ({ row }) => (Number(row.original.debitAmount) > 0 ? formatCurrency(row.original.debitAmount) : '-'),
+  },
+  {
+    header: '대변',
+    cell: ({ row }) => (Number(row.original.creditAmount) > 0 ? formatCurrency(row.original.creditAmount) : '-'),
+  },
   { header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
   { header: '적요', cell: ({ row }) => row.original.description || row.original.voucher.description || '-' },
 ]
@@ -53,11 +72,11 @@ export default function JournalPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounting-journal', startDate, endDate, accountId],
-    queryFn: () => api.get(`/accounting/journal?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/accounting/journal?${qp.toString()}`),
   })
   const { data: accountsData } = useQuery({
     queryKey: ['accounting-accounts'],
-    queryFn: () => api.get('/accounting/accounts') as Promise<any>,
+    queryFn: () => api.get('/accounting/accounts'),
   })
 
   const entries: JournalRow[] = data?.data || []
@@ -66,7 +85,7 @@ export default function JournalPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="분개장" description="전표의 분개 내역을 조회합니다" />
-      <div className="flex items-center gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Label className="whitespace-nowrap">기간</Label>
           <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
@@ -74,10 +93,16 @@ export default function JournalPage() {
           <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
         </div>
         <Select value={accountId} onValueChange={setAccountId}>
-          <SelectTrigger className="w-56"><SelectValue placeholder="전체 계정과목" /></SelectTrigger>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="전체 계정과목" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체</SelectItem>
-            {accounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.code} - {a.nameKo}</SelectItem>)}
+            {accounts.map((a: { id: string; code: string; nameKo: string }) => (
+              <SelectItem key={a.id} value={a.id}>
+                {a.code} - {a.nameKo}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

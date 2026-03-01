@@ -22,7 +22,7 @@ function generateClientRequestId(): string {
 }
 
 // ─── 중복 요청 방지 (Deduplication) ───
-const inflightRequests = new Map<string, Promise<any>>()
+const inflightRequests = new Map<string, Promise<unknown>>()
 
 function getDedupeKey(method: string, url: string): string | null {
   // GET 요청만 중복 제거 (mutation은 항상 실행)
@@ -30,7 +30,7 @@ function getDedupeKey(method: string, url: string): string | null {
   return `${method}:${url}`
 }
 
-async function request(method: string, url: string, data?: any) {
+async function request(method: string, url: string, data?: unknown) {
   // GET 요청 중복 제거
   const dedupeKey = getDedupeKey(method, url)
   if (dedupeKey) {
@@ -94,7 +94,7 @@ async function request(method: string, url: string, data?: any) {
           // 유효성 검증 에러: 상세 필드 메시지 포함
           if (json?.error?.code === 'VALIDATION_ERROR' && Array.isArray(json?.error?.details)) {
             const fieldMessages = json.error.details
-              .map((d: any) => d.message)
+              .map((d: { message?: string }) => d.message)
               .filter(Boolean)
               .slice(0, 3)
             if (fieldMessages.length > 0) {
@@ -180,8 +180,8 @@ export class ApiError extends Error {
 
 export const api = {
   get: (url: string) => request('GET', url),
-  post: (url: string, data?: any) => request('POST', url, data),
-  put: (url: string, data?: any) => request('PUT', url, data),
-  patch: (url: string, data?: any) => request('PATCH', url, data),
+  post: (url: string, data?: unknown) => request('POST', url, data),
+  put: (url: string, data?: unknown) => request('PUT', url, data),
+  patch: (url: string, data?: unknown) => request('PATCH', url, data),
   delete: (url: string) => request('DELETE', url),
 }

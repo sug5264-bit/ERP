@@ -131,8 +131,8 @@ export function handleApiError(error: unknown) {
   if (isPrismaError(error)) {
     const prismaMessage = getPrismaErrorMessage(error)
     logger.error('Prisma Error', {
-      code: (error as any).code,
-      error: error instanceof Error ? error.message : String(error),
+      code: error.code,
+      error: 'message' in error ? String((error as { message?: string }).message) : String(error),
     })
     return errorResponse(prismaMessage, 'DATABASE_ERROR', 400)
   }
@@ -168,19 +168,24 @@ export function handleApiError(error: unknown) {
   return errorResponse('서버 오류가 발생했습니다.', 'INTERNAL_ERROR', 500)
 }
 
-function isPrismaError(error: unknown): boolean {
+interface PrismaError {
+  code: string
+  meta?: { field_name?: string }
+}
+
+function isPrismaError(error: unknown): error is PrismaError {
   return (
     error != null &&
     typeof error === 'object' &&
     'code' in error &&
-    typeof (error as any).code === 'string' &&
-    (error as any).code.startsWith('P')
+    typeof (error as Record<string, unknown>).code === 'string' &&
+    ((error as Record<string, unknown>).code as string).startsWith('P')
   )
 }
 
-function getPrismaErrorMessage(error: unknown): string {
-  const code = (error as any).code as string
-  const meta = (error as any).meta
+function getPrismaErrorMessage(error: PrismaError): string {
+  const code = error.code
+  const meta = error.meta
   switch (code) {
     case 'P2002':
       return '이미 존재하는 데이터입니다. 중복된 값을 확인해주세요.'
@@ -297,7 +302,8 @@ export function buildMeta(page: number, pageSize: number, totalCount: number) {
 
 // ─── API 핸들러 래퍼 (요청 추적 + 성능 측정 + 에러 핸들링) ───
 
-type ApiHandler = (req: NextRequest, ctx?: any) => Promise<NextResponse>
+type RouteContext = { params: Promise<Record<string, string>> }
+type ApiHandler = (req: NextRequest, ctx?: RouteContext) => Promise<NextResponse>
 
 /**
  * API Route 핸들러를 래핑하여 요청 추적, 성능 측정, 에러 핸들링을 자동화합니다.
@@ -310,7 +316,7 @@ type ApiHandler = (req: NextRequest, ctx?: any) => Promise<NextResponse>
  * })
  */
 export function withApiHandler(handler: ApiHandler): ApiHandler {
-  return async (req: NextRequest, ctx?: any) => {
+  return async (req: NextRequest, ctx?: RouteContext) => {
     const requestId = getRequestId(req)
     const startTime = performance.now()
     const method = req.method

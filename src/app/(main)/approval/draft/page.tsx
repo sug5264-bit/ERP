@@ -45,7 +45,36 @@ interface Step {
   lineLabel: string
 }
 
-const columns: ColumnDef<any>[] = [
+interface ApprovalDocRow {
+  id: string
+  documentNo: string
+  title: string
+  draftDate: string
+  urgency: string
+  currentStep: number
+  totalSteps: number
+  status: string
+  drafter?: { nameKo: string; department?: { name: string } }
+  content?: {
+    docType?: string
+    purpose?: string
+    amount?: number | string
+    period?: string
+    department?: string
+    body?: string
+    [key: string]: unknown
+  }
+  steps?: {
+    id: string
+    status: string
+    approvalType: string
+    comment?: string
+    actionDate?: string
+    approver?: { nameKo: string; position?: { name: string } }
+  }[]
+}
+
+const columns: ColumnDef<ApprovalDocRow>[] = [
   {
     accessorKey: 'documentNo',
     header: '문서번호',
@@ -95,7 +124,7 @@ const columns: ColumnDef<any>[] = [
 export default function ApprovalDraftPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [selectedDoc, setSelectedDoc] = useState<ApprovalDocRow | null>(null)
   const [docType, setDocType] = useState('GENERAL')
   const [steps, setSteps] = useState<Step[]>(
     DEFAULT_LINE_LABELS.map((label) => ({ approverId: '', approvalType: 'APPROVE', lineLabel: label }))
@@ -104,16 +133,16 @@ export default function ApprovalDraftPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-my-drafts'],
-    queryFn: () => api.get('/approval/documents?filter=myDrafts&pageSize=50') as Promise<any>,
+    queryFn: () => api.get('/approval/documents?filter=myDrafts&pageSize=50'),
   })
 
   const { data: employeesData } = useQuery({
     queryKey: ['employees-all'],
-    queryFn: () => api.get('/hr/employees?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/hr/employees?pageSize=500'),
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/approval/documents', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/approval/documents', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['approval-my-drafts'] })
       setOpen(false)
@@ -124,7 +153,8 @@ export default function ApprovalDraftPage() {
   })
 
   const actionMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: any }) => api.put(`/approval/documents/${id}`, body),
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+      api.put(`/approval/documents/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['approval-my-drafts'] })
       setDetailOpen(false)
@@ -164,10 +194,10 @@ export default function ApprovalDraftPage() {
     })
   }
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: ApprovalDocRow) => {
     try {
-      const res = (await api.get(`/approval/documents/${row.id}`)) as any
-      setSelectedDoc(res.data || res)
+      const res = (await api.get(`/approval/documents/${row.id}`)) as Record<string, unknown>
+      setSelectedDoc((res.data || res) as ApprovalDocRow)
       setDetailOpen(true)
     } catch {
       toast.error('문서를 불러올 수 없습니다.')
@@ -429,7 +459,8 @@ export default function ApprovalDraftPage() {
                         <div className="font-medium">{s.lineLabel || `${idx + 1}차`}</div>
                         <div className="text-muted-foreground max-w-[80px] truncate">
                           {s.approverId
-                            ? employees.find((e: any) => e.id === s.approverId)?.nameKo || '선택됨'
+                            ? employees.find((e: { id: string; nameKo: string }) => e.id === s.approverId)?.nameKo ||
+                              '선택됨'
                             : '미지정'}
                         </div>
                       </div>
@@ -456,11 +487,18 @@ export default function ApprovalDraftPage() {
                           <SelectValue placeholder="결재자 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          {employees.map((e: any) => (
-                            <SelectItem key={e.id} value={e.id}>
-                              {e.nameKo} ({e.position?.name || '-'} / {e.department?.name || '-'})
-                            </SelectItem>
-                          ))}
+                          {employees.map(
+                            (e: {
+                              id: string
+                              nameKo: string
+                              position?: { name: string } | null
+                              department?: { name: string } | null
+                            }) => (
+                              <SelectItem key={e.id} value={e.id}>
+                                {e.nameKo} ({e.position?.name || '-'} / {e.department?.name || '-'})
+                              </SelectItem>
+                            )
+                          )}
                         </SelectContent>
                       </Select>
                       <Select
@@ -557,8 +595,8 @@ export default function ApprovalDraftPage() {
                 {selectedDoc.content?.docType && (
                   <div>
                     <span className="text-muted-foreground">문서유형:</span>{' '}
-                    {DOC_TYPES.find((t) => t.value === selectedDoc.content.docType)?.label ||
-                      selectedDoc.content.docType}
+                    {DOC_TYPES.find((t) => t.value === selectedDoc.content?.docType)?.label ||
+                      selectedDoc.content?.docType}
                   </div>
                 )}
               </div>
@@ -596,40 +634,52 @@ export default function ApprovalDraftPage() {
               <div className="space-y-3 rounded-md border p-4">
                 <h4 className="text-sm font-semibold">결재선</h4>
                 <div className="space-y-2">
-                  {(selectedDoc.steps || []).map((step: any, idx: number) => (
-                    <div key={step.id} className="flex items-center gap-3 border-b py-1 text-sm last:border-0">
-                      <span className="text-muted-foreground w-6 text-center font-medium">{idx + 1}</span>
-                      {getStepStatusIcon(step.status)}
-                      <span className="flex-1 font-medium">
-                        {step.approver?.nameKo || '-'}
-                        <span className="text-muted-foreground ml-1 font-normal">
-                          ({step.approver?.position?.name || '-'})
+                  {(selectedDoc.steps || []).map(
+                    (
+                      step: {
+                        id: string
+                        status: string
+                        approvalType: string
+                        comment?: string
+                        actionDate?: string
+                        approver?: { nameKo: string; position?: { name: string } }
+                      },
+                      idx: number
+                    ) => (
+                      <div key={step.id} className="flex items-center gap-3 border-b py-1 text-sm last:border-0">
+                        <span className="text-muted-foreground w-6 text-center font-medium">{idx + 1}</span>
+                        {getStepStatusIcon(step.status)}
+                        <span className="flex-1 font-medium">
+                          {step.approver?.nameKo || '-'}
+                          <span className="text-muted-foreground ml-1 font-normal">
+                            ({step.approver?.position?.name || '-'})
+                          </span>
                         </span>
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {step.approvalType === 'APPROVE' ? '결재' : step.approvalType === 'REVIEW' ? '검토' : '통보'}
-                      </Badge>
-                      <Badge
-                        variant={
-                          step.status === 'APPROVED'
-                            ? 'default'
-                            : step.status === 'REJECTED'
-                              ? 'destructive'
-                              : 'outline'
-                        }
-                      >
-                        {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
-                      </Badge>
-                      {step.comment && (
-                        <span className="text-muted-foreground max-w-[100px] truncate text-xs" title={step.comment}>
-                          "{step.comment}"
-                        </span>
-                      )}
-                      {step.actionDate && (
-                        <span className="text-muted-foreground text-xs">{formatDate(step.actionDate)}</span>
-                      )}
-                    </div>
-                  ))}
+                        <Badge variant="outline" className="text-xs">
+                          {step.approvalType === 'APPROVE' ? '결재' : step.approvalType === 'REVIEW' ? '검토' : '통보'}
+                        </Badge>
+                        <Badge
+                          variant={
+                            step.status === 'APPROVED'
+                              ? 'default'
+                              : step.status === 'REJECTED'
+                                ? 'destructive'
+                                : 'outline'
+                          }
+                        >
+                          {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
+                        </Badge>
+                        {step.comment && (
+                          <span className="text-muted-foreground max-w-[100px] truncate text-xs" title={step.comment}>
+                            "{step.comment}"
+                          </span>
+                        )}
+                        {step.actionDate && (
+                          <span className="text-muted-foreground text-xs">{formatDate(step.actionDate)}</span>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
 

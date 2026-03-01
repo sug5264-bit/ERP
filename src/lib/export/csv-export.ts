@@ -1,8 +1,8 @@
-import type { ExportConfig } from './types'
+import type { ExportConfig, ExportRow } from './types'
 import { getValue, triggerDownload } from './utils'
 
 /** CSV 셀 값 이스케이프 (수식 인젝션 방지 + 따옴표 처리) */
-function escapeCsvValue(row: any, accessor: string | ((row: any) => any)): string {
+function escapeCsvValue(row: ExportRow, accessor: string | ((row: ExportRow) => unknown)): string {
   let val = getValue(row, accessor)
   if (val == null) return ''
   let str = String(val)
