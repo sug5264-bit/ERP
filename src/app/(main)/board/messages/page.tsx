@@ -18,34 +18,69 @@ import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { Mail, Send } from 'lucide-react'
 
-const receivedColumns: ColumnDef<any>[] = [
-  { id: 'isRead', header: '', cell: ({ row }) => !row.original.isRead ? <Badge variant="default" className="text-xs">NEW</Badge> : null, size: 50 },
+interface MessageRow {
+  id: string
+  subject: string
+  content: string
+  sentAt: string
+  isRead: boolean
+  sender?: { name: string }
+  receiver?: { name: string }
+}
+
+const receivedColumns: ColumnDef<MessageRow>[] = [
+  {
+    id: 'isRead',
+    header: '',
+    cell: ({ row }) =>
+      !row.original.isRead ? (
+        <Badge variant="default" className="text-xs">
+          NEW
+        </Badge>
+      ) : null,
+    size: 50,
+  },
   { accessorKey: 'subject', header: '제목' },
   { id: 'sender', header: '보낸사람', cell: ({ row }) => row.original.sender?.name || '-' },
   { id: 'sentAt', header: '수신일', cell: ({ row }) => formatDate(row.original.sentAt) },
 ]
 
-const sentColumns: ColumnDef<any>[] = [
+const sentColumns: ColumnDef<MessageRow>[] = [
   { accessorKey: 'subject', header: '제목' },
   { id: 'receiver', header: '받는사람', cell: ({ row }) => row.original.receiver?.name || '-' },
   { id: 'sentAt', header: '발신일', cell: ({ row }) => formatDate(row.original.sentAt) },
-  { id: 'isRead', header: '읽음', cell: ({ row }) => row.original.isRead ? <Badge variant="outline">읽음</Badge> : <Badge variant="secondary">안읽음</Badge> },
+  {
+    id: 'isRead',
+    header: '읽음',
+    cell: ({ row }) =>
+      row.original.isRead ? <Badge variant="outline">읽음</Badge> : <Badge variant="secondary">안읽음</Badge>,
+  },
 ]
 
 export default function MessagesPage() {
   const [open, setOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedMsg, setSelectedMsg] = useState<any>(null)
+  const [selectedMsg, setSelectedMsg] = useState<MessageRow | null>(null)
   const [tab, setTab] = useState('received')
   const queryClient = useQueryClient()
 
-  const { data: receivedData, isLoading: rLoading } = useQuery({ queryKey: ['messages-received'], queryFn: () => api.get('/board/messages?box=received&pageSize=50') as Promise<any> })
-  const { data: sentData, isLoading: sLoading } = useQuery({ queryKey: ['messages-sent'], queryFn: () => api.get('/board/messages?box=sent&pageSize=50') as Promise<any> })
-  const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: () => api.get('/admin/users?pageSize=500') as Promise<any> })
+  const { data: receivedData, isLoading: rLoading } = useQuery({
+    queryKey: ['messages-received'],
+    queryFn: () => api.get('/board/messages?box=received&pageSize=50'),
+  })
+  const { data: sentData, isLoading: sLoading } = useQuery({
+    queryKey: ['messages-sent'],
+    queryFn: () => api.get('/board/messages?box=sent&pageSize=50'),
+  })
+  const { data: usersData } = useQuery({ queryKey: ['users-all'], queryFn: () => api.get('/admin/users?pageSize=500') })
 
   const sendMutation = useMutation({
-    mutationFn: (body: any) => api.post('/board/messages', body),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['messages-sent'] }); setOpen(false); toast.success('메시지를 보냈습니다.') },
+    mutationFn: (body: Record<string, unknown>) => api.post('/board/messages', body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['messages-sent'] })
+      setOpen(false)
+      toast.success('메시지를 보냈습니다.')
+    },
     onError: (err: Error) => toast.error(err.message),
   })
 
@@ -54,10 +89,14 @@ export default function MessagesPage() {
   const handleSend = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
-    sendMutation.mutate({ receiverId: form.get('receiverId'), subject: form.get('subject'), content: form.get('content') })
+    sendMutation.mutate({
+      receiverId: form.get('receiverId'),
+      subject: form.get('subject'),
+      content: form.get('content'),
+    })
   }
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: MessageRow) => {
     setSelectedMsg(row)
     setDetailOpen(true)
     if (!row.isRead && tab === 'received') {
@@ -75,19 +114,48 @@ export default function MessagesPage() {
       <PageHeader title="사내 메시지" description="사내 메시지를 주고받습니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Send className="mr-1 h-4 w-4" /> 메시지 보내기</Button></DialogTrigger>
-          <DialogContent className="max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>메시지 보내기</DialogTitle></DialogHeader>
+          <DialogTrigger asChild>
+            <Button>
+              <Send className="mr-1 h-4 w-4" /> 메시지 보내기
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>메시지 보내기</DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleSend} className="space-y-4">
               <div className="space-y-2">
-                <Label>받는사람 <span className="text-destructive">*</span></Label>
-                <Select name="receiverId"><SelectTrigger><SelectValue placeholder="수신자 선택" /></SelectTrigger>
-                  <SelectContent>{users.map((u: any) => <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>)}</SelectContent>
+                <Label>
+                  받는사람 <span className="text-destructive">*</span>
+                </Label>
+                <Select name="receiverId">
+                  <SelectTrigger>
+                    <SelectValue placeholder="수신자 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((u: { id: string; name: string; email: string }) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name} ({u.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>제목 <span className="text-destructive">*</span></Label><Input name="subject" required aria-required="true" /></div>
-              <div className="space-y-2"><Label>내용 <span className="text-destructive">*</span></Label><Textarea name="content" rows={6} required /></div>
-              <Button type="submit" className="w-full" disabled={sendMutation.isPending}>{sendMutation.isPending ? '전송 중...' : '메시지 보내기'}</Button>
+              <div className="space-y-2">
+                <Label>
+                  제목 <span className="text-destructive">*</span>
+                </Label>
+                <Input name="subject" required aria-required="true" />
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  내용 <span className="text-destructive">*</span>
+                </Label>
+                <Textarea name="content" rows={6} required />
+              </div>
+              <Button type="submit" className="w-full" disabled={sendMutation.isPending}>
+                {sendMutation.isPending ? '전송 중...' : '메시지 보내기'}
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -95,28 +163,52 @@ export default function MessagesPage() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="received" className="flex items-center gap-1"><Mail className="h-4 w-4" /> 받은 메시지</TabsTrigger>
-          <TabsTrigger value="sent" className="flex items-center gap-1"><Send className="h-4 w-4" /> 보낸 메시지</TabsTrigger>
+          <TabsTrigger value="received" className="flex items-center gap-1">
+            <Mail className="h-4 w-4" /> 받은 메시지
+          </TabsTrigger>
+          <TabsTrigger value="sent" className="flex items-center gap-1">
+            <Send className="h-4 w-4" /> 보낸 메시지
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="received">
-          <DataTable columns={receivedColumns} data={receivedData?.data || []} searchColumn="subject" searchPlaceholder="제목으로 검색..." isLoading={rLoading} pageSize={50} onRowClick={handleRowClick} />
+          <DataTable
+            columns={receivedColumns}
+            data={receivedData?.data || []}
+            searchColumn="subject"
+            searchPlaceholder="제목으로 검색..."
+            isLoading={rLoading}
+            pageSize={50}
+            onRowClick={handleRowClick}
+          />
         </TabsContent>
         <TabsContent value="sent">
-          <DataTable columns={sentColumns} data={sentData?.data || []} searchColumn="subject" searchPlaceholder="제목으로 검색..." isLoading={sLoading} pageSize={50} onRowClick={handleRowClick} />
+          <DataTable
+            columns={sentColumns}
+            data={sentData?.data || []}
+            searchColumn="subject"
+            searchPlaceholder="제목으로 검색..."
+            isLoading={sLoading}
+            pageSize={50}
+            onRowClick={handleRowClick}
+          />
         </TabsContent>
       </Tabs>
 
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-w-sm sm:max-w-lg">
-          <DialogHeader><DialogTitle>{selectedMsg?.subject}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{selectedMsg?.subject}</DialogTitle>
+          </DialogHeader>
           {selectedMsg && (
             <div className="space-y-3">
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="text-muted-foreground flex items-center gap-4 text-sm">
                 <span>보낸사람: {selectedMsg.sender?.name}</span>
                 <span>받는사람: {selectedMsg.receiver?.name}</span>
               </div>
-              <div className="text-xs text-muted-foreground">{formatDate(selectedMsg.sentAt)}</div>
-              <div className="border rounded-md p-4 text-sm whitespace-pre-wrap min-h-[150px]">{selectedMsg.content}</div>
+              <div className="text-muted-foreground text-xs">{formatDate(selectedMsg.sentAt)}</div>
+              <div className="min-h-[150px] rounded-md border p-4 text-sm whitespace-pre-wrap">
+                {selectedMsg.content}
+              </div>
             </div>
           )}
         </DialogContent>

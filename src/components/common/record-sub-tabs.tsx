@@ -183,7 +183,7 @@ export function RecordSubTabs({
         {/* Edit mode: existing files */}
         {isEditMode && attachments.length > 0 && (
           <div className="space-y-1">
-            {attachments.map((att: any) => (
+            {attachments.map((att: { id: string; fileName: string; fileSize: number }) => (
               <div key={att.id} className="flex items-center justify-between rounded-md border p-2 text-sm">
                 <span className="truncate">
                   {att.fileName} <span className="text-muted-foreground">({(att.fileSize / 1024).toFixed(1)}KB)</span>
@@ -248,7 +248,7 @@ export function RecordSubTabs({
         {/* Edit mode: existing notes */}
         {isEditMode && notes.length > 0 && (
           <div className="space-y-2">
-            {notes.map((note: any) => (
+            {notes.map((note: { id: string; content: string; createdAt: string; user?: { name?: string } }) => (
               <div key={note.id} className="space-y-1 rounded-md border p-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm break-all whitespace-pre-wrap">{note.content}</p>

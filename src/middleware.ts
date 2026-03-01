@@ -197,9 +197,19 @@ export function middleware(request: NextRequest) {
   }
 
   // 보안 헤더는 next.config.ts headers()에서 일괄 관리
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: { headers: requestHeaders },
   })
+
+  // API GET 요청에 캐시 힌트 헤더 추가 (브라우저 캐시 최적화)
+  if (pathname.startsWith('/api/') && request.method === 'GET') {
+    // 마스터 데이터 (거래처, 품목, 부서 등)는 30초 캐시
+    if (pathname.match(/\/(partners|items|departments|positions|accounts|company)/)) {
+      response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+    }
+  }
+
+  return response
 }
 
 export const config = {

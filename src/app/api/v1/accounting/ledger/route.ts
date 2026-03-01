@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     // 계정과목별 집계 보기 (선택 없을 때)
     if (!accountSubjectId) {
-      const voucherDateWhere: any = {}
+      const voucherDateWhere: Record<string, unknown> = {}
       if (startDate) {
         const d = new Date(startDate)
         if (!isNaN(d.getTime())) voucherDateWhere.gte = d
@@ -68,23 +68,25 @@ export async function GET(request: NextRequest) {
 
     // 특정 계정과목의 거래내역 보기 (페이지네이션 적용)
     const { page, pageSize, skip } = getPaginationParams(searchParams)
-    const dateWhere: any = {}
+    const dateWhere: Record<string, unknown> = {}
     if (startDate || endDate) {
-      dateWhere.voucherDate = {}
+      const voucherDateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const d = new Date(startDate)
-        if (!isNaN(d.getTime())) dateWhere.voucherDate.gte = d
+        if (!isNaN(d.getTime())) voucherDateRange.gte = d
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) dateWhere.voucherDate.lte = d
+        if (!isNaN(d.getTime())) voucherDateRange.lte = d
       }
+      dateWhere.voucherDate = voucherDateRange
     }
 
-    const detailWhere = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const detailWhere: any = {
       accountSubjectId,
       voucher: {
-        status: { in: ['APPROVED', 'CONFIRMED'] as const },
+        status: { in: ['APPROVED', 'CONFIRMED'] },
         ...dateWhere,
       },
     }

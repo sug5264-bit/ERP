@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const departmentId = searchParams.get('departmentId')
     const status = searchParams.get('status')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (rawSearch) {
       const search = sanitizeSearchQuery(rawSearch)
       where.OR = [
@@ -52,15 +52,16 @@ export async function GET(req: NextRequest) {
     const joinDateFrom = searchParams.get('joinDateFrom')
     const joinDateTo = searchParams.get('joinDateTo')
     if (joinDateFrom || joinDateTo) {
-      where.joinDate = {}
+      const dateRange: { gte?: Date; lte?: Date } = {}
       if (joinDateFrom) {
         const d = new Date(joinDateFrom)
-        if (!isNaN(d.getTime())) where.joinDate.gte = d
+        if (!isNaN(d.getTime())) dateRange.gte = d
       }
       if (joinDateTo) {
         const d = new Date(joinDateTo)
-        if (!isNaN(d.getTime())) where.joinDate.lte = d
+        if (!isNaN(d.getTime())) dateRange.lte = d
       }
+      where.joinDate = dateRange
     }
 
     const [employees, totalCount] = await Promise.all([

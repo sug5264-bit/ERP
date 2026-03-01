@@ -24,18 +24,19 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const rawSearch = searchParams.get('search')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (invoiceType) where.invoiceType = invoiceType
     if (startDate || endDate) {
-      where.issueDate = {}
+      const dateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const d = new Date(startDate)
-        if (!isNaN(d.getTime())) where.issueDate.gte = d
+        if (!isNaN(d.getTime())) dateRange.gte = d
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) where.issueDate.lte = d
+        if (!isNaN(d.getTime())) dateRange.lte = d
       }
+      where.issueDate = dateRange
     }
     if (rawSearch) {
       const search = sanitizeSearchQuery(rawSearch)

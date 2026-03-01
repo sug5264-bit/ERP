@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return errorResponse('완료 또는 취소된 발주는 수정할 수 없습니다.', 'INVALID_STATUS')
       }
 
-      const updateData: any = {}
+      const updateData: Record<string, unknown> = {}
       if (body.orderDate) updateData.orderDate = new Date(body.orderDate)
       if (body.partnerId) updateData.partnerId = body.partnerId
       if (body.deliveryDate !== undefined)
@@ -99,43 +99,47 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         }
 
         // 기존 납품 수량 보존을 위해 맵 생성
-        const existingDelivered = new Map(order.details.map((d: any) => [d.itemId, Number(d.deliveredQty ?? 0)]))
+        const existingDelivered = new Map(order.details.map((d) => [d.itemId, Number(d.deliveredQty ?? 0)]))
         // 품목 세금유형 조회
-        const orderItemIds = body.details.map((d: any) => d.itemId)
+        const orderItemIds = body.details.map((d: { itemId: string }) => d.itemId)
         const itemsInfo = await prisma.item.findMany({
           where: { id: { in: orderItemIds } },
           select: { id: true, taxType: true },
         })
-        const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
+        const taxTypeMap = new Map(itemsInfo.map((i) => [i.id, i.taxType]))
         const isVatIncluded = body.vatIncluded !== undefined ? body.vatIncluded : order.vatIncluded
-        const details = body.details.map((d: any, idx: number) => {
-          const supplyAmount = Math.round(d.quantity * d.unitPrice)
-          const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
-          const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
-          const deliveredQty = existingDelivered.get(d.itemId) || 0
-          const remainingQty = Math.max(0, d.quantity - deliveredQty)
-          return {
-            lineNo: idx + 1,
-            itemId: d.itemId,
-            quantity: d.quantity,
-            unitPrice: d.unitPrice,
-            supplyAmount,
-            taxAmount,
-            totalAmount: supplyAmount + taxAmount,
-            deliveredQty,
-            remainingQty,
-            remark: d.remark || null,
+        const details = body.details.map(
+          (d: { itemId: string; quantity: number; unitPrice: number; remark?: string }, idx: number) => {
+            const supplyAmount = Math.round(d.quantity * d.unitPrice)
+            const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
+            const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+            const deliveredQty = existingDelivered.get(d.itemId) || 0
+            const remainingQty = Math.max(0, d.quantity - deliveredQty)
+            return {
+              lineNo: idx + 1,
+              itemId: d.itemId,
+              quantity: d.quantity,
+              unitPrice: d.unitPrice,
+              supplyAmount,
+              taxAmount,
+              totalAmount: supplyAmount + taxAmount,
+              deliveredQty,
+              remainingQty,
+              remark: d.remark || null,
+            }
           }
-        })
-        const totalSupply = details.reduce((s: number, d: any) => s + d.supplyAmount, 0)
-        const totalTax = details.reduce((s: number, d: any) => s + d.taxAmount, 0)
+        )
+        const totalSupply = details.reduce((s: number, d: { supplyAmount: number }) => s + d.supplyAmount, 0)
+        const totalTax = details.reduce((s: number, d: { taxAmount: number }) => s + d.taxAmount, 0)
         updateData.totalSupply = totalSupply
         updateData.totalTax = totalTax
         updateData.totalAmount = totalSupply + totalTax
 
         await prisma.$transaction(async (tx) => {
           await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
-          await tx.salesOrderDetail.createMany({ data: details.map((d: any) => ({ ...d, salesOrderId: id })) })
+          await tx.salesOrderDetail.createMany({
+            data: details.map((d: Record<string, unknown>) => ({ ...d, salesOrderId: id })),
+          })
           await tx.salesOrder.update({ where: { id }, data: updateData })
         })
       } else {

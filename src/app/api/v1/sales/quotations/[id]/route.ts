@@ -110,7 +110,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         return errorResponse('발주 전환된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
       if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
 
-      const updateData: any = {}
+      const updateData: Record<string, unknown> = {}
       if (body.quotationDate) updateData.quotationDate = new Date(body.quotationDate)
       if (body.partnerId) updateData.partnerId = body.partnerId
       if (body.validUntil !== undefined) updateData.validUntil = body.validUntil ? new Date(body.validUntil) : null
@@ -124,37 +124,41 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           if (typeof d.unitPrice !== 'number' || d.unitPrice < 0) throw new Error('단가는 0 이상이어야 합니다.')
         }
 
-        const itemIds = body.details.map((d: any) => d.itemId)
+        const itemIds = body.details.map((d: { itemId: string }) => d.itemId)
         const itemsInfo = await prisma.item.findMany({
           where: { id: { in: itemIds } },
           select: { id: true, taxType: true },
         })
-        const taxTypeMap = new Map(itemsInfo.map((i: any) => [i.id, i.taxType]))
+        const taxTypeMap = new Map(itemsInfo.map((i) => [i.id, i.taxType]))
 
-        const details = body.details.map((d: any, idx: number) => {
-          const supplyAmount = Math.round(d.quantity * d.unitPrice)
-          const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
-          const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
-          return {
-            lineNo: idx + 1,
-            itemId: d.itemId,
-            quantity: d.quantity,
-            unitPrice: d.unitPrice,
-            supplyAmount,
-            taxAmount,
-            totalAmount: supplyAmount + taxAmount,
-            remark: d.remark || null,
+        const details = body.details.map(
+          (d: { itemId: string; quantity: number; unitPrice: number; remark?: string }, idx: number) => {
+            const supplyAmount = Math.round(d.quantity * d.unitPrice)
+            const taxType = taxTypeMap.get(d.itemId) || 'TAXABLE'
+            const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+            return {
+              lineNo: idx + 1,
+              itemId: d.itemId,
+              quantity: d.quantity,
+              unitPrice: d.unitPrice,
+              supplyAmount,
+              taxAmount,
+              totalAmount: supplyAmount + taxAmount,
+              remark: d.remark || null,
+            }
           }
-        })
-        const totalSupply = details.reduce((s: number, d: any) => s + d.supplyAmount, 0)
-        const totalTax = details.reduce((s: number, d: any) => s + d.taxAmount, 0)
+        )
+        const totalSupply = details.reduce((s: number, d: { supplyAmount: number }) => s + d.supplyAmount, 0)
+        const totalTax = details.reduce((s: number, d: { taxAmount: number }) => s + d.taxAmount, 0)
         updateData.totalSupply = totalSupply
         updateData.totalTax = totalTax
         updateData.totalAmount = totalSupply + totalTax
 
         await prisma.$transaction(async (tx) => {
           await tx.quotationDetail.deleteMany({ where: { quotationId: id } })
-          await tx.quotationDetail.createMany({ data: details.map((d: any) => ({ ...d, quotationId: id })) })
+          await tx.quotationDetail.createMany({
+            data: details.map((d: Record<string, unknown>) => ({ ...d, quotationId: id })),
+          })
           await tx.quotation.update({ where: { id }, data: updateData })
         })
       } else {

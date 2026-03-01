@@ -94,11 +94,11 @@ export default function TaxInvoicePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounting-tax-invoice', typeFilter],
-    queryFn: () => api.get(`/accounting/tax-invoice?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/accounting/tax-invoice?${qp.toString()}`),
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/accounting/tax-invoice', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/accounting/tax-invoice', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting-tax-invoice'] })
       setOpen(false)
@@ -110,14 +110,14 @@ export default function TaxInvoicePage() {
 
   const invoices: TaxInvoiceRow[] = data?.data || []
 
-  const updateItem = (idx: number, field: string, value: any) => {
+  const updateItem = (idx: number, field: keyof InvoiceItem, value: string | number) => {
     const newItems = [...items]
-    ;(newItems[idx] as any)[field] = value
+    ;(newItems[idx] as unknown as Record<string, string | number>)[field] = value
     if (field === 'qty' || field === 'unitPrice') {
       const qty = field === 'qty' ? value : newItems[idx].qty
       const price = field === 'unitPrice' ? value : newItems[idx].unitPrice
-      newItems[idx].supplyAmount = qty * price
-      newItems[idx].taxAmount = Math.round(qty * price * 0.1)
+      newItems[idx].supplyAmount = Number(qty) * Number(price)
+      newItems[idx].taxAmount = Math.round(Number(qty) * Number(price) * 0.1)
     }
     setItems(newItems)
   }

@@ -475,6 +475,97 @@ aside .overflow-y-auto::-webkit-scrollbar-track {
   background: oklch(0.35 0 0);
 }
 
+/* ─── Print Styles (인쇄 최적화) ─── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+  aside,
+  nav,
+  header,
+  [data-sonner-toaster],
+  button:not(.print-visible),
+  .no-print {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+  table {
+    page-break-inside: auto;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+  thead {
+    display: table-header-group;
+  }
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+}
+
+/* ─── Enhanced Table Styles ─── */
+.table-container {
+  position: relative;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-container::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  background: linear-gradient(to left, var(--background) 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.table-container:not([data-scrolled-end='true'])::after {
+  opacity: 1;
+}
+
+/* ─── Form Group Divider ─── */
+.form-section-divider {
+  border-top: 1px dashed var(--border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+/* ─── Progress Bar Animation ─── */
+@keyframes progress-fill {
+  from {
+    width: 0;
+  }
+  to {
+    width: var(--progress-width, 0%);
+  }
+}
+.animate-progress-fill {
+  animation: progress-fill 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ─── Empty State Illustration ─── */
+.empty-state-icon {
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+.group:hover .empty-state-icon {
+  opacity: 0.6;
+}
+
+/* ─── Tooltip Delay Optimization ─── */
+[data-radix-tooltip-content] {
+  animation-duration: 0.15s !important;
+}
+
 /* ─── Dialog Backdrop Blur ─── */
 [data-state='open'][role='dialog'] {
   animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);

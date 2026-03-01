@@ -102,7 +102,7 @@ export default function StockMovementPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/inventory/stock-movement', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/inventory/stock-movement', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock-movement'] })
       queryClient.invalidateQueries({ queryKey: ['inventory-stock-balance'] })
@@ -133,7 +133,7 @@ export default function StockMovementPage() {
   const allItems = itemsData?.data || []
   const warehouses = warehousesData?.data || []
 
-  const updateDetail = (idx: number, field: string, value: any) => {
+  const updateDetail = (idx: number, field: string, value: string | number) => {
     const newDetails = [...details]
     ;(newDetails[idx] as any)[field] = value
     setDetails(newDetails)
@@ -234,7 +234,7 @@ export default function StockMovementPage() {
                         <SelectValue placeholder="선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {warehouses.map((w: any) => (
+                        {warehouses.map((w: { id: string; name: string }) => (
                           <SelectItem key={w.id} value={w.id}>
                             {w.name}
                           </SelectItem>
@@ -253,7 +253,7 @@ export default function StockMovementPage() {
                         <SelectValue placeholder="선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {warehouses.map((w: any) => (
+                        {warehouses.map((w: { id: string; name: string }) => (
                           <SelectItem key={w.id} value={w.id}>
                             {w.name}
                           </SelectItem>
@@ -296,7 +296,7 @@ export default function StockMovementPage() {
                           <SelectValue placeholder="품목 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          {allItems.map((item: any) => (
+                          {allItems.map((item: { id: string; itemCode: string; itemName: string }) => (
                             <SelectItem key={item.id} value={item.id}>
                               {item.itemCode} - {item.itemName}
                             </SelectItem>
@@ -344,7 +344,7 @@ export default function StockMovementPage() {
           {
             id: 'delete',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <Button
                 variant="ghost"
                 size="icon"

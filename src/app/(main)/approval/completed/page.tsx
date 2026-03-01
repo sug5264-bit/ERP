@@ -21,7 +21,33 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   CANCELLED: { label: '취소', variant: 'secondary' },
 }
 
-const columns: ColumnDef<any>[] = [
+interface CompletedDocRow {
+  id: string
+  documentNo: string
+  title: string
+  draftDate: string
+  status: string
+  drafter?: { nameKo: string }
+  content?: {
+    docType?: string
+    purpose?: string
+    amount?: number | string
+    period?: string
+    department?: string
+    body?: string
+    [key: string]: unknown
+  }
+  steps?: {
+    id: string
+    status: string
+    approvalType: string
+    comment?: string
+    actionDate?: string
+    approver?: { nameKo: string; position?: { name: string } }
+  }[]
+}
+
+const columns: ColumnDef<CompletedDocRow>[] = [
   {
     accessorKey: 'documentNo',
     header: '문서번호',
@@ -43,22 +69,24 @@ const columns: ColumnDef<any>[] = [
 export default function ApprovalCompletedPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [detailOpen, setDetailOpen] = useState(false)
-  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [selectedDoc, setSelectedDoc] = useState<CompletedDocRow | null>(null)
 
   const qp = new URLSearchParams({ pageSize: '50', filter: 'myDrafts' })
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-completed', statusFilter],
-    queryFn: () => api.get(`/approval/documents?${qp}`) as Promise<any>,
+    queryFn: () => api.get(`/approval/documents?${qp}`),
   })
 
-  const completedData = (data?.data || []).filter((d: any) => ['APPROVED', 'REJECTED', 'CANCELLED'].includes(d.status))
+  const completedData = (data?.data || []).filter((d: { status: string }) =>
+    ['APPROVED', 'REJECTED', 'CANCELLED'].includes(d.status)
+  )
 
-  const handleRowClick = async (row: any) => {
+  const handleRowClick = async (row: CompletedDocRow) => {
     try {
-      const res = (await api.get(`/approval/documents/${row.id}`)) as any
-      setSelectedDoc(res.data || res)
+      const res = (await api.get(`/approval/documents/${row.id}`)) as Record<string, unknown>
+      setSelectedDoc((res.data || res) as CompletedDocRow)
       setDetailOpen(true)
     } catch {
       toast.error('문서를 불러올 수 없습니다.')
@@ -120,23 +148,39 @@ export default function ApprovalCompletedPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">결재선</Label>
-                {(selectedDoc.steps || []).map((step: any, idx: number) => (
-                  <div key={step.id} className="flex items-center gap-2 text-sm">
-                    <span className="w-6">{idx + 1}.</span>
-                    <span className="flex-1">{step.approver?.nameKo || '-'}</span>
-                    <Badge
-                      variant={
-                        step.status === 'APPROVED' ? 'default' : step.status === 'REJECTED' ? 'destructive' : 'outline'
-                      }
-                    >
-                      {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
-                    </Badge>
-                    {step.comment && <span className="text-muted-foreground text-xs">({step.comment})</span>}
-                    {step.actionDate && (
-                      <span className="text-muted-foreground text-xs">{formatDate(step.actionDate)}</span>
-                    )}
-                  </div>
-                ))}
+                {(selectedDoc.steps || []).map(
+                  (
+                    step: {
+                      id: string
+                      status: string
+                      approvalType: string
+                      comment?: string
+                      actionDate?: string
+                      approver?: { nameKo: string }
+                    },
+                    idx: number
+                  ) => (
+                    <div key={step.id} className="flex items-center gap-2 text-sm">
+                      <span className="w-6">{idx + 1}.</span>
+                      <span className="flex-1">{step.approver?.nameKo || '-'}</span>
+                      <Badge
+                        variant={
+                          step.status === 'APPROVED'
+                            ? 'default'
+                            : step.status === 'REJECTED'
+                              ? 'destructive'
+                              : 'outline'
+                        }
+                      >
+                        {step.status === 'APPROVED' ? '승인' : step.status === 'REJECTED' ? '반려' : '대기'}
+                      </Badge>
+                      {step.comment && <span className="text-muted-foreground text-xs">({step.comment})</span>}
+                      {step.actionDate && (
+                        <span className="text-muted-foreground text-xs">{formatDate(step.actionDate)}</span>
+                      )}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}

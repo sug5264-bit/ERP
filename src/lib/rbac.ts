@@ -47,12 +47,7 @@ export function getModuleFromPath(pathname: string): string | null {
 /**
  * 서버사이드 권한 체크 (API route에서 사용)
  */
-export function hasPermission(
-  permissions: Permission[],
-  roles: string[],
-  module: string,
-  action: Action
-): boolean {
+export function hasPermission(permissions: Permission[], roles: string[], module: string, action: Action): boolean {
   // 시스템 관리자는 모든 권한
   if (roles.includes('SYSTEM_ADMIN') || roles.includes('관리자')) return true
   // 부서장은 읽기/승인 가능
@@ -73,9 +68,9 @@ export async function requirePermission(module: string, action: Action) {
     return { error: 'UNAUTHORIZED' as const, status: 401, session: null }
   }
 
-  const user = session.user as any
-  const permissions: Permission[] = user.permissions || []
-  const roles: string[] = user.roles || []
+  const user = session.user as Record<string, unknown>
+  const permissions: Permission[] = (user.permissions || []) as Permission[]
+  const roles: string[] = (user.roles || []) as string[]
 
   if (!hasPermission(permissions, roles, module, action)) {
     return { error: 'FORBIDDEN' as const, status: 403, session: null }

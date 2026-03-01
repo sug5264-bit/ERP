@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     const status = sp.get('status')
     if (status) where.status = status
     const partnerId = sp.get('partnerId')

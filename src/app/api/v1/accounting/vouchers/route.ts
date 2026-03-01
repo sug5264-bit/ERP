@@ -26,19 +26,20 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('endDate')
     const search = searchParams.get('search')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (voucherType) where.voucherType = voucherType
     if (status) where.status = status
     if (startDate || endDate) {
-      where.voucherDate = {}
+      const dateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
         const d = new Date(startDate)
-        if (!isNaN(d.getTime())) where.voucherDate.gte = d
+        if (!isNaN(d.getTime())) dateRange.gte = d
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) where.voucherDate.lte = d
+        if (!isNaN(d.getTime())) dateRange.lte = d
       }
+      where.voucherDate = dateRange
     }
     if (search) {
       const sanitized = sanitizeSearchQuery(search)
@@ -79,8 +80,8 @@ export async function POST(request: NextRequest) {
 
     // Resolve accountCode to accountSubjectId if needed (배치 조회로 N+1 방지)
     const accountCodes = data.details
-      .filter((d) => !d.accountSubjectId && (d as any).accountCode)
-      .map((d) => (d as any).accountCode as string)
+      .filter((d) => !d.accountSubjectId && (d as Record<string, unknown>).accountCode)
+      .map((d) => (d as Record<string, unknown>).accountCode as string)
     const accountCodeMap = new Map<string, string>()
     if (accountCodes.length > 0) {
       const accounts = await prisma.accountSubject.findMany({
@@ -94,7 +95,8 @@ export async function POST(request: NextRequest) {
       }
     }
     const resolvedDetails = data.details.map((d) => {
-      const accountSubjectId = d.accountSubjectId || accountCodeMap.get((d as any).accountCode)
+      const accountSubjectId =
+        d.accountSubjectId || accountCodeMap.get((d as Record<string, unknown>).accountCode as string)
       if (!accountSubjectId) {
         throw new Error('계정과목 ID가 누락된 항목이 있습니다.')
       }

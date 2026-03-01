@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (existingUser) throw new Error('CONFLICT:이미 사용 중인 이메일입니다.')
       }
 
-      const updateData: any = {}
+      const updateData: Record<string, unknown> = {}
       if (validated.username !== undefined) updateData.username = validated.username
       if (validated.email !== undefined) updateData.email = validated.email
       if (validated.name !== undefined) updateData.name = validated.name
@@ -84,7 +84,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
       // 소속(부서/직위) 변경
       if ((validated.departmentId !== undefined || validated.positionId !== undefined) && updated.employeeId) {
-        const employeeUpdateData: any = {}
+        const employeeUpdateData: Record<string, unknown> = {}
         if (validated.departmentId !== undefined) employeeUpdateData.departmentId = validated.departmentId
         if (validated.positionId !== undefined) employeeUpdateData.positionId = validated.positionId
         await tx.employee.update({

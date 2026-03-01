@@ -28,6 +28,55 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   CANCELLED: { label: '취소', variant: 'destructive' },
 }
 
+interface QuotationRow {
+  id: string
+  quotationNo: string
+  quotationDate: string
+  validUntil?: string | null
+  status: string
+  totalSupply: number
+  totalTax: number
+  totalAmount: number
+  description?: string | null
+  partner?: { id: string; partnerCode: string; partnerName: string } | null
+  employee?: { id: string; nameKo: string } | null
+  details?: QuotationDetailRow[]
+}
+
+interface QuotationDetailRow {
+  id: string
+  itemId: string
+  quantity: number
+  unitPrice: number
+  supplyAmount: number
+  taxAmount: number
+  totalAmount: number
+  item?: {
+    id: string
+    itemName: string
+    itemCode?: string
+    specification?: string
+    storageTemp?: string
+    manufacturer?: string
+  }
+}
+
+interface PartnerOption {
+  id: string
+  partnerName: string
+  partnerCode: string
+  haccpNo?: string | null
+}
+
+interface ItemOption {
+  id: string
+  itemCode: string
+  itemName: string
+  taxType?: string
+  storageTemp?: string | null
+  manufacturer?: string | null
+}
+
 interface Detail {
   itemId: string
   quantity: number
@@ -42,14 +91,14 @@ export default function QuotationsPage() {
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const queryClient = useQueryClient()
 
-  const handlePDF = (q: any) => {
+  const handlePDF = (q: QuotationRow) => {
     const pdfData: QuotationPDFData = {
       quotationNo: q.quotationNo,
       quotationDate: formatDate(q.quotationDate),
       validUntil: q.validUntil ? formatDate(q.validUntil) : undefined,
       company: { name: COMPANY_NAME },
       partner: { name: q.partner?.partnerName || '' },
-      items: (q.details || []).map((d: any, i: number) => ({
+      items: (q.details || []).map((d: QuotationDetailRow, i: number) => ({
         no: i + 1,
         itemName: d.item?.itemName || '',
         spec: d.item?.specification || '',
@@ -68,7 +117,7 @@ export default function QuotationsPage() {
     toast.success('견적서 PDF가 다운로드되었습니다.')
   }
 
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<QuotationRow>[] = [
     {
       accessorKey: 'quotationNo',
       header: '견적번호',
@@ -149,21 +198,21 @@ export default function QuotationsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-quotations', statusFilter],
-    queryFn: () => api.get(`/sales/quotations?${qp}`) as Promise<any>,
+    queryFn: () => api.get(`/sales/quotations?${qp}`) as Promise<{ data: QuotationRow[] }>,
   })
   const { data: partnersData } = useQuery({
     queryKey: ['partners-sales'],
-    queryFn: () => api.get('/partners?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/partners?pageSize=500') as Promise<{ data: PartnerOption[] }>,
     staleTime: 10 * 60 * 1000,
   })
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
-    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<{ data: ItemOption[] }>,
     staleTime: 10 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/sales/quotations', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/sales/quotations', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-quotations'] })
       setOpen(false)
@@ -196,9 +245,9 @@ export default function QuotationsPage() {
     setDeleteTarget({ id, name: no })
   }
 
-  const partners = partnersData?.data || []
-  const items = itemsData?.data || []
-  const quotations = data?.data || []
+  const partners: PartnerOption[] = partnersData?.data || []
+  const items: ItemOption[] = itemsData?.data || []
+  const quotations: QuotationRow[] = data?.data || []
 
   const exportColumns: ExportColumn[] = [
     { header: '견적번호', accessor: 'quotationNo' },
@@ -218,9 +267,13 @@ export default function QuotationsPage() {
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
-  const updateDetail = (idx: number, field: string, value: any) => {
+  const updateDetail = (idx: number, field: keyof Detail, value: string | number) => {
     const d = [...details]
-    ;(d[idx] as any)[field] = value
+    if (field === 'itemId') {
+      d[idx] = { ...d[idx], itemId: value as string }
+    } else {
+      d[idx] = { ...d[idx], [field]: value as number }
+    }
     setDetails(d)
   }
 
@@ -238,7 +291,7 @@ export default function QuotationsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="견적관리" description="고객 견적서를 작성하고 관리합니다" />
+      <PageHeader title="견적관리" description="OEM 제조 견적서를 작성하고 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-36">
@@ -281,7 +334,7 @@ export default function QuotationsPage() {
                       <SelectValue placeholder="선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      {partners.map((p: any) => (
+                      {partners.map((p: PartnerOption) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.partnerName}
                         </SelectItem>
@@ -313,7 +366,7 @@ export default function QuotationsPage() {
                 <div className="space-y-3">
                   {details.map((d, idx) => {
                     const supply = d.quantity * d.unitPrice
-                    const itemTaxType = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                    const itemTaxType = items.find((it: ItemOption) => it.id === d.itemId)?.taxType || 'TAXABLE'
                     const tax = itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
                       <div key={`detail-${idx}-${d.itemId}`} className="space-y-2 rounded-md border p-3">
@@ -335,7 +388,7 @@ export default function QuotationsPage() {
                             <SelectValue placeholder="품목 선택" />
                           </SelectTrigger>
                           <SelectContent className="max-w-[calc(100vw-4rem)]">
-                            {items.map((it: any) => (
+                            {items.map((it: ItemOption) => (
                               <SelectItem key={it.id} value={it.id}>
                                 <span className="truncate">
                                   {it.itemCode} - {it.itemName}
@@ -391,7 +444,7 @@ export default function QuotationsPage() {
                   {formatCurrency(
                     details.reduce((s, d) => {
                       const sup = d.quantity * d.unitPrice
-                      const tt = items.find((it: any) => it.id === d.itemId)?.taxType || 'TAXABLE'
+                      const tt = items.find((it: ItemOption) => it.id === d.itemId)?.taxType || 'TAXABLE'
                       return s + sup + (tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0)
                     }, 0)
                   )}

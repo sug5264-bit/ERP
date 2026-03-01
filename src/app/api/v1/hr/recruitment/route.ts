@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const { page, pageSize, skip } = getPaginationParams(searchParams)
     const status = searchParams.get('status')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (status) where.status = status
 
     const [items, totalCount] = await Promise.all([

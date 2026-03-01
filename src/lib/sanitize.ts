@@ -24,10 +24,10 @@ export function escapeHtml(str: string): string {
  */
 export function sanitizeString(input: string): string {
   return input
-    .replace(/\0/g, '')           // null 바이트 제거
+    .replace(/\0/g, '') // null 바이트 제거
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 제어 문자 제거
     .trim()
-    .replace(/\s{2,}/g, ' ')     // 연속 공백 → 단일 공백
+    .replace(/\s{2,}/g, ' ') // 연속 공백 → 단일 공백
 }
 
 /**
@@ -36,27 +36,27 @@ export function sanitizeString(input: string): string {
  */
 export function sanitizeSearchQuery(query: string): string {
   return sanitizeString(query)
-    .replace(/[%_\\]/g, (ch) => `\\${ch}`)  // Prisma/SQL 와일드카드 이스케이프
+    .replace(/[%_\\]/g, (ch) => `\\${ch}`) // Prisma/SQL 와일드카드 이스케이프
     .slice(0, 100) // 검색어 최대 100자
 }
 
 /**
  * 객체의 모든 문자열 필드를 재귀적으로 살균
  */
-export function sanitizeObject<T extends Record<string, any>>(obj: T): T {
-  const result = { ...obj } as Record<string, any>
+export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
+  const result = { ...obj } as Record<string, unknown>
   for (const key of Object.keys(result)) {
     const value = result[key]
     if (typeof value === 'string') {
       result[key] = sanitizeString(value)
     } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result[key] = sanitizeObject(value)
+      result[key] = sanitizeObject(value as Record<string, unknown>)
     } else if (Array.isArray(value)) {
-      result[key] = value.map((item: any) =>
+      result[key] = value.map((item: unknown) =>
         typeof item === 'string'
           ? sanitizeString(item)
           : item !== null && typeof item === 'object'
-            ? sanitizeObject(item)
+            ? sanitizeObject(item as Record<string, unknown>)
             : item
       )
     }
@@ -72,7 +72,7 @@ const RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i
 export function sanitizeFileName(name: string): string {
   let sanitized = name
     .replace(/[<>:"/\\|?*\x00-\x1F]/g, '') // 금지 문자 제거
-    .replace(/\.\./g, '')                    // 경로 순회 방지
+    .replace(/\.\./g, '') // 경로 순회 방지
     .trim()
     .slice(0, 255)
   // OS 예약 파일명 방지

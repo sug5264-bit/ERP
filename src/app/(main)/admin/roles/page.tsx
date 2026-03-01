@@ -146,18 +146,18 @@ export default function RolesPage() {
   }, [permissions])
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/admin/roles', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/admin/roles', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
       setCreateOpen(false)
       resetForm()
       toast.success('역할이 생성되었습니다.')
     },
-    onError: (err: any) => toast.error(err?.message || '역할 생성에 실패했습니다.'),
+    onError: (err: Error) => toast.error(err?.message || '역할 생성에 실패했습니다.'),
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => api.put(`/admin/roles/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => api.put(`/admin/roles/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-roles'] })
       setEditOpen(false)
@@ -165,7 +165,7 @@ export default function RolesPage() {
       resetForm()
       toast.success('역할이 수정되었습니다.')
     },
-    onError: (err: any) => toast.error(err?.message || '역할 수정에 실패했습니다.'),
+    onError: (err: Error) => toast.error(err?.message || '역할 수정에 실패했습니다.'),
   })
 
   const deleteMutation = useMutation({
@@ -176,7 +176,7 @@ export default function RolesPage() {
       setSelectedRole(null)
       toast.success('역할이 삭제되었습니다.')
     },
-    onError: (err: any) => toast.error(err?.message || '역할 삭제에 실패했습니다.'),
+    onError: (err: Error) => toast.error(err?.message || '역할 삭제에 실패했습니다.'),
   })
 
   const resetForm = () => {

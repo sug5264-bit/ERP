@@ -24,12 +24,19 @@ const PURPLE = '#8b5cf6'
 const AMBER = '#f59e0b'
 const CYAN = '#06b6d4'
 
-function CustomTooltip({ active, payload, label }: any) {
+interface TooltipPayload {
+  name?: string
+  dataKey?: string
+  color?: string
+  value?: number | string
+}
+
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
   if (!active || !payload?.length) return null
   return (
     <div className="animate-scale-in bg-background/95 rounded-lg border p-3 text-xs shadow-lg backdrop-blur-sm sm:text-sm">
       <p className="mb-1.5 font-semibold">{label}</p>
-      {payload.map((entry: any) => (
+      {payload.map((entry: TooltipPayload) => (
         <div key={entry.name || entry.dataKey} className="flex items-center gap-2 py-0.5">
           <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }} />
           <span className="text-muted-foreground">{entry.name}:</span>
@@ -60,13 +67,35 @@ function ChartEmptyState({ message }: { message: string }) {
   )
 }
 
+interface MonthlyData {
+  month: string
+  online: number
+  offline: number
+}
+
+interface DeptData {
+  name: string
+  count: number
+}
+
+interface StockData {
+  name: string
+  quantity: number
+}
+
+interface LeaveData {
+  type: string
+  count: number
+  days: number
+}
+
 interface DashboardChartsProps {
-  salesSummary: any
-  dashStats: any
+  salesSummary?: { data?: { monthly?: MonthlyData[] } }
+  dashStats?: { data?: { deptData?: DeptData[]; stockData?: StockData[]; leaveData?: LeaveData[] } }
 }
 
 export default function DashboardCharts({ salesSummary, dashStats }: DashboardChartsProps) {
-  const monthlyData = (salesSummary?.data?.monthly || []).map((m: any) => ({
+  const monthlyData: MonthlyData[] = (salesSummary?.data?.monthly || []).map((m: MonthlyData) => ({
     month: m.month,
     online: m.online,
     offline: m.offline,
@@ -135,13 +164,13 @@ export default function DashboardCharts({ salesSummary, dashStats }: DashboardCh
                     innerRadius={40}
                     dataKey="count"
                     nameKey="name"
-                    label={({ name, value }: any) => `${name} (${value})`}
+                    label={({ name, value }: { name?: string; value?: number }) => `${name} (${value})`}
                     labelLine={{ strokeWidth: 1 }}
                     fontSize={10}
                     strokeWidth={2}
                     stroke="var(--background)"
                   >
-                    {deptData.map((d: any, idx: number) => (
+                    {deptData.map((d: DeptData, idx: number) => (
                       <Cell key={d.name || `dept-${idx}`} fill={COLORS[idx % COLORS.length]} />
                     ))}
                   </Pie>

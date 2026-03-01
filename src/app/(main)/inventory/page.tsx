@@ -27,9 +27,13 @@ export default function InventoryPage() {
   const balances = balancesData?.data || []
   const warehouses = warehousesData?.data || []
 
-  const totalValue = balances.reduce((s: number, b: any) => s + Number(b.quantity) * Number(b.averageCost), 0)
+  const totalValue = balances.reduce(
+    (s: number, b: { quantity: number; averageCost: number }) => s + Number(b.quantity) * Number(b.averageCost),
+    0
+  )
   const belowSafety = balances.filter(
-    (b: any) => Number(b.quantity) < (b.item?.safetyStock || 0) && b.item?.safetyStock > 0
+    (b: { quantity: number; item?: { safetyStock?: number } }) =>
+      Number(b.quantity) < (b.item?.safetyStock || 0) && (b.item?.safetyStock || 0) > 0
   ).length
 
   const cards = [

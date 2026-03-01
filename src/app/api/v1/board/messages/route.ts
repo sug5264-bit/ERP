@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
     const box = sp.get('box') || 'received'
-    const where: any =
+    const where: Record<string, unknown> =
       box === 'sent' ? { senderId: authResult.session.user.id } : { receiverId: authResult.session.user.id }
     const [items, totalCount] = await Promise.all([
       prisma.message.findMany({

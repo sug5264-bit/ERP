@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     // 기존 사번 일괄 조회 (N+1 쿼리 방지)
     const allEmpNos = rows
-      .map((r: any) => (r.employeeNo ? String(r.employeeNo).trim() : ''))
+      .map((r: Record<string, unknown>) => (r.employeeNo ? String(r.employeeNo).trim() : ''))
       .filter((n: string) => n.length > 0)
     const existingEmployees = await prisma.employee.findMany({
       where: { employeeNo: { in: allEmpNos } },

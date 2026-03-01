@@ -83,7 +83,7 @@ export default function CodesPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/admin/codes', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/admin/codes', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-codes'] })
       setOpen(false)

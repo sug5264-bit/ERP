@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get('employeeId')
     const status = searchParams.get('status')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (employeeId) where.employeeId = employeeId
     if (status) where.status = status
 

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
-    const where: any = { isActive: true }
+    const where: Record<string, unknown> = { isActive: true }
     const itemId = sp.get('itemId')
     if (itemId) where.itemId = itemId
     const category = sp.get('category')

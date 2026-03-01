@@ -77,7 +77,7 @@ export async function createPDFDocument(options: CreatePDFOptions = {}): Promise
 
 /** autoTable 렌더링 후 최종 Y 좌표를 안전하게 추출 */
 export function getLastTableY(doc: InstanceType<typeof jsPDF>): number {
-  return (doc as any).lastAutoTable?.finalY ?? 0
+  return (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? 0
 }
 
 // ---------------------------------------------------------------------------

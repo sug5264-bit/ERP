@@ -36,7 +36,7 @@ export default function WarehousesPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/inventory/warehouses', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/inventory/warehouses', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
       setOpen(false)
@@ -46,7 +46,8 @@ export default function WarehousesPage() {
   })
 
   const createZoneMutation = useMutation({
-    mutationFn: ({ warehouseId, ...body }: any) => api.post(`/inventory/warehouses/${warehouseId}/zones`, body),
+    mutationFn: ({ warehouseId, ...body }: { warehouseId: string; [key: string]: unknown }) =>
+      api.post(`/inventory/warehouses/${warehouseId}/zones`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-warehouses'] })
       setZoneDialogId(null)
@@ -84,7 +85,7 @@ export default function WarehousesPage() {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
     createZoneMutation.mutate({
-      warehouseId: zoneDialogId,
+      warehouseId: zoneDialogId || '',
       zoneCode: form.get('zoneCode'),
       zoneName: form.get('zoneName'),
     })

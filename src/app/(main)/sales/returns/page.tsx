@@ -16,9 +16,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { toast } from 'sonner'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { Paperclip, FileText, CalendarDays, Table2 } from 'lucide-react'
 import { RecordSubTabs, savePendingData } from '@/components/common/record-sub-tabs'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
+
+interface OrderOption {
+  id: string
+  orderNo: string
+  partner?: { partnerName: string } | null
+}
+
+interface PartnerOption {
+  id: string
+  partnerName: string
+}
 
 interface ReturnRow {
   id: string
@@ -63,25 +75,26 @@ export default function ReturnsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-returns', statusFilter],
-    queryFn: () => api.get(`/sales/returns?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/sales/returns?${qp.toString()}`) as Promise<{ data: ReturnRow[] }>,
   })
 
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-for-return'],
-    queryFn: () => api.get('/sales/orders?pageSize=200') as Promise<any>,
+    queryFn: () => api.get('/sales/orders?pageSize=200') as Promise<{ data: OrderOption[] }>,
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: partnersData } = useQuery({
     queryKey: ['partners-all'],
-    queryFn: () => api.get('/partners?pageSize=200') as Promise<any>,
+    queryFn: () => api.get('/partners?pageSize=200') as Promise<{ data: PartnerOption[] }>,
     staleTime: 5 * 60 * 1000,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/sales/returns', body),
-    onSuccess: async (res: any) => {
-      const record = res.data || res
+    mutationFn: (body: Record<string, unknown>) => api.post('/sales/returns', body),
+    onSuccess: async (res: unknown) => {
+      const resObj = res as { data?: { id?: string } }
+      const record = resObj.data || (res as { id?: string })
       if (record?.id && (pendingFiles.length > 0 || pendingNote.trim())) {
         await savePendingData('SalesReturn', record.id, pendingFiles, pendingNote)
       }
@@ -117,8 +130,31 @@ export default function ReturnsPage() {
   }
 
   const returns: ReturnRow[] = data?.data || []
-  const orders = ordersData?.data || []
-  const partners = partnersData?.data || []
+  const orders: OrderOption[] = ordersData?.data || []
+  const partners: PartnerOption[] = partnersData?.data || []
+
+  // 내보내기 컬럼 정의
+  const exportColumns: ExportColumn[] = [
+    { header: '반품번호', accessor: 'returnNo' },
+    { header: '반품일', accessor: (r) => (r.returnDate ? formatDate(r.returnDate as string) : '') },
+    { header: '거래처', accessor: (r) => (r.partner as ReturnRow['partner'])?.partnerName || '' },
+    { header: '수주번호', accessor: (r) => (r.salesOrder as ReturnRow['salesOrder'])?.orderNo || '' },
+    { header: '사유', accessor: (r) => REASON_MAP[r.reason as string] || (r.reason as string) },
+    { header: '반품금액', accessor: (r) => formatCurrency(r.totalAmount as number) },
+    { header: '상태', accessor: (r) => STATUS_MAP[r.status as string]?.label || (r.status as string) },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = {
+      fileName: '반품목록',
+      title: '반품관리 목록',
+      columns: exportColumns,
+      data: returns as unknown as Record<string, unknown>[],
+    }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   // Calendar events
   const calendarEvents: CalendarEvent[] = useMemo(() => {
@@ -200,7 +236,7 @@ export default function ReturnsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="반품관리" description="매출 반품을 등록하고 관리합니다" />
+      <PageHeader title="반품관리" description="OEM 제조 반품 및 품질 이슈를 등록하고 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-36">
@@ -268,6 +304,7 @@ export default function ReturnsPage() {
           searchColumn="returnNo"
           searchPlaceholder="반품번호로 검색..."
           isLoading={isLoading}
+          onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
         />
       )}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -299,7 +336,7 @@ export default function ReturnsPage() {
                         <SelectValue placeholder="수주 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {orders.map((o: any) => (
+                        {orders.map((o) => (
                           <SelectItem key={o.id} value={o.id}>
                             [{o.orderNo}] {o.partner?.partnerName || ''}
                           </SelectItem>
@@ -316,7 +353,7 @@ export default function ReturnsPage() {
                         <SelectValue placeholder="거래처 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {partners.map((p: any) => (
+                        {partners.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.partnerName}
                           </SelectItem>

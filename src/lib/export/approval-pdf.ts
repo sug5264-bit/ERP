@@ -6,7 +6,17 @@ interface ApprovalDocExport {
   draftDate: string
   urgency: string
   status: string
-  content: any
+  content:
+    | {
+        body?: string
+        amount?: string
+        period?: string
+        destination?: string
+        purpose?: string
+        [key: string]: unknown
+      }
+    | string
+    | null
   drafter: {
     nameKo: string
     department?: { name: string } | null
@@ -73,7 +83,7 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
     styles: { fontSize: 10, cellPadding: 3 },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 35 },
-      1: { cellWidth: 'auto' as any },
+      1: { cellWidth: 'auto' as unknown as number },
     },
     margin: { left: 15, right: 15 },
   })
@@ -106,29 +116,30 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   y = getLastTableY(pdf) + 10
 
   // 본문
-  if (doc.content?.body) {
+  const content = typeof doc.content === 'object' && doc.content !== null ? doc.content : null
+  if (content?.body) {
     pdf.setFontSize(11)
     pdf.text('내용', 15, y)
     y += 5
 
     pdf.setFontSize(10)
-    const lines = pdf.splitTextToSize(doc.content.body, pageWidth - 30)
+    const lines = pdf.splitTextToSize(content.body, pageWidth - 30)
     pdf.text(lines, 15, y)
     y += lines.length * 5
   }
 
   // 추가 정보 (금액, 기간 등)
-  if (doc.content?.amount || doc.content?.period || doc.content?.destination) {
+  if (content?.amount || content?.period || content?.destination) {
     y += 5
     pdf.setFontSize(11)
     pdf.text('상세 정보', 15, y)
     y += 3
 
     const detailData: string[][] = []
-    if (doc.content.amount) detailData.push(['금액', doc.content.amount])
-    if (doc.content.period) detailData.push(['기간', doc.content.period])
-    if (doc.content.destination) detailData.push(['목적지', doc.content.destination])
-    if (doc.content.purpose) detailData.push(['목적', doc.content.purpose])
+    if (content.amount) detailData.push(['금액', content.amount])
+    if (content.period) detailData.push(['기간', content.period])
+    if (content.destination) detailData.push(['목적지', content.destination])
+    if (content.purpose) detailData.push(['목적', content.purpose])
 
     if (detailData.length > 0) {
       autoTable({

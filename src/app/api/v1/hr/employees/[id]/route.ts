@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const validated = updateEmployeeSchema.parse(body)
 
-    const updateData: any = { ...validated }
+    const updateData: Record<string, unknown> = { ...validated }
     if (validated.joinDate !== undefined) {
       if (!validated.joinDate) return errorResponse('입사일은 필수 항목입니다.', 'VALIDATION_ERROR', 400)
       updateData.joinDate = new Date(validated.joinDate)
