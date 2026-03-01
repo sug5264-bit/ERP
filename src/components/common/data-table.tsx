@@ -229,9 +229,9 @@ export function DataTable<TData, TValue>({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {allBulkActions.map((ba, i) => (
+                  {allBulkActions.map((ba) => (
                     <DropdownMenuItem
-                      key={i}
+                      key={ba.label}
                       onClick={() => ba.action(selectedRows)}
                       className={ba.variant === 'destructive' ? 'text-destructive focus:text-destructive' : ''}
                     >

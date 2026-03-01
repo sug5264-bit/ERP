@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   requirePermissionCheck,
   isErrorResponse,
@@ -50,6 +51,19 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const data = createSalesReturnSchema.parse(body)
+
+    // 반품 거래처가 수주 거래처와 일치하는지 검증
+    const salesOrder = await prisma.salesOrder.findUnique({
+      where: { id: data.salesOrderId },
+      select: { partnerId: true },
+    })
+    if (!salesOrder) {
+      return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    }
+    if (salesOrder.partnerId && salesOrder.partnerId !== data.partnerId) {
+      return errorResponse('반품 거래처가 수주 거래처와 일치하지 않습니다.', 'PARTNER_MISMATCH', 400)
+    }
+
     // 반품 상세가 있으면 totalAmount를 자동 계산
     const details = data.details || []
     const computedTotal =

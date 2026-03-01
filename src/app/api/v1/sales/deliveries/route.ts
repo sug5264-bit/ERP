@@ -152,17 +152,23 @@ export async function POST(request: NextRequest) {
             `품목 "${item?.itemName || d.itemId}"의 재고가 부족합니다. (현재고: ${totalStock}, 출고량: ${d.quantity})`
           )
         }
-        // 재고가 많은 창고부터 순차 차감
+        // 재고가 많은 창고부터 순차 차감 (낙관적 잠금으로 동시성 보호)
         let remaining = d.quantity
         for (const bal of balances) {
           if (remaining <= 0) break
           const available = Number(bal.quantity)
           const deduct = Math.min(available, remaining)
           if (deduct > 0) {
-            await tx.stockBalance.update({
-              where: { id: bal.id },
+            const result = await tx.stockBalance.updateMany({
+              where: { id: bal.id, quantity: { gte: deduct } },
               data: { quantity: { decrement: deduct } },
             })
+            if (result.count === 0) {
+              const item = await tx.item.findUnique({ where: { id: d.itemId }, select: { itemName: true } })
+              throw new Error(
+                `품목 "${item?.itemName || d.itemId}"의 재고가 동시 처리로 변경되었습니다. 다시 시도해주세요.`
+              )
+            }
             remaining -= deduct
           }
         }

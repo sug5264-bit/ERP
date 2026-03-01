@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
     const actionLabel = action === 'approve' ? '승인' : '반려'
     let successCount = 0
     let failCount = 0
+    const errors: { id: string; message: string }[] = []
 
     // 일괄 조회로 N+1 제거
     const leaves = await prisma.leave.findMany({
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
         const leave = leaveMap.get(leaveId)
         if (!leave) {
           failCount++
+          errors.push({ id: leaveId, message: '해당 휴가를 찾을 수 없거나 이미 처리되었습니다.' })
           continue
         }
 
@@ -95,12 +97,13 @@ export async function POST(req: NextRequest) {
         await Promise.all(tasks)
 
         successCount++
-      } catch {
+      } catch (err) {
         failCount++
+        errors.push({ id: leaveId, message: err instanceof Error ? err.message : '처리 중 오류가 발생했습니다.' })
       }
     }
 
-    return successResponse({ successCount, failCount })
+    return successResponse({ successCount, failCount, errors })
   } catch (error) {
     return handleApiError(error)
   }

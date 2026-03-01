@@ -33,6 +33,17 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       for (const detail of movement.details) {
         if (movement.movementType === 'INBOUND' || movement.movementType === 'TRANSFER') {
           if (movement.targetWarehouseId) {
+            // 음수 재고 방지: 현재 잔량 확인 후 차감
+            const balance = await tx.stockBalance.findFirst({
+              where: { itemId: detail.itemId, warehouseId: movement.targetWarehouseId },
+            })
+            const currentQty = Number(balance?.quantity ?? 0)
+            if (currentQty < Number(detail.quantity)) {
+              const item = await tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } })
+              throw new Error(
+                `품목 "${item?.itemName || detail.itemId}"의 재고가 부족하여 입고 취소할 수 없습니다. (현재고: ${currentQty}, 취소량: ${detail.quantity})`
+              )
+            }
             await tx.stockBalance.updateMany({
               where: { itemId: detail.itemId, warehouseId: movement.targetWarehouseId },
               data: { quantity: { decrement: detail.quantity } },

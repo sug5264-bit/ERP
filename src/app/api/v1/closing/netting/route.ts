@@ -137,7 +137,8 @@ export async function POST(req: NextRequest) {
       where: { id: authResult.session.user.id },
       select: { employeeId: true },
     })
-    if (!user?.employeeId) {
+    const employeeId = user?.employeeId
+    if (!employeeId) {
       return errorResponse('사원 정보가 연결되어 있지 않습니다.', 'NO_EMPLOYEE')
     }
 
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
           totalDebit: parsedAmount,
           totalCredit: parsedAmount,
           fiscalYearId: fiscalYear.id,
-          createdById: user!.employeeId!,
+          createdById: employeeId,
           details: {
             create: [
               {
