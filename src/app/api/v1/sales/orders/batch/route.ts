@@ -8,7 +8,7 @@ import {
   isErrorResponse,
 } from '@/lib/api-helpers'
 
-// POST: 발주 일괄 상태 변경
+// POST: 수주 일괄 상태 변경
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requirePermissionCheck('sales', 'update')
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { ids, action } = body
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return errorResponse('대상 발주를 선택해주세요.', 'INVALID_INPUT')
+      return errorResponse('대상 수주를 선택해주세요.', 'INVALID_INPUT')
     }
     if (ids.length > 100) {
       return errorResponse('한 번에 최대 100건까지 처리 가능합니다.', 'TOO_MANY')
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (orders.length === 0) {
-      return errorResponse('해당 발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      return errorResponse('해당 수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
     let success = 0
@@ -38,21 +38,21 @@ export async function POST(request: NextRequest) {
     const errors: string[] = []
 
     if (action === 'cancel') {
-      // 취소 가능한 발주 필터
+      // 취소 가능한 수주 필터
       const cancellable = orders.filter((o) => {
         if (o.status === 'CANCELLED') {
-          errors.push(`${o.orderNo}: 이미 취소된 발주입니다.`)
+          errors.push(`${o.orderNo}: 이미 취소된 수주입니다.`)
           failed++
           return false
         }
         if (o.status === 'COMPLETED') {
-          errors.push(`${o.orderNo}: 완료된 발주는 취소할 수 없습니다.`)
+          errors.push(`${o.orderNo}: 완료된 수주는 취소할 수 없습니다.`)
           failed++
           return false
         }
         return true
       })
-      // 납품 진행된 발주 제외
+      // 납품 진행된 수주 제외
       if (cancellable.length > 0) {
         const delivered = await prisma.salesOrderDetail.findMany({
           where: { salesOrderId: { in: cancellable.map((o) => o.id) }, deliveredQty: { gt: 0 } },
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         const orderNoMap = new Map(cancellable.map((o) => [o.id, o.orderNo]))
         const actualCancellable = cancellable.filter((o) => {
           if (deliveredIds.has(o.id)) {
-            errors.push(`${o.orderNo}: 납품이 진행된 발주는 취소할 수 없습니다.`)
+            errors.push(`${o.orderNo}: 납품이 진행된 수주는 취소할 수 없습니다.`)
             failed++
             return false
           }
@@ -91,12 +91,12 @@ export async function POST(request: NextRequest) {
       }
       const completable = orders.filter((o) => {
         if (o.status === 'COMPLETED') {
-          errors.push(`${o.orderNo}: 이미 완료된 발주입니다.`)
+          errors.push(`${o.orderNo}: 이미 완료된 수주입니다.`)
           failed++
           return false
         }
         if (o.status === 'CANCELLED') {
-          errors.push(`${o.orderNo}: 취소된 발주는 완료 처리할 수 없습니다.`)
+          errors.push(`${o.orderNo}: 취소된 수주는 완료 처리할 수 없습니다.`)
           failed++
           return false
         }

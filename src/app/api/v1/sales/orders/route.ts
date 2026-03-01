@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       if (maxAmount) amountRange.lte = Number(maxAmount)
       where.totalAmount = amountRange
     }
-    // 통합 검색 (발주번호 또는 거래처명)
+    // 통합 검색 (수주번호 또는 거래처명)
     const rawSearch = sp.get('search')
     if (rawSearch) {
       const search = sanitizeSearchQuery(rawSearch)
