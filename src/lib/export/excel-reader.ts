@@ -42,6 +42,7 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
   }
 
   // 첫 번째 시트 (안내사항 시트 제외)
+  if (workbook.worksheets.length === 0) return []
   const sheet = workbook.worksheets.find((ws) => ws.name !== '안내사항') || workbook.worksheets[0]
   if (!sheet || sheet.rowCount < 2) return []
 

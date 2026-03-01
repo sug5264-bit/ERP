@@ -35,11 +35,12 @@ export async function loadKoreanFont(doc: InstanceType<typeof jsPDF>): Promise<s
         const arrayBuffer = await response.arrayBuffer()
         const bytes = new Uint8Array(arrayBuffer)
         const chunkSize = 8192
-        let binary = ''
+        const chunks: string[] = []
         for (let i = 0; i < bytes.length; i += chunkSize) {
           const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
-          binary += String.fromCharCode.apply(null, Array.from(chunk))
+          chunks.push(String.fromCharCode.apply(null, Array.from(chunk)))
         }
+        const binary = chunks.join('')
         const base64 = btoa(binary)
         cachedFontBase64 = base64
         doc.addFileToVFS(FONT_FILE, base64)

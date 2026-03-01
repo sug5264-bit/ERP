@@ -6,7 +6,7 @@ export const createApprovalDocumentSchema = z.object({
   draftDate: z
     .string()
     .min(1, '기안일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}/, '올바른 날짜 형식이 아닙니다'),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   content: z
     .any()
     .refine((val) => val === undefined || val === null || (typeof val === 'object' && !Array.isArray(val)), {

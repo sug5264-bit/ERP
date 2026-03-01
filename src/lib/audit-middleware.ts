@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeAuditLog, getClientIp } from '@/lib/audit-log'
+import { logger } from '@/lib/logger'
 
 type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'EXPORT' | 'IMPORT' | 'APPROVE' | 'REJECT'
 
@@ -88,7 +89,7 @@ export function withAuditLog(
         oldValue: oldValue ? JSON.stringify(oldValue) : undefined,
         newValue: newValue ? JSON.stringify(newValue) : undefined,
         ipAddress,
-      }).catch((e) => console.error('Audit log failed:', e))
+      }).catch((e) => logger.error('Audit log failed', { error: e instanceof Error ? e.message : String(e) }))
     }
 
     return response

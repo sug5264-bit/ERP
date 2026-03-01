@@ -182,6 +182,14 @@ export default function FinancialStatementsPage() {
                 <CardContent className="space-y-6">
                   {renderSection('LIABILITY', '부채')}
                   {renderSection('EQUITY', '자본')}
+                  <div className="space-y-1 border-t pt-2">
+                    <div className="flex justify-between text-sm">
+                      <span>당기순이익(이익잉여금)</span>
+                      <span className={`font-mono ${netIncome < 0 ? 'text-destructive' : ''}`}>
+                        {formatCurrency(netIncome)}
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex justify-between border-t-2 pt-2 font-bold">
                     <span>부채 및 자본 합계</span>
                     <span className="font-mono">{formatCurrency(totalLiabilities + totalEquity + netIncome)}</span>

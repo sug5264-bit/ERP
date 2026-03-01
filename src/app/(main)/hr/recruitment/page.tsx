@@ -186,13 +186,6 @@ export default function RecruitmentPage() {
     })
   }
 
-  // 상세보기를 위해 지원자 포함 데이터 다시 조회
-  const { data: detailData } = useQuery({
-    queryKey: ['hr-recruitment-detail', selected?.id],
-    queryFn: () => api.get(`/hr/recruitment/${selected?.id}`),
-    enabled: !!selected?.id,
-  })
-
   return (
     <div className="space-y-6">
       <PageHeader title="채용관리" description="채용 공고 및 지원자를 관리합니다" />
