@@ -81,14 +81,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         _count: { select: { userRoles: true } },
       },
     })
+    if (!updated) return errorResponse('역할을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     return successResponse({
-      id: updated!.id,
-      name: updated!.name,
-      description: updated!.description,
-      isSystem: updated!.isSystem,
-      userCount: updated!._count.userRoles,
-      permissions: updated!.rolePermissions.map((rp) => ({
+      id: updated.id,
+      name: updated.name,
+      description: updated.description,
+      isSystem: updated.isSystem,
+      userCount: updated._count.userRoles,
+      permissions: updated.rolePermissions.map((rp) => ({
         id: rp.permission.id,
         module: rp.permission.module,
         action: rp.permission.action,

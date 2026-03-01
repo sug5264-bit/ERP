@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
 
     if (data.parentId) {
       const parent = await prisma.itemCategory.findUnique({ where: { id: data.parentId } })
-      if (parent) data.level = parent.level + 1
+      if (!parent) return errorResponse('상위 분류를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      data.level = parent.level + 1
     }
 
     const category = await prisma.itemCategory.create({ data })
