@@ -44,7 +44,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const existing = await prisma.quotation.findUnique({ where: { id }, select: { status: true } })
       if (!existing) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
       if (existing.status === 'ORDERED') {
-        return errorResponse('수주 전환된 견적은 취소할 수 없습니다.', 'INVALID_STATUS', 400)
+        return errorResponse('발주 전환된 견적은 취소할 수 없습니다.', 'INVALID_STATUS', 400)
       }
       const q = await prisma.quotation.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(q)
@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         include: { details: { include: { item: { select: { id: true, taxType: true } } } } },
       })
       if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (quotation.status === 'ORDERED') return errorResponse('이미 수주 전환된 견적입니다.', 'ALREADY_ORDERED')
+      if (quotation.status === 'ORDERED') return errorResponse('이미 발주 전환된 견적입니다.', 'ALREADY_ORDERED')
       if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 전환할 수 없습니다.', 'INVALID_STATUS')
 
       const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
@@ -107,7 +107,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const quotation = await prisma.quotation.findUnique({ where: { id }, include: { details: true } })
       if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
       if (quotation.status === 'ORDERED')
-        return errorResponse('수주 전환된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
+        return errorResponse('발주 전환된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
       if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 수정할 수 없습니다.', 'INVALID_STATUS')
 
       const updateData: Record<string, unknown> = {}
@@ -187,7 +187,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     if (quotation.status === 'ORDERED') {
-      return errorResponse('수주 전환된 견적은 삭제할 수 없습니다. 먼저 수주를 삭제하세요.', 'HAS_ORDERS', 400)
+      return errorResponse('발주 전환된 견적은 삭제할 수 없습니다. 먼저 발주를 삭제하세요.', 'HAS_ORDERS', 400)
     }
 
     await prisma.$transaction(async (tx) => {

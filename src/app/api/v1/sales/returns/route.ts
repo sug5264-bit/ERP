@@ -52,29 +52,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = createSalesReturnSchema.parse(body)
 
-    // 반품 거래처가 수주 거래처와 일치하는지 검증
+    // 발주 존재 확인 및 거래처 일치 검증
     const salesOrder = await prisma.salesOrder.findUnique({
       where: { id: data.salesOrderId },
-      select: { partnerId: true },
+      select: { id: true, partnerId: true, status: true },
     })
     if (!salesOrder) {
-      return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
     if (salesOrder.partnerId && salesOrder.partnerId !== data.partnerId) {
-      return errorResponse('반품 거래처가 수주 거래처와 일치하지 않습니다.', 'PARTNER_MISMATCH', 400)
+      return errorResponse('반품 거래처가 발주 거래처와 일치하지 않습니다.', 'PARTNER_MISMATCH', 400)
     }
 
     // 반품 상세가 있으면 totalAmount를 자동 계산
     const details = data.details || []
     const computedTotal =
       details.length > 0 ? details.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0) : data.totalAmount
-
-    // 수주 존재 확인
-    const salesOrder = await prisma.salesOrder.findUnique({
-      where: { id: data.salesOrderId },
-      select: { id: true, status: true },
-    })
-    if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     const salesReturn = await prisma.$transaction(async (tx) => {
       const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate), tx)
@@ -106,10 +99,10 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // 반품 시 재고 복원 (입고 처리) 및 수주 잔량 복원
+      // 반품 시 재고 복원 (입고 처리) 및 발주 잔량 복원
       if (details.length > 0) {
         for (const d of details) {
-          // 수주 상세의 납품수량 감소, 잔량 증가
+          // 발주 상세의 납품수량 감소, 잔량 증가
           await tx.salesOrderDetail.updateMany({
             where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
             data: { deliveredQty: { decrement: d.quantity }, remainingQty: { increment: d.quantity } },

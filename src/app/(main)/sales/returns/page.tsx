@@ -138,7 +138,7 @@ export default function ReturnsPage() {
     { header: '반품번호', accessor: 'returnNo' },
     { header: '반품일', accessor: (r) => (r.returnDate ? formatDate(r.returnDate as string) : '') },
     { header: '거래처', accessor: (r) => (r.partner as ReturnRow['partner'])?.partnerName || '' },
-    { header: '수주번호', accessor: (r) => (r.salesOrder as ReturnRow['salesOrder'])?.orderNo || '' },
+    { header: '발주번호', accessor: (r) => (r.salesOrder as ReturnRow['salesOrder'])?.orderNo || '' },
     { header: '사유', accessor: (r) => REASON_MAP[r.reason as string] || (r.reason as string) },
     { header: '반품금액', accessor: (r) => formatCurrency(r.totalAmount as number) },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status as string]?.label || (r.status as string) },
@@ -182,7 +182,7 @@ export default function ReturnsPage() {
     },
     { accessorKey: 'returnDate', header: '반품일', cell: ({ row }) => formatDate(row.original.returnDate) },
     { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
-    { id: 'orderNo', header: '수주번호', cell: ({ row }) => row.original.salesOrder?.orderNo || '-' },
+    { id: 'orderNo', header: '발주번호', cell: ({ row }) => row.original.salesOrder?.orderNo || '-' },
     {
       id: 'reason',
       header: '사유',
@@ -329,11 +329,11 @@ export default function ReturnsPage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label>
-                      수주 선택 <span className="text-destructive">*</span>
+                      발주 선택 <span className="text-destructive">*</span>
                     </Label>
                     <Select name="salesOrderId" required>
                       <SelectTrigger>
-                        <SelectValue placeholder="수주 선택" />
+                        <SelectValue placeholder="발주 선택" />
                       </SelectTrigger>
                       <SelectContent>
                         {orders.map((o) => (

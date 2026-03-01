@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         where.totalAmount = amountRange
       }
     }
-    // 통합 검색 (수주번호 또는 거래처명)
+    // 통합 검색 (발주번호 또는 거래처명)
     const rawSearch = sp.get('search')
     if (rawSearch) {
       const search = sanitizeSearchQuery(rawSearch)
@@ -108,11 +108,11 @@ export async function POST(request: NextRequest) {
       employeeId = employee.id
     }
 
-    // 가용재고 체크: 현재고 - 기존 미처리 수주잔량
+    // 가용재고 체크: 현재고 - 기존 미처리 발주잔량
     const warnings: string[] = []
     const orderItemIds = data.details.map((d) => d.itemId)
 
-    // 재고, 수주잔량, 품목정보를 병렬 조회
+    // 재고, 발주잔량, 품목정보를 병렬 조회
     const [stockAggs, orderedAggs, itemsInfo] = await Promise.all([
       prisma.stockBalance.groupBy({
         by: ['itemId'],

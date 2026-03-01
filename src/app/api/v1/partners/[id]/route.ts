@@ -54,7 +54,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       prisma.quotation.count({ where: { partnerId: id } }),
     ])
     if (orders > 0 || quotations > 0) {
-      return errorResponse('연결된 수주 또는 견적이 있어 삭제할 수 없습니다.', 'HAS_DEPENDENCIES', 400)
+      return errorResponse('연결된 발주 또는 견적이 있어 삭제할 수 없습니다.', 'HAS_DEPENDENCIES', 400)
     }
 
     await prisma.partner.delete({ where: { id } })

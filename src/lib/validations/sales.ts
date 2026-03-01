@@ -24,11 +24,11 @@ export const createQuotationSchema = z.object({
   details: z.array(lineDetailSchema).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
 })
 
-// ─── 수주 ──────────────────────────────────
+// ─── 발주 ──────────────────────────────────
 export const createSalesOrderSchema = z.object({
   orderDate: z
     .string()
-    .min(1, '수주일을 입력하세요')
+    .min(1, '발주일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   partnerId: z.string().max(50).optional().nullable(),
   quotationId: z.string().max(50).optional().nullable(),
@@ -65,7 +65,7 @@ export const createDeliverySchema = z.object({
     .string()
     .min(1, '납품일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
-  salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
+  salesOrderId: z.string().min(1, '발주를 선택하세요').max(50),
   deliveryAddress: z.string().max(500).optional().nullable(),
   trackingNo: z.string().max(100).optional().nullable(),
   carrier: z.string().max(100).optional().nullable(),
@@ -87,7 +87,7 @@ export const createSalesReturnSchema = z.object({
     .string()
     .min(1, '반품일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
-  salesOrderId: z.string().min(1, '수주를 선택하세요').max(50),
+  salesOrderId: z.string().min(1, '발주를 선택하세요').max(50),
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
   reason: z.enum(['DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER']).optional().default('OTHER'),
   reasonDetail: z.string().max(1000).optional().nullable(),

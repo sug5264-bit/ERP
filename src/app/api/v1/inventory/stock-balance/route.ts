@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     if (warehouseId) where.warehouseId = warehouseId
     if (itemId) where.itemId = itemId
 
-    // 재고 + 수주잔량 + 총 건수 쿼리 병렬 실행
+    // 재고 + 발주잔량 + 총 건수 쿼리 병렬 실행
     const [balances, activeOrderDetails, totalCount] = await Promise.all([
       prisma.stockBalance.findMany({
         where,
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       orderedQtyMap.set(d.itemId, Number(d._sum.remainingQty ?? 0))
     }
 
-    // 품목별 전체 재고 합계 (수주잔량은 품목 단위이므로 비율로 분배)
+    // 품목별 전체 재고 합계 (발주잔량은 품목 단위이므로 비율로 분배)
     const itemTotalStockMap = new Map<string, number>()
     for (const b of balances) {
       itemTotalStockMap.set(b.itemId, (itemTotalStockMap.get(b.itemId) || 0) + Number(b.quantity))
