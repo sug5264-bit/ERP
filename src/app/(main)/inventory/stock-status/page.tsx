@@ -250,7 +250,7 @@ export default function StockStatusPage() {
                   <th className="p-3 text-left font-medium">창고</th>
                   <th className="p-3 text-left font-medium">구역</th>
                   <th className="p-3 text-right font-medium">현재고</th>
-                  <th className="p-3 text-right font-medium">수주잔량</th>
+                  <th className="p-3 text-right font-medium">발주잔량</th>
                   <th className="p-3 text-right font-medium">가용재고</th>
                   <th className="p-3 text-right font-medium">평균단가</th>
                   <th className="p-3 text-right font-medium">재고가치</th>

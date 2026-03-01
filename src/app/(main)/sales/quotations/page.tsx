@@ -171,8 +171,8 @@ export default function QuotationsPage() {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => setConvertTarget({ id: q.id, quotationNo: q.quotationNo })}
-                title="수주 전환"
-                aria-label="수주 전환"
+                title="발주 전환"
+                aria-label="발주 전환"
               >
                 <ArrowRightLeft className="h-4 w-4" />
               </Button>
@@ -236,7 +236,7 @@ export default function QuotationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-quotations'] })
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
-      toast.success('수주로 전환되었습니다.')
+      toast.success('발주로 전환되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
   })
@@ -481,9 +481,9 @@ export default function QuotationsPage() {
       <ConfirmDialog
         open={!!convertTarget}
         onOpenChange={(open) => !open && setConvertTarget(null)}
-        title="수주 전환"
-        description={`[${convertTarget?.quotationNo}] 견적을 수주로 전환하시겠습니까?`}
-        confirmLabel="수주 전환"
+        title="발주 전환"
+        description={`[${convertTarget?.quotationNo}] 견적을 발주로 전환하시겠습니까?`}
+        confirmLabel="발주 전환"
         onConfirm={() => {
           if (convertTarget) convertMutation.mutate(convertTarget.id)
         }}

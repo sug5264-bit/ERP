@@ -79,8 +79,8 @@ export async function POST(request: NextRequest) {
       where: { id: data.salesOrderId },
       select: { id: true, partnerId: true },
     })
-    if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-    if (!salesOrder.partnerId) return errorResponse('수주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
+    if (!salesOrder) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (!salesOrder.partnerId) return errorResponse('발주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         include: { details: { include: { item: true } }, partner: true, salesOrder: true },
       })
 
-      // 수주 상세 업데이트 (납품수량 증가, 잔량 감소)
+      // 발주 상세 업데이트 (납품수량 증가, 잔량 감소)
       await Promise.all(
         data.details.map((d) =>
           tx.salesOrderDetail.updateMany({
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 수주 전체 납품 완료 시 상태 자동 변경
+      // 발주 전체 납품 완료 시 상태 자동 변경
       const remainingDetails = await tx.salesOrderDetail.findMany({
         where: { salesOrderId: data.salesOrderId, remainingQty: { gt: 0 } },
       })

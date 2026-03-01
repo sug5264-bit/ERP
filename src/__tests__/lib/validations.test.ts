@@ -31,7 +31,7 @@ describe('Sales Validations', () => {
       details: [{ itemId: 'item-1', quantity: 10, unitPrice: 5000 }],
     }
 
-    it('최소 필수 필드만으로 유효한 수주 생성', () => {
+    it('최소 필수 필드만으로 유효한 발주 생성', () => {
       const result = createSalesOrderSchema.safeParse(validOrder)
       expect(result.success).toBe(true)
     })
@@ -112,7 +112,7 @@ describe('Sales Validations', () => {
       expect(result.success).toBe(true)
     })
 
-    it('수주 ID 누락 시 실패', () => {
+    it('발주 ID 누락 시 실패', () => {
       const result = createDeliverySchema.safeParse({ ...validDelivery, salesOrderId: '' })
       expect(result.success).toBe(false)
     })
