@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 interface AuditLogParams {
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT' | 'EXPORT' | 'IMPORT' | 'APPROVE' | 'REJECT'
@@ -32,7 +33,7 @@ export async function writeAuditLog(params: AuditLogParams) {
     })
   } catch (error) {
     // 감사 로그 기록 실패해도 원래 작업은 계속 진행
-    console.error('Audit log write failed:', error)
+    logger.error('Audit log write failed', { error: error instanceof Error ? error.message : String(error) })
   }
 }
 
@@ -68,6 +69,6 @@ export async function createNotification(params: {
       },
     })
   } catch (error) {
-    console.error('Notification create failed:', error)
+    logger.error('Notification create failed', { error: error instanceof Error ? error.message : String(error) })
   }
 }

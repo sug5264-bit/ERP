@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const data = createItemCategorySchema.parse(body)
 
     const exists = await prisma.itemCategory.findUnique({ where: { code: data.code } })
-    if (exists) return errorResponse('이미 존재하는 분류코드입니다.', 'DUPLICATE')
+    if (exists) return errorResponse('이미 존재하는 분류코드입니다.', 'DUPLICATE', 409)
 
     if (data.parentId) {
       const parent = await prisma.itemCategory.findUnique({ where: { id: data.parentId } })

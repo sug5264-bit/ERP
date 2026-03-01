@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       where: { code: data.code },
     })
     if (existing) {
-      return errorResponse('이미 존재하는 계정코드입니다.', 'DUPLICATE')
+      return errorResponse('이미 존재하는 계정코드입니다.', 'DUPLICATE', 409)
     }
 
     const account = await prisma.accountSubject.create({

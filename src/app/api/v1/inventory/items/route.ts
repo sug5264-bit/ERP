@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const data = createItemSchema.parse(body)
 
     const exists = await prisma.item.findUnique({ where: { itemCode: data.itemCode } })
-    if (exists) return errorResponse('이미 존재하는 품목코드입니다.', 'DUPLICATE')
+    if (exists) return errorResponse('이미 존재하는 품목코드입니다.', 'DUPLICATE', 409)
 
     const item = await prisma.item.create({ data: { ...data, standardPrice: data.standardPrice } })
     return successResponse(item)

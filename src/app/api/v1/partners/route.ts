@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const data = createPartnerSchema.parse(body)
 
     const exists = await prisma.partner.findUnique({ where: { partnerCode: data.partnerCode } })
-    if (exists) return errorResponse('이미 존재하는 거래처코드입니다.', 'DUPLICATE')
+    if (exists) return errorResponse('이미 존재하는 거래처코드입니다.', 'DUPLICATE', 409)
 
     const partner = await prisma.partner.create({ data })
     return successResponse(partner)

@@ -38,15 +38,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
     if (body.action === 'complete') {
       const order = await prisma.salesOrder.findUnique({ where: { id } })
-      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (order.status === 'COMPLETED') return errorResponse('이미 완료된 발주입니다.', 'INVALID_STATUS')
-      if (order.status === 'CANCELLED') return errorResponse('취소된 발주는 완료 처리할 수 없습니다.', 'INVALID_STATUS')
+      if (!order) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (order.status === 'COMPLETED') return errorResponse('이미 완료된 수주입니다.', 'INVALID_STATUS')
+      if (order.status === 'CANCELLED') return errorResponse('취소된 수주는 완료 처리할 수 없습니다.', 'INVALID_STATUS')
 
       // 배차정보 및 담당자 확인
       const dispatchInfo = body.dispatchInfo || order.dispatchInfo
       const receivedBy = body.receivedBy || order.receivedBy
       if (!dispatchInfo || !receivedBy) {
-        return errorResponse('완료 처리를 위해 배차정보와 발주 담당자를 입력해주세요.', 'MISSING_FIELDS')
+        return errorResponse('완료 처리를 위해 배차정보와 수주 담당자를 입력해주세요.', 'MISSING_FIELDS')
       }
 
       const o = await prisma.salesOrder.update({
@@ -61,23 +61,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
     if (body.action === 'cancel') {
       const order = await prisma.salesOrder.findUnique({ where: { id }, select: { status: true } })
-      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (order.status === 'CANCELLED') return errorResponse('이미 취소된 발주입니다.', 'INVALID_STATUS')
-      if (order.status === 'COMPLETED') return errorResponse('완료된 발주는 취소할 수 없습니다.', 'INVALID_STATUS')
-      // 납품 진행된 발주는 취소 불가
+      if (!order) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (order.status === 'CANCELLED') return errorResponse('이미 취소된 수주입니다.', 'INVALID_STATUS')
+      if (order.status === 'COMPLETED') return errorResponse('완료된 수주는 취소할 수 없습니다.', 'INVALID_STATUS')
+      // 납품 진행된 수주는 취소 불가
       const hasDelivered = await prisma.salesOrderDetail.findFirst({
         where: { salesOrderId: id, deliveredQty: { gt: 0 } },
       })
-      if (hasDelivered) return errorResponse('납품이 진행된 발주는 취소할 수 없습니다.', 'CANNOT_CANCEL')
+      if (hasDelivered) return errorResponse('납품이 진행된 수주는 취소할 수 없습니다.', 'CANNOT_CANCEL')
       const o = await prisma.salesOrder.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(o)
     }
-    // 발주서 수정
+    // 수주서 수정
     if (body.action === 'update' || (!body.action && body.orderDate)) {
       const order = await prisma.salesOrder.findUnique({ where: { id }, include: { details: true } })
-      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      if (!order) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
       if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
-        return errorResponse('완료 또는 취소된 발주는 수정할 수 없습니다.', 'INVALID_STATUS')
+        return errorResponse('완료 또는 취소된 수주는 수정할 수 없습니다.', 'INVALID_STATUS')
       }
 
       const updateData: Record<string, unknown> = {}
@@ -165,7 +165,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const { id } = await params
 
     const order = await prisma.salesOrder.findUnique({ where: { id } })
-    if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    if (!order) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     await prisma.$transaction(async (tx) => {
       const deliveries = await tx.delivery.findMany({ where: { salesOrderId: id }, select: { id: true } })
@@ -198,7 +198,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       await tx.salesOrder.delete({ where: { id } })
     })
 
-    return successResponse({ message: '발주가 삭제되었습니다.' })
+    return successResponse({ message: '수주가 삭제되었습니다.' })
   } catch (error) {
     return handleApiError(error)
   }

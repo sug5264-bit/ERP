@@ -10,7 +10,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     const { id } = await params
     const note = await prisma.note.findUnique({ where: { id } })
     if (!note) {
-      return errorResponse('게시글을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      return errorResponse('메모를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
     if (note.createdBy !== authResult.session.user.id) {

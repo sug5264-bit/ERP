@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const data = createWarehouseSchema.parse(body)
 
     const exists = await prisma.warehouse.findUnique({ where: { code: data.code } })
-    if (exists) return errorResponse('이미 존재하는 창고코드입니다.', 'DUPLICATE')
+    if (exists) return errorResponse('이미 존재하는 창고코드입니다.', 'DUPLICATE', 409)
 
     const warehouse = await prisma.warehouse.create({ data })
     return successResponse(warehouse)
