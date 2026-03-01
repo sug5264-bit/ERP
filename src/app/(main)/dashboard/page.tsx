@@ -18,6 +18,7 @@ import {
   TrendingDown,
   Minus,
   ArrowRight,
+  Timer,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -42,9 +43,9 @@ const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
 
 function KpiSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-5">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Card key={i} className={i === 5 ? 'col-span-2 sm:col-span-1' : ''}>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-6">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <Card key={i}>
           <CardContent className="space-y-3 p-3 sm:p-6">
             <div className="skeleton-shimmer h-4 w-16" />
             <div className="skeleton-shimmer h-8 w-20" />
@@ -85,6 +86,15 @@ const KPI_CARDS = [
     bg: 'bg-status-danger-muted',
     color: 'text-status-danger',
   },
+  {
+    key: 'expiry',
+    href: '/inventory/stock-status',
+    label: '유통기한 임박',
+    unit: '건',
+    Icon: Timer,
+    bg: 'bg-status-warning-muted',
+    color: 'text-status-warning',
+  },
 ] as const
 
 interface RecentOrder {
@@ -120,6 +130,7 @@ export default function DashboardPage() {
       approval: kpi?.approvalCount || 0,
       leave: kpi?.leaveCount || 0,
       stock: kpi?.stockAlertCount || 0,
+      expiry: kpi?.expiryAlertCount || 0,
     }),
     [kpi]
   )
@@ -146,16 +157,12 @@ export default function DashboardPage() {
       {isLoading ? (
         <KpiSkeleton />
       ) : (
-        <div className="stagger-children grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-5">
-          {KPI_CARDS.map((card, idx) => {
+        <div className="stagger-children grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:gap-4 lg:grid-cols-6">
+          {KPI_CARDS.map((card) => {
             const value = kpiValues[card.key]
             const hasAlert = value > 0 && card.color
             return (
-              <Link
-                key={card.key}
-                href={card.href}
-                className={`focus-visible:outline-none ${idx === 4 ? 'col-span-2 sm:col-span-1' : ''}`}
-              >
+              <Link key={card.key} href={card.href} className="focus-visible:outline-none">
                 <Card className="card-interactive h-full">
                   <CardHeader className="flex flex-row items-center justify-between p-3 pb-1 sm:p-6 sm:pb-2">
                     <CardTitle className="text-xs font-medium sm:text-sm">{card.label}</CardTitle>

@@ -156,19 +156,34 @@ export async function GET() {
       }),
     ])
 
-    // 안전재고 이하 품목 수
+    // 안전재고 이하 품목 수 & 유통기한 임박 품목 수
     let stockAlertCount = 0
+    let expiryAlertCount = 0
     try {
-      const result = await prisma.$queryRaw<[{ count: bigint }]>`
-        SELECT COUNT(DISTINCT sb."itemId")::bigint as count
-        FROM stock_balances sb
-        JOIN items i ON sb."itemId" = i.id
-        WHERE sb.quantity <= i."safetyStock" AND i."safetyStock" > 0
-      `
-      stockAlertCount = Number(result[0]?.count ?? 0)
+      const [stockResult, expiryResult] = await Promise.all([
+        prisma.$queryRaw<[{ count: bigint }]>`
+          SELECT COUNT(DISTINCT sb."itemId")::bigint as count
+          FROM stock_balances sb
+          JOIN items i ON sb."itemId" = i.id
+          WHERE sb.quantity <= i."safetyStock" AND i."safetyStock" > 0
+        `,
+        // 유통기한 30일 이내 임박 재고 (식품 유통 KPI)
+        prisma.$queryRaw<[{ count: bigint }]>`
+          SELECT COUNT(DISTINCT smd."itemId")::bigint as count
+          FROM stock_movement_details smd
+          JOIN stock_movements sm ON smd."stockMovementId" = sm.id
+          WHERE smd."expiryDate" IS NOT NULL
+            AND smd."expiryDate" <= CURRENT_DATE + INTERVAL '30 days'
+            AND smd."expiryDate" >= CURRENT_DATE
+            AND sm."movementType" = 'INBOUND'
+        `,
+      ])
+      stockAlertCount = Number(stockResult[0]?.count ?? 0)
+      expiryAlertCount = Number(expiryResult[0]?.count ?? 0)
     } catch (err) {
-      logger.warn('Stock alert count query failed', { error: err instanceof Error ? err.message : String(err) })
+      logger.warn('Stock/expiry alert count query failed', { error: err instanceof Error ? err.message : String(err) })
       stockAlertCount = 0
+      expiryAlertCount = 0
     }
 
     // Stats 가공
@@ -241,7 +256,7 @@ export async function GET() {
 
     return successResponse(
       {
-        kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount },
+        kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount, expiryAlertCount },
         trends: {
           salesAmount: { current: thisMonthAmount, previous: lastMonthAmount, change: salesTrend },
           orderCount: { current: thisMonthSales._count, previous: lastMonthSales._count, change: orderTrend },

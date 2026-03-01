@@ -1,3 +1,4 @@
+import type { CellValue } from 'exceljs'
 import type { ExportConfig } from './types'
 import { getValue, triggerDownload } from './utils'
 
@@ -61,7 +62,7 @@ export async function exportToExcel(config: ExportConfig) {
     const excelRow = sheet.getRow(startRow + 1 + rowIdx)
     columns.forEach((col, colIdx) => {
       const cell = excelRow.getCell(colIdx + 1)
-      cell.value = getValue(row, col.accessor)
+      cell.value = getValue(row, col.accessor) as CellValue
       cell.border = {
         top: { style: 'thin' },
         bottom: { style: 'thin' },

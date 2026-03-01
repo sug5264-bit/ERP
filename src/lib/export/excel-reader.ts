@@ -13,7 +13,13 @@ function normalizeHeader(raw: string): string {
     .trim()
 }
 
-export async function readExcelFile(file: File, keyMap: Record<string, string>): Promise<any[]> {
+/** ExcelJS richText 배열에서 텍스트 추출 */
+function extractRichText(val: unknown): string {
+  const rich = val as { richText?: { text: string }[] }
+  return rich.richText?.map((rt) => rt.text).join('') ?? ''
+}
+
+export async function readExcelFile(file: File, keyMap: Record<string, string>): Promise<Record<string, unknown>[]> {
   if (file.size > MAX_EXCEL_SIZE_MB * 1024 * 1024) {
     throw new Error(`파일 크기가 ${MAX_EXCEL_SIZE_MB}MB를 초과합니다.`)
   }
@@ -30,8 +36,9 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
 
   try {
     await workbook.xlsx.load(buffer)
-  } catch {
-    throw new Error('엑셀 파일을 읽을 수 없습니다. 올바른 .xlsx 파일인지 확인해주세요. (.xls 형식은 지원하지 않습니다)')
+  } catch (err) {
+    const detail = err instanceof Error ? ` (${err.message})` : ''
+    throw new Error(`엑셀 파일을 읽을 수 없습니다. 올바른 .xlsx 파일인지 확인해주세요.${detail}`)
   }
 
   // 첫 번째 시트 (안내사항 시트 제외)
@@ -44,7 +51,7 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
     let headerVal = ''
     const cv = cell.value
     if (cv && typeof cv === 'object' && 'richText' in cv) {
-      headerVal = (cv as any).richText.map((rt: any) => rt.text).join('')
+      headerVal = extractRichText(cv)
     } else {
       headerVal = String(cv || '')
     }
@@ -67,27 +74,28 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
   }
 
   // 데이터 읽기 (2행부터)
-  const rows: any[] = []
+  const rows: Record<string, unknown>[] = []
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r)
-    const obj: any = {}
+    const obj: Record<string, unknown> = {}
     let hasValue = false
 
     colKeys.forEach((key, i) => {
       if (!key) return
       const cell = row.getCell(i + 1)
-      let val = cell.value
+      let val: unknown = cell.value
       // ExcelJS richtext 처리
       if (val && typeof val === 'object' && 'richText' in val) {
-        val = (val as any).richText.map((rt: any) => rt.text).join('')
+        val = extractRichText(val)
       }
       // ExcelJS formula 처리
       if (val && typeof val === 'object' && 'result' in val) {
-        val = (val as any).result ?? (val as any).formula ?? ''
+        const formula = val as { result?: unknown; formula?: string }
+        val = formula.result ?? formula.formula ?? ''
       }
       // ExcelJS hyperlink 처리
       if (val && typeof val === 'object' && 'text' in val) {
-        val = (val as any).text
+        val = (val as { text: string }).text
       }
       // 날짜 객체는 로컬 날짜 문자열로 (UTC 변환 시 KST -1일 오차 방지)
       if (val instanceof Date) {

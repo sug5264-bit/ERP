@@ -733,6 +733,13 @@ model Item {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // 식품 유통 전용 필드
+  manufacturer   String?  // OEM 제조사명
+  originCountry  String?  // 원산지
+  storageTemp    String?  // 보관온도 (냉동/냉장/상온)
+  shelfLifeDays  Int?     // 유통기한 일수
+  allergens      String?  // 알레르기 정보
+
   category               ItemCategory?         @relation(fields: [categoryId], references: [id])
   stockMovementDetails   StockMovementDetail[]
   stockBalances          StockBalance[]
@@ -875,6 +882,11 @@ model Partner {
   isActive      Boolean     @default(true)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  // OEM 식품 제조사 전용 필드
+  foodBizNo      String?   // 식품제조업 허가번호
+  haccpNo        String?   // HACCP 인증번호
+  factoryAddress String?   // 공장 소재지
 
   quotations       Quotation[]
   salesOrders      SalesOrder[]

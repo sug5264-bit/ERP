@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const warehouseId = sp.get('warehouseId')
     const itemId = sp.get('itemId')
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     if (warehouseId) where.warehouseId = warehouseId
     if (itemId) where.itemId = itemId
 
@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
               itemName: true,
               unit: true,
               itemType: true,
+              storageTemp: true,
+              shelfLifeDays: true,
+              manufacturer: true,
               category: { select: { name: true } },
             },
           },

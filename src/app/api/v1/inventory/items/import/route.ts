@@ -141,6 +141,15 @@ export async function POST(req: NextRequest) {
           categoryId = categoryMap.get(catName)
         }
 
+        // 유통기한 일수 검증
+        let shelfLifeDays: number | undefined
+        if (row.shelfLifeDays !== undefined && row.shelfLifeDays !== '') {
+          shelfLifeDays = Math.floor(parseNumber(row.shelfLifeDays))
+          if (isNaN(shelfLifeDays) || shelfLifeDays < 0 || shelfLifeDays > 9999) {
+            throw new Error('유통기한 일수는 0~9999 사이의 정수여야 합니다.')
+          }
+        }
+
         await prisma.item.create({
           data: {
             itemCode,
@@ -153,6 +162,11 @@ export async function POST(req: NextRequest) {
             taxType: mappedTaxType as 'TAXABLE' | 'TAX_FREE' | 'ZERO_RATE',
             barcode: row.barcode ? String(row.barcode).trim() : undefined,
             categoryId,
+            manufacturer: row.manufacturer ? String(row.manufacturer).trim().slice(0, 200) : undefined,
+            originCountry: row.originCountry ? String(row.originCountry).trim().slice(0, 100) : undefined,
+            storageTemp: row.storageTemp ? String(row.storageTemp).trim().slice(0, 50) : undefined,
+            shelfLifeDays,
+            allergens: row.allergens ? String(row.allergens).trim().slice(0, 500) : undefined,
           },
         })
         existingCodeSet.add(itemCode)

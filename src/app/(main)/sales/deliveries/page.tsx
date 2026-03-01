@@ -721,7 +721,7 @@ export default function DeliveriesPage() {
     if (!file) return
     try {
       const rows = await readExcelFile(file, { 납품번호: 'deliveryNo', 택배사: 'carrier', 운송장번호: 'trackingNo' })
-      setTrackingRows(rows as TrackingRow[])
+      setTrackingRows(rows as unknown as TrackingRow[])
       setTrackingResult(null)
     } catch {
       toast.error('엑셀 파일을 읽을 수 없습니다.')

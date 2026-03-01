@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
 import { Package, Warehouse, TrendingDown, Banknote, CalendarDays, Table2 } from 'lucide-react'
 
 interface BalanceRow {
@@ -25,10 +25,26 @@ interface BalanceRow {
     itemName: string
     unit: string
     itemType: string
+    storageTemp: string | null
+    shelfLifeDays: number | null
+    manufacturer: string | null
     category: { name: string } | null
   }
   warehouse: { id: string; code: string; name: string }
   zone: { zoneCode: string; zoneName: string } | null
+}
+
+interface WarehouseOption {
+  id: string
+  name: string
+}
+
+interface MovementRow {
+  id: string
+  movementNo: string
+  movementDate: string
+  movementType: string
+  details?: unknown[]
 }
 
 const ITEM_TYPE_MAP: Record<string, string> = {
@@ -62,23 +78,23 @@ export default function StockStatusPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['inventory-stock-balance', warehouseFilter],
-    queryFn: () => api.get(`/inventory/stock-balance?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/inventory/stock-balance?${qp.toString()}`) as Promise<{ data: BalanceRow[] }>,
   })
 
   const { data: warehousesData } = useQuery({
     queryKey: ['inventory-warehouses'],
-    queryFn: () => api.get('/inventory/warehouses') as Promise<any>,
+    queryFn: () => api.get('/inventory/warehouses') as Promise<{ data: WarehouseOption[] }>,
   })
 
   // Fetch stock movements for calendar view
   const { data: movementsData } = useQuery({
     queryKey: ['inventory-stock-movement-calendar'],
-    queryFn: () => api.get('/inventory/stock-movement?pageSize=200') as Promise<any>,
+    queryFn: () => api.get('/inventory/stock-movement?pageSize=200') as Promise<{ data: MovementRow[] }>,
     enabled: viewMode === 'calendar',
   })
 
   const balances: BalanceRow[] = data?.data || []
-  const warehouses = warehousesData?.data || []
+  const warehouses: WarehouseOption[] = warehousesData?.data || []
 
   const totalItems = new Set(balances.map((b) => b.item.id)).size
   const totalCurrentQty = balances.reduce((s, b) => s + Number(b.quantity), 0)
@@ -88,7 +104,7 @@ export default function StockStatusPage() {
   // Build calendar events from stock movements
   const calendarEvents: CalendarEvent[] = useMemo(() => {
     const movements = movementsData?.data || []
-    return movements.map((m: any) => ({
+    return movements.map((m: MovementRow) => ({
       id: m.id,
       date: m.movementDate?.split('T')[0] || '',
       label: `${MOVEMENT_LABEL[m.movementType] || m.movementType} ${m.movementNo}`,
@@ -99,7 +115,7 @@ export default function StockStatusPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="재고현황" description="현재 재고 상태를 조회합니다" />
+      <PageHeader title="재고현황" description="보관온도별 재고 상태 및 유통기한을 관리합니다" />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
@@ -188,7 +204,7 @@ export default function StockStatusPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 창고</SelectItem>
-            {warehouses.map((w: any) => (
+            {warehouses.map((w) => (
               <SelectItem key={w.id} value={w.id}>
                 {w.name}
               </SelectItem>
@@ -229,6 +245,8 @@ export default function StockStatusPage() {
                   <th className="p-3 text-left font-medium">품목코드</th>
                   <th className="p-3 text-left font-medium">품목명</th>
                   <th className="p-3 text-left font-medium">구분</th>
+                  <th className="p-3 text-left font-medium">보관</th>
+                  <th className="p-3 text-left font-medium">OEM제조사</th>
                   <th className="p-3 text-left font-medium">창고</th>
                   <th className="p-3 text-left font-medium">구역</th>
                   <th className="p-3 text-right font-medium">현재고</th>
@@ -251,6 +269,25 @@ export default function StockStatusPage() {
                       <td className="p-3">
                         <Badge variant="outline">{ITEM_TYPE_MAP[b.item.itemType] || b.item.itemType}</Badge>
                       </td>
+                      <td className="p-3">
+                        {b.item.storageTemp ? (
+                          <Badge
+                            variant={
+                              b.item.storageTemp.includes('냉동')
+                                ? 'default'
+                                : b.item.storageTemp.includes('냉장')
+                                  ? 'secondary'
+                                  : 'outline'
+                            }
+                            className="text-[10px]"
+                          >
+                            {b.item.storageTemp.split('(')[0]}
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+                      <td className="p-3 text-xs">{b.item.manufacturer || '-'}</td>
                       <td className="p-3">{b.warehouse.name}</td>
                       <td className="p-3">{b.zone?.zoneName || '-'}</td>
                       <td className="p-3 text-right font-mono">
@@ -272,7 +309,7 @@ export default function StockStatusPage() {
                   )
                 })}
                 <tr className="bg-muted/50 font-medium">
-                  <td className="p-3" colSpan={5}>
+                  <td className="p-3" colSpan={7}>
                     합계
                   </td>
                   <td className="p-3 text-right font-mono">{totalCurrentQty.toLocaleString()}</td>
