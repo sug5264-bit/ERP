@@ -49,6 +49,9 @@ interface PartnerRow {
   creditLimit: number | null
   paymentTerms: string | null
   isActive: boolean
+  foodBizNo: string | null
+  haccpNo: string | null
+  factoryAddress: string | null
 }
 
 const columns: ColumnDef<PartnerRow>[] = [
@@ -83,6 +86,18 @@ const columns: ColumnDef<PartnerRow>[] = [
   { id: 'phone', header: '연락처', cell: ({ row }) => row.original.phone || '-' },
   { id: 'contactPerson', header: '담당자', cell: ({ row }) => row.original.contactPerson || '-' },
   {
+    id: 'haccpNo',
+    header: 'HACCP',
+    cell: ({ row }) =>
+      row.original.haccpNo ? (
+        <Badge variant="default" className="text-[10px]">
+          인증
+        </Badge>
+      ) : (
+        <span className="text-muted-foreground text-xs">-</span>
+      ),
+  },
+  {
     id: 'creditLimit',
     header: '여신한도',
     cell: ({ row }) => (row.original.creditLimit ? formatCurrency(row.original.creditLimit) : '-'),
@@ -115,11 +130,11 @@ export default function PartnersPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['partners', typeFilter, startDate, endDate],
-    queryFn: () => api.get(`/partners?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/partners?${qp.toString()}`) as Promise<{ data: PartnerRow[] }>,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/partners', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/partners', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partners'] })
       setOpen(false)
@@ -129,7 +144,7 @@ export default function PartnersPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...body }: any) => api.put(`/partners/${id}`, body),
+    mutationFn: ({ id, ...body }: { id: string; [key: string]: unknown }) => api.put(`/partners/${id}`, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['partners'] })
       setEditTarget(null)
@@ -172,6 +187,9 @@ export default function PartnersPage() {
       creditLimit: form.get('creditLimit') ? parseFloat(form.get('creditLimit') as string) : undefined,
       paymentTerms: form.get('paymentTerms') || undefined,
       isActive: form.get('isActive') === 'true',
+      foodBizNo: form.get('foodBizNo') || undefined,
+      haccpNo: form.get('haccpNo') || undefined,
+      factoryAddress: form.get('factoryAddress') || undefined,
     })
   }
 
@@ -188,18 +206,21 @@ export default function PartnersPage() {
     { header: '담당자', accessor: (r) => r.contactPerson || '' },
     { header: '이메일', accessor: (r) => r.email || '' },
     { header: '여신한도', accessor: (r) => (r.creditLimit ? formatCurrency(r.creditLimit) : '') },
+    { header: '식품제조업허가', accessor: (r) => r.foodBizNo || '' },
+    { header: 'HACCP인증', accessor: (r) => r.haccpNo || '' },
+    { header: '공장주소', accessor: (r) => r.factoryAddress || '' },
     { header: '상태', accessor: (r) => (r.isActive ? '활성' : '비활성') },
   ]
 
   const importTemplateColumns: TemplateColumn[] = [
     { header: '거래처코드', key: 'partnerCode', example: 'PTN-001', required: true },
-    { header: '거래처명', key: 'partnerName', example: '테스트거래처', required: true },
-    { header: '구분', key: 'partnerType', example: '매출/매입' },
+    { header: '거래처명', key: 'partnerName', example: '(주)식품제조', required: true },
+    { header: '구분', key: 'partnerType', example: '매입' },
     { header: '채널', key: 'salesChannel', example: '오프라인' },
     { header: '사업자번호', key: 'bizNo', example: '123-45-67890' },
     { header: '대표자', key: 'ceoName', example: '홍길동' },
     { header: '업태', key: 'bizType', example: '제조' },
-    { header: '종목', key: 'bizCategory', example: '전자부품' },
+    { header: '종목', key: 'bizCategory', example: '식품가공' },
     { header: '전화번호', key: 'phone', example: '02-1234-5678' },
     { header: '팩스', key: 'fax', example: '02-1234-5679' },
     { header: '이메일', key: 'email', example: 'partner@test.com' },
@@ -207,6 +228,9 @@ export default function PartnersPage() {
     { header: '담당자', key: 'contactPerson', example: '김담당' },
     { header: '여신한도', key: 'creditLimit', example: '10000000' },
     { header: '결제조건', key: 'paymentTerms', example: '월말 30일' },
+    { header: '식품제조업허가번호', key: 'foodBizNo', example: '2024-서울-00001' },
+    { header: 'HACCP인증번호', key: 'haccpNo', example: 'HACCP-2024-001' },
+    { header: '공장주소', key: 'factoryAddress', example: '경기도 안성시 공도읍' },
   ]
 
   const importKeyMap: Record<string, string> = {
@@ -226,6 +250,12 @@ export default function PartnersPage() {
     담당자: 'contactPerson',
     여신한도: 'creditLimit',
     결제조건: 'paymentTerms',
+    식품제조업허가번호: 'foodBizNo',
+    식품제조업허가: 'foodBizNo',
+    HACCP인증번호: 'haccpNo',
+    HACCP: 'haccpNo',
+    공장주소: 'factoryAddress',
+    공장소재지: 'factoryAddress',
   }
 
   const handleExport = (type: 'excel' | 'pdf') => {
@@ -254,12 +284,15 @@ export default function PartnersPage() {
       contactPerson: form.get('contactPerson') || undefined,
       creditLimit: form.get('creditLimit') ? parseFloat(form.get('creditLimit') as string) : undefined,
       paymentTerms: form.get('paymentTerms') || undefined,
+      foodBizNo: form.get('foodBizNo') || undefined,
+      haccpNo: form.get('haccpNo') || undefined,
+      factoryAddress: form.get('factoryAddress') || undefined,
     })
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="거래처관리" description="고객 및 공급업체 정보를 관리합니다" />
+      <PageHeader title="거래처관리" description="OEM 제조사 및 유통 거래처를 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-full sm:w-36">
@@ -401,6 +434,24 @@ export default function PartnersPage() {
                 <Label>결제조건</Label>
                 <Input name="paymentTerms" placeholder="월말 30일" />
               </div>
+              {/* OEM 식품 제조사 정보 */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground mb-3 text-xs font-medium">OEM 제조사 정보</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>식품제조업 허가번호</Label>
+                    <Input name="foodBizNo" placeholder="2024-서울-00001" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>HACCP 인증번호</Label>
+                    <Input name="haccpNo" placeholder="HACCP-2024-001" />
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Label>공장 소재지</Label>
+                  <Input name="factoryAddress" placeholder="경기도 안성시 공도읍" />
+                </div>
+              </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 {createMutation.isPending ? '등록 중...' : '거래처 등록'}
               </Button>
@@ -414,7 +465,7 @@ export default function PartnersPage() {
           {
             id: 'actions',
             header: '',
-            cell: ({ row }: any) => (
+            cell: ({ row }) => (
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -560,6 +611,24 @@ export default function PartnersPage() {
               <div className="space-y-2">
                 <Label>결제조건</Label>
                 <Input name="paymentTerms" defaultValue={editTarget.paymentTerms || ''} placeholder="월말 30일" />
+              </div>
+              {/* OEM 식품 제조사 정보 */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground mb-3 text-xs font-medium">OEM 제조사 정보</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>식품제조업 허가번호</Label>
+                    <Input name="foodBizNo" defaultValue={editTarget.foodBizNo || ''} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>HACCP 인증번호</Label>
+                    <Input name="haccpNo" defaultValue={editTarget.haccpNo || ''} />
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <Label>공장 소재지</Label>
+                  <Input name="factoryAddress" defaultValue={editTarget.factoryAddress || ''} />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>상태</Label>

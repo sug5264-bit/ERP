@@ -33,6 +33,8 @@ const TAX_TYPE_MAP: Record<string, string> = {
   ZERO_RATE: '영세',
 }
 
+const STORAGE_TEMP_OPTIONS = ['냉동(-18℃ 이하)', '냉장(0~10℃)', '상온(1~35℃)', '실온'] as const
+
 interface ItemRow {
   id: string
   itemCode: string
@@ -46,6 +48,11 @@ interface ItemRow {
   barcode: string | null
   isActive: boolean
   category: { code: string; name: string } | null
+  manufacturer: string | null
+  originCountry: string | null
+  storageTemp: string | null
+  shelfLifeDays: number | null
+  allergens: string | null
 }
 
 const columns: ColumnDef<ItemRow>[] = [
@@ -91,6 +98,33 @@ const columns: ColumnDef<ItemRow>[] = [
   { id: 'unit', header: '단위', cell: ({ row }) => row.original.unit },
   { id: 'standardPrice', header: '기준가', cell: ({ row }) => formatCurrency(row.original.standardPrice) },
   { id: 'safetyStock', header: '안전재고', cell: ({ row }) => row.original.safetyStock },
+  { id: 'manufacturer', header: 'OEM제조사', cell: ({ row }) => row.original.manufacturer || '-' },
+  {
+    id: 'storageTemp',
+    header: '보관온도',
+    cell: ({ row }) =>
+      row.original.storageTemp ? (
+        <Badge
+          variant={
+            row.original.storageTemp.includes('냉동')
+              ? 'default'
+              : row.original.storageTemp.includes('냉장')
+                ? 'secondary'
+                : 'outline'
+          }
+        >
+          {row.original.storageTemp.split('(')[0]}
+        </Badge>
+      ) : (
+        '-'
+      ),
+  },
+  {
+    id: 'shelfLifeDays',
+    header: '유통기한',
+    cell: ({ row }) => (row.original.shelfLifeDays ? `${row.original.shelfLifeDays}일` : '-'),
+  },
+  { id: 'originCountry', header: '원산지', cell: ({ row }) => row.original.originCountry || '-' },
   {
     id: 'status',
     header: '상태',
@@ -178,6 +212,11 @@ export default function ItemsPage() {
       taxType: form.get('taxType'),
       barcode: form.get('barcode') || undefined,
       isActive: form.get('isActive') === 'true',
+      manufacturer: form.get('manufacturer') || undefined,
+      originCountry: form.get('originCountry') || undefined,
+      storageTemp: form.get('storageTemp') || undefined,
+      shelfLifeDays: form.get('shelfLifeDays') ? parseInt(form.get('shelfLifeDays') as string) : undefined,
+      allergens: form.get('allergens') || undefined,
     })
   }
 
@@ -196,6 +235,11 @@ export default function ItemsPage() {
       { header: '단위', accessor: 'unit' },
       { header: '기준가', accessor: (r) => Number(r.standardPrice) },
       { header: '안전재고', accessor: (r) => Number(r.safetyStock) },
+      { header: 'OEM제조사', accessor: (r) => r.manufacturer || '' },
+      { header: '보관온도', accessor: (r) => r.storageTemp || '' },
+      { header: '유통기한(일)', accessor: (r) => (r.shelfLifeDays ? Number(r.shelfLifeDays) : '') },
+      { header: '원산지', accessor: (r) => r.originCountry || '' },
+      { header: '알레르기', accessor: (r) => r.allergens || '' },
       { header: '상태', accessor: (r) => (r.isActive ? '활성' : '비활성') },
     ],
     []
@@ -203,15 +247,20 @@ export default function ItemsPage() {
 
   const importTemplateColumns: TemplateColumn[] = [
     { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
-    { header: '품목명', key: 'itemName', example: '테스트 품목', required: true },
+    { header: '품목명', key: 'itemName', example: '즉석밥 210g', required: true },
     { header: '구분', key: 'itemType', example: '상품' },
     { header: '과세구분', key: 'taxType', example: '과세' },
-    { header: '분류', key: 'categoryName', example: '전자부품' },
-    { header: '규격', key: 'specification', example: '100x200mm' },
-    { header: '단위', key: 'unit', example: 'EA' },
+    { header: '분류', key: 'categoryName', example: '즉석식품' },
+    { header: '규격', key: 'specification', example: '210g x 24입' },
+    { header: '단위', key: 'unit', example: 'BOX' },
     { header: '기준가', key: 'standardPrice', example: '10000' },
     { header: '안전재고', key: 'safetyStock', example: '100' },
     { header: '바코드', key: 'barcode', example: '8801234567890' },
+    { header: 'OEM제조사', key: 'manufacturer', example: '(주)식품제조' },
+    { header: '원산지', key: 'originCountry', example: '국내산' },
+    { header: '보관온도', key: 'storageTemp', example: '냉장(0~10℃)' },
+    { header: '유통기한(일)', key: 'shelfLifeDays', example: '180' },
+    { header: '알레르기', key: 'allergens', example: '밀, 대두, 우유' },
   ]
 
   const importKeyMap: Record<string, string> = {
@@ -225,6 +274,14 @@ export default function ItemsPage() {
     기준가: 'standardPrice',
     안전재고: 'safetyStock',
     바코드: 'barcode',
+    OEM제조사: 'manufacturer',
+    제조사: 'manufacturer',
+    원산지: 'originCountry',
+    보관온도: 'storageTemp',
+    '유통기한(일)': 'shelfLifeDays',
+    유통기한일수: 'shelfLifeDays',
+    알레르기: 'allergens',
+    알레르기정보: 'allergens',
   }
 
   const handleExport = (type: 'excel' | 'pdf') => {
@@ -248,12 +305,17 @@ export default function ItemsPage() {
       itemType: form.get('itemType') || 'GOODS',
       taxType: form.get('taxType') || 'TAXABLE',
       barcode: form.get('barcode') || undefined,
+      manufacturer: form.get('manufacturer') || undefined,
+      originCountry: form.get('originCountry') || undefined,
+      storageTemp: form.get('storageTemp') || undefined,
+      shelfLifeDays: form.get('shelfLifeDays') ? parseInt(form.get('shelfLifeDays') as string) : undefined,
+      allergens: form.get('allergens') || undefined,
     })
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="품목관리" description="상품 및 원자재 품목을 관리합니다" />
+      <PageHeader title="품목관리" description="OEM 생산 품목 및 식품 유통 품목을 관리합니다" />
       <div className="flex flex-wrap items-center gap-2 sm:gap-4">
         <Input
           placeholder="품목코드, 품목명, 바코드 검색..."
@@ -370,7 +432,7 @@ export default function ItemsPage() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>규격</Label>
-                  <Input name="specification" />
+                  <Input name="specification" placeholder="210g x 24입" />
                 </div>
                 <div className="space-y-2">
                   <Label>바코드</Label>
@@ -385,6 +447,45 @@ export default function ItemsPage() {
                 <div className="space-y-2">
                   <Label>안전재고</Label>
                   <Input name="safetyStock" type="number" defaultValue="0" />
+                </div>
+              </div>
+              {/* 식품 유통 정보 */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground mb-3 text-xs font-medium">식품 유통 정보</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>OEM 제조사</Label>
+                    <Input name="manufacturer" placeholder="(주)식품제조" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>원산지</Label>
+                    <Input name="originCountry" placeholder="국내산" />
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>보관온도</Label>
+                    <Select name="storageTemp">
+                      <SelectTrigger>
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STORAGE_TEMP_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>유통기한 (일)</Label>
+                    <Input name="shelfLifeDays" type="number" placeholder="180" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>알레르기 정보</Label>
+                    <Input name="allergens" placeholder="밀, 대두, 우유" />
+                  </div>
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
@@ -576,6 +677,45 @@ export default function ItemsPage() {
                 <div className="space-y-2">
                   <Label>안전재고</Label>
                   <Input name="safetyStock" type="number" defaultValue={editTarget.safetyStock} />
+                </div>
+              </div>
+              {/* 식품 유통 정보 */}
+              <div className="border-t pt-4">
+                <p className="text-muted-foreground mb-3 text-xs font-medium">식품 유통 정보</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>OEM 제조사</Label>
+                    <Input name="manufacturer" defaultValue={editTarget.manufacturer || ''} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>원산지</Label>
+                    <Input name="originCountry" defaultValue={editTarget.originCountry || ''} />
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label>보관온도</Label>
+                    <Select name="storageTemp" defaultValue={editTarget.storageTemp || ''}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STORAGE_TEMP_OPTIONS.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>유통기한 (일)</Label>
+                    <Input name="shelfLifeDays" type="number" defaultValue={editTarget.shelfLifeDays ?? ''} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>알레르기 정보</Label>
+                    <Input name="allergens" defaultValue={editTarget.allergens || ''} />
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">

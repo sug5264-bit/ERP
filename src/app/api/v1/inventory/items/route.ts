@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
 
-    const where: any = {}
+    const where: Record<string, unknown> = {}
     const rawSearch = sp.get('search')
     if (rawSearch) {
       const search = sanitizeSearchQuery(rawSearch)

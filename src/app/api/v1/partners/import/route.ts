@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
     const BIZ_NO_RE = /^[\d-]{0,20}$/
 
     // 배치 중복 검사: N+1 쿼리 제거
-    const allCodes = rows.filter((r: any) => r.partnerCode).map((r: any) => String(r.partnerCode).trim())
+    const allCodes = rows
+      .filter((r: Record<string, unknown>) => r.partnerCode)
+      .map((r: Record<string, unknown>) => String(r.partnerCode).trim())
     const existingPartners = await prisma.partner.findMany({
       where: { partnerCode: { in: allCodes } },
       select: { partnerCode: true },
@@ -49,7 +51,7 @@ export async function POST(req: NextRequest) {
     const existingCodeSet = new Set(existingPartners.map((p) => p.partnerCode))
 
     /** 콤마 포함 숫자 문자열을 파싱 */
-    function parseNumber(val: any): number {
+    function parseNumber(val: unknown): number {
       if (typeof val === 'number') return val
       return parseFloat(String(val).replace(/,/g, ''))
     }
@@ -118,6 +120,9 @@ export async function POST(req: NextRequest) {
             contactPerson: row.contactPerson ? String(row.contactPerson).trim().slice(0, 100) : undefined,
             creditLimit: row.creditLimit ? parseNumber(row.creditLimit) : undefined,
             paymentTerms: row.paymentTerms ? String(row.paymentTerms).trim().slice(0, 100) : undefined,
+            foodBizNo: row.foodBizNo ? String(row.foodBizNo).trim().slice(0, 50) : undefined,
+            haccpNo: row.haccpNo ? String(row.haccpNo).trim().slice(0, 50) : undefined,
+            factoryAddress: row.factoryAddress ? String(row.factoryAddress).trim().slice(0, 500) : undefined,
           },
         })
         existingCodeSet.add(partnerCode)

@@ -148,11 +148,14 @@ export function ExcelImportDialog({
                   <tbody>
                     {preview.map((row, i) => (
                       <tr key={i} className="border-b">
-                        {previewKeys.map((k) => (
-                          <td key={k} className="max-w-[200px] truncate p-2 whitespace-nowrap">
-                            {row[k] != null ? String(row[k]) : ''}
-                          </td>
-                        ))}
+                        {previewKeys.map((k) => {
+                          const cellVal = row[k] != null ? String(row[k]) : ''
+                          return (
+                            <td key={k} className="max-w-[200px] truncate p-2 whitespace-nowrap" title={cellVal}>
+                              {cellVal}
+                            </td>
+                          )
+                        })}
                       </tr>
                     ))}
                   </tbody>
