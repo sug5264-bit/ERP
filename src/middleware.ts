@@ -71,8 +71,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 헬스체크 경로 바이패스
-  if (bypassPaths.some((path) => pathname.startsWith(path))) {
+  // 헬스체크 경로 바이패스 (정확 매칭 또는 하위 경로만 허용)
+  if (bypassPaths.some((path) => pathname === path || pathname.startsWith(path + '/'))) {
     return NextResponse.next()
   }
 
@@ -171,16 +171,16 @@ export function middleware(request: NextRequest) {
       requestHeaders.set('x-ratelimit-limit', '60')
     }
 
-    // 공개 API 경로 허용
-    if (publicPaths.some((path) => pathname.startsWith(path))) {
+    // 공개 API 경로 허용 (정확 매칭 또는 하위 경로만 허용)
+    if (publicPaths.some((path) => pathname === path || pathname.startsWith(path + '/'))) {
       return NextResponse.next({
         request: { headers: requestHeaders },
       })
     }
   }
 
-  // 공개 경로 허용
-  if (publicPaths.some((path) => pathname.startsWith(path))) {
+  // 공개 경로 허용 (정확 매칭 또는 하위 경로만 허용)
+  if (publicPaths.some((path) => pathname === path || pathname.startsWith(path + '/'))) {
     return NextResponse.next({
       request: { headers: requestHeaders },
     })
@@ -204,7 +204,7 @@ export function middleware(request: NextRequest) {
   // API GET 요청에 캐시 힌트 헤더 추가 (브라우저 캐시 최적화)
   if (pathname.startsWith('/api/') && request.method === 'GET') {
     // 마스터 데이터 (거래처, 품목, 부서 등)는 30초 캐시
-    if (pathname.match(/\/(partners|items|departments|positions|accounts|company)/)) {
+    if (pathname.match(/\/(partners|items|departments|positions|accounts|company)(\/|$)/)) {
       response.headers.set('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
     }
   }

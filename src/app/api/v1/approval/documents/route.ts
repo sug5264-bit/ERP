@@ -128,29 +128,30 @@ export async function POST(request: NextRequest) {
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    const documentNo = await generateDocumentNumber('APR', new Date(data.draftDate))
-
-    const doc = await prisma.approvalDocument.create({
-      data: {
-        documentNo,
-        templateId: data.templateId || null,
-        title: data.title,
-        content: data.content || null,
-        drafterId: employee.id,
-        draftDate: new Date(data.draftDate),
-        totalSteps: data.steps.length,
-        urgency: data.urgency,
-        relatedModule: data.relatedModule || null,
-        relatedDocId: data.relatedDocId || null,
-        steps: {
-          create: data.steps.map((s, idx) => ({
-            stepOrder: idx + 1,
-            approverId: s.approverId,
-            approvalType: s.approvalType,
-          })),
+    const doc = await prisma.$transaction(async (tx) => {
+      const documentNo = await generateDocumentNumber('APR', new Date(data.draftDate), tx)
+      return tx.approvalDocument.create({
+        data: {
+          documentNo,
+          templateId: data.templateId || null,
+          title: data.title,
+          content: data.content || null,
+          drafterId: employee.id,
+          draftDate: new Date(data.draftDate),
+          totalSteps: data.steps.length,
+          urgency: data.urgency,
+          relatedModule: data.relatedModule || null,
+          relatedDocId: data.relatedDocId || null,
+          steps: {
+            create: data.steps.map((s, idx) => ({
+              stepOrder: idx + 1,
+              approverId: s.approverId,
+              approvalType: s.approvalType,
+            })),
+          },
         },
-      },
-      include: { drafter: true, steps: { include: { approver: true }, orderBy: { stepOrder: 'asc' } } },
+        include: { drafter: true, steps: { include: { approver: true }, orderBy: { stepOrder: 'asc' } } },
+      })
     })
     return successResponse(doc)
   } catch (error) {

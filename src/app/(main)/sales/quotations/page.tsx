@@ -226,6 +226,7 @@ export default function QuotationsPage() {
     mutationFn: (id: string) => api.delete(`/sales/quotations/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-quotations'] })
+      setDeleteTarget(null)
       toast.success('견적이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -236,6 +237,7 @@ export default function QuotationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-quotations'] })
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+      setConvertTarget(null)
       toast.success('수주로 전환되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

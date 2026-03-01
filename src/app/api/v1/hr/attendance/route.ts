@@ -66,6 +66,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const validated = createAttendanceSchema.parse(body)
 
+    // 동일 사원, 동일 근무일 중복 체크
+    const workDate = new Date(validated.workDate)
+    if (isNaN(workDate.getTime())) {
+      return errorResponse('올바른 근무일 형식이 아닙니다.', 'BAD_REQUEST', 400)
+    }
+    const existing = await prisma.attendance.findFirst({
+      where: {
+        employeeId: validated.employeeId,
+        workDate,
+      },
+    })
+    if (existing) {
+      return errorResponse('해당 날짜에 이미 근태 기록이 있습니다.', 'DUPLICATE_ATTENDANCE', 409)
+    }
+
     const checkIn = validated.checkInTime ? new Date(validated.checkInTime) : null
     const checkOut = validated.checkOutTime ? new Date(validated.checkOutTime) : null
     let workHours = null

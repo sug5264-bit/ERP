@@ -63,7 +63,7 @@ const columns: ColumnDef<VoucherRow>[] = [
   { accessorKey: 'description', header: '적요', cell: ({ row }) => row.original.description || '-' },
   { id: 'totalDebit', header: '차변', cell: ({ row }) => formatCurrency(row.original.totalDebit) },
   { id: 'totalCredit', header: '대변', cell: ({ row }) => formatCurrency(row.original.totalCredit) },
-  { id: 'detailCount', header: '분개', cell: ({ row }) => `${row.original._count.details}건` },
+  { id: 'detailCount', header: '분개', cell: ({ row }) => `${row.original._count?.details ?? 0}건` },
   {
     id: 'status',
     header: '상태',
@@ -72,7 +72,7 @@ const columns: ColumnDef<VoucherRow>[] = [
       return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
     },
   },
-  { id: 'createdBy', header: '작성자', cell: ({ row }) => row.original.createdBy.nameKo },
+  { id: 'createdBy', header: '작성자', cell: ({ row }) => row.original.createdBy?.nameKo || '-' },
 ]
 
 interface DetailLine {
@@ -125,6 +125,7 @@ export default function VouchersPage() {
     mutationFn: (id: string) => api.delete(`/accounting/vouchers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounting-vouchers'] })
+      setDeleteTarget(null)
       toast.success('전표가 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

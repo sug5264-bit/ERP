@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   requirePermissionCheck,
   isErrorResponse,
@@ -55,9 +56,16 @@ export async function POST(req: NextRequest) {
     const computedTotal =
       details.length > 0 ? details.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0) : data.totalAmount
 
+    // 수주 존재 확인
+    const salesOrder = await prisma.salesOrder.findUnique({
+      where: { id: data.salesOrderId },
+      select: { id: true, status: true },
+    })
+    if (!salesOrder) return errorResponse('수주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
     const salesReturn = await prisma.$transaction(async (tx) => {
       const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate), tx)
-      return tx.salesReturn.create({
+      const created = await tx.salesReturn.create({
         data: {
           returnNo,
           returnDate: new Date(data.returnDate),
@@ -84,6 +92,30 @@ export async function POST(req: NextRequest) {
           details: { include: { item: { select: { id: true, itemName: true } } } },
         },
       })
+
+      // 반품 시 재고 복원 (입고 처리) 및 수주 잔량 복원
+      if (details.length > 0) {
+        for (const d of details) {
+          // 수주 상세의 납품수량 감소, 잔량 증가
+          await tx.salesOrderDetail.updateMany({
+            where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
+            data: { deliveredQty: { decrement: d.quantity }, remainingQty: { increment: d.quantity } },
+          })
+          // 재고 잔량 복원 (기본 창고에 입고)
+          const existingBalance = await tx.stockBalance.findFirst({
+            where: { itemId: d.itemId },
+            orderBy: { quantity: 'desc' },
+          })
+          if (existingBalance) {
+            await tx.stockBalance.update({
+              where: { id: existingBalance.id },
+              data: { quantity: { increment: d.quantity } },
+            })
+          }
+        }
+      }
+
+      return created
     })
 
     return successResponse(salesReturn)

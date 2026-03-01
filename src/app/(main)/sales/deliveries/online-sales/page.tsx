@@ -37,6 +37,19 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   REFUNDED: { label: '환불', variant: 'secondary' },
 }
 
+interface OnlineSaleRow {
+  id: string
+  saleNo: string
+  saleDate: string
+  channel: string
+  platformOrderNo: string
+  buyerName: string
+  totalAmount: number
+  totalFee: number
+  status: string
+  trackingNo: string
+}
+
 interface OnlineSaleItem {
   itemName: string
   quantity: number
@@ -55,11 +68,11 @@ export default function OnlineSalesPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['online-sales', channelFilter],
-    queryFn: () => api.get(`/sales/online-sales?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/sales/online-sales?${qp.toString()}`) as Promise<Record<string, unknown>>,
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: any) => api.post('/sales/online-sales', body),
+    mutationFn: (body: Record<string, unknown>) => api.post('/sales/online-sales', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['online-sales'] })
       setOpen(false)
@@ -85,20 +98,20 @@ export default function OnlineSalesPage() {
     })
   }
 
-  const updateItem = (idx: number, field: string, value: any) => {
+  const updateItem = (idx: number, field: string, value: string | number) => {
     const updated = [...items]
-    ;(updated[idx] as any)[field] = value
+    ;(updated[idx] as unknown as Record<string, string | number>)[field] = value
     setItems(updated)
   }
 
-  const sales = data?.data || []
+  const sales: OnlineSaleRow[] = (data?.data as OnlineSaleRow[]) || []
 
   // Summary
-  const totalSales = sales.reduce((s: number, r: any) => s + Number(r.totalAmount || 0), 0)
-  const totalFees = sales.reduce((s: number, r: any) => s + Number(r.totalFee || 0), 0)
+  const totalSales = sales.reduce((s: number, r: OnlineSaleRow) => s + Number(r.totalAmount || 0), 0)
+  const totalFees = sales.reduce((s: number, r: OnlineSaleRow) => s + Number(r.totalFee || 0), 0)
   const netSales = totalSales - totalFees
 
-  const columns: ColumnDef<any>[] = [
+  const columns: ColumnDef<OnlineSaleRow>[] = [
     {
       accessorKey: 'saleNo',
       header: '매출번호',

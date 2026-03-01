@@ -112,6 +112,7 @@ export default function LeavePage() {
       queryClient.invalidateQueries({ queryKey: ['hr-leave'] })
       const msg = variables.action === 'approve' ? '승인' : variables.action === 'reject' ? '반려' : '취소'
       toast.success(`휴가가 ${msg}되었습니다.`)
+      setActionConfirm(null)
       setDetailOpen(false)
       setApprovalComment('')
     },

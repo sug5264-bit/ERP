@@ -120,6 +120,7 @@ export default function StockMovementPage() {
       queryClient.invalidateQueries({ queryKey: ['inventory-stock-movement'] })
       queryClient.invalidateQueries({ queryKey: ['inventory-stock-balance'] })
       queryClient.invalidateQueries({ queryKey: ['inventory-balances-summary'] })
+      setDeleteTarget(null)
       toast.success('입출고 내역이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -135,7 +136,7 @@ export default function StockMovementPage() {
 
   const updateDetail = (idx: number, field: string, value: string | number) => {
     const newDetails = [...details]
-    ;(newDetails[idx] as any)[field] = value
+    ;(newDetails[idx] as unknown as Record<string, string | number>)[field] = value
     setDetails(newDetails)
   }
 
