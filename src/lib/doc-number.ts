@@ -1,8 +1,11 @@
 import { prisma } from '@/lib/prisma'
 import { format } from 'date-fns'
+import { logger } from '@/lib/logger'
 
 // Prisma 트랜잭션 클라이언트 타입 (prisma.$transaction(async (tx) => ...) 의 tx)
 type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+const MAX_SEQ = 99999
 
 export async function generateDocumentNumber(prefix: string, date?: Date, tx?: TransactionClient): Promise<string> {
   const d = date || new Date()
@@ -23,6 +26,11 @@ export async function generateDocumentNumber(prefix: string, date?: Date, tx?: T
       lastSeq: 1,
     },
   })
+
+  if (sequence.lastSeq > MAX_SEQ) {
+    logger.error('Document sequence overflow', { prefix, yearMonth, lastSeq: sequence.lastSeq })
+    throw new Error(`문서번호 시퀀스 초과: ${prefix}-${yearMonth} (최대 ${MAX_SEQ})`)
+  }
 
   const seqNo = String(sequence.lastSeq).padStart(5, '0')
   return `${prefix}-${yearMonth}-${seqNo}`

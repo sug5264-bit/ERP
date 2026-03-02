@@ -126,24 +126,31 @@ export async function POST(request: NextRequest) {
         // 출고 먼저 처리 (재고 부족 검증이 정확하도록)
         if (data.movementType === 'OUTBOUND' || data.movementType === 'TRANSFER') {
           if (data.sourceWarehouseId) {
-            const balance = await tx.stockBalance.findFirst({
-              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
-              select: { quantity: true },
-            })
-            const currentQty = Number(balance?.quantity ?? 0)
-            if (currentQty < detail.quantity) {
-              const item = await tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } })
-              throw new Error(
-                `품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`
-              )
-            }
-            await tx.stockBalance.updateMany({
-              where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
+            // 원자적 재고 차감: WHERE 조건에 수량 검증을 포함하여 레이스 컨디션 방지
+            const updated = await tx.stockBalance.updateMany({
+              where: {
+                itemId: detail.itemId,
+                warehouseId: data.sourceWarehouseId,
+                quantity: { gte: detail.quantity },
+              },
               data: {
                 quantity: { decrement: detail.quantity },
                 lastMovementDate: movementDate,
               },
             })
+            if (updated.count === 0) {
+              const [item, balance] = await Promise.all([
+                tx.item.findUnique({ where: { id: detail.itemId }, select: { itemName: true } }),
+                tx.stockBalance.findFirst({
+                  where: { itemId: detail.itemId, warehouseId: data.sourceWarehouseId },
+                  select: { quantity: true },
+                }),
+              ])
+              const currentQty = Number(balance?.quantity ?? 0)
+              throw new Error(
+                `품목 "${item?.itemName || detail.itemId}"의 재고가 부족합니다. (현재고: ${currentQty}, 출고량: ${detail.quantity})`
+              )
+            }
           }
         }
         // 입고 처리

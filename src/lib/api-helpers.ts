@@ -219,10 +219,15 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
     return errorResponse('인증이 필요합니다.', 'UNAUTHORIZED', 401)
   }
   const user = session.user as Record<string, unknown>
+  const userId = user.id as string | undefined
+  if (!userId) {
+    logger.error('Session user missing ID', { email: user.email })
+    return errorResponse('사용자 세션이 유효하지 않습니다.', 'UNAUTHORIZED', 401)
+  }
   return {
     session: {
       user: {
-        id: user.id as string,
+        id: userId,
         email: user.email as string | null,
         name: user.name as string | null,
         roles: (user.roles as string[]) || [],
