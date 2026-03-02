@@ -9,11 +9,32 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const now = new Date()
-    const year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
-    const month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
 
-    const startDate = new Date(year, month - 1, 1)
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999)
+    let startDate: Date
+    let endDate: Date
+
+    // startDate/endDate 직접 지정 시 우선 (일자별 조회)
+    const rawStart = searchParams.get('startDate')
+    const rawEnd = searchParams.get('endDate')
+    if (rawStart) {
+      const sd = new Date(rawStart)
+      const ed = rawEnd ? new Date(rawEnd) : sd
+      if (!isNaN(sd.getTime()) && !isNaN(ed.getTime())) {
+        startDate = sd
+        endDate = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate(), 23, 59, 59, 999)
+      } else {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+      }
+    } else {
+      // year/month 기반 월별 조회 (기본)
+      let year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
+      let month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
+      if (year < 2000 || year > 2100) year = now.getFullYear()
+      if (month < 1 || month > 12) month = now.getMonth() + 1
+      startDate = new Date(year, month - 1, 1)
+      endDate = new Date(year, month, 0, 23, 59, 59, 999)
+    }
 
     // 대금지급 전표 (PAYMENT 타입) 조회
     const vouchers = await prisma.voucher.findMany({

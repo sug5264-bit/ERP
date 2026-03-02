@@ -28,8 +28,8 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
 const APPROVAL_STATUS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> =
   {
     DRAFTED: { label: '임시저장', variant: 'outline' },
-    IN_PROGRESS: { label: '진행중', variant: 'secondary' },
-    APPROVED: { label: '승인', variant: 'default' },
+    IN_PROGRESS: { label: '결재진행', variant: 'secondary' },
+    APPROVED: { label: '승인완료', variant: 'default' },
     REJECTED: { label: '반려', variant: 'destructive' },
     CANCELLED: { label: '취소', variant: 'outline' },
   }

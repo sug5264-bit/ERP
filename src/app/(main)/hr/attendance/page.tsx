@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatTime } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 
@@ -71,11 +71,11 @@ const columns: ColumnDef<AttendanceRow>[] = [
   },
   {
     header: '출근',
-    cell: ({ row }) => row.original.checkInTime?.slice(11, 16) || '-',
+    cell: ({ row }) => formatTime(row.original.checkInTime) || '-',
   },
   {
     header: '퇴근',
-    cell: ({ row }) => row.original.checkOutTime?.slice(11, 16) || '-',
+    cell: ({ row }) => formatTime(row.original.checkOutTime) || '-',
   },
   {
     header: '근무시간',
@@ -93,8 +93,8 @@ const exportColumns: ExportColumn[] = [
   { header: '이름', accessor: (r) => r.employee?.nameKo || '' },
   { header: '부서', accessor: (r) => r.employee?.department?.name || '' },
   { header: '유형', accessor: (r) => TYPE_MAP[r.attendanceType]?.label || r.attendanceType },
-  { header: '출근', accessor: (r) => r.checkInTime?.slice(11, 16) || '' },
-  { header: '퇴근', accessor: (r) => r.checkOutTime?.slice(11, 16) || '' },
+  { header: '출근', accessor: (r) => formatTime(r.checkInTime) || '' },
+  { header: '퇴근', accessor: (r) => formatTime(r.checkOutTime) || '' },
   { header: '근무시간', accessor: (r) => (r.workHours != null ? `${r.workHours}h` : '') },
   { header: '초과근무', accessor: (r) => (r.overtimeHours ? `${r.overtimeHours}h` : '') },
 ]
