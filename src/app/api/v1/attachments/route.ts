@@ -4,6 +4,7 @@ import { successResponse, errorResponse, handleApiError, requireAuth, isErrorRes
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
+import { sanitizeFileName } from '@/lib/sanitize'
 
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     const attachment = await prisma.attachment.create({
       data: {
-        fileName: file.name,
+        fileName: sanitizeFileName(file.name),
         filePath: uniqueName,
         fileSize: file.size,
         mimeType: file.type || 'application/octet-stream',

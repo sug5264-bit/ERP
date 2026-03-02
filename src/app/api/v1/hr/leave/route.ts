@@ -102,27 +102,38 @@ export async function PUT(req: NextRequest) {
       const year = new Date(leave.startDate).getFullYear()
       // 잔여일 조회 + 상태 변경 + 잔여일 차감을 하나의 트랜잭션으로 처리
       const updated = await prisma.$transaction(async (tx) => {
+        // 트랜잭션 내에서 상태 재확인 (TOCTOU 방지)
+        const freshLeave = await tx.leave.findUnique({ where: { id } })
+        if (!freshLeave || freshLeave.status !== 'REQUESTED') {
+          throw new Error('할 수 없습니다:이미 처리된 휴가입니다.')
+        }
         const balance = await tx.leaveBalance.findFirst({
           where: { employeeId: leave.employeeId, year },
         })
         if (!balance) {
           throw new Error('NOT_FOUND:해당 연도의 휴가 잔여일 정보가 없습니다.')
         }
-        if (Number(balance.remainingDays) < Number(leave.days)) {
-          throw new Error(`INSUFFICIENT:잔여 휴가일수(${balance.remainingDays}일)가 부족합니다.`)
+        const remaining = Number(balance.remainingDays)
+        const days = Number(leave.days)
+        if (remaining < days) {
+          throw new Error(`INSUFFICIENT:잔여 휴가일수(${remaining}일)가 부족합니다.`)
         }
         const result = await tx.leave.update({
           where: { id },
           data: { status: 'APPROVED' },
           include: { employee: { select: { nameKo: true } } },
         })
-        await tx.leaveBalance.updateMany({
-          where: { employeeId: leave.employeeId, year },
+        // 원자적 잔여일 차감: WHERE 조건에 잔여일 검증 포함
+        const balanceUpdated = await tx.leaveBalance.updateMany({
+          where: { employeeId: leave.employeeId, year, remainingDays: { gte: days } },
           data: {
-            usedDays: { increment: Number(leave.days) },
-            remainingDays: { decrement: Number(leave.days) },
+            usedDays: { increment: days },
+            remainingDays: { decrement: days },
           },
         })
+        if (balanceUpdated.count === 0) {
+          throw new Error(`INSUFFICIENT:잔여 휴가일수가 부족합니다.`)
+        }
         return result
       })
       return successResponse(updated)
@@ -144,22 +155,32 @@ export async function PUT(req: NextRequest) {
       if (!['REQUESTED', 'APPROVED'].includes(leave.status)) {
         return errorResponse('취소할 수 없는 상태입니다.', 'BAD_REQUEST', 400)
       }
-      const wasApproved = leave.status === 'APPROVED'
       const year = new Date(leave.startDate).getFullYear()
       const updated = await prisma.$transaction(async (tx) => {
+        // 트랜잭션 내에서 상태 재확인 (TOCTOU 방지)
+        const freshLeave = await tx.leave.findUnique({ where: { id } })
+        if (!freshLeave || !['REQUESTED', 'APPROVED'].includes(freshLeave.status)) {
+          throw new Error('할 수 없습니다:이미 처리된 휴가입니다.')
+        }
+        const wasApproved = freshLeave.status === 'APPROVED'
         const result = await tx.leave.update({
           where: { id },
           data: { status: 'CANCELLED' },
           include: { employee: { select: { nameKo: true } } },
         })
         if (wasApproved) {
-          await tx.leaveBalance.updateMany({
+          const balance = await tx.leaveBalance.findFirst({
             where: { employeeId: leave.employeeId, year },
-            data: {
-              usedDays: { decrement: Number(leave.days) },
-              remainingDays: { increment: Number(leave.days) },
-            },
           })
+          if (balance) {
+            await tx.leaveBalance.updateMany({
+              where: { employeeId: leave.employeeId, year },
+              data: {
+                usedDays: { decrement: Number(leave.days) },
+                remainingDays: { increment: Number(leave.days) },
+              },
+            })
+          }
         }
         return result
       })

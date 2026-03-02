@@ -35,10 +35,9 @@ describe('generateDocumentNumber', () => {
     expect(result).toBe('DLV-202401-99999')
   })
 
-  it('5자리 초과 시퀀스 처리 (패딩 없이)', async () => {
+  it('5자리 초과 시퀀스 시 오버플로우 에러 발생', async () => {
     mockUpsert.mockResolvedValue({ lastSeq: 100000 })
-    const result = await generateDocumentNumber('SM', new Date(2024, 0, 1))
-    expect(result).toBe('SM-202401-100000')
+    await expect(generateDocumentNumber('SM', new Date(2024, 0, 1))).rejects.toThrow('문서번호 시퀀스 초과')
   })
 
   it('date 미제공 시 현재 날짜 사용', async () => {
