@@ -44,8 +44,7 @@ import { api } from '@/hooks/use-api'
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
   // 영업관리 (SD)
-  '/sales/orders': '수주현황',
-  '/sales/deliveries': '출하관리',
+'/sales/deliveries': '출하관리',
   '/sales/summary': '매출현황',
   '/sales/partners': '매출처관리',
   '/sales/returns': '반품관리',

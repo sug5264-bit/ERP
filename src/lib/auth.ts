@@ -107,6 +107,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             employeeName: user.employee?.nameKo ?? null,
             departmentName: user.employee?.department?.name ?? null,
             positionName: user.employee?.position?.name ?? null,
+            accountType: (user as Record<string, unknown>).accountType ?? 'INTERNAL',
+            shipperId: (user as Record<string, unknown>).shipperId ?? null,
           }
         } catch (error) {
           logger.error('Auth authorize error', {

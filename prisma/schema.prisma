@@ -35,6 +35,10 @@ model User {
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
 
+  accountType      String    @default("INTERNAL") // INTERNAL(자사), SHIPPER(화주사)
+  shipperId        String?
+  shipper          ShipperCompany? @relation(fields: [shipperId], references: [id])
+
   @@map("users")
 }
 
@@ -1069,6 +1073,9 @@ model Delivery {
   details    DeliveryDetail[]
   qualityInspections QualityInspection[]
 
+  completedAt DateTime? // 출하완료 일시
+  completedBy String?   // 출하완료 처리자
+
   @@index([deliveryDate])
   @@index([salesOrderId])
   @@index([partnerId])
@@ -1798,4 +1805,65 @@ model SalesPrice {
   @@index([itemId])
   @@index([isActive])
   @@map("sales_prices")
+}
+
+// ============================================================
+// 3PL 화주사 (Shipper)
+// ============================================================
+
+model ShipperCompany {
+  id            String   @id @default(cuid())
+  companyCode   String   @unique
+  companyName   String
+  bizNo         String?  @unique
+  ceoName       String?
+  phone         String?
+  email         String?
+  address       String?
+  contractStart DateTime? @db.Date
+  contractEnd   DateTime? @db.Date
+  monthlyFee    Decimal?  @db.Decimal(15, 2)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  users         User[]
+  shipperOrders ShipperOrder[]
+
+  @@index([companyName])
+  @@map("shipper_companies")
+}
+
+model ShipperOrder {
+  id              String   @id @default(cuid())
+  orderNo         String   @unique
+  shipperId       String
+  orderDate       DateTime @db.Date
+  senderName      String
+  senderPhone     String?
+  senderAddress   String?
+  recipientName   String
+  recipientPhone  String?
+  recipientZipCode String?
+  recipientAddress String
+  itemName        String
+  quantity        Int      @default(1)
+  weight          Decimal? @db.Decimal(10, 2)
+  shippingMethod  String   @default("NORMAL") // NORMAL, EXPRESS, SAME_DAY
+  status          String   @default("RECEIVED") // RECEIVED, PROCESSING, SHIPPED, IN_TRANSIT, DELIVERED, RETURNED
+  trackingNo      String?
+  carrier         String?
+  shippingCost    Decimal? @db.Decimal(15, 2)
+  deliveredAt     DateTime?
+  specialNote     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  shipper ShipperCompany @relation(fields: [shipperId], references: [id])
+
+  @@index([shipperId])
+  @@index([orderDate])
+  @@index([status])
+  @@index([trackingNo])
+  @@map("shipper_orders")
 }

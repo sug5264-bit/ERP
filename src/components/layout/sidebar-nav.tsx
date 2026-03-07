@@ -52,8 +52,7 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
     module: 'sales',
     children: [
-      { title: '수주현황', href: '/sales/orders', permission: 'sales.orders' },
-      { title: '출하관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
+{ title: '출하관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
       { title: '매출현황', href: '/sales/summary', permission: 'sales.summary' },
       { title: '매출처관리', href: '/sales/partners', permission: 'sales.partners' },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },

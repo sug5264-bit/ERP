@@ -19,8 +19,10 @@ import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2 } from 'lucide-react'
+import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2, CheckCircle } from 'lucide-react'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
+import { StatusBadge } from '@/components/common/status-badge'
 
 const STATUS_MAP: Record<string, string> = { PREPARING: '준비중', SHIPPED: '출하', DELIVERED: '납품완료' }
 const QUALITY_STATUS_MAP: Record<
@@ -276,6 +278,8 @@ const emptyInspectionItem = (): InspectionItemInput => ({
 export default function DeliveriesPage() {
   const [activeTab, setActiveTab] = useState<string>('ONLINE')
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<{ date: string; events: CalendarEvent[] } | null>(
     null
   )
@@ -362,7 +366,24 @@ export default function DeliveriesPage() {
     {
       id: 'status',
       header: '상태',
-      cell: ({ row }) => <Badge variant="outline">{STATUS_MAP[row.original.status] || row.original.status}</Badge>,
+      cell: ({ row }) => <StatusBadge status={row.original.status} labels={STATUS_MAP} />,
+    },
+    {
+      id: 'shipAction',
+      header: '',
+      cell: ({ row }) =>
+        row.original.status === 'PREPARING' ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => handleShipComplete(row.original.id)}
+            disabled={shipCompleteMutation.isPending}
+          >
+            <CheckCircle className="mr-1 h-3 w-3" />
+            출하완료
+          </Button>
+        ) : null,
     },
     {
       id: 'qualityStatus',
@@ -502,15 +523,22 @@ export default function DeliveriesPage() {
   }
 
   // Fetch deliveries filtered by salesChannel (ONLINE or OFFLINE)
+  const dateParams = useMemo(() => {
+    let params = ''
+    if (startDate) params += `&startDate=${startDate}`
+    if (endDate) params += `&endDate=${endDate}`
+    return params
+  }, [startDate, endDate])
+
   const { data: onlineData, isLoading: onlineLoading } = useQuery({
-    queryKey: ['sales-deliveries', 'ONLINE'],
+    queryKey: ['sales-deliveries', 'ONLINE', startDate, endDate],
     queryFn: () =>
-      api.get('/sales/deliveries?pageSize=50&salesChannel=ONLINE') as Promise<ApiListResponse<DeliveryRow>>,
+      api.get(`/sales/deliveries?pageSize=50&salesChannel=ONLINE${dateParams}`) as Promise<ApiListResponse<DeliveryRow>>,
   })
   const { data: offlineData, isLoading: offlineLoading } = useQuery({
-    queryKey: ['sales-deliveries', 'OFFLINE'],
+    queryKey: ['sales-deliveries', 'OFFLINE', startDate, endDate],
     queryFn: () =>
-      api.get('/sales/deliveries?pageSize=50&salesChannel=OFFLINE') as Promise<ApiListResponse<DeliveryRow>>,
+      api.get(`/sales/deliveries?pageSize=50&salesChannel=OFFLINE${dateParams}`) as Promise<ApiListResponse<DeliveryRow>>,
   })
 
   const { data: ordersData } = useQuery({
@@ -570,6 +598,22 @@ export default function DeliveriesPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   })
+
+  const shipCompleteMutation = useMutation({
+    mutationFn: (id: string) =>
+      api.patch(`/sales/deliveries/${id}`, { status: 'SHIPPED', completedAt: new Date().toISOString() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
+      toast.success('출하완료 처리되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const handleShipComplete = (id: string) => {
+    if (window.confirm('출하완료 처리하시겠습니까?')) {
+      shipCompleteMutation.mutate(id)
+    }
+  }
 
   const orders = ordersData?.data || []
   const items = itemsData?.data || []
