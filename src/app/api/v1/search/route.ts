@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       ? modulesParam.split(',')
       : ['employee', 'partner', 'item', 'voucher', 'project']
 
-    const results: Record<string, any[]> = {}
+    const results: Record<string, { id: string; type: string; title: string; subtitle: string; badge: string; url: string }[]> = {}
 
     const searches = []
 

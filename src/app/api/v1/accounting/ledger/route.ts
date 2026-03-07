@@ -82,8 +82,7 @@ export async function GET(request: NextRequest) {
       dateWhere.voucherDate = voucherDateRange
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const detailWhere: any = {
+    const detailWhere: Record<string, unknown> = {
       accountSubjectId,
       voucher: {
         status: { in: ['APPROVED', 'CONFIRMED'] },

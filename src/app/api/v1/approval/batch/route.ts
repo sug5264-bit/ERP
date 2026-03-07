@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         })
 
         // 감사로그 + 알림은 트랜잭션 외부에서 병렬 실행
-        const bgTasks: Promise<any>[] = [
+        const bgTasks: Promise<unknown>[] = [
           writeAuditLog({
             action: action === 'approve' ? 'APPROVE' : 'REJECT',
             tableName: 'approval_documents',
