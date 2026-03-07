@@ -174,7 +174,7 @@ export default function SalesSummaryPage() {
                 <div className="text-2xl font-bold">
                   {summary.total.count > 0
                     ? formatCurrency(Math.round(summary.total.totalAmount / summary.total.count))
-                    : '0'}
+                    : formatCurrency(0)}
                 </div>
                 <p className="text-muted-foreground mt-1 text-xs">건당 평균</p>
               </CardContent>
