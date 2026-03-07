@@ -1,13 +1,17 @@
 export const APP_NAME = '웰그린 ERP'
-export const COMPANY_NAME = '웰그린 주식회사'
+export const COMPANY_NAME = '(주)웰그린'
 
+// SAP 모듈 기준 라벨 (식품 유통사 맞춤)
 export const MODULE_LABELS: Record<string, string> = {
   dashboard: '대시보드',
-  accounting: '회계',
-  hr: '인사',
-  inventory: '재고',
-  sales: '매출',
-  projects: '프로젝트',
+  sales: '영업관리',        // SAP SD
+  purchasing: '구매관리',    // SAP MM
+  production: '생산관리',    // SAP PP
+  inventory: '재고관리',     // SAP WM
+  quality: '품질관리',       // SAP QM
+  accounting: '회계관리',    // SAP FI
+  hr: '인사관리',           // SAP HR
+  closing: '정산관리',
   approval: '전자결재',
   board: '게시판',
   admin: '시스템관리',
@@ -33,4 +37,28 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   IMPORT: '가져오기',
   APPROVE: '승인',
   REJECT: '반려',
+}
+
+// 식품 유통사 공통 코드
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  DRAFT: '작성중',
+  CONFIRMED: '확정',
+  IN_PROGRESS: '진행중',
+  SHIPPED: '출하완료',
+  DELIVERED: '배송완료',
+  CLOSED: '마감',
+  CANCELLED: '취소',
+}
+
+export const ITEM_TYPE_LABELS: Record<string, string> = {
+  FINISHED: '완제품',
+  RAW_MATERIAL: '원자재',
+  PACKAGING: '포장재',
+  SUB_MATERIAL: '부자재',
+}
+
+export const STORAGE_TYPE_LABELS: Record<string, string> = {
+  AMBIENT: '상온',
+  REFRIGERATED: '냉장',
+  FROZEN: '냉동',
 }

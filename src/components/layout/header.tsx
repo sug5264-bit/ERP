@@ -40,46 +40,69 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { api } from '@/hooks/use-api'
 
+// SAP 모듈 기준 / 식품 유통사 용어 체계
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
+  // 영업관리 (SD)
+  '/sales/orders': '수주현황',
+  '/sales/deliveries': '출하관리',
+  '/sales/summary': '매출현황',
+  '/sales/partners': '매출처관리',
+  '/sales/returns': '반품관리',
+  '/sales/pricing': '단가관리',
+  // 구매관리 (MM)
+  '/purchasing/orders': '발주관리',
+  '/purchasing/receiving': '입고관리',
+  '/purchasing/suppliers': '매입처관리',
+  '/purchasing/summary': '매입현황',
+  // 생산관리 (PP)
+  '/production/oem': 'OEM 위탁현황',
+  '/production/bom': '배합표(BOM)',
+  '/production/plan': '생산계획',
+  '/production/result': '생산실적',
+  // 재고관리 (WM)
+  '/inventory/items': '품목관리',
+  '/inventory/stock-status': '재고현황',
+  '/inventory/stock-movement': '입출고내역',
+  '/inventory/expiry': '유통기한관리',
+  '/inventory/lot-tracking': 'LOT추적',
+  '/inventory/warehouses': '창고관리',
+  // 품질관리 (QM)
+  '/quality/incoming': '입고검사',
+  '/quality/outgoing': '출하검사',
+  '/quality/standards': '검사기준',
+  // 정산관리
+  '/closing/sales-settlement': '매출정산',
+  '/closing/purchase-settlement': '매입정산',
+  '/closing/netting': '상계내역',
+  '/closing/payments': '대금지급',
+  // 회계관리 (FI)
   '/accounting/vouchers': '전표관리',
-  '/accounting/journal': '분개장',
   '/accounting/ledger': '총계정원장',
-  '/accounting/financial-statements': '재무제표',
   '/accounting/tax-invoice': '세금계산서',
-  '/accounting/budget': '예산관리',
+  '/accounting/financial-statements': '재무제표',
+  // 인사관리 (HR)
   '/hr/employees': '사원관리',
   '/hr/organization': '부서/직급',
   '/hr/attendance': '근태관리',
   '/hr/leave': '휴가관리',
   '/hr/payroll': '급여관리',
-  '/hr/recruitment': '채용관리',
-  '/inventory/items': '품목관리',
-  '/inventory/stock-movement': '입출고',
-  '/inventory/stock-status': '재고현황',
-  '/inventory/warehouses': '창고관리',
-  '/sales/summary': '매출집계',
-  '/sales/partners': '거래처관리',
-  '/sales/quotations': '견적관리',
-  '/sales/orders': '발주관리',
-  '/sales/deliveries': '납품관리',
-  '/sales/returns': '반품관리',
-  '/closing/netting': '상계내역',
-  '/closing/payments': '대금지급',
+  // 전자결재
   '/approval/draft': '기안하기',
   '/approval/pending': '결재대기',
   '/approval/completed': '결재완료',
   '/approval/rejected': '반려문서',
+  // 게시판
   '/board/notices': '공지사항',
   '/board/general': '자유게시판',
   '/board/messages': '사내메시지',
+  // 시스템관리
   '/admin/users': '사용자관리',
   '/admin/roles': '권한관리',
   '/admin/codes': '코드관리',
   '/admin/logs': '감사로그',
   '/admin/company': '회사관리',
   '/mypage': '마이페이지',
-  '/projects': '프로젝트',
 }
 
 const SEARCHABLE_PAGES = Object.entries(PAGE_TITLES).map(([href, title]) => ({ href, title }))
@@ -133,7 +156,6 @@ export function Header() {
   const canFavorite = !!pageTitle && pathname !== '/dashboard'
   const isCurrentFav = isFavorite(pathname)
 
-  // 메뉴 검색 결과
   const menuResults = useMemo(() => {
     if (!searchQuery.trim()) return []
     const q = searchQuery.toLowerCase()
@@ -143,7 +165,6 @@ export function Header() {
     )
   }, [searchQuery])
 
-  // 데이터 검색 (debounced + AbortController로 race condition 방지)
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
     if (abortControllerRef.current) abortControllerRef.current.abort()
@@ -189,7 +210,6 @@ export function Header() {
     if (searchOpen) searchRef.current?.focus()
   }, [searchOpen])
 
-  // 데스크톱 검색 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
@@ -250,7 +270,6 @@ export function Header() {
         )}
 
         <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
-          {/* 통합 검색 - 모바일 */}
           <Button
             variant="ghost"
             size="icon"
@@ -262,7 +281,6 @@ export function Header() {
             <Search className="h-5 w-5" />
           </Button>
 
-          {/* 통합 검색 - 데스크톱 */}
           <div ref={searchContainerRef} className="relative hidden lg:block">
             <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
             <Input
@@ -352,7 +370,6 @@ export function Header() {
             )}
           </div>
 
-          {/* Favorite toggle */}
           {canFavorite && (
             <Button
               variant="ghost"
@@ -372,7 +389,6 @@ export function Header() {
             </Button>
           )}
 
-          {/* Dark mode toggle */}
           <Button
             variant="ghost"
             size="icon"
@@ -384,7 +400,6 @@ export function Header() {
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
-          {/* 알림 */}
           <NotificationBell />
 
           <DropdownMenu>
@@ -495,15 +510,17 @@ export function Header() {
             {!searchQuery && (
               <div className="space-y-1 p-4">
                 <p className="text-muted-foreground px-2 pb-2 text-xs">자주 찾는 메뉴</p>
-                {['/dashboard', '/approval/pending', '/hr/leave', '/inventory/items', '/sales/orders'].map((href) => (
-                  <button
-                    key={href}
-                    onClick={() => handleSearchNavigate(href)}
-                    className="hover:bg-accent w-full rounded-md px-3 py-2.5 text-left text-sm transition-colors"
-                  >
-                    {PAGE_TITLES[href] || href}
-                  </button>
-                ))}
+                {['/dashboard', '/sales/orders', '/inventory/items', '/purchasing/orders', '/approval/pending'].map(
+                  (href) => (
+                    <button
+                      key={href}
+                      onClick={() => handleSearchNavigate(href)}
+                      className="hover:bg-accent w-full rounded-md px-3 py-2.5 text-left text-sm transition-colors"
+                    >
+                      {PAGE_TITLES[href] || href}
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>

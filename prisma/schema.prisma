@@ -758,12 +758,13 @@ model Item {
 }
 
 model Warehouse {
-  id        String  @id @default(cuid())
-  code      String  @unique
-  name      String
-  location  String?
-  managerId String?
-  isActive  Boolean @default(true)
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  location    String?
+  managerId   String?
+  storageType String  @default("AMBIENT") // AMBIENT(상온), REFRIGERATED(냉장), FROZEN(냉동)
+  isActive    Boolean @default(true)
 
   zones              WarehouseZone[]
   stockMovementsFrom StockMovement[] @relation("SourceWarehouse")
@@ -838,6 +839,8 @@ model StockBalance {
   itemId           String
   warehouseId      String
   zoneId           String?
+  lotNo            String?   // LOT 번호
+  expiryDate       DateTime? @db.Date // 유통기한
   quantity         Decimal   @default(0) @db.Decimal(15, 2)
   averageCost      Decimal   @default(0) @db.Decimal(15, 2)
   lastMovementDate DateTime?
@@ -849,6 +852,8 @@ model StockBalance {
   @@unique([itemId, warehouseId, zoneId])
   @@index([itemId])
   @@index([warehouseId])
+  @@index([expiryDate])
+  @@index([lotNo])
   @@map("stock_balances")
 }
 
@@ -1647,4 +1652,150 @@ model Message {
   @@index([receiverId, isRead])
   @@index([senderId, sentAt])
   @@map("messages")
+}
+
+// ============================================================
+// 생산관리 (Production) - OEM 위탁생산 특화
+// ============================================================
+
+enum OemContractStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+model OemContract {
+  id              String            @id @default(cuid())
+  contractNo      String            @unique
+  partnerId       String            // OEM 제조사 (매입처)
+  contractName    String
+  startDate       DateTime          @db.Date
+  endDate         DateTime?         @db.Date
+  status          OemContractStatus @default(DRAFT)
+  minimumOrderQty Decimal?          @db.Decimal(15, 2)
+  leadTimeDays    Int?              // 제조 리드타임 (일)
+  paymentTerms    String?
+  qualityTerms    String?           @db.Text
+  description     String?           @db.Text
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  productionPlans ProductionPlan[]
+
+  @@index([partnerId])
+  @@index([status])
+  @@map("oem_contracts")
+}
+
+model BomHeader {
+  id          String   @id @default(cuid())
+  bomCode     String   @unique
+  bomName     String
+  itemId      String   // 완제품 품목
+  version     Int      @default(1)
+  yieldRate   Decimal  @default(100) @db.Decimal(8, 4) // 수율 (%)
+  isActive    Boolean  @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  details         BomDetail[]
+  productionPlans ProductionPlan[]
+
+  @@index([itemId])
+  @@map("bom_headers")
+}
+
+model BomDetail {
+  id           String  @id @default(cuid())
+  bomHeaderId  String
+  lineNo       Int
+  itemId       String  // 원자재/부자재/포장재
+  quantity     Decimal @db.Decimal(15, 4) // 소요량
+  unit         String  @default("EA")
+  lossRate     Decimal @default(0) @db.Decimal(8, 4) // 로스율 (%)
+  remark       String?
+
+  bomHeader BomHeader @relation(fields: [bomHeaderId], references: [id], onDelete: Cascade)
+
+  @@unique([bomHeaderId, lineNo])
+  @@index([itemId])
+  @@map("bom_details")
+}
+
+enum ProductionPlanStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model ProductionPlan {
+  id              String               @id @default(cuid())
+  planNo          String               @unique
+  planDate        DateTime             @db.Date
+  bomHeaderId     String
+  oemContractId   String?
+  plannedQty      Decimal              @db.Decimal(15, 2)
+  plannedDate     DateTime             @db.Date // 생산예정일
+  completionDate  DateTime?            @db.Date // 완료일
+  status          ProductionPlanStatus @default(PLANNED)
+  description     String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  bomHeader   BomHeader    @relation(fields: [bomHeaderId], references: [id])
+  oemContract OemContract? @relation(fields: [oemContractId], references: [id])
+  results     ProductionResult[]
+
+  @@index([planDate])
+  @@index([status])
+  @@index([oemContractId])
+  @@map("production_plans")
+}
+
+model ProductionResult {
+  id               String   @id @default(cuid())
+  resultNo         String   @unique
+  productionPlanId String
+  productionDate   DateTime @db.Date
+  producedQty      Decimal  @db.Decimal(15, 2)
+  defectQty        Decimal  @default(0) @db.Decimal(15, 2)
+  goodQty          Decimal  @db.Decimal(15, 2)
+  lotNo            String?
+  expiryDate       DateTime? @db.Date
+  remarks          String?
+  createdAt        DateTime @default(now())
+
+  productionPlan ProductionPlan @relation(fields: [productionPlanId], references: [id])
+
+  @@index([productionPlanId])
+  @@index([productionDate])
+  @@index([lotNo])
+  @@map("production_results")
+}
+
+// ============================================================
+// 단가관리 (Sales Pricing)
+// ============================================================
+
+model SalesPrice {
+  id          String    @id @default(cuid())
+  partnerId   String
+  itemId      String
+  unitPrice   Decimal   @db.Decimal(15, 2)
+  startDate   DateTime  @db.Date
+  endDate     DateTime? @db.Date
+  minQty      Decimal?  @db.Decimal(15, 2) // 최소주문수량
+  isActive    Boolean   @default(true)
+  remark      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([partnerId, itemId, startDate])
+  @@index([partnerId])
+  @@index([itemId])
+  @@index([isActive])
+  @@map("sales_prices")
 }
