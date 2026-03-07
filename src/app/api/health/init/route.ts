@@ -7,24 +7,35 @@ import { hash } from 'bcryptjs'
  * 프로덕션에서 admin 계정이 없을 경우 초기 계정을 생성합니다.
  * 이미 admin 계정이 존재하면 아무 작업도 하지 않습니다.
  */
+// GET으로도 접근 가능 (브라우저 주소창에서 바로 실행)
+export async function GET() {
+  return initAdmin()
+}
+
 export async function POST() {
+  return initAdmin()
+}
+
+async function initAdmin() {
   try {
     // DB 연결 테스트
     await prisma.$queryRawUnsafe('SELECT 1')
 
-    // admin 사용자 존재 여부 확인
-    const existingAdmin = await prisma.user.findUnique({
-      where: { username: 'admin' },
-      select: { id: true },
-    })
+    // admin 사용자 존재 여부 확인 (raw SQL로 스키마 불일치 우회)
+    const adminRows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      'SELECT "id" FROM "User" WHERE "username" = $1 LIMIT 1',
+      'admin'
+    )
+    const existingAdmin = adminRows.length > 0 ? adminRows[0] : null
 
     if (existingAdmin) {
-      // admin이 존재하면 비밀번호를 admin1234로 리셋
+      // admin이 존재하면 비밀번호를 admin1234로 리셋 (raw SQL로 스키마 불일치 우회)
       const newHash = await hash('admin1234', 10)
-      await prisma.user.update({
-        where: { id: existingAdmin.id },
-        data: { passwordHash: newHash, isActive: true },
-      })
+      await prisma.$executeRawUnsafe(
+        'UPDATE "User" SET "passwordHash" = $1, "isActive" = true WHERE "id" = $2',
+        newHash,
+        existingAdmin.id
+      )
       return NextResponse.json({ message: 'admin 비밀번호가 admin1234로 리셋되었습니다.', reset: true })
     }
 

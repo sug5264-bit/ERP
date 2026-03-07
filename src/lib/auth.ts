@@ -36,34 +36,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null
           }
 
-          const user = await prisma.user.findUnique({
-            where: { username: usernameStr },
-            include: {
-              userRoles: {
-                include: {
-                  role: {
-                    include: {
-                      rolePermissions: {
-                        include: { permission: true },
-                      },
-                    },
-                  },
-                },
-              },
-              employee: {
-                include: {
-                  department: true,
-                  position: true,
-                },
-              },
-            },
-          })
+          // Raw SQL로 조회 (Prisma 스키마와 DB 스키마 불일치 우회)
+          const users = await prisma.$queryRawUnsafe<
+            {
+              id: string
+              email: string | null
+              name: string
+              passwordHash: string
+              isActive: boolean
+              employeeId: string | null
+            }[]
+          >(
+            'SELECT "id", "email", "name", "passwordHash", "isActive", "employeeId" FROM "User" WHERE "username" = $1 LIMIT 1',
+            usernameStr
+          )
 
-          if (!user) {
+          if (users.length === 0) {
             incrementRateLimit(rateLimitKey)
             logger.warn('Login failed: user not found', { module: 'auth', action: 'login' })
             return null
           }
+
+          const user = users[0]
 
           if (!user.isActive) {
             incrementRateLimit(rateLimitKey)
@@ -82,18 +76,46 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // 로그인 성공 시 rate limit 초기화
           resetRateLimit(rateLimitKey)
 
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { lastLoginAt: new Date() },
-          })
+          await prisma.$executeRawUnsafe('UPDATE "User" SET "lastLoginAt" = NOW() WHERE "id" = $1', user.id)
 
-          const roles = user.userRoles.map((ur) => ur.role.name)
-          const permissions = user.userRoles.flatMap((ur) =>
-            ur.role.rolePermissions.map((rp) => ({
-              module: rp.permission.module,
-              action: rp.permission.action,
-            }))
+          // 역할 조회
+          const roleRows = await prisma.$queryRawUnsafe<{ roleName: string }[]>(
+            `SELECT r."name" as "roleName" FROM "UserRole" ur JOIN "Role" r ON ur."roleId" = r."id" WHERE ur."userId" = $1`,
+            user.id
           )
+          const roles = roleRows.map((r) => r.roleName)
+
+          // 권한 조회
+          const permRows = await prisma.$queryRawUnsafe<{ module: string; action: string }[]>(
+            `SELECT p."module", p."action" FROM "UserRole" ur
+             JOIN "RolePermission" rp ON ur."roleId" = rp."roleId"
+             JOIN "Permission" p ON rp."permissionId" = p."id"
+             WHERE ur."userId" = $1`,
+            user.id
+          )
+          const permissions = permRows.map((p) => ({ module: p.module, action: p.action }))
+
+          // 직원 정보 조회
+          let employeeName: string | null = null
+          let departmentName: string | null = null
+          let positionName: string | null = null
+          if (user.employeeId) {
+            const empRows = await prisma.$queryRawUnsafe<
+              { nameKo: string | null; deptName: string | null; posName: string | null }[]
+            >(
+              `SELECT e."nameKo", d."name" as "deptName", pos."name" as "posName"
+               FROM "Employee" e
+               LEFT JOIN "Department" d ON e."departmentId" = d."id"
+               LEFT JOIN "Position" pos ON e."positionId" = pos."id"
+               WHERE e."id" = $1 LIMIT 1`,
+              user.employeeId
+            )
+            if (empRows.length > 0) {
+              employeeName = empRows[0].nameKo
+              departmentName = empRows[0].deptName
+              positionName = empRows[0].posName
+            }
+          }
 
           logger.info('Login successful', { module: 'auth', action: 'login', userId: user.id })
 
@@ -104,11 +126,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             roles,
             permissions,
             employeeId: user.employeeId,
-            employeeName: user.employee?.nameKo ?? null,
-            departmentName: user.employee?.department?.name ?? null,
-            positionName: user.employee?.position?.name ?? null,
-            accountType: (user as Record<string, unknown>).accountType ?? 'INTERNAL',
-            shipperId: (user as Record<string, unknown>).shipperId ?? null,
+            employeeName,
+            departmentName,
+            positionName,
+            accountType: 'INTERNAL',
+            shipperId: null,
           }
         } catch (error) {
           logger.error('Auth authorize error', {
