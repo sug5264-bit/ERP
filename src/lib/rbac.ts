@@ -19,6 +19,11 @@ const ROUTE_MODULE_MAP: Record<string, string> = {
   '/board': 'board',
   '/projects': 'projects',
   '/admin': 'admin',
+  '/purchasing': 'purchasing',
+  '/production': 'production',
+  '/quality': 'quality',
+  '/closing': 'closing',
+  '/shipper': 'shipper',  // 3PL 화주사
 }
 
 /**
@@ -47,7 +52,12 @@ export function getModuleFromPath(pathname: string): string | null {
 /**
  * 서버사이드 권한 체크 (API route에서 사용)
  */
-export function hasPermission(permissions: Permission[], roles: string[], module: string, action: Action): boolean {
+export function hasPermission(permissions: Permission[], roles: string[], module: string, action: Action, accountType?: string): boolean {
+  // 화주사 유저는 'shipper' 모듈만 접근 가능
+  if (accountType === 'SHIPPER') {
+    return module === 'shipper'
+  }
+
   // 시스템 관리자는 모든 권한
   if (roles.includes('SYSTEM_ADMIN') || roles.includes('관리자')) return true
   // 부서장은 읽기/승인 가능

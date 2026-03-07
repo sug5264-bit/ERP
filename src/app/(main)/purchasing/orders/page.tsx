@@ -1,24 +1,150 @@
 'use client'
 
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { ColumnDef } from '@tanstack/react-table'
+import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
-import { Card, CardContent } from '@/components/ui/card'
-import { ClipboardList } from 'lucide-react'
+import { DataTable } from '@/components/common/data-table'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
+import { StatusBadge } from '@/components/common/status-badge'
+import { SummaryCards } from '@/components/common/summary-cards'
+import { PermissionGuard } from '@/components/common/permission-guard'
+import { formatCurrency, formatDate } from '@/lib/format'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { ClipboardList, Plus, ShoppingCart, Loader2, CheckCircle, DollarSign } from 'lucide-react'
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  ORDERED: '발주완료',
+  IN_PROGRESS: '진행중',
+  COMPLETED: '입고완료',
+  CANCELLED: '취소',
+}
+
+interface PurchaseOrder {
+  id: string
+  orderNo: string
+  orderDate: string
+  supplierName: string
+  supplyAmount: number
+  totalAmount: number
+  status: string
+  managerName: string
+}
+
+const columns: ColumnDef<PurchaseOrder>[] = [
+  {
+    accessorKey: 'orderNo',
+    header: '발주번호',
+    cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
+  },
+  {
+    accessorKey: 'orderDate',
+    header: '발주일',
+    cell: ({ row }) => formatDate(row.original.orderDate),
+  },
+  {
+    accessorKey: 'supplierName',
+    header: '매입처명',
+    cell: ({ row }) => <span className="font-medium">{row.original.supplierName}</span>,
+  },
+  {
+    accessorKey: 'supplyAmount',
+    header: '공급가액',
+    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.supplyAmount)}원</span>,
+  },
+  {
+    accessorKey: 'status',
+    header: '상태',
+    cell: ({ row }) => <StatusBadge status={row.original.status} labels={ORDER_STATUS_LABELS} />,
+  },
+  {
+    accessorKey: 'managerName',
+    header: '담당자',
+  },
+]
 
 export default function PurchasingOrdersPage() {
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  const qp = new URLSearchParams({ page: '1', pageSize: '50' })
+  if (startDate) qp.set('startDate', startDate)
+  if (endDate) qp.set('endDate', endDate)
+  if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['purchasing-orders', startDate, endDate, statusFilter],
+    queryFn: () => api.get(`/purchasing/orders?${qp.toString()}`),
+  })
+
+  const items = (data?.data || []) as PurchaseOrder[]
+
+  const totalCount = items.length
+  const inProgressCount = items.filter(i => i.status === 'IN_PROGRESS').length
+  const completedCount = items.filter(i => i.status === 'COMPLETED').length
+  const thisMonthAmount = items
+    .filter(i => {
+      const d = new Date(i.orderDate)
+      const now = new Date()
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+    })
+    .reduce((sum, i) => sum + (i.supplyAmount || 0), 0)
+
+  const summaryItems = [
+    { label: '전체', value: totalCount, icon: ClipboardList, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+    { label: '진행중', value: inProgressCount, icon: Loader2, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+    { label: '완료', value: completedCount, icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' },
+    { label: '이번달 발주금액', value: `${formatCurrency(thisMonthAmount)}원`, icon: DollarSign, color: 'text-violet-600', bgColor: 'bg-violet-50' },
+  ]
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title="발주관리"
         description="원자재 및 부자재 발주를 등록하고 관리합니다"
+        actions={
+          <PermissionGuard module="purchasing" action="create">
+            <Button size="sm" onClick={() => toast.info('발주 등록 기능은 준비 중입니다.')}>
+              <Plus className="mr-1.5 h-4 w-4" /> 발주 등록
+            </Button>
+          </PermissionGuard>
+        }
       />
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-16">
-          <div className="bg-muted rounded-full p-4">
-            <ClipboardList className="text-muted-foreground h-8 w-8" />
-          </div>
-          <p className="text-muted-foreground mt-4 text-sm">발주관리 페이지가 준비 중입니다</p>
-        </CardContent>
-      </Card>
+
+      <SummaryCards items={summaryItems} isLoading={isLoading} />
+
+      <div className="flex flex-wrap items-end gap-2">
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+        />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-8 w-36 text-sm">
+            <SelectValue placeholder="전체 상태" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 상태</SelectItem>
+            {Object.entries(ORDER_STATUS_LABELS).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <DataTable
+        columns={columns}
+        data={items}
+        searchPlaceholder="발주번호, 매입처 검색..."
+        searchColumn="orderNo"
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+      />
     </div>
   )
 }
