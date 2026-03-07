@@ -87,8 +87,29 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const detailsSchema = createVoucherSchema.shape.details
       const parsedDetails = detailsSchema.parse(body.details)
 
-      const totalDebitCents = parsedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0)
-      const totalCreditCents = parsedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0)
+      // accountCode → accountSubjectId 변환 (accountSubjectId가 없는 경우)
+      const accountCodes = parsedDetails
+        .filter((d) => !d.accountSubjectId && (d as Record<string, unknown>).accountCode)
+        .map((d) => (d as Record<string, unknown>).accountCode as string)
+      const accountCodeMap = new Map<string, string>()
+      if (accountCodes.length > 0) {
+        const accounts = await prisma.accountSubject.findMany({
+          where: { code: { in: accountCodes } },
+          select: { id: true, code: true },
+        })
+        for (const acc of accounts) accountCodeMap.set(acc.code, acc.id)
+      }
+      const resolvedDetails = parsedDetails.map((d) => {
+        const accountSubjectId =
+          d.accountSubjectId || accountCodeMap.get((d as Record<string, unknown>).accountCode as string)
+        if (!accountSubjectId) {
+          throw new Error('계정과목 ID가 누락된 항목이 있습니다.')
+        }
+        return { ...d, accountSubjectId }
+      })
+
+      const totalDebitCents = resolvedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0)
+      const totalCreditCents = resolvedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0)
       if (totalDebitCents !== totalCreditCents) {
         return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR', 400)
       }
@@ -106,9 +127,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             totalDebit,
             totalCredit,
             details: {
-              create: parsedDetails.map((d, idx) => ({
+              create: resolvedDetails.map((d, idx) => ({
                 lineNo: idx + 1,
-                accountSubjectId: d.accountSubjectId!,
+                accountSubjectId: d.accountSubjectId,
                 debitAmount: d.debitAmount,
                 creditAmount: d.creditAmount,
                 partnerId: d.partnerId || null,

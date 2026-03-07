@@ -26,6 +26,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       REQUESTED: ['APPROVED', 'REJECTED', 'CANCELLED'],
       APPROVED: ['COMPLETED', 'CANCELLED'],
       REJECTED: ['REQUESTED'],
+      COMPLETED: [],
+      CANCELLED: [],
     }
 
     // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
