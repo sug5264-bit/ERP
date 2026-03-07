@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -86,22 +87,18 @@ export default function OrderNotesPage() {
 
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-all'],
-    queryFn: async () => {
-      const res = await fetch('/api/v1/sales/orders?pageSize=9999')
-      return res.json()
-    },
+    queryFn: () => api.get('/sales/orders?pageSize=9999'),
   })
   const orders: OrderItem[] = ordersData?.data || []
 
   const { data: attachmentsData } = useQuery({
     queryKey: ['attachments', 'SalesOrder', selectedOrderId],
-    queryFn: async () => {
+    queryFn: () => {
       const url =
         selectedOrderId && selectedOrderId !== 'all'
-          ? `/api/v1/attachments?relatedTable=SalesOrder&relatedId=${selectedOrderId}`
-          : `/api/v1/attachments?relatedTable=SalesOrder`
-      const res = await fetch(url)
-      return res.json()
+          ? `/attachments?relatedTable=SalesOrder&relatedId=${selectedOrderId}`
+          : `/attachments?relatedTable=SalesOrder`
+      return api.get(url)
     },
   })
   const attachments: AttachmentItem[] = attachmentsData?.data || []
@@ -150,12 +147,7 @@ export default function OrderNotesPage() {
       return
     }
     try {
-      const res = await fetch('/api/v1/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: memo.trim(), relatedTable: 'SalesOrder', relatedId: uploadOrderId }),
-      })
-      if (!res.ok) throw new Error()
+      await api.post('/notes', { content: memo.trim(), relatedTable: 'SalesOrder', relatedId: uploadOrderId })
       toast.success('특이사항 메모가 저장되었습니다.')
       setMemo('')
     } catch {
@@ -165,7 +157,7 @@ export default function OrderNotesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/v1/attachments/${id}`, { method: 'DELETE' })
+      await api.delete(`/attachments/${id}`)
       queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrder'] })
       toast.success('파일이 삭제되었습니다.')
     } catch {

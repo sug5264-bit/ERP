@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
 import { TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,21 +42,13 @@ export function RecordSubTabs({
 
   const { data: attachmentsData } = useQuery({
     queryKey: ['attachments', relatedTable, relatedId],
-    queryFn: async () => {
-      const res = await fetch(`/api/v1/attachments?relatedTable=${relatedTable}&relatedId=${relatedId}`)
-      if (!res.ok) throw new Error('첨부파일 조회 실패')
-      return res.json()
-    },
+    queryFn: () => api.get(`/attachments?relatedTable=${relatedTable}&relatedId=${relatedId}`),
     enabled: isEditMode,
   })
 
   const { data: notesData } = useQuery({
     queryKey: ['notes', relatedTable, relatedId],
-    queryFn: async () => {
-      const res = await fetch(`/api/v1/notes?relatedTable=${relatedTable}&relatedId=${relatedId}`)
-      if (!res.ok) throw new Error('게시글 조회 실패')
-      return res.json()
-    },
+    queryFn: () => api.get(`/notes?relatedTable=${relatedTable}&relatedId=${relatedId}`),
     enabled: isEditMode,
   })
 
@@ -96,8 +89,7 @@ export function RecordSubTabs({
 
   const handleDeleteAttachment = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/attachments/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('삭제 실패')
+      await api.delete(`/attachments/${id}`)
       queryClient.invalidateQueries({ queryKey: ['attachments', relatedTable, relatedId] })
       toast.success('파일이 삭제되었습니다.')
     } catch {
@@ -108,15 +100,7 @@ export function RecordSubTabs({
   const handleAddNote = async () => {
     if (!newNote.trim()) return
     try {
-      const res = await fetch('/api/v1/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newNote, relatedTable, relatedId }),
-      })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error(json?.error?.message || '등록 실패')
-      }
+      await api.post('/notes', { content: newNote, relatedTable, relatedId })
       queryClient.invalidateQueries({ queryKey: ['notes', relatedTable, relatedId] })
       setNewNote('')
       toast.success('게시글이 등록되었습니다.')
@@ -127,8 +111,7 @@ export function RecordSubTabs({
 
   const handleDeleteNote = async (id: string) => {
     try {
-      const res = await fetch(`/api/v1/notes/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('삭제 실패')
+      await api.delete(`/notes/${id}`)
       queryClient.invalidateQueries({ queryKey: ['notes', relatedTable, relatedId] })
       toast.success('게시글이 삭제되었습니다.')
     } catch {
@@ -279,24 +262,19 @@ export function RecordSubTabs({
  * 레코드 생성 후 대기 중인 파일/게시글을 저장합니다.
  */
 export async function savePendingData(relatedTable: string, relatedId: string, files: File[], noteContent: string) {
-  const promises: Promise<Response>[] = []
+  const promises: Promise<unknown>[] = []
 
   for (const file of files) {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('relatedTable', relatedTable)
     formData.append('relatedId', relatedId)
+    // File uploads require raw fetch (api helper doesn't support FormData)
     promises.push(fetch('/api/v1/attachments', { method: 'POST', body: formData }))
   }
 
   if (noteContent.trim()) {
-    promises.push(
-      fetch('/api/v1/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: noteContent, relatedTable, relatedId }),
-      })
-    )
+    promises.push(api.post('/notes', { content: noteContent, relatedTable, relatedId }))
   }
 
   await Promise.allSettled(promises)

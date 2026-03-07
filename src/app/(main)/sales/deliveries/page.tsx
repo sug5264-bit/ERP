@@ -23,6 +23,7 @@ import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Tabl
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const STATUS_MAP: Record<string, string> = { PREPARING: '준비중', SHIPPED: '출하', DELIVERED: '납품완료' }
 const QUALITY_STATUS_MAP: Record<
@@ -476,6 +477,9 @@ export default function DeliveriesPage() {
   const deliveryImportFileRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
+  // 출하완료 확인 state
+  const [shipCompleteTarget, setShipCompleteTarget] = useState<string | null>(null)
+
   // 품질검사 state
   const [qiOpen, setQiOpen] = useState(false)
   const [qiViewOpen, setQiViewOpen] = useState(false)
@@ -582,9 +586,7 @@ export default function DeliveriesPage() {
   })
 
   const handleShipComplete = (id: string) => {
-    if (window.confirm('출하완료 처리하시겠습니까?')) {
-      shipCompleteMutation.mutate(id)
-    }
+    setShipCompleteTarget(id)
   }
 
   const orders = ordersData?.data || []
@@ -1686,6 +1688,20 @@ export default function DeliveriesPage() {
       {/* 품질검사 다이얼로그 (페이지 레벨) */}
       {qualityInspectionDialog}
       {qualityViewDialog}
+
+      {/* 출하완료 확인 다이얼로그 */}
+      <ConfirmDialog
+        open={!!shipCompleteTarget}
+        onOpenChange={(open) => !open && setShipCompleteTarget(null)}
+        title="출하완료 처리"
+        description="출하완료 처리하시겠습니까?"
+        confirmLabel="출하완료"
+        onConfirm={() => {
+          if (shipCompleteTarget) shipCompleteMutation.mutate(shipCompleteTarget)
+          setShipCompleteTarget(null)
+        }}
+        isPending={shipCompleteMutation.isPending}
+      />
     </div>
   )
 }

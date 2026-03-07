@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,22 +88,18 @@ export default function DeliveryNotesPage() {
 
   const { data: deliveriesData } = useQuery({
     queryKey: ['sales-deliveries-all'],
-    queryFn: async () => {
-      const res = await fetch('/api/v1/sales/deliveries?pageSize=9999')
-      return res.json()
-    },
+    queryFn: () => api.get('/sales/deliveries?pageSize=9999'),
   })
   const deliveries = deliveriesData?.data || []
 
   const { data: attachmentsData } = useQuery({
     queryKey: ['attachments', 'Delivery', selectedDeliveryId],
-    queryFn: async () => {
+    queryFn: () => {
       const url =
         selectedDeliveryId && selectedDeliveryId !== 'all'
-          ? `/api/v1/attachments?relatedTable=Delivery&relatedId=${selectedDeliveryId}`
-          : `/api/v1/attachments?relatedTable=Delivery`
-      const res = await fetch(url)
-      return res.json()
+          ? `/attachments?relatedTable=Delivery&relatedId=${selectedDeliveryId}`
+          : `/attachments?relatedTable=Delivery`
+      return api.get(url)
     },
   })
   const attachments = attachmentsData?.data || []
@@ -151,12 +148,7 @@ export default function DeliveryNotesPage() {
       return
     }
     try {
-      const res = await fetch('/api/v1/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: memo.trim(), relatedTable: 'Delivery', relatedId: uploadDeliveryId }),
-      })
-      if (!res.ok) throw new Error()
+      await api.post('/notes', { content: memo.trim(), relatedTable: 'Delivery', relatedId: uploadDeliveryId })
       toast.success('특이사항 메모가 저장되었습니다.')
       setMemo('')
     } catch {
@@ -166,7 +158,7 @@ export default function DeliveryNotesPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/v1/attachments/${id}`, { method: 'DELETE' })
+      await api.delete(`/attachments/${id}`)
       queryClient.invalidateQueries({ queryKey: ['attachments', 'Delivery'] })
       toast.success('파일이 삭제되었습니다.')
     } catch {
@@ -175,7 +167,9 @@ export default function DeliveryNotesPage() {
     setDeleteTarget(null)
   }
 
-  const deliveryMap = new Map<string, string>(deliveries.map((d: DeliveryItem) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
+  const deliveryMap = new Map<string, string>(
+    deliveries.map((d: DeliveryItem) => [d.id, d.deliveryNo || d.id?.slice(-6) || ''])
+  )
 
   return (
     <div className="space-y-4 sm:space-y-6">

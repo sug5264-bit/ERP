@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -70,8 +71,6 @@ function getFileTypeBadge(mimeType: string, fileName: string) {
   return { label: ext.toUpperCase() || '파일', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }
 }
 
-
-
 export default function OrderPostsPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -84,22 +83,18 @@ export default function OrderPostsPage() {
 
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-all'],
-    queryFn: async () => {
-      const res = await fetch('/api/v1/sales/orders?pageSize=9999')
-      return res.json()
-    },
+    queryFn: () => api.get('/sales/orders?pageSize=9999'),
   })
   const orders: OrderItem[] = ordersData?.data || []
 
   const { data: notesData } = useQuery({
     queryKey: ['notes', 'SalesOrder', selectedOrderId],
-    queryFn: async () => {
+    queryFn: () => {
       const url =
         selectedOrderId && selectedOrderId !== 'all'
-          ? `/api/v1/notes?relatedTable=SalesOrder&relatedId=${selectedOrderId}`
-          : `/api/v1/notes?relatedTable=SalesOrder`
-      const res = await fetch(url)
-      return res.json()
+          ? `/notes?relatedTable=SalesOrder&relatedId=${selectedOrderId}`
+          : `/notes?relatedTable=SalesOrder`
+      return api.get(url)
     },
   })
   const notes: NoteItem[] = notesData?.data || []
@@ -107,13 +102,12 @@ export default function OrderPostsPage() {
   // 게시글별 첨부파일 조회
   const { data: allAttachmentsData } = useQuery({
     queryKey: ['attachments', 'SalesOrderPost', selectedOrderId],
-    queryFn: async () => {
+    queryFn: () => {
       const url =
         selectedOrderId && selectedOrderId !== 'all'
-          ? `/api/v1/attachments?relatedTable=SalesOrderPost&relatedId=${selectedOrderId}`
-          : `/api/v1/attachments?relatedTable=SalesOrderPost`
-      const res = await fetch(url)
-      return res.json()
+          ? `/attachments?relatedTable=SalesOrderPost&relatedId=${selectedOrderId}`
+          : `/attachments?relatedTable=SalesOrderPost`
+      return api.get(url)
     },
   })
   const allAttachments: AttachmentItem[] = allAttachmentsData?.data || []
@@ -136,13 +130,11 @@ export default function OrderPostsPage() {
     setSubmitting(true)
     try {
       // 1. 게시글 등록
-      const res = await fetch('/api/v1/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newContent.trim(), relatedTable: 'SalesOrder', relatedId: postOrderId }),
+      const noteResult = await api.post('/notes', {
+        content: newContent.trim(),
+        relatedTable: 'SalesOrder',
+        relatedId: postOrderId,
       })
-      if (!res.ok) throw new Error()
-      const noteResult = await res.json()
       const noteId = noteResult?.data?.id
 
       // 2. 첨부파일 업로드
@@ -171,7 +163,7 @@ export default function OrderPostsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/v1/notes/${id}`, { method: 'DELETE' })
+      await api.delete(`/notes/${id}`)
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
       toast.success('게시글이 삭제되었습니다.')
     } catch {

@@ -154,7 +154,7 @@ export default function MyPage() {
       <div className="space-y-4 p-6 sm:space-y-6">
         <PageHeader title="마이페이지" description="내 정보와 활동 내역을 확인합니다" />
         <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
+          <CardContent className="text-muted-foreground py-10 text-center">
             마이페이지 정보를 불러올 수 없습니다.
           </CardContent>
         </Card>
@@ -291,7 +291,9 @@ export default function MyPage() {
                       <div className="bg-muted mt-2 h-2 overflow-hidden rounded-full">
                         <div
                           className="bg-primary h-full rounded-full transition-all"
-                          style={{ width: `${Math.min(100, (Number(lb.usedDays) / Number(lb.totalDays)) * 100)}%` }}
+                          style={{
+                            width: `${Number(lb.totalDays) === 0 ? 0 : Math.min(100, (Number(lb.usedDays) / Number(lb.totalDays)) * 100)}%`,
+                          }}
                         />
                       </div>
                     </CardContent>

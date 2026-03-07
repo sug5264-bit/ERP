@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -83,35 +84,30 @@ export default function DeliveryPostsPage() {
 
   const { data: deliveriesData } = useQuery({
     queryKey: ['sales-deliveries-all'],
-    queryFn: async () => {
-      const res = await fetch('/api/v1/sales/deliveries?pageSize=9999')
-      return res.json()
-    },
+    queryFn: () => api.get('/sales/deliveries?pageSize=9999'),
   })
   const deliveries: DeliveryItem[] = deliveriesData?.data || []
 
   const { data: notesData } = useQuery({
     queryKey: ['notes', 'Delivery', selectedDeliveryId],
-    queryFn: async () => {
+    queryFn: () => {
       const url =
         selectedDeliveryId && selectedDeliveryId !== 'all'
-          ? `/api/v1/notes?relatedTable=Delivery&relatedId=${selectedDeliveryId}`
-          : `/api/v1/notes?relatedTable=Delivery`
-      const res = await fetch(url)
-      return res.json()
+          ? `/notes?relatedTable=Delivery&relatedId=${selectedDeliveryId}`
+          : `/notes?relatedTable=Delivery`
+      return api.get(url)
     },
   })
   const notes: NoteItem[] = notesData?.data || []
 
   const { data: allAttachmentsData } = useQuery({
     queryKey: ['attachments', 'DeliveryPost', selectedDeliveryId],
-    queryFn: async () => {
+    queryFn: () => {
       const url =
         selectedDeliveryId && selectedDeliveryId !== 'all'
-          ? `/api/v1/attachments?relatedTable=DeliveryPost&relatedId=${selectedDeliveryId}`
-          : `/api/v1/attachments?relatedTable=DeliveryPost`
-      const res = await fetch(url)
-      return res.json()
+          ? `/attachments?relatedTable=DeliveryPost&relatedId=${selectedDeliveryId}`
+          : `/attachments?relatedTable=DeliveryPost`
+      return api.get(url)
     },
   })
   const allAttachments: AttachmentItem[] = allAttachmentsData?.data || []
@@ -133,13 +129,11 @@ export default function DeliveryPostsPage() {
     }
     setSubmitting(true)
     try {
-      const res = await fetch('/api/v1/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newContent.trim(), relatedTable: 'Delivery', relatedId: postDeliveryId }),
+      const noteResult = await api.post('/notes', {
+        content: newContent.trim(),
+        relatedTable: 'Delivery',
+        relatedId: postDeliveryId,
       })
-      if (!res.ok) throw new Error()
-      const noteResult = await res.json()
       const noteId = noteResult?.data?.id
 
       if (pendingFiles.length > 0 && noteId) {
@@ -167,7 +161,7 @@ export default function DeliveryPostsPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await fetch(`/api/v1/notes/${id}`, { method: 'DELETE' })
+      await api.delete(`/notes/${id}`)
       queryClient.invalidateQueries({ queryKey: ['notes', 'Delivery'] })
       toast.success('게시글이 삭제되었습니다.')
     } catch {
