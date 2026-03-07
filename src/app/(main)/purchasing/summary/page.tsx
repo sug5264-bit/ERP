@@ -40,7 +40,7 @@ const columns: ColumnDef<PurchaseSummaryItem>[] = [
   {
     accessorKey: 'purchaseAmount',
     header: '매입금액',
-    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.purchaseAmount)}원</span>,
+    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.purchaseAmount)}</span>,
   },
   {
     accessorKey: 'ratio',
@@ -48,12 +48,9 @@ const columns: ColumnDef<PurchaseSummaryItem>[] = [
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
         <div className="h-2 w-16 rounded-full bg-gray-100 dark:bg-gray-800">
-          <div
-            className="h-2 rounded-full bg-blue-500"
-            style={{ width: `${Math.min(row.original.ratio, 100)}%` }}
-          />
+          <div className="h-2 rounded-full bg-blue-500" style={{ width: `${Math.min(row.original.ratio, 100)}%` }} />
         </div>
-        <span className="tabular-nums text-xs">{row.original.ratio.toFixed(1)}%</span>
+        <span className="text-xs tabular-nums">{row.original.ratio.toFixed(1)}%</span>
       </div>
     ),
   },
@@ -72,28 +69,51 @@ export default function PurchasingSummaryPage() {
     queryFn: () => api.get(`/purchasing/summary?${qp.toString()}`),
   })
 
-  const summaryData = (data?.data || { totalAmount: 0, totalCount: 0, supplierCount: 0, items: [] }) as PurchaseSummaryData
+  const summaryData = (data?.data || {
+    totalAmount: 0,
+    totalCount: 0,
+    supplierCount: 0,
+    items: [],
+  }) as PurchaseSummaryData
   const items = summaryData.items || []
 
   const summaryItems = [
-    { label: '총매입액', value: `${formatCurrency(summaryData.totalAmount)}원`, icon: DollarSign, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { label: '매입건수', value: summaryData.totalCount, icon: ShoppingCart, color: 'text-green-600', bgColor: 'bg-green-50' },
-    { label: '매입처수', value: summaryData.supplierCount, icon: Building2, color: 'text-violet-600', bgColor: 'bg-violet-50' },
+    {
+      label: '총매입액',
+      value: `${formatCurrency(summaryData.totalAmount)}`,
+      icon: DollarSign,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      label: '매입건수',
+      value: summaryData.totalCount,
+      icon: ShoppingCart,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      label: '매입처수',
+      value: summaryData.supplierCount,
+      icon: Building2,
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50',
+    },
   ]
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="매입현황"
-        description="매입 현황을 조회하고 분석합니다"
-      />
+      <PageHeader title="매입현황" description="매입 현황을 조회하고 분석합니다" />
 
       <SummaryCards items={summaryItems} isLoading={isLoading} />
 
       <DateRangeFilter
         startDate={startDate}
         endDate={endDate}
-        onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+        onDateChange={(s, e) => {
+          setStartDate(s)
+          setEndDate(e)
+        }}
       />
 
       <DataTable

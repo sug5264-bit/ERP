@@ -136,7 +136,9 @@ export function BreadcrumbNav() {
               {index > 0 && <BreadcrumbSeparator />}
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage className="text-foreground font-medium">{label}</BreadcrumbPage>
+                  <BreadcrumbPage className="text-foreground font-medium" aria-current="page">
+                    {label}
+                  </BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link href={href} className="hover:text-foreground transition-colors">

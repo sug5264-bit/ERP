@@ -53,7 +53,7 @@ const columns: ColumnDef<PurchaseOrder>[] = [
   {
     accessorKey: 'supplyAmount',
     header: '공급가액',
-    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.supplyAmount)}원</span>,
+    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.supplyAmount)}</span>,
   },
   {
     accessorKey: 'status',
@@ -84,10 +84,10 @@ export default function PurchasingOrdersPage() {
   const items = (data?.data || []) as PurchaseOrder[]
 
   const totalCount = items.length
-  const inProgressCount = items.filter(i => i.status === 'IN_PROGRESS').length
-  const completedCount = items.filter(i => i.status === 'COMPLETED').length
+  const inProgressCount = items.filter((i) => i.status === 'IN_PROGRESS').length
+  const completedCount = items.filter((i) => i.status === 'COMPLETED').length
   const thisMonthAmount = items
-    .filter(i => {
+    .filter((i) => {
       const d = new Date(i.orderDate)
       const now = new Date()
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
@@ -98,7 +98,13 @@ export default function PurchasingOrdersPage() {
     { label: '전체', value: totalCount, icon: ClipboardList, color: 'text-blue-600', bgColor: 'bg-blue-50' },
     { label: '진행중', value: inProgressCount, icon: Loader2, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
     { label: '완료', value: completedCount, icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' },
-    { label: '이번달 발주금액', value: `${formatCurrency(thisMonthAmount)}원`, icon: DollarSign, color: 'text-violet-600', bgColor: 'bg-violet-50' },
+    {
+      label: '이번달 발주금액',
+      value: `${formatCurrency(thisMonthAmount)}`,
+      icon: DollarSign,
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50',
+    },
   ]
 
   return (
@@ -121,7 +127,10 @@ export default function PurchasingOrdersPage() {
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
-          onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-8 w-36 text-sm">
@@ -130,7 +139,9 @@ export default function PurchasingOrdersPage() {
           <SelectContent>
             <SelectItem value="all">전체 상태</SelectItem>
             {Object.entries(ORDER_STATUS_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

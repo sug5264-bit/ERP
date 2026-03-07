@@ -2,36 +2,36 @@ import { describe, it, expect } from 'vitest'
 import { formatCurrency, formatDate, formatDateTime, formatPhone, formatDistanceToNow } from '@/lib/format'
 
 describe('formatCurrency', () => {
-  it('숫자를 한국식 통화 형식으로 변환', () => {
-    expect(formatCurrency(1000)).toBe('1,000')
-    expect(formatCurrency(1234567)).toBe('1,234,567')
+  it('숫자를 한국식 통화 형식으로 변환 (원 단위 포함)', () => {
+    expect(formatCurrency(1000)).toBe('1,000원')
+    expect(formatCurrency(1234567)).toBe('1,234,567원')
   })
 
   it('문자열 숫자를 처리', () => {
-    expect(formatCurrency('50000')).toBe('50,000')
-    expect(formatCurrency('1234.56')).toBe('1,235')
+    expect(formatCurrency('50000')).toBe('50,000원')
+    expect(formatCurrency('1234.56')).toBe('1,235원')
   })
 
-  it('null/undefined는 0 반환', () => {
-    expect(formatCurrency(null)).toBe('0')
-    expect(formatCurrency(undefined)).toBe('0')
+  it('null/undefined는 0원 반환', () => {
+    expect(formatCurrency(null)).toBe('0원')
+    expect(formatCurrency(undefined)).toBe('0원')
   })
 
   it('0은 올바르게 처리', () => {
-    expect(formatCurrency(0)).toBe('0')
+    expect(formatCurrency(0)).toBe('0원')
   })
 
   it('음수를 처리', () => {
-    expect(formatCurrency(-1500)).toBe('-1,500')
+    expect(formatCurrency(-1500)).toBe('-1,500원')
   })
 
   it('소수점 이하 버림 (최대 소수점 0자리)', () => {
-    expect(formatCurrency(1234.99)).toBe('1,235')
-    expect(formatCurrency(1234.01)).toBe('1,234')
+    expect(formatCurrency(1234.99)).toBe('1,235원')
+    expect(formatCurrency(1234.01)).toBe('1,234원')
   })
 
   it('매우 큰 숫자를 처리', () => {
-    expect(formatCurrency(999999999999)).toBe('999,999,999,999')
+    expect(formatCurrency(999999999999)).toBe('999,999,999,999원')
   })
 })
 

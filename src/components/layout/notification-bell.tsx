@@ -158,7 +158,12 @@ export function NotificationBell() {
         </div>
         <ScrollArea className="max-h-[60dvh] sm:max-h-[400px]">
           {notifications.length === 0 ? (
-            <div className="text-muted-foreground py-8 text-center text-sm">알림이 없습니다</div>
+            <div className="flex flex-col items-center justify-center gap-2 py-10">
+              <div className="bg-muted rounded-full p-3">
+                <Bell className="text-muted-foreground/40 h-6 w-6" />
+              </div>
+              <p className="text-muted-foreground text-sm">새로운 알림이 없습니다</p>
+            </div>
           ) : (
             <div className="divide-y">
               {notifications.map((notif) => (

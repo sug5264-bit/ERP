@@ -43,19 +43,21 @@ const columns: ColumnDef<SalesSettlement>[] = [
   {
     accessorKey: 'salesAmount',
     header: '매출금액',
-    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.salesAmount)}원</span>,
+    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.salesAmount)}</span>,
   },
   {
     accessorKey: 'collectedAmount',
     header: '수금액',
-    cell: ({ row }) => <span className="tabular-nums text-green-600">{formatCurrency(row.original.collectedAmount)}원</span>,
+    cell: ({ row }) => (
+      <span className="text-green-600 tabular-nums">{formatCurrency(row.original.collectedAmount)}</span>
+    ),
   },
   {
     accessorKey: 'outstandingAmount',
     header: '미수금액',
     cell: ({ row }) => (
-      <span className={`tabular-nums ${row.original.outstandingAmount > 0 ? 'text-red-600 font-medium' : ''}`}>
-        {formatCurrency(row.original.outstandingAmount)}원
+      <span className={`tabular-nums ${row.original.outstandingAmount > 0 ? 'font-medium text-red-600' : ''}`}>
+        {formatCurrency(row.original.outstandingAmount)}
       </span>
     ),
   },
@@ -86,24 +88,42 @@ export default function SalesSettlementPage() {
   const totalOutstanding = items.reduce((sum, i) => sum + (i.outstandingAmount || 0), 0)
 
   const summaryItems = [
-    { label: '총매출', value: `${formatCurrency(totalSales)}원`, icon: DollarSign, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { label: '총수금', value: `${formatCurrency(totalCollected)}원`, icon: CreditCard, color: 'text-green-600', bgColor: 'bg-green-50' },
-    { label: '총미수금', value: `${formatCurrency(totalOutstanding)}원`, icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
+    {
+      label: '총매출',
+      value: `${formatCurrency(totalSales)}`,
+      icon: DollarSign,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      label: '총수금',
+      value: `${formatCurrency(totalCollected)}`,
+      icon: CreditCard,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      label: '총미수금',
+      value: `${formatCurrency(totalOutstanding)}`,
+      icon: AlertCircle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+    },
   ]
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="매출정산"
-        description="매출 정산 내역을 조회하고 관리합니다"
-      />
+      <PageHeader title="매출정산" description="매출 정산 내역을 조회하고 관리합니다" />
 
       <SummaryCards items={summaryItems} isLoading={isLoading} />
 
       <DateRangeFilter
         startDate={startDate}
         endDate={endDate}
-        onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+        onDateChange={(s, e) => {
+          setStartDate(s)
+          setEndDate(e)
+        }}
       />
 
       <DataTable
