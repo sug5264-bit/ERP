@@ -97,16 +97,9 @@ interface LoginLog {
 export default function MyPage() {
   const [pwOpen, setPwOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['mypage'],
-    queryFn: async () => {
-      try {
-        return (await api.get('/mypage')) as { data: Record<string, unknown> }
-      } catch (err) {
-        toast.error('마이페이지 정보를 불러올 수 없습니다.')
-        return null
-      }
-    },
+    queryFn: () => api.get('/mypage') as Promise<{ data: Record<string, unknown> }>,
   })
 
   const pwMutation = useMutation({
@@ -153,6 +146,18 @@ export default function MyPage() {
             </Card>
           ))}
         </div>
+      </div>
+    )
+
+  if (isError)
+    return (
+      <div className="space-y-4 p-6 sm:space-y-6">
+        <PageHeader title="마이페이지" description="내 정보와 활동 내역을 확인합니다" />
+        <Card>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            마이페이지 정보를 불러올 수 없습니다.
+          </CardContent>
+        </Card>
       </div>
     )
 

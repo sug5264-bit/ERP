@@ -175,11 +175,11 @@ export function SidebarNav() {
   const userRecord = session?.user as Record<string, unknown> | undefined
   const userPermissions = useMemo(
     () => (Array.isArray(userRecord?.permissions) ? userRecord.permissions : []),
-    [userRecord?.permissions]
+    [userRecord]
   )
   const userRoles = useMemo(
     () => (Array.isArray(userRecord?.roles) ? userRecord.roles : []),
-    [userRecord?.roles]
+    [userRecord]
   )
   const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 

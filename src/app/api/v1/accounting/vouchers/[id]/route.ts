@@ -67,16 +67,19 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       if (!user?.employeeId) {
         return errorResponse('사원 정보가 연결되어 있지 않습니다. 승인 권한을 확인하세요.', 'NO_EMPLOYEE', 400)
       }
-      // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
-      if (user.employeeId === existing.createdById) {
-        return errorResponse('작성자는 승인할 수 없습니다.', 'FORBIDDEN', 403)
-      }
-      const voucher = await prisma.voucher.update({
-        where: { id },
-        data: {
-          status: 'APPROVED',
-          approvedById: user.employeeId,
-        },
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const voucher = await prisma.$transaction(async (tx) => {
+        const fresh = await tx.voucher.findUnique({ where: { id } })
+        if (!fresh) throw new Error('NOT_FOUND:전표를 찾을 수 없습니다.')
+        if (fresh.status !== 'DRAFT') throw new Error('작성 상태의 전표만 승인할 수 있습니다.')
+        // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
+        if (user.employeeId === fresh.createdById) {
+          throw new Error('작성자는 승인할 수 없습니다.')
+        }
+        return tx.voucher.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: user.employeeId },
+        })
       })
       return successResponse(voucher)
     }
