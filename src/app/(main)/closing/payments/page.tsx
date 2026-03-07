@@ -77,7 +77,7 @@ export default function PaymentsPage() {
     qp.set('endDate', filterDate)
   }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['closing-payments', dateType, year, month, filterDate],
     queryFn: () => api.get(`/closing/payments?${qp.toString()}`),
   })
@@ -288,6 +288,8 @@ export default function PaymentsPage() {
         searchColumn="voucherNo"
         searchPlaceholder="전표번호로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
       />
 
       {/* 대금지급 등록 Dialog */}

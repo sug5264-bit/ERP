@@ -60,7 +60,7 @@ export default function RecruitmentPage() {
   const qp = new URLSearchParams({ pageSize: '50' })
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['hr-recruitment', statusFilter],
     queryFn: () => api.get(`/hr/recruitment?${qp}`),
   })
@@ -294,6 +294,8 @@ export default function RecruitmentPage() {
         searchColumn="title"
         searchPlaceholder="공고명으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

@@ -14,7 +14,7 @@ import { formatCurrency, formatDate } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { ClipboardList, Plus, ShoppingCart, Loader2, CheckCircle, DollarSign } from 'lucide-react'
+import { ClipboardList, Plus, Loader2, CheckCircle, DollarSign } from 'lucide-react'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 
 const ORDER_STATUS_LABELS: Record<string, string> = {

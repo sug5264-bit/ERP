@@ -71,7 +71,7 @@ export default function OnlineSalesPage() {
   if (startDate) qp.set('startDate', startDate)
   if (endDate) qp.set('endDate', endDate)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['online-sales', channelFilter, startDate, endDate],
     queryFn: () => api.get(`/sales/online-sales?${qp.toString()}`) as Promise<Record<string, unknown>>,
   })
@@ -282,6 +282,8 @@ export default function OnlineSalesPage() {
         searchColumn="saleNo"
         searchPlaceholder="매출번호로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />

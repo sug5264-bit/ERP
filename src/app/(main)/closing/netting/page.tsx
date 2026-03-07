@@ -106,7 +106,7 @@ export default function NettingPage() {
   const [formDate, setFormDate] = useState(getLocalDateString())
   const [formDescription, setFormDescription] = useState('')
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['closing-netting', year, month],
     queryFn: () => api.get(`/closing/netting?year=${year}&month=${month}`),
   })
@@ -158,8 +158,7 @@ export default function NettingPage() {
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['netting-orders', year, month],
-    queryFn: () =>
-      api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`),
+    queryFn: () => api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`),
   })
 
   const { data: companyData } = useQuery({
@@ -441,6 +440,8 @@ export default function NettingPage() {
             searchColumn="partnerName"
             searchPlaceholder="거래처명으로 검색..."
             isLoading={isLoading}
+            isError={isError}
+            onRetry={() => refetch()}
           />
         </TabsContent>
 

@@ -120,7 +120,7 @@ export default function CompanyManagementPage() {
   const [editTarget, setEditTarget] = useState<CompanyRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-companies'],
     queryFn: () => api.get('/admin/company') as Promise<{ data: CompanyRow[] }>,
   })
@@ -258,6 +258,8 @@ export default function CompanyManagementPage() {
         searchColumn="companyName"
         searchPlaceholder="회사명으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
       />
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

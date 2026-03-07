@@ -231,6 +231,7 @@ export default function OrdersPage() {
   const [batchCompleteIds, setBatchCompleteIds] = useState<string[]>([])
   const [cancelTarget, setCancelTarget] = useState<{ id: string; orderNo: string } | null>(null)
   const [batchCancelConfirm, setBatchCancelConfirm] = useState<string[] | null>(null)
+  const [bulkDeleteIds, setBulkDeleteIds] = useState<string[] | null>(null)
   const [vatIncluded, setVatIncluded] = useState(true)
   const [details, setDetails] = useState<Detail[]>([
     { itemId: '', quantity: 1, unitPrice: 0, carrier: '', trackingNo: '', description: '' },
@@ -728,7 +729,12 @@ export default function OrdersPage() {
   const qpOnline = buildQueryParams('ONLINE')
   const qpOffline = buildQueryParams('OFFLINE')
 
-  const { data: onlineData, isLoading: onlineLoading } = useQuery({
+  const {
+    data: onlineData,
+    isLoading: onlineLoading,
+    isError: onlineError,
+    refetch: onlineRefetch,
+  } = useQuery({
     queryKey: [
       'sales-orders',
       'ONLINE',
@@ -742,7 +748,12 @@ export default function OrdersPage() {
     ],
     queryFn: () => api.get(`/sales/orders?${qpOnline}`) as Promise<{ data: SalesOrder[] }>,
   })
-  const { data: offlineData, isLoading: offlineLoading } = useQuery({
+  const {
+    data: offlineData,
+    isLoading: offlineLoading,
+    isError: offlineError,
+    refetch: offlineRefetch,
+  } = useQuery({
     queryKey: [
       'sales-orders',
       'OFFLINE',
@@ -2080,18 +2091,13 @@ export default function OrdersPage() {
               searchColumn="orderNo"
               searchPlaceholder="주문번호로 검색..."
               isLoading={onlineLoading}
+              isError={onlineError}
+              onRetry={() => onlineRefetch()}
               pageSize={50}
               selectable
               onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
               onBulkDelete={(rows) => {
-                if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) {
-                  Promise.all(rows.map((r) => api.delete(`/sales/orders/${r.id}`)))
-                    .then(() => {
-                      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
-                      toast.success('삭제되었습니다.')
-                    })
-                    .catch(() => toast.error('일부 삭제 실패'))
-                }
+                setBulkDeleteIds(rows.map((r) => r.id))
               }}
               bulkActions={[
                 {
@@ -2135,18 +2141,13 @@ export default function OrdersPage() {
               searchColumn="orderNo"
               searchPlaceholder="발주번호로 검색..."
               isLoading={offlineLoading}
+              isError={offlineError}
+              onRetry={() => offlineRefetch()}
               pageSize={50}
               selectable
               onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
               onBulkDelete={(rows) => {
-                if (confirm(`선택한 ${rows.length}건을 삭제하시겠습니까?`)) {
-                  Promise.all(rows.map((r) => api.delete(`/sales/orders/${r.id}`)))
-                    .then(() => {
-                      queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
-                      toast.success('삭제되었습니다.')
-                    })
-                    .catch(() => toast.error('일부 삭제 실패'))
-                }
+                setBulkDeleteIds(rows.map((r) => r.id))
               }}
               bulkActions={[
                 {
@@ -2508,6 +2509,25 @@ export default function OrdersPage() {
           if (batchCancelConfirm) batchMutation.mutate({ ids: batchCancelConfirm, action: 'cancel' })
         }}
         isPending={batchMutation.isPending}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteIds}
+        onOpenChange={(open) => !open && setBulkDeleteIds(null)}
+        title="일괄 삭제"
+        description={`선택한 ${bulkDeleteIds?.length || 0}건을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={async () => {
+          if (!bulkDeleteIds) return
+          try {
+            await Promise.all(bulkDeleteIds.map((id) => api.delete(`/sales/orders/${id}`)))
+            queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+            toast.success('삭제되었습니다.')
+          } catch {
+            toast.error('일부 삭제 실패')
+          }
+          setBulkDeleteIds(null)
+        }}
       />
     </div>
   )
