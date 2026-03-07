@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
             })
           } else {
             // 재고 기록이 없는 경우 기본 창고에 신규 생성
-            const defaultWarehouse = await tx.warehouse.findFirst({ orderBy: { createdAt: 'asc' } })
+            const defaultWarehouse = await tx.warehouse.findFirst({ where: { isActive: true }, orderBy: { code: 'asc' } })
             if (defaultWarehouse) {
               await tx.stockBalance.create({
                 data: {
