@@ -23,6 +23,7 @@ interface BalanceRow {
     id: string
     itemCode: string
     itemName: string
+    barcode?: string
     unit: string
     itemType: string
     storageTemp: string | null
@@ -242,8 +243,9 @@ export default function StockStatusPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50 border-b">
+                  <th className="p-3 text-left font-medium">바코드</th>
                   <th className="p-3 text-left font-medium">품목코드</th>
-                  <th className="p-3 text-left font-medium">품목명</th>
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium">내품명</th>
                   <th className="p-3 text-left font-medium">구분</th>
                   <th className="p-3 text-left font-medium">보관</th>
                   <th className="p-3 text-left font-medium">OEM제조사</th>
@@ -264,8 +266,9 @@ export default function StockStatusPage() {
                   const isShort = availableQty < currentQty
                   return (
                     <tr key={b.id} className="hover:bg-muted/30 border-b transition-colors">
-                      <td className="p-3 font-mono text-xs">{b.item.itemCode}</td>
-                      <td className="p-3 font-medium">{b.item.itemName}</td>
+                      <td className="p-3 font-mono text-xs font-semibold">{b.item.barcode || '-'}</td>
+                      <td className="text-muted-foreground p-3 font-mono text-xs">{b.item.itemCode}</td>
+                      <td className="text-muted-foreground p-3 text-xs">{b.item.itemName}</td>
                       <td className="p-3">
                         <Badge variant="outline">{ITEM_TYPE_MAP[b.item.itemType] || b.item.itemType}</Badge>
                       </td>
@@ -309,7 +312,7 @@ export default function StockStatusPage() {
                   )
                 })}
                 <tr className="bg-muted/50 font-medium">
-                  <td className="p-3" colSpan={7}>
+                  <td className="p-3" colSpan={8}>
                     합계
                   </td>
                   <td className="p-3 text-right font-mono">{totalCurrentQty.toLocaleString()}</td>

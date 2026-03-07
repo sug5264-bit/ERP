@@ -57,14 +57,19 @@ interface ItemRow {
 
 const columns: ColumnDef<ItemRow>[] = [
   {
+    accessorKey: 'barcode',
+    header: '바코드',
+    cell: ({ row }) => <span className="font-mono text-xs font-semibold">{row.original.barcode || '-'}</span>,
+  },
+  {
     accessorKey: 'itemCode',
     header: '품목코드',
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.itemCode}</span>,
+    cell: ({ row }) => <span className="text-muted-foreground font-mono text-xs">{row.original.itemCode}</span>,
   },
   {
     accessorKey: 'itemName',
-    header: '품목명',
-    cell: ({ row }) => <span className="font-medium">{row.original.itemName}</span>,
+    header: '내품명',
+    cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
     id: 'itemType',
@@ -89,11 +94,6 @@ const columns: ColumnDef<ItemRow>[] = [
     ),
   },
   { id: 'category', header: '분류', cell: ({ row }) => row.original.category?.name || '-' },
-  {
-    accessorKey: 'barcode',
-    header: '바코드',
-    cell: ({ row }) => (row.original.barcode ? <span className="font-mono text-xs">{row.original.barcode}</span> : '-'),
-  },
   { id: 'specification', header: '규격', cell: ({ row }) => row.original.specification || '-' },
   { id: 'unit', header: '단위', cell: ({ row }) => row.original.unit },
   { id: 'standardPrice', header: '기준가', cell: ({ row }) => formatCurrency(row.original.standardPrice) },

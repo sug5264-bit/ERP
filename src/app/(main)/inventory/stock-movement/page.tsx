@@ -40,7 +40,7 @@ interface MovementRow {
     quantity: number
     unitPrice: number
     amount: number
-    item: { itemCode: string; itemName: string }
+    item: { itemCode: string; itemName: string; barcode?: string }
   }[]
 }
 
@@ -297,11 +297,13 @@ export default function StockMovementPage() {
                           <SelectValue placeholder="품목 선택" />
                         </SelectTrigger>
                         <SelectContent>
-                          {allItems.map((item: { id: string; itemCode: string; itemName: string }) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              {item.itemCode} - {item.itemName}
-                            </SelectItem>
-                          ))}
+                          {allItems.map(
+                            (item: { id: string; itemCode: string; itemName: string; barcode?: string }) => (
+                              <SelectItem key={item.id} value={item.id}>
+                                {item.barcode || item.itemCode} - {item.itemName}
+                              </SelectItem>
+                            )
+                          )}
                         </SelectContent>
                       </Select>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
