@@ -179,7 +179,12 @@ export function SidebarNav() {
 
   const hasPermission = useCallback(
     (module: string) =>
-      userPermissions.some((p) => (p.module === module || p.module.startsWith(module + '.')) && p.action === 'read'),
+      userPermissions.some(
+        (p) =>
+          typeof p?.module === 'string' &&
+          (p.module === module || p.module.startsWith(module + '.')) &&
+          p.action === 'read'
+      ),
     [userPermissions]
   )
 
