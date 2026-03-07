@@ -47,7 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               employeeId: string | null
             }[]
           >(
-            'SELECT "id", "email", "name", "passwordHash", "isActive", "employeeId" FROM "User" WHERE "username" = $1 LIMIT 1',
+            'SELECT "id", "email", "name", "passwordHash", "isActive", "employeeId" FROM "users" WHERE "username" = $1 LIMIT 1',
             usernameStr
           )
 
@@ -76,20 +76,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // 로그인 성공 시 rate limit 초기화
           resetRateLimit(rateLimitKey)
 
-          await prisma.$executeRawUnsafe('UPDATE "User" SET "lastLoginAt" = NOW() WHERE "id" = $1', user.id)
+          await prisma.$executeRawUnsafe('UPDATE "users" SET "lastLoginAt" = NOW() WHERE "id" = $1', user.id)
 
           // 역할 조회
           const roleRows = await prisma.$queryRawUnsafe<{ roleName: string }[]>(
-            `SELECT r."name" as "roleName" FROM "UserRole" ur JOIN "Role" r ON ur."roleId" = r."id" WHERE ur."userId" = $1`,
+            `SELECT r."name" as "roleName" FROM "user_roles" ur JOIN "roles" r ON ur."roleId" = r."id" WHERE ur."userId" = $1`,
             user.id
           )
           const roles = roleRows.map((r) => r.roleName)
 
           // 권한 조회
           const permRows = await prisma.$queryRawUnsafe<{ module: string; action: string }[]>(
-            `SELECT p."module", p."action" FROM "UserRole" ur
-             JOIN "RolePermission" rp ON ur."roleId" = rp."roleId"
-             JOIN "Permission" p ON rp."permissionId" = p."id"
+            `SELECT p."module", p."action" FROM "user_roles" ur
+             JOIN "role_permissions" rp ON ur."roleId" = rp."roleId"
+             JOIN "permissions" p ON rp."permissionId" = p."id"
              WHERE ur."userId" = $1`,
             user.id
           )
@@ -104,9 +104,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               { nameKo: string | null; deptName: string | null; posName: string | null }[]
             >(
               `SELECT e."nameKo", d."name" as "deptName", pos."name" as "posName"
-               FROM "Employee" e
-               LEFT JOIN "Department" d ON e."departmentId" = d."id"
-               LEFT JOIN "Position" pos ON e."positionId" = pos."id"
+               FROM "employees" e
+               LEFT JOIN "departments" d ON e."departmentId" = d."id"
+               LEFT JOIN "positions" pos ON e."positionId" = pos."id"
                WHERE e."id" = $1 LIMIT 1`,
               user.employeeId
             )
