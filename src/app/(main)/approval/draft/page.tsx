@@ -671,7 +671,7 @@ export default function ApprovalDraftPage() {
                         </Badge>
                         {step.comment && (
                           <span className="text-muted-foreground max-w-[100px] truncate text-xs" title={step.comment}>
-                            "{step.comment}"
+                            &ldquo;{step.comment}&rdquo;
                           </span>
                         )}
                         {step.actionDate && (

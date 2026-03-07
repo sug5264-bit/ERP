@@ -3,15 +3,6 @@
 import { useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface Shortcut {
-  key: string
-  ctrl?: boolean
-  alt?: boolean
-  shift?: boolean
-  description: string
-  action: () => void
-}
-
 /**
  * 글로벌 키보드 단축키 목록
  */

@@ -37,7 +37,6 @@ import { useFavoritesStore } from '@/stores/favorites-store'
 import { NotificationBell } from '@/components/layout/notification-bell'
 import { APP_NAME } from '@/lib/constants'
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { api } from '@/hooks/use-api'
 
