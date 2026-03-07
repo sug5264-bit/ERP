@@ -37,7 +37,15 @@ interface SummaryData {
   offline: { count: number; totalAmount: number; totalSupply: number; totalTax: number }
   total: { count: number; totalAmount: number }
   monthly: { month: string; online: number; offline: number; total: number }[]
-  topItems: { itemCode: string; itemName: string; online: number; offline: number; total: number; qty: number }[]
+  topItems: {
+    itemCode: string
+    itemName: string
+    barcode?: string
+    online: number
+    offline: number
+    total: number
+    qty: number
+  }[]
 }
 
 export default function SalesSummaryPage() {
@@ -60,8 +68,8 @@ export default function SalesSummaryPage() {
       : 0
 
   const exportItemColumns: ExportColumn[] = [
-    { header: '품목코드', accessor: 'itemCode' },
-    { header: '품목명', accessor: 'itemName' },
+    { header: '바코드', accessor: (r) => (r.barcode as string) || (r.itemCode as string) },
+    { header: '내품명', accessor: 'itemName' },
     { header: '수량', accessor: 'qty' },
     { header: '온라인', accessor: (r) => formatCurrency(r.online) },
     { header: '오프라인', accessor: (r) => formatCurrency(r.offline) },
@@ -285,8 +293,8 @@ export default function SalesSummaryPage() {
                     <thead>
                       <tr className="bg-muted/50 border-b">
                         <th className="p-3 text-left">순위</th>
-                        <th className="p-3 text-left">품목코드</th>
-                        <th className="p-3 text-left">품목명</th>
+                        <th className="p-3 text-left">바코드</th>
+                        <th className="text-muted-foreground p-3 text-left text-xs">내품명</th>
                         <th className="p-3 text-right">수량</th>
                         <th className="p-3 text-right">온라인</th>
                         <th className="p-3 text-right">오프라인</th>
@@ -299,8 +307,8 @@ export default function SalesSummaryPage() {
                           <td className="p-3">
                             <Badge variant={idx < 3 ? 'default' : 'secondary'}>{idx + 1}</Badge>
                           </td>
-                          <td className="p-3 font-mono text-xs">{item.itemCode}</td>
-                          <td className="p-3 font-medium">{item.itemName}</td>
+                          <td className="p-3 font-mono text-xs font-semibold">{item.barcode || item.itemCode}</td>
+                          <td className="text-muted-foreground p-3 text-xs">{item.itemName}</td>
                           <td className="p-3 text-right font-mono">{item.qty}</td>
                           <td className="text-status-info p-3 text-right font-mono">{formatCurrency(item.online)}</td>
                           <td className="text-status-warning p-3 text-right font-mono">

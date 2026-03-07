@@ -26,6 +26,7 @@ const PRICING_STATUS_LABELS: Record<string, string> = {
 interface PricingItem {
   id: string
   partnerName: string
+  barcode?: string
   itemName: string
   unitPrice: number
   startDate: string
@@ -41,8 +42,14 @@ const columns: ColumnDef<PricingItem>[] = [
     cell: ({ row }) => <span className="font-medium">{row.original.partnerName}</span>,
   },
   {
+    accessorKey: 'barcode',
+    header: '바코드',
+    cell: ({ row }) => <span className="font-mono text-xs font-semibold">{row.original.barcode || '-'}</span>,
+  },
+  {
     accessorKey: 'itemName',
-    header: '품목명',
+    header: '내품명',
+    cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
     accessorKey: 'unitPrice',
@@ -84,17 +91,23 @@ function PricingForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>거래처명 <span className="text-destructive">*</span></Label>
+          <Label>
+            거래처명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="partnerName" required defaultValue={pricing?.partnerName || ''} />
         </div>
         <div className="space-y-2">
-          <Label>품목명 <span className="text-destructive">*</span></Label>
+          <Label>
+            품목명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="itemName" required defaultValue={pricing?.itemName || ''} />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>단가 <span className="text-destructive">*</span></Label>
+          <Label>
+            단가 <span className="text-destructive">*</span>
+          </Label>
           <Input name="unitPrice" type="number" required defaultValue={pricing?.unitPrice || ''} />
         </div>
         <div className="space-y-2">
@@ -104,7 +117,9 @@ function PricingForm({
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>적용시작일 <span className="text-destructive">*</span></Label>
+          <Label>
+            적용시작일 <span className="text-destructive">*</span>
+          </Label>
           <Input name="startDate" type="date" required defaultValue={pricing?.startDate?.slice(0, 10) || ''} />
         </div>
         <div className="space-y-2">
@@ -113,7 +128,7 @@ function PricingForm({
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? (pricing ? '수정 중...' : '등록 중...') : (pricing ? '수정' : '등록')}
+        {isPending ? (pricing ? '수정 중...' : '등록 중...') : pricing ? '수정' : '등록'}
       </Button>
     </form>
   )
@@ -211,7 +226,13 @@ export default function PricingPage() {
             header: '',
             cell: ({ row }) => (
               <PermissionGuard module="sales" action="update">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditTarget(row.original)}
+                  aria-label="수정"
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
               </PermissionGuard>
@@ -233,7 +254,12 @@ export default function PricingPage() {
             <DialogTitle>단가 수정</DialogTitle>
           </DialogHeader>
           {editTarget && (
-            <PricingForm key={editTarget.id} pricing={editTarget} onSubmit={handleUpdate} isPending={updateMutation.isPending} />
+            <PricingForm
+              key={editTarget.id}
+              pricing={editTarget}
+              onSubmit={handleUpdate}
+              isPending={updateMutation.isPending}
+            />
           )}
         </DialogContent>
       </Dialog>

@@ -15,6 +15,7 @@ interface ExpiryItem {
   id: string
   itemCode: string
   itemName: string
+  barcode?: string
   lotNo: string
   expiryDate: string
   daysLeft: number
@@ -38,14 +39,19 @@ function getDaysLeftColor(daysLeft: number) {
 
 const columns: ColumnDef<ExpiryItem>[] = [
   {
+    accessorKey: 'barcode',
+    header: '바코드',
+    cell: ({ row }) => <span className="font-mono text-xs font-semibold">{row.original.barcode || '-'}</span>,
+  },
+  {
     accessorKey: 'itemCode',
     header: '품목코드',
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.itemCode}</span>,
+    cell: ({ row }) => <span className="text-muted-foreground font-mono text-xs">{row.original.itemCode}</span>,
   },
   {
     accessorKey: 'itemName',
-    header: '품목명',
-    cell: ({ row }) => <span className="font-medium">{row.original.itemName}</span>,
+    header: '내품명',
+    cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
     accessorKey: 'lotNo',
@@ -100,16 +106,13 @@ export default function ExpiryManagementPage() {
 
   const items = (data?.data || []) as ExpiryItem[]
 
-  const expiredCount = items.filter(i => i.daysLeft <= 0).length
-  const urgentCount = items.filter(i => i.daysLeft > 0 && i.daysLeft <= 7).length
-  const warningCount = items.filter(i => i.daysLeft > 7 && i.daysLeft <= 30).length
+  const expiredCount = items.filter((i) => i.daysLeft <= 0).length
+  const urgentCount = items.filter((i) => i.daysLeft > 0 && i.daysLeft <= 7).length
+  const warningCount = items.filter((i) => i.daysLeft > 7 && i.daysLeft <= 30).length
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="유통기한관리"
-        description="제품의 유통기한을 추적하고 관리합니다"
-      />
+      <PageHeader title="유통기한관리" description="제품의 유통기한을 추적하고 관리합니다" />
 
       {!isLoading && items.length > 0 && (
         <div className="flex flex-wrap gap-3 text-sm">
@@ -119,12 +122,18 @@ export default function ExpiryManagementPage() {
             </Badge>
           )}
           {urgentCount > 0 && (
-            <Badge variant="outline" className="border-0 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+            <Badge
+              variant="outline"
+              className="border-0 bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+            >
               7일 이내 {urgentCount}건
             </Badge>
           )}
           {warningCount > 0 && (
-            <Badge variant="outline" className="border-0 bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+            <Badge
+              variant="outline"
+              className="border-0 bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+            >
               30일 이내 {warningCount}건
             </Badge>
           )}
@@ -137,8 +146,10 @@ export default function ExpiryManagementPage() {
             <SelectValue placeholder="기간 선택" />
           </SelectTrigger>
           <SelectContent>
-            {DAYS_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            {DAYS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

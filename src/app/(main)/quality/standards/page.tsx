@@ -21,6 +21,7 @@ const CATEGORY_OPTIONS = ['미생물', '이화학', '관능', '중금속', '위�
 
 interface QualityStandard {
   id: string
+  barcode?: string
   itemName: string
   standardName: string
   category: string
@@ -33,9 +34,14 @@ interface QualityStandard {
 
 const columns: ColumnDef<QualityStandard>[] = [
   {
+    accessorKey: 'barcode',
+    header: '바코드',
+    cell: ({ row }) => <span className="font-mono text-xs font-semibold">{row.original.barcode || '-'}</span>,
+  },
+  {
     accessorKey: 'itemName',
-    header: '품목명',
-    cell: ({ row }) => <span className="font-medium">{row.original.itemName}</span>,
+    header: '내품명',
+    cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
     accessorKey: 'standardName',
@@ -59,12 +65,16 @@ const columns: ColumnDef<QualityStandard>[] = [
   {
     accessorKey: 'minValue',
     header: '최소값',
-    cell: ({ row }) => <span className="tabular-nums">{row.original.minValue != null ? row.original.minValue : '-'}</span>,
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.minValue != null ? row.original.minValue : '-'}</span>
+    ),
   },
   {
     accessorKey: 'maxValue',
     header: '최대값',
-    cell: ({ row }) => <span className="tabular-nums">{row.original.maxValue != null ? row.original.maxValue : '-'}</span>,
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.maxValue != null ? row.original.maxValue : '-'}</span>
+    ),
   },
   {
     id: 'isRequired',
@@ -90,11 +100,15 @@ function StandardForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>품목명 <span className="text-destructive">*</span></Label>
+          <Label>
+            품목명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="itemName" required defaultValue={standard?.itemName || ''} />
         </div>
         <div className="space-y-2">
-          <Label>기준명 <span className="text-destructive">*</span></Label>
+          <Label>
+            기준명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="standardName" required defaultValue={standard?.standardName || ''} />
         </div>
       </div>
@@ -102,10 +116,14 @@ function StandardForm({
         <div className="space-y-2">
           <Label>카테고리</Label>
           <Select name="category" defaultValue={standard?.category || ''}>
-            <SelectTrigger><SelectValue placeholder="선택" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="선택" />
+            </SelectTrigger>
             <SelectContent>
-              {CATEGORY_OPTIONS.map(c => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
+              {CATEGORY_OPTIONS.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -134,7 +152,7 @@ function StandardForm({
         <Switch name="isRequired" defaultChecked={standard?.isRequired ?? true} />
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? (standard ? '수정 중...' : '등록 중...') : (standard ? '수정' : '등록')}
+        {isPending ? (standard ? '수정 중...' : '등록 중...') : standard ? '수정' : '등록'}
       </Button>
     </form>
   )
@@ -239,8 +257,10 @@ export default function QualityStandardsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 카테고리</SelectItem>
-            {CATEGORY_OPTIONS.map(c => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+            {CATEGORY_OPTIONS.map((c) => (
+              <SelectItem key={c} value={c}>
+                {c}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -254,7 +274,13 @@ export default function QualityStandardsPage() {
             header: '',
             cell: ({ row }) => (
               <PermissionGuard module="quality" action="update">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditTarget(row.original)}
+                  aria-label="수정"
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
               </PermissionGuard>
@@ -276,7 +302,12 @@ export default function QualityStandardsPage() {
             <DialogTitle>검사기준 수정</DialogTitle>
           </DialogHeader>
           {editTarget && (
-            <StandardForm key={editTarget.id} standard={editTarget} onSubmit={handleUpdate} isPending={updateMutation.isPending} />
+            <StandardForm
+              key={editTarget.id}
+              standard={editTarget}
+              onSubmit={handleUpdate}
+              isPending={updateMutation.isPending}
+            />
           )}
         </DialogContent>
       </Dialog>

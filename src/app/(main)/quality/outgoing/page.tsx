@@ -18,6 +18,7 @@ interface OutgoingInspection {
   inspectionNo: string
   inspectionDate: string
   shipmentNo: string
+  barcode?: string
   itemName: string
   sampleCount: number
   defectCount: number
@@ -42,9 +43,14 @@ const columns: ColumnDef<OutgoingInspection>[] = [
     cell: ({ row }) => <span className="font-mono text-xs">{row.original.shipmentNo}</span>,
   },
   {
+    accessorKey: 'barcode',
+    header: '바코드',
+    cell: ({ row }) => <span className="font-mono text-xs font-semibold">{row.original.barcode || '-'}</span>,
+  },
+  {
     accessorKey: 'itemName',
-    header: '품목명',
-    cell: ({ row }) => <span className="font-medium">{row.original.itemName}</span>,
+    header: '내품명',
+    cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
     accessorKey: 'sampleCount',
@@ -55,7 +61,7 @@ const columns: ColumnDef<OutgoingInspection>[] = [
     accessorKey: 'defectCount',
     header: '불량수',
     cell: ({ row }) => (
-      <span className={`tabular-nums ${row.original.defectCount > 0 ? 'text-red-600 font-medium' : ''}`}>
+      <span className={`tabular-nums ${row.original.defectCount > 0 ? 'font-medium text-red-600' : ''}`}>
         {row.original.defectCount}
       </span>
     ),
@@ -95,16 +101,16 @@ export default function OutgoingInspectionPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="출하검사"
-        description="출하 물품의 품질 검사를 수행하고 관리합니다"
-      />
+      <PageHeader title="출하검사" description="출하 물품의 품질 검사를 수행하고 관리합니다" />
 
       <div className="flex flex-wrap items-end gap-2">
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
-          onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
         />
         <Select value={judgementFilter} onValueChange={setJudgementFilter}>
           <SelectTrigger className="h-8 w-36 text-sm">
@@ -113,7 +119,9 @@ export default function OutgoingInspectionPage() {
           <SelectContent>
             <SelectItem value="all">전체 판정</SelectItem>
             {Object.entries(INSPECTION_JUDGEMENT_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

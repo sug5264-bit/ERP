@@ -72,6 +72,7 @@ interface ItemOption {
   id: string
   itemCode: string
   itemName: string
+  barcode?: string
   taxType?: string
   storageTemp?: string | null
   manufacturer?: string | null
@@ -308,10 +309,13 @@ export default function QuotationsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Dialog open={open} onOpenChange={(v) => {
-          setOpen(v)
-          if (v) setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
-        }}>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v)
+            if (v) setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
+          }}
+        >
           <DialogTrigger asChild>
             <Button>견적 등록</Button>
           </DialogTrigger>
@@ -396,7 +400,7 @@ export default function QuotationsPage() {
                             {items.map((it: ItemOption) => (
                               <SelectItem key={it.id} value={it.id}>
                                 <span className="truncate">
-                                  {it.itemCode} - {it.itemName}
+                                  {it.barcode || it.itemCode} - {it.itemName}
                                 </span>
                               </SelectItem>
                             ))}

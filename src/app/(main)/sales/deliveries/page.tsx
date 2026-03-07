@@ -160,6 +160,7 @@ interface ItemOption {
   id: string
   itemCode: string
   itemName: string
+  barcode?: string
   specification?: string
   unit?: string
 }
@@ -533,12 +534,16 @@ export default function DeliveriesPage() {
   const { data: onlineData, isLoading: onlineLoading } = useQuery({
     queryKey: ['sales-deliveries', 'ONLINE', startDate, endDate],
     queryFn: () =>
-      api.get(`/sales/deliveries?pageSize=50&salesChannel=ONLINE${dateParams}`) as Promise<ApiListResponse<DeliveryRow>>,
+      api.get(`/sales/deliveries?pageSize=50&salesChannel=ONLINE${dateParams}`) as Promise<
+        ApiListResponse<DeliveryRow>
+      >,
   })
   const { data: offlineData, isLoading: offlineLoading } = useQuery({
     queryKey: ['sales-deliveries', 'OFFLINE', startDate, endDate],
     queryFn: () =>
-      api.get(`/sales/deliveries?pageSize=50&salesChannel=OFFLINE${dateParams}`) as Promise<ApiListResponse<DeliveryRow>>,
+      api.get(`/sales/deliveries?pageSize=50&salesChannel=OFFLINE${dateParams}`) as Promise<
+        ApiListResponse<DeliveryRow>
+      >,
   })
 
   const { data: ordersData } = useQuery({
@@ -1039,7 +1044,7 @@ export default function DeliveriesPage() {
                             <SelectContent>
                               {items.map((it: ItemOption) => (
                                 <SelectItem key={it.id} value={it.id}>
-                                  {it.itemCode} - {it.itemName}
+                                  {it.barcode || it.itemCode} - {it.itemName}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1211,7 +1216,7 @@ export default function DeliveriesPage() {
                             <SelectContent>
                               {items.map((it: ItemOption) => (
                                 <SelectItem key={it.id} value={it.id}>
-                                  {it.itemCode} - {it.itemName}
+                                  {it.barcode || it.itemCode} - {it.itemName}
                                 </SelectItem>
                               ))}
                             </SelectContent>

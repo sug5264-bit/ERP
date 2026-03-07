@@ -36,6 +36,7 @@ interface BomItem {
 
 interface BomMaterial {
   id: string
+  barcode?: string
   itemName: string
   itemCode: string
   quantity: number
@@ -90,17 +91,30 @@ function BomForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>BOM코드 <span className="text-destructive">*</span></Label>
-          <Input name="bomCode" required defaultValue={bom?.bomCode || ''} disabled={!!bom} className={bom ? 'bg-muted' : ''} placeholder="BOM-001" />
+          <Label>
+            BOM코드 <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            name="bomCode"
+            required
+            defaultValue={bom?.bomCode || ''}
+            disabled={!!bom}
+            className={bom ? 'bg-muted' : ''}
+            placeholder="BOM-001"
+          />
         </div>
         <div className="space-y-2">
-          <Label>BOM명 <span className="text-destructive">*</span></Label>
+          <Label>
+            BOM명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="bomName" required defaultValue={bom?.bomName || ''} />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>완제품명 <span className="text-destructive">*</span></Label>
+          <Label>
+            완제품명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="productName" required defaultValue={bom?.productName || ''} />
         </div>
         <div className="space-y-2">
@@ -116,17 +130,21 @@ function BomForm({
         <div className="space-y-2">
           <Label>상태</Label>
           <Select name="status" defaultValue={bom?.status || 'DRAFT'}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {Object.entries(BOM_STATUS_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? (bom ? '수정 중...' : '등록 중...') : (bom ? '수정' : '등록')}
+        {isPending ? (bom ? '수정 중...' : '등록 중...') : bom ? '수정' : '등록'}
       </Button>
     </form>
   )
@@ -231,11 +249,23 @@ export default function BomPage() {
             header: '',
             cell: ({ row }) => (
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailTarget(row.original)} aria-label="상세보기">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setDetailTarget(row.original)}
+                  aria-label="상세보기"
+                >
                   <Eye className="h-4 w-4" />
                 </Button>
                 <PermissionGuard module="production" action="update">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setEditTarget(row.original)}
+                    aria-label="수정"
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
                 </PermissionGuard>
@@ -259,7 +289,12 @@ export default function BomPage() {
             <DialogTitle>배합표 수정</DialogTitle>
           </DialogHeader>
           {editTarget && (
-            <BomForm key={editTarget.id} bom={editTarget} onSubmit={handleUpdate} isPending={updateMutation.isPending} />
+            <BomForm
+              key={editTarget.id}
+              bom={editTarget}
+              onSubmit={handleUpdate}
+              isPending={updateMutation.isPending}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -273,11 +308,22 @@ export default function BomPage() {
           {detailTarget && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-                <div><span className="text-muted-foreground">BOM코드:</span> {detailTarget.bomCode}</div>
-                <div><span className="text-muted-foreground">완제품:</span> {detailTarget.productName}</div>
-                <div><span className="text-muted-foreground">버전:</span> {detailTarget.version}</div>
-                <div><span className="text-muted-foreground">수율:</span> {detailTarget.yieldRate}%</div>
-                <div><span className="text-muted-foreground">상태:</span> <StatusBadge status={detailTarget.status} labels={BOM_STATUS_LABELS} /></div>
+                <div>
+                  <span className="text-muted-foreground">BOM코드:</span> {detailTarget.bomCode}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">완제품:</span> {detailTarget.productName}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">버전:</span> {detailTarget.version}
+                </div>
+                <div>
+                  <span className="text-muted-foreground">수율:</span> {detailTarget.yieldRate}%
+                </div>
+                <div>
+                  <span className="text-muted-foreground">상태:</span>{' '}
+                  <StatusBadge status={detailTarget.status} labels={BOM_STATUS_LABELS} />
+                </div>
               </div>
               <div className="border-t pt-4">
                 <h4 className="mb-2 text-sm font-medium">원자재 목록</h4>
@@ -286,8 +332,9 @@ export default function BomPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-muted/30 border-b">
-                          <th className="px-3 py-2 text-left text-xs font-medium">품목코드</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium">품목명</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium">바코드</th>
+                          <th className="text-muted-foreground px-3 py-2 text-left text-xs font-medium">품목코드</th>
+                          <th className="text-muted-foreground px-3 py-2 text-left text-xs font-medium">내품명</th>
                           <th className="px-3 py-2 text-right text-xs font-medium">수량</th>
                           <th className="px-3 py-2 text-left text-xs font-medium">단위</th>
                           <th className="px-3 py-2 text-right text-xs font-medium">손실율(%)</th>
@@ -296,8 +343,9 @@ export default function BomPage() {
                       <tbody>
                         {detailMaterials.map((m) => (
                           <tr key={m.id} className="border-b last:border-0">
-                            <td className="px-3 py-2 font-mono text-xs">{m.itemCode}</td>
-                            <td className="px-3 py-2">{m.itemName}</td>
+                            <td className="px-3 py-2 font-mono text-xs font-semibold">{m.barcode || '-'}</td>
+                            <td className="text-muted-foreground px-3 py-2 font-mono text-xs">{m.itemCode}</td>
+                            <td className="text-muted-foreground px-3 py-2 text-xs">{m.itemName}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{m.quantity}</td>
                             <td className="px-3 py-2">{m.unit}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{m.lossRate}%</td>
