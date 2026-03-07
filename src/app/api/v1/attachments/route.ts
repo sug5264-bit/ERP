@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     const relatedId = sp.get('relatedId')
 
     if (!relatedTable) {
-      return errorResponse('relatedTable이 필요합니다.', 'VALIDATION_ERROR')
+      return errorResponse('relatedTable이 필요합니다.', 'VALIDATION_ERROR', 400)
     }
     if (!VALID_TABLES.includes(relatedTable)) {
       return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const relatedId = formData.get('relatedId') as string
 
     if (!file || !relatedTable || !relatedId) {
-      return errorResponse('file, relatedTable, relatedId가 필요합니다.', 'VALIDATION_ERROR')
+      return errorResponse('file, relatedTable, relatedId가 필요합니다.', 'VALIDATION_ERROR', 400)
     }
 
     if (!VALID_TABLES.includes(relatedTable)) {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return errorResponse('파일 크기가 50MB를 초과합니다.', 'FILE_TOO_LARGE')
+      return errorResponse('파일 크기가 50MB를 초과합니다.', 'FILE_TOO_LARGE', 413)
     }
 
     const ext = file.name.includes('.') ? (file.name.split('.').pop() || '').toLowerCase() : ''

@@ -73,8 +73,8 @@ async function request(method: string, url: string, data?: unknown) {
 
         // 403 → 권한 없음
         if (res.status === 403) {
-          const json = await res.json().catch(() => ({}))
-          const message = json?.error?.message || '이 작업에 대한 권한이 없습니다.'
+          const json = await res.json().catch(() => null)
+          const message = (json && json.error?.message) || '이 작업에 대한 권한이 없습니다.'
           throw new PermissionError(message)
         }
 

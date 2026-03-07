@@ -9,9 +9,10 @@ export const createApprovalDocumentSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   content: z
     .any()
-    .refine((val) => val === undefined || val === null || (typeof val === 'object' && !Array.isArray(val)), {
-      message: '결재 내용은 객체 형식이어야 합니다',
-    })
+    .refine(
+      (val) => val === undefined || val === null || (typeof val === 'object' && val !== null && !Array.isArray(val)),
+      { message: '결재 내용은 객체 형식이어야 합니다' }
+    )
     .optional(),
   relatedModule: z.string().max(50).optional().nullable(),
   relatedDocId: z.string().max(50).optional().nullable(),

@@ -140,13 +140,17 @@ export async function PUT(req: NextRequest) {
     }
 
     if (action === 'reject') {
-      if (leave.status !== 'REQUESTED') {
-        return errorResponse('대기 상태의 휴가만 반려할 수 있습니다.', 'BAD_REQUEST', 400)
-      }
-      const updated = await prisma.leave.update({
-        where: { id },
-        data: { status: 'REJECTED' },
-        include: { employee: { select: { nameKo: true } } },
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const updated = await prisma.$transaction(async (tx) => {
+        const freshLeave = await tx.leave.findUnique({ where: { id } })
+        if (!freshLeave || freshLeave.status !== 'REQUESTED') {
+          throw new Error('이미 처리된 휴가이거나 대기 상태가 아닙니다.')
+        }
+        return tx.leave.update({
+          where: { id },
+          data: { status: 'REJECTED' },
+          include: { employee: { select: { nameKo: true } } },
+        })
       })
       return successResponse(updated)
     }

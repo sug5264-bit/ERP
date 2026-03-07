@@ -155,9 +155,13 @@ export function handleApiError(error: unknown) {
       msg.includes('할 수 없습니다') ||
       msg.includes('이미 존재') ||
       msg.includes('일치하지 않습니다') ||
-      msg.includes('이미 처리')
+      msg.includes('이미 처리') ||
+      msg.includes('이미 완료') ||
+      msg.includes('이미 취소')
     ) {
-      return errorResponse(userMessage, errorCode, 400)
+      // NOT_FOUND 코드는 404, 나머지 비즈니스 에러는 400
+      const status = errorCode === 'NOT_FOUND' ? 404 : 400
+      return errorResponse(userMessage, errorCode, status)
     }
   }
 

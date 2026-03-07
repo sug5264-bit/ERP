@@ -123,6 +123,26 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return errorResponse('자기 자신을 삭제할 수 없습니다.', 'SELF_DELETE', 400)
     }
 
+    // 마지막 관리자 비활성화 방지
+    const targetUser = await prisma.user.findUnique({
+      where: { id },
+      include: { userRoles: { include: { role: { select: { name: true } } } } },
+    })
+    if (!targetUser) return errorResponse('사용자를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+    const isAdmin = targetUser.userRoles.some((ur) => ur.role.name === 'SYSTEM_ADMIN' || ur.role.name === '관리자')
+    if (isAdmin) {
+      const activeAdminCount = await prisma.user.count({
+        where: {
+          isActive: true,
+          userRoles: { some: { role: { name: { in: ['SYSTEM_ADMIN', '관리자'] } } } },
+        },
+      })
+      if (activeAdminCount <= 1) {
+        return errorResponse('마지막 관리자는 비활성화할 수 없습니다.', 'LAST_ADMIN', 400)
+      }
+    }
+
     // 비활성화로 처리 (역할 포함 연관 데이터 보존)
     await prisma.user.update({ where: { id }, data: { isActive: false } })
 
