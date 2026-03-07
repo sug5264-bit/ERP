@@ -32,55 +32,58 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
     if (body.action === 'submit') {
-      const existing = await prisma.quotation.findUnique({ where: { id }, select: { status: true } })
-      if (!existing) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (existing.status !== 'DRAFT') {
-        return errorResponse('작성 상태의 견적만 제출할 수 있습니다.', 'INVALID_STATUS', 400)
-      }
-      const q = await prisma.quotation.update({ where: { id }, data: { status: 'SUBMITTED' } })
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const q = await prisma.$transaction(async (tx) => {
+        const existing = await tx.quotation.findUnique({ where: { id }, select: { id: true, status: true } })
+        if (!existing) throw new Error('NOT_FOUND:견적을 찾을 수 없습니다.')
+        if (existing.status !== 'DRAFT') throw new Error('작성 상태의 견적만 제출할 수 있습니다.')
+        return tx.quotation.update({ where: { id }, data: { status: 'SUBMITTED' } })
+      })
       return successResponse(q)
     }
     if (body.action === 'cancel') {
-      const existing = await prisma.quotation.findUnique({ where: { id }, select: { status: true } })
-      if (!existing) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (existing.status === 'ORDERED') {
-        return errorResponse('발주 전환된 견적은 취소할 수 없습니다.', 'INVALID_STATUS', 400)
-      }
-      const q = await prisma.quotation.update({ where: { id }, data: { status: 'CANCELLED' } })
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const q = await prisma.$transaction(async (tx) => {
+        const existing = await tx.quotation.findUnique({ where: { id }, select: { id: true, status: true } })
+        if (!existing) throw new Error('NOT_FOUND:견적을 찾을 수 없습니다.')
+        if (existing.status === 'ORDERED') throw new Error('발주 전환된 견적은 취소할 수 없습니다.')
+        return tx.quotation.update({ where: { id }, data: { status: 'CANCELLED' } })
+      })
       return successResponse(q)
     }
     if (body.action === 'convert') {
-      const quotation = await prisma.quotation.findUnique({
-        where: { id },
-        include: { details: { include: { item: { select: { id: true, taxType: true } } } } },
-      })
-      if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (quotation.status === 'ORDERED') return errorResponse('이미 발주 전환된 견적입니다.', 'ALREADY_ORDERED')
-      if (quotation.status === 'CANCELLED') return errorResponse('취소된 견적은 전환할 수 없습니다.', 'INVALID_STATUS')
-
       const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
       if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-      const details = quotation.details.map((d, idx) => {
-        const supplyAmount = Number(d.supplyAmount)
-        const taxType = d.item?.taxType || 'TAXABLE'
-        const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
-        return {
-          lineNo: idx + 1,
-          itemId: d.itemId,
-          quantity: Number(d.quantity),
-          unitPrice: Number(d.unitPrice),
-          supplyAmount,
-          taxAmount,
-          totalAmount: supplyAmount + taxAmount,
-          deliveredQty: 0,
-          remainingQty: Number(d.quantity),
-        }
-      })
-      const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
-      const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
-
+      // 트랜잭션으로 상태 검증 + 발주 생성을 원자적으로 처리 (중복 전환 방지)
       const result = await prisma.$transaction(async (tx) => {
+        const quotation = await tx.quotation.findUnique({
+          where: { id },
+          include: { details: { include: { item: { select: { id: true, taxType: true } } } } },
+        })
+        if (!quotation) throw new Error('NOT_FOUND:견적을 찾을 수 없습니다.')
+        if (quotation.status === 'ORDERED') throw new Error('이미 발주 전환된 견적입니다.')
+        if (quotation.status === 'CANCELLED') throw new Error('취소된 견적은 전환할 수 없습니다.')
+
+        const details = quotation.details.map((d, idx) => {
+          const supplyAmount = Number(d.supplyAmount)
+          const taxType = d.item?.taxType || 'TAXABLE'
+          const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+          return {
+            lineNo: idx + 1,
+            itemId: d.itemId,
+            quantity: Number(d.quantity),
+            unitPrice: Number(d.unitPrice),
+            supplyAmount,
+            taxAmount,
+            totalAmount: supplyAmount + taxAmount,
+            deliveredQty: 0,
+            remainingQty: Number(d.quantity),
+          }
+        })
+        const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
+        const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
+
         const orderNo = await generateDocumentNumber('SO', new Date(), tx)
         const order = await tx.salesOrder.create({
           data: {

@@ -79,16 +79,16 @@ export default function PaymentsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['closing-payments', dateType, year, month, filterDate],
-    queryFn: () => api.get(`/closing/payments?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/closing/payments?${qp.toString()}`),
   })
 
   const { data: partnersData } = useQuery({
     queryKey: ['partners-all'],
-    queryFn: () => api.get('/partners?pageSize=200') as Promise<any>,
+    queryFn: () => api.get('/partners?pageSize=200'),
   })
 
   const rows: PaymentRow[] = data?.data || []
-  const partners: PartnerItem[] = (partnersData?.data || []).map((p: any) => ({
+  const partners: PartnerItem[] = (partnersData?.data || []).map((p: Record<string, unknown>) => ({
     id: p.id,
     partnerCode: p.partnerCode,
     partnerName: p.partnerName,
@@ -97,14 +97,14 @@ export default function PaymentsPage() {
   const totalAmount = rows.reduce((sum, r) => sum + r.totalAmount, 0)
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/accounting/vouchers', data),
+    mutationFn: (data: Record<string, unknown>) => api.post('/accounting/vouchers', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['closing-payments'] })
       setCreateOpen(false)
       resetForm()
       toast.success('대금지급 전표가 생성되었습니다.')
     },
-    onError: (err: any) => toast.error(err?.message || '전표 생성에 실패했습니다.'),
+    onError: (err: Error) => toast.error(err?.message || '전표 생성에 실패했습니다.'),
   })
 
   const resetForm = () => {

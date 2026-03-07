@@ -106,12 +106,12 @@ export default function RolesPage() {
     refetch,
   } = useQuery({
     queryKey: ['admin-roles'],
-    queryFn: () => api.get('/admin/roles') as Promise<any>,
+    queryFn: () => api.get('/admin/roles'),
   })
 
   const { data: permissionsData } = useQuery({
     queryKey: ['admin-permissions'],
-    queryFn: () => api.get('/admin/permissions') as Promise<any>,
+    queryFn: () => api.get('/admin/permissions'),
     staleTime: 10 * 60 * 1000,
   })
 

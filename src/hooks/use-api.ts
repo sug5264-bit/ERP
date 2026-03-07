@@ -73,8 +73,8 @@ async function request(method: string, url: string, data?: unknown) {
 
         // 403 → 권한 없음
         if (res.status === 403) {
-          const json = await res.json().catch(() => ({}))
-          const message = json?.error?.message || '이 작업에 대한 권한이 없습니다.'
+          const json = await res.json().catch(() => null)
+          const message = (json && json.error?.message) || '이 작업에 대한 권한이 없습니다.'
           throw new PermissionError(message)
         }
 
@@ -179,10 +179,13 @@ export class ApiError extends Error {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResponse = Record<string, any>
+
 export const api = {
-  get: (url: string) => request('GET', url),
-  post: (url: string, data?: unknown) => request('POST', url, data),
-  put: (url: string, data?: unknown) => request('PUT', url, data),
-  patch: (url: string, data?: unknown) => request('PATCH', url, data),
-  delete: (url: string) => request('DELETE', url),
+  get: (url: string) => request('GET', url) as Promise<ApiResponse>,
+  post: (url: string, data?: unknown) => request('POST', url, data) as Promise<ApiResponse>,
+  put: (url: string, data?: unknown) => request('PUT', url, data) as Promise<ApiResponse>,
+  patch: (url: string, data?: unknown) => request('PATCH', url, data) as Promise<ApiResponse>,
+  delete: (url: string) => request('DELETE', url) as Promise<ApiResponse>,
 }

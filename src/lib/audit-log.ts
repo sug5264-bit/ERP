@@ -26,8 +26,8 @@ export async function writeAuditLog(params: AuditLogParams) {
         action: params.action,
         tableName: params.tableName,
         recordId: params.recordId || null,
-        oldValue: params.oldValue || undefined,
-        newValue: params.newValue || undefined,
+        oldValue: params.oldValue ?? undefined,
+        newValue: params.newValue ?? undefined,
         ipAddress: params.ipAddress || null,
       },
     })

@@ -49,7 +49,7 @@ export default function SalesSummaryPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['sales-summary', year, month],
-    queryFn: () => api.get(`/sales/summary?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/sales/summary?${qp.toString()}`),
   })
 
   const summary: SummaryData | null = data?.data || null

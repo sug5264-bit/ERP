@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency } from '@/lib/format'
 
-const ACCOUNT_TYPE_MAP: Record<string, string> = {
+const _ACCOUNT_TYPE_MAP: Record<string, string> = {
   ASSET: '자산',
   LIABILITY: '부채',
   EQUITY: '자본',
@@ -37,7 +37,7 @@ export default function FinancialStatementsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounting-ledger-fs', startDate, endDate],
-    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`),
   })
 
   const accounts: AccountRow[] = data?.data || []

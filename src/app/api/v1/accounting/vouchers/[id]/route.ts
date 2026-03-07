@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const existing = await prisma.voucher.findUnique({ where: { id } })
     if (!existing) return errorResponse('전표를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     if (existing.status !== 'DRAFT') {
-      return errorResponse('작성 상태의 전표만 수정할 수 있습니다.', 'INVALID_STATUS')
+      return errorResponse('작성 상태의 전표만 수정할 수 있습니다.', 'INVALID_STATUS', 400)
     }
 
     // 승인 처리
@@ -65,18 +65,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         select: { employeeId: true },
       })
       if (!user?.employeeId) {
-        return errorResponse('사원 정보가 연결되어 있지 않습니다. 승인 권한을 확인하세요.', 'NO_EMPLOYEE')
+        return errorResponse('사원 정보가 연결되어 있지 않습니다. 승인 권한을 확인하세요.', 'NO_EMPLOYEE', 400)
       }
-      // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
-      if (user.employeeId === existing.createdById) {
-        return errorResponse('작성자는 승인할 수 없습니다.', 'FORBIDDEN', 403)
-      }
-      const voucher = await prisma.voucher.update({
-        where: { id },
-        data: {
-          status: 'APPROVED',
-          approvedById: user.employeeId,
-        },
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const voucher = await prisma.$transaction(async (tx) => {
+        const fresh = await tx.voucher.findUnique({ where: { id } })
+        if (!fresh) throw new Error('NOT_FOUND:전표를 찾을 수 없습니다.')
+        if (fresh.status !== 'DRAFT') throw new Error('작성 상태의 전표만 승인할 수 있습니다.')
+        // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
+        if (user.employeeId === fresh.createdById) {
+          throw new Error('작성자는 승인할 수 없습니다.')
+        }
+        return tx.voucher.update({
+          where: { id },
+          data: { status: 'APPROVED', approvedById: user.employeeId },
+        })
       })
       return successResponse(voucher)
     }
@@ -87,10 +90,31 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const detailsSchema = createVoucherSchema.shape.details
       const parsedDetails = detailsSchema.parse(body.details)
 
-      const totalDebitCents = parsedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0)
-      const totalCreditCents = parsedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0)
+      // accountCode → accountSubjectId 변환 (accountSubjectId가 없는 경우)
+      const accountCodes = parsedDetails
+        .filter((d) => !d.accountSubjectId && (d as Record<string, unknown>).accountCode)
+        .map((d) => (d as Record<string, unknown>).accountCode as string)
+      const accountCodeMap = new Map<string, string>()
+      if (accountCodes.length > 0) {
+        const accounts = await prisma.accountSubject.findMany({
+          where: { code: { in: accountCodes } },
+          select: { id: true, code: true },
+        })
+        for (const acc of accounts) accountCodeMap.set(acc.code, acc.id)
+      }
+      const resolvedDetails = parsedDetails.map((d) => {
+        const accountSubjectId =
+          d.accountSubjectId || accountCodeMap.get((d as Record<string, unknown>).accountCode as string)
+        if (!accountSubjectId) {
+          throw new Error('계정과목 ID가 누락된 항목이 있습니다.')
+        }
+        return { ...d, accountSubjectId }
+      })
+
+      const totalDebitCents = resolvedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0)
+      const totalCreditCents = resolvedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0)
       if (totalDebitCents !== totalCreditCents) {
-        return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
+        return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR', 400)
       }
       const totalDebit = totalDebitCents / 100
       const totalCredit = totalCreditCents / 100
@@ -106,9 +130,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
             totalDebit,
             totalCredit,
             details: {
-              create: parsedDetails.map((d, idx) => ({
+              create: resolvedDetails.map((d, idx) => ({
                 lineNo: idx + 1,
-                accountSubjectId: d.accountSubjectId!,
+                accountSubjectId: d.accountSubjectId,
                 debitAmount: d.debitAmount,
                 creditAmount: d.creditAmount,
                 partnerId: d.partnerId || null,
@@ -129,7 +153,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return successResponse(voucher)
     }
 
-    return errorResponse('수정할 데이터가 없습니다.', 'NO_DATA')
+    return errorResponse('수정할 데이터가 없습니다.', 'NO_DATA', 400)
   } catch (error) {
     return handleApiError(error)
   }

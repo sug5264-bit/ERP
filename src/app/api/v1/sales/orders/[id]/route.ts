@@ -37,39 +37,39 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const body = await request.json()
     if (body.action === 'complete') {
-      const order = await prisma.salesOrder.findUnique({ where: { id } })
-      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (order.status === 'COMPLETED') return errorResponse('이미 완료된 발주입니다.', 'INVALID_STATUS')
-      if (order.status === 'CANCELLED') return errorResponse('취소된 발주는 완료 처리할 수 없습니다.', 'INVALID_STATUS')
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const o = await prisma.$transaction(async (tx) => {
+        const order = await tx.salesOrder.findUnique({ where: { id } })
+        if (!order) throw new Error('NOT_FOUND:발주를 찾을 수 없습니다.')
+        if (order.status === 'COMPLETED') throw new Error('이미 완료된 발주입니다.')
+        if (order.status === 'CANCELLED') throw new Error('취소된 발주는 완료 처리할 수 없습니다.')
 
-      // 배차정보 및 담당자 확인
-      const dispatchInfo = body.dispatchInfo || order.dispatchInfo
-      const receivedBy = body.receivedBy || order.receivedBy
-      if (!dispatchInfo || !receivedBy) {
-        return errorResponse('완료 처리를 위해 배차정보와 발주 담당자를 입력해주세요.', 'MISSING_FIELDS')
-      }
+        const dispatchInfo = body.dispatchInfo || order.dispatchInfo
+        const receivedBy = body.receivedBy || order.receivedBy
+        if (!dispatchInfo || !receivedBy) {
+          throw new Error('완료 처리를 위해 배차정보와 발주 담당자를 입력해주세요.')
+        }
 
-      const o = await prisma.salesOrder.update({
-        where: { id },
-        data: {
-          status: 'COMPLETED',
-          dispatchInfo: dispatchInfo,
-          receivedBy: receivedBy,
-        },
+        return tx.salesOrder.update({
+          where: { id },
+          data: { status: 'COMPLETED', dispatchInfo, receivedBy },
+        })
       })
       return successResponse(o)
     }
     if (body.action === 'cancel') {
-      const order = await prisma.salesOrder.findUnique({ where: { id }, select: { status: true } })
-      if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
-      if (order.status === 'CANCELLED') return errorResponse('이미 취소된 발주입니다.', 'INVALID_STATUS')
-      if (order.status === 'COMPLETED') return errorResponse('완료된 발주는 취소할 수 없습니다.', 'INVALID_STATUS')
-      // 납품 진행된 발주는 취소 불가
-      const hasDelivered = await prisma.salesOrderDetail.findFirst({
-        where: { salesOrderId: id, deliveredQty: { gt: 0 } },
+      // 트랜잭션으로 원자적 상태 전이 (race condition 방지)
+      const o = await prisma.$transaction(async (tx) => {
+        const order = await tx.salesOrder.findUnique({ where: { id }, select: { id: true, status: true } })
+        if (!order) throw new Error('NOT_FOUND:발주를 찾을 수 없습니다.')
+        if (order.status === 'CANCELLED') throw new Error('이미 취소된 발주입니다.')
+        if (order.status === 'COMPLETED') throw new Error('완료된 발주는 취소할 수 없습니다.')
+        const hasDelivered = await tx.salesOrderDetail.findFirst({
+          where: { salesOrderId: id, deliveredQty: { gt: 0 } },
+        })
+        if (hasDelivered) throw new Error('납품이 진행된 발주는 취소할 수 없습니다.')
+        return tx.salesOrder.update({ where: { id }, data: { status: 'CANCELLED' } })
       })
-      if (hasDelivered) return errorResponse('납품이 진행된 발주는 취소할 수 없습니다.', 'CANNOT_CANCEL')
-      const o = await prisma.salesOrder.update({ where: { id }, data: { status: 'CANCELLED' } })
       return successResponse(o)
     }
     // 발주서 수정

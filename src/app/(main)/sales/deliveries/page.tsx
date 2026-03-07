@@ -577,7 +577,7 @@ export default function DeliveriesPage() {
   })
 
   const orders = ordersData?.data || []
-  const partners = partnersData?.data || []
+  const _partners = partnersData?.data || []
   const items = itemsData?.data || []
   const onlineDeliveries = onlineData?.data || []
   const offlineDeliveries = offlineData?.data || []

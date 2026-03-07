@@ -10,17 +10,17 @@ import Link from 'next/link'
 export default function InventoryPage() {
   const { data: itemsData } = useQuery({
     queryKey: ['inventory-items-summary'],
-    queryFn: () => api.get('/inventory/items?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/inventory/items?pageSize=1'),
   })
 
   const { data: balancesData } = useQuery({
     queryKey: ['inventory-balances-summary'],
-    queryFn: () => api.get('/inventory/stock-balance') as Promise<any>,
+    queryFn: () => api.get('/inventory/stock-balance'),
   })
 
   const { data: warehousesData } = useQuery({
     queryKey: ['inventory-warehouses-summary'],
-    queryFn: () => api.get('/inventory/warehouses') as Promise<any>,
+    queryFn: () => api.get('/inventory/warehouses'),
   })
 
   const itemCount = itemsData?.meta?.totalCount || 0

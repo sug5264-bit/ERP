@@ -86,18 +86,18 @@ export default function StockMovementPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['inventory-stock-movement', typeFilter],
-    queryFn: () => api.get(`/inventory/stock-movement?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/inventory/stock-movement?${qp.toString()}`),
   })
 
   const { data: itemsData } = useQuery({
     queryKey: ['inventory-items-all'],
-    queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<any>,
+    queryFn: () => api.get('/inventory/items?pageSize=500'),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: warehousesData } = useQuery({
     queryKey: ['inventory-warehouses'],
-    queryFn: () => api.get('/inventory/warehouses') as Promise<any>,
+    queryFn: () => api.get('/inventory/warehouses'),
     staleTime: 5 * 60 * 1000,
   })
 

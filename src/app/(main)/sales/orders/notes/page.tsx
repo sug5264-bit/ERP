@@ -12,7 +12,6 @@ import { toast } from 'sonner'
 import {
   Download,
   Trash2,
-  Upload,
   Paperclip,
   Search,
   FileImage,

@@ -108,12 +108,12 @@ export default function NettingPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['closing-netting', year, month],
-    queryFn: () => api.get(`/closing/netting?year=${year}&month=${month}`) as Promise<any>,
+    queryFn: () => api.get(`/closing/netting?year=${year}&month=${month}`),
   })
 
   const { data: partnersData } = useQuery({
     queryKey: ['partners-all'],
-    queryFn: () => api.get('/partners?pageSize=200') as Promise<any>,
+    queryFn: () => api.get('/partners?pageSize=200'),
   })
   const partners = partnersData?.data || []
 
@@ -159,12 +159,12 @@ export default function NettingPage() {
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['netting-orders', year, month],
     queryFn: () =>
-      api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`) as Promise<any>,
+      api.get(`/sales/orders?startDate=${ordersStartDate}&endDate=${ordersEndDate}&pageSize=200`),
   })
 
   const { data: companyData } = useQuery({
     queryKey: ['admin-company'],
-    queryFn: () => api.get('/admin/company') as Promise<any>,
+    queryFn: () => api.get('/admin/company'),
     staleTime: 30 * 60 * 1000,
   })
 

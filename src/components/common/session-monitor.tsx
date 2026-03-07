@@ -91,10 +91,14 @@ export function SessionMonitor() {
   }, [showWarning, getExpiryTime])
 
   const handleExtend = useCallback(async () => {
-    // 세션 갱신 요청
-    await update()
-    warningShownRef.current = false
-    setShowWarning(false)
+    try {
+      await update()
+      warningShownRef.current = false
+      setShowWarning(false)
+    } catch {
+      // 세션 갱신 실패 시 로그아웃 처리
+      signOut({ callbackUrl: '/login' })
+    }
   }, [update])
 
   const handleLogout = useCallback(() => {

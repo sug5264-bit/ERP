@@ -14,9 +14,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
-import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
+import { exportToExcel, exportToPDF, downloadImportTemplate, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Plus, Trash2, FileDown, Upload } from 'lucide-react'
+import { Plus, Trash2, FileDown } from 'lucide-react'
 
 const CHANNEL_MAP: Record<string, string> = {
   NAVER: '네이버 스토어',
