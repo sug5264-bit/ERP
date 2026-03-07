@@ -14,7 +14,6 @@ import {
   Search,
   MessageSquare,
   Paperclip,
-  Download,
   FileImage,
   FileText,
   FileSpreadsheet,
@@ -22,6 +21,26 @@ import {
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+
+interface OrderItem {
+  id: string
+  orderNo?: string
+  partner?: { partnerName?: string }
+}
+
+interface NoteItem {
+  id: string
+  content: string
+  relatedId: string
+  createdAt: string
+}
+
+interface AttachmentItem {
+  id: string
+  relatedId: string
+  mimeType: string
+  fileName: string
+}
 
 const ACCEPTED_TYPES = '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
 
@@ -51,11 +70,7 @@ function getFileTypeBadge(mimeType: string, fileName: string) {
   return { label: ext.toUpperCase() || '파일', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }
 }
 
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes}B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
-}
+
 
 export default function OrderPostsPage() {
   const queryClient = useQueryClient()
@@ -74,7 +89,7 @@ export default function OrderPostsPage() {
       return res.json()
     },
   })
-  const orders = ordersData?.data || []
+  const orders: OrderItem[] = ordersData?.data || []
 
   const { data: notesData } = useQuery({
     queryKey: ['notes', 'SalesOrder', selectedOrderId],
@@ -87,7 +102,7 @@ export default function OrderPostsPage() {
       return res.json()
     },
   })
-  const notes = notesData?.data || []
+  const notes: NoteItem[] = notesData?.data || []
 
   // 게시글별 첨부파일 조회
   const { data: allAttachmentsData } = useQuery({
@@ -101,7 +116,7 @@ export default function OrderPostsPage() {
       return res.json()
     },
   })
-  const allAttachments = allAttachmentsData?.data || []
+  const allAttachments: AttachmentItem[] = allAttachmentsData?.data || []
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -165,10 +180,10 @@ export default function OrderPostsPage() {
     setDeleteTarget(null)
   }
 
-  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
+  const orderMap = new Map(orders.map((o) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
 
   // 게시글에 연결된 첨부파일 가져오기
-  const getPostAttachments = (noteId: string) => allAttachments.filter((a: any) => a.relatedId === noteId)
+  const getPostAttachments = (noteId: string) => allAttachments.filter((a) => a.relatedId === noteId)
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -184,7 +199,7 @@ export default function OrderPostsPage() {
               <SelectValue placeholder="발주 선택" />
             </SelectTrigger>
             <SelectContent>
-              {orders.map((o: any) => (
+              {orders.map((o) => (
                 <SelectItem key={o.id} value={o.id}>
                   {o.orderNo || o.id?.slice(-6) || ''} - {o.partner?.partnerName || ''}
                 </SelectItem>
@@ -253,7 +268,7 @@ export default function OrderPostsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 발주</SelectItem>
-            {orders.map((o: any) => (
+            {orders.map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
               </SelectItem>
@@ -271,7 +286,7 @@ export default function OrderPostsPage() {
             <p className="text-sm">작성된 게시글이 없습니다.</p>
           </div>
         ) : (
-          notes.map((note: any) => {
+          notes.map((note) => {
             const postFiles = getPostAttachments(note.id)
             return (
               <div key={note.id} className="space-y-2 rounded-lg border p-4">
@@ -289,7 +304,7 @@ export default function OrderPostsPage() {
                 {/* 첨부파일 표시 */}
                 {postFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {postFiles.map((att: any) => {
+                    {postFiles.map((att) => {
                       const Icon = getFileIcon(att.mimeType)
                       const typeBadge = getFileTypeBadge(att.mimeType, att.fileName)
                       return (

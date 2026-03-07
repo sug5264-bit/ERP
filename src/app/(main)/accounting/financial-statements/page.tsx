@@ -10,13 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency } from '@/lib/format'
 
-const _ACCOUNT_TYPE_MAP: Record<string, string> = {
-  ASSET: '자산',
-  LIABILITY: '부채',
-  EQUITY: '자본',
-  REVENUE: '수익',
-  EXPENSE: '비용',
-}
+
 
 interface AccountRow {
   id: string

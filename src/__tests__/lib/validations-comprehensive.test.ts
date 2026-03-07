@@ -4,14 +4,11 @@ import {
   createDeliverySchema,
   createQuotationSchema,
   createSalesReturnSchema,
-  createQualityInspectionSchema,
   createQualityStandardSchema,
   createNettingSchema,
 } from '@/lib/validations/sales'
 import {
-  createItemSchema,
   createItemCategorySchema,
-  createWarehouseSchema,
   createWarehouseZoneSchema,
   createStockMovementSchema,
   createPartnerSchema,
@@ -19,7 +16,6 @@ import {
 import {
   createVoucherSchema,
   createTaxInvoiceSchema,
-  createAccountSubjectSchema,
   createBudgetSchema,
 } from '@/lib/validations/accounting'
 import {
@@ -31,7 +27,7 @@ import {
 } from '@/lib/validations/hr'
 import { createApprovalDocumentSchema } from '@/lib/validations/approval'
 import { createPostSchema, createCommentSchema, createMessageSchema } from '@/lib/validations/board'
-import { createProjectSchema, createProjectTaskSchema, createPayrollSchema } from '@/lib/validations/project'
+import { createProjectSchema, createPayrollSchema } from '@/lib/validations/project'
 
 describe('프론트엔드 폼 전송 시뮬레이션', () => {
   describe('입출고 (Stock Movement)', () => {

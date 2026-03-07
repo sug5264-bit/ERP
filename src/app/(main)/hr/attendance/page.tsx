@@ -130,7 +130,7 @@ export default function AttendancePage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const records: AttendanceRow[] = data?.data || []
+  const records: AttendanceRow[] = useMemo(() => data?.data || [], [data?.data])
   const employees = empData?.data || []
 
   // 근태 통계
