@@ -14,7 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Download } from 'lucide-react'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 const MOVEMENT_TYPE_MAP: Record<
@@ -84,7 +85,7 @@ export default function StockMovementPage() {
   const qp = new URLSearchParams({ pageSize: '50' })
   if (typeFilter && typeFilter !== 'all') qp.set('movementType', typeFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['inventory-stock-movement', typeFilter],
     queryFn: () => api.get(`/inventory/stock-movement?${qp.toString()}`),
   })
@@ -133,6 +134,26 @@ export default function StockMovementPage() {
   const movements: MovementRow[] = data?.data || []
   const allItems = itemsData?.data || []
   const warehouses = warehousesData?.data || []
+
+  const exportColumns: ExportColumn[] = [
+    { header: '이동번호', accessor: 'movementNo' },
+    { header: '이동일', accessor: (r) => r.movementDate },
+    { header: '유형', accessor: (r) => MOVEMENT_TYPE_MAP[r.movementType]?.label || r.movementType },
+    { header: '출고창고', accessor: (r) => r.sourceWarehouse?.name || '' },
+    { header: '입고창고', accessor: (r) => r.targetWarehouse?.name || '' },
+    { header: '품목수', accessor: (r) => r.details?.length || 0 },
+    {
+      header: '합계금액',
+      accessor: (r) => (r.details || []).reduce((s: number, d: { amount: number }) => s + Number(d.amount), 0),
+    },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '입출고내역', title: '입출고 내역', columns: exportColumns, data: movements }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const updateDetail = (idx: number, field: string, value: string | number) => {
     const newDetails = [...details]
@@ -365,7 +386,10 @@ export default function StockMovementPage() {
         searchColumn="movementNo"
         searchPlaceholder="이동번호로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
       <ConfirmDialog
         open={!!deleteTarget}

@@ -77,7 +77,7 @@ export default function RejectedPage() {
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedDoc, setSelectedDoc] = useState<RejectedDocRow | null>(null)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-rejected'],
     queryFn: () => api.get('/approval/documents?filter=myDrafts&status=REJECTED&pageSize=50'),
   })
@@ -107,6 +107,8 @@ export default function RejectedPage() {
         searchColumn="title"
         searchPlaceholder="제목으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

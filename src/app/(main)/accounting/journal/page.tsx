@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 
 interface JournalRow {
   id: string
@@ -70,7 +72,7 @@ export default function JournalPage() {
   if (endDate) qp.set('endDate', endDate)
   if (accountId && accountId !== 'all') qp.set('accountSubjectId', accountId)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['accounting-journal', startDate, endDate, accountId],
     queryFn: () => api.get(`/accounting/journal?${qp.toString()}`),
   })
@@ -81,6 +83,25 @@ export default function JournalPage() {
 
   const entries: JournalRow[] = data?.data || []
   const accounts = accountsData?.data || []
+
+  const exportColumns: ExportColumn[] = [
+    { header: '전표번호', accessor: (r) => r.voucher.voucherNo },
+    { header: '전표일자', accessor: (r) => r.voucher.voucherDate },
+    { header: '유형', accessor: (r) => TYPE_MAP[r.voucher.voucherType] || r.voucher.voucherType },
+    { header: '계정코드', accessor: (r) => r.accountSubject.code },
+    { header: '계정과목', accessor: (r) => r.accountSubject.nameKo },
+    { header: '차변', accessor: (r) => Number(r.debitAmount) },
+    { header: '대변', accessor: (r) => Number(r.creditAmount) },
+    { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
+    { header: '적요', accessor: (r) => r.description || r.voucher.description || '' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '분개장', title: '분개장', columns: exportColumns, data: entries }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   return (
     <div className="space-y-6">
@@ -106,7 +127,15 @@ export default function JournalPage() {
           </SelectContent>
         </Select>
       </div>
-      <DataTable columns={columns} data={entries} isLoading={isLoading} pageSize={100} />
+      <DataTable
+        columns={columns}
+        data={entries}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
+        pageSize={100}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
+      />
     </div>
   )
 }
