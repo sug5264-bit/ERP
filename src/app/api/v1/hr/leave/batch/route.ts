@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
         })
 
         // 감사 로그 + 알림 병렬 실행
-        const tasks: Promise<any>[] = [
+        const tasks: Promise<unknown>[] = [
           writeAuditLog({
             action: action === 'approve' ? 'APPROVE' : 'REJECT',
             tableName: 'leaves',

@@ -95,10 +95,14 @@ export async function PUT(req: NextRequest) {
     }
 
     if (action === 'read' && id) {
-      await prisma.notification.update({
+      // 본인 알림만 읽음 처리 (updateMany로 userId 조건 적용)
+      const result = await prisma.notification.updateMany({
         where: { id, userId: authResult.session.user.id },
         data: { isRead: true },
       })
+      if (result.count === 0) {
+        return errorResponse('알림을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+      }
       return successResponse({ updated: true })
     }
 

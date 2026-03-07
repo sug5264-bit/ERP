@@ -159,7 +159,7 @@ export default function DeliveryNotesPage() {
     setDeleteTarget(null)
   }
 
-  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id.slice(-6)]))
+  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -178,7 +178,7 @@ export default function DeliveryNotesPage() {
               <SelectContent>
                 {deliveries.map((d: any) => (
                   <SelectItem key={d.id} value={d.id}>
-                    {d.deliveryNo || d.id.slice(-6)} -{' '}
+                    {d.deliveryNo || d.id?.slice(-6) || ''} -{' '}
                     {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
                   </SelectItem>
                 ))}

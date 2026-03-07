@@ -160,7 +160,7 @@ export default function OrderNotesPage() {
     setDeleteTarget(null)
   }
 
-  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id.slice(-6)]))
+  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -179,7 +179,7 @@ export default function OrderNotesPage() {
               <SelectContent>
                 {orders.map((o: any) => (
                   <SelectItem key={o.id} value={o.id}>
-                    {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
+                    {o.orderNo || o.id?.slice(-6) || ''} - {o.partner?.partnerName || ''}
                   </SelectItem>
                 ))}
               </SelectContent>

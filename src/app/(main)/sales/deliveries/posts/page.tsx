@@ -128,7 +128,9 @@ export default function DeliveryPostsPage() {
           formData.append('file', file)
           formData.append('relatedTable', 'DeliveryPost')
           formData.append('relatedId', noteId)
-          await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {})
+          await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {
+            toast.error(`첨부파일 "${file.name}" 업로드에 실패했습니다.`)
+          })
         }
       }
 
@@ -154,7 +156,7 @@ export default function DeliveryPostsPage() {
     setDeleteTarget(null)
   }
 
-  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id.slice(-6)]))
+  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
   const getPostAttachments = (noteId: string) => allAttachments.filter((a: any) => a.relatedId === noteId)
 
   return (
@@ -173,7 +175,7 @@ export default function DeliveryPostsPage() {
             <SelectContent>
               {deliveries.map((d: any) => (
                 <SelectItem key={d.id} value={d.id}>
-                  {d.deliveryNo || d.id.slice(-6)} -{' '}
+                  {d.deliveryNo || d.id?.slice(-6) || ''} -{' '}
                   {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
                 </SelectItem>
               ))}

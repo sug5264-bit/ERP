@@ -105,7 +105,7 @@ export async function PUT(req: NextRequest) {
         // 트랜잭션 내에서 상태 재확인 (TOCTOU 방지)
         const freshLeave = await tx.leave.findUnique({ where: { id } })
         if (!freshLeave || freshLeave.status !== 'REQUESTED') {
-          throw new Error('할 수 없습니다:이미 처리된 휴가입니다.')
+          throw new Error('ALREADY_PROCESSED:이미 처리된 휴가입니다.')
         }
         const balance = await tx.leaveBalance.findFirst({
           where: { employeeId: leave.employeeId, year },
@@ -160,7 +160,7 @@ export async function PUT(req: NextRequest) {
         // 트랜잭션 내에서 상태 재확인 (TOCTOU 방지)
         const freshLeave = await tx.leave.findUnique({ where: { id } })
         if (!freshLeave || !['REQUESTED', 'APPROVED'].includes(freshLeave.status)) {
-          throw new Error('할 수 없습니다:이미 처리된 휴가입니다.')
+          throw new Error('ALREADY_PROCESSED:이미 처리된 휴가입니다.')
         }
         const wasApproved = freshLeave.status === 'APPROVED'
         const result = await tx.leave.update({
@@ -195,6 +195,9 @@ export async function PUT(req: NextRequest) {
       }
       if (error.message.startsWith('INSUFFICIENT:')) {
         return errorResponse(error.message.slice(13), 'INSUFFICIENT_BALANCE', 400)
+      }
+      if (error.message.startsWith('ALREADY_PROCESSED:')) {
+        return errorResponse(error.message.slice(18), 'ALREADY_PROCESSED', 409)
       }
     }
     return handleApiError(error)

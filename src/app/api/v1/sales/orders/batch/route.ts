@@ -59,7 +59,6 @@ export async function POST(request: NextRequest) {
           select: { salesOrderId: true },
         })
         const deliveredIds = new Set(delivered.map((d) => d.salesOrderId))
-        const orderNoMap = new Map(cancellable.map((o) => [o.id, o.orderNo]))
         const actualCancellable = cancellable.filter((o) => {
           if (deliveredIds.has(o.id)) {
             errors.push(`${o.orderNo}: 납품이 진행된 발주는 취소할 수 없습니다.`)
