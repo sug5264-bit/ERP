@@ -293,7 +293,11 @@ export function Header() {
                   e.preventDefault()
                   const firstResult = menuResults[0] || dataResults[0]
                   if (firstResult) {
-                    handleSearchNavigate('href' in firstResult ? firstResult.href : firstResult.url)
+                    handleSearchNavigate(
+                      'href' in firstResult
+                        ? (firstResult as { href: string }).href
+                        : (firstResult as { url: string }).url
+                    )
                   }
                 }
               }}
@@ -460,7 +464,11 @@ export function Header() {
                   e.preventDefault()
                   const firstResult = menuResults[0] || dataResults[0]
                   if (firstResult) {
-                    handleSearchNavigate('href' in firstResult ? firstResult.href : firstResult.url)
+                    handleSearchNavigate(
+                      'href' in firstResult
+                        ? (firstResult as { href: string }).href
+                        : (firstResult as { url: string }).url
+                    )
                   }
                 }
               }}
