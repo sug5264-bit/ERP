@@ -13,18 +13,18 @@ import {
   FileText,
   ClipboardList,
   ShoppingCart,
-  CalendarOff,
   TrendingUp,
   TrendingDown,
   Minus,
   ArrowRight,
   Timer,
+  Truck,
+  Factory,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { Suspense, useMemo, memo } from 'react'
 
-// recharts lazy load (번들 사이즈 ~200KB 절감)
 const DashboardCharts = dynamic(() => import('@/components/dashboard/charts'), {
   ssr: false,
   loading: () => (
@@ -56,27 +56,11 @@ function KpiSkeleton() {
   )
 }
 
+// 식품 유통사 핵심 KPI
 const KPI_CARDS = [
-  { key: 'emp', href: '/hr/employees', label: '전체 사원', unit: '명', Icon: Users, bg: '', color: '' },
+  { key: 'order', href: '/sales/orders', label: '금일 수주', unit: '건', Icon: ShoppingCart, bg: '', color: '' },
+  { key: 'delivery', href: '/sales/deliveries', label: '출하 대기', unit: '건', Icon: Truck, bg: 'bg-status-info-muted', color: 'text-status-info' },
   { key: 'item', href: '/inventory/items', label: '등록 품목', unit: '건', Icon: Package, bg: '', color: '' },
-  {
-    key: 'approval',
-    href: '/approval/pending',
-    label: '결재 대기',
-    unit: '건',
-    Icon: FileText,
-    bg: 'bg-status-warning-muted',
-    color: 'text-status-warning',
-  },
-  {
-    key: 'leave',
-    href: '/hr/leave',
-    label: '휴가 대기',
-    unit: '건',
-    Icon: CalendarOff,
-    bg: 'bg-status-info-muted',
-    color: 'text-status-info',
-  },
   {
     key: 'stock',
     href: '/inventory/stock-status',
@@ -88,10 +72,19 @@ const KPI_CARDS = [
   },
   {
     key: 'expiry',
-    href: '/inventory/stock-status',
+    href: '/inventory/expiry',
     label: '유통기한 임박',
     unit: '건',
     Icon: Timer,
+    bg: 'bg-status-warning-muted',
+    color: 'text-status-warning',
+  },
+  {
+    key: 'approval',
+    href: '/approval/pending',
+    label: '결재 대기',
+    unit: '건',
+    Icon: FileText,
     bg: 'bg-status-warning-muted',
     color: 'text-status-warning',
   },
@@ -114,7 +107,6 @@ interface Notice {
 export default function DashboardPage() {
   const { data: session } = useSession()
 
-  // 대시보드 전체 데이터 단일 요청 (5개 HTTP 요청 → 1개)
   const { data: dashData, isLoading } = useQuery({
     queryKey: ['dashboard-batch'],
     queryFn: () => api.get('/dashboard/batch') as Promise<{ data: Record<string, unknown> }>,
@@ -125,12 +117,12 @@ export default function DashboardPage() {
   const kpi = dd?.kpi as Record<string, number> | undefined
   const kpiValues: Record<string, number> = useMemo(
     () => ({
-      emp: kpi?.empCount || 0,
+      order: kpi?.todayOrderCount || 0,
+      delivery: kpi?.deliveryPendingCount || kpi?.approvalCount || 0,
       item: kpi?.itemCount || 0,
-      approval: kpi?.approvalCount || 0,
-      leave: kpi?.leaveCount || 0,
       stock: kpi?.stockAlertCount || 0,
       expiry: kpi?.expiryAlertCount || 0,
+      approval: kpi?.approvalCount || 0,
     }),
     [kpi]
   )
@@ -175,11 +167,6 @@ export default function DashboardPage() {
                       {value.toLocaleString()}
                       <span className="text-muted-foreground ml-0.5 text-sm font-normal">{card.unit}</span>
                     </div>
-                    {card.key === 'emp' && trends?.newEmployees && trends.newEmployees.current > 0 && (
-                      <p className="text-status-success mt-0.5 text-[10px] sm:text-xs">
-                        이번 달 +{trends.newEmployees.current}명
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
               </Link>
@@ -188,7 +175,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 매출 트렌드 요약 */}
+      {/* 매출/수주 트렌드 요약 */}
       <Card className="animate-fade-in-up">
         <CardContent className="p-3 sm:p-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
@@ -199,14 +186,14 @@ export default function DashboardPage() {
               trendLabel="전월 대비"
             />
             <TrendItem
-              label="이번 달 발주"
+              label="이번 달 수주"
               value={`${trends?.orderCount?.current ?? 0}건`}
               trend={orderTrend}
               trendLabel="전월 대비"
             />
-            <TrendItem label="오늘 발주" value={`${todayOrders}건`} />
+            <TrendItem label="금일 수주" value={`${todayOrders}건`} />
             <TrendItem
-              label="발주 평균 금액"
+              label="수주 평균 금액"
               value={
                 (trends?.orderCount?.current ?? 0) > 0
                   ? formatCurrency(Math.round(thisMonthAmount / (trends?.orderCount?.current || 1)))
@@ -217,7 +204,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Charts (lazy loaded) */}
+      {/* Charts */}
       <Suspense
         fallback={
           <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
@@ -240,11 +227,11 @@ export default function DashboardPage() {
 
       {/* Lists */}
       <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
-        {/* 최근 발주 */}
+        {/* 최근 수주 */}
         <Card className="animate-fade-in-up">
           <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-              <ShoppingCart className="h-4 w-4" /> 최근 발주
+              <ShoppingCart className="h-4 w-4" /> 최근 수주
             </CardTitle>
             <Link href="/sales/orders">
               <Button variant="ghost" size="sm" className="hover:text-primary text-xs">
@@ -254,7 +241,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {recentOrders.length === 0 ? (
-              <EmptyState icon={ShoppingCart} message="발주 데이터가 없습니다" />
+              <EmptyState icon={ShoppingCart} message="수주 데이터가 없습니다" />
             ) : (
               <div className="space-y-0">
                 {recentOrders.slice(0, 5).map((o, idx) => (

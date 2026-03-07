@@ -8,13 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { APP_NAME, COMPANY_NAME } from '@/lib/constants'
-import { AlertCircle, Eye, EyeOff, Loader2, Shield, Lock } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, Loader2, Leaf, Lock } from 'lucide-react'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard'
-  // 오픈 리다이렉트 방지: 내부 경로만 허용 (//, /\, 프로토콜 등 차단)
   const callbackUrl =
     rawCallback.startsWith('/') && !/^\/[/\\]/.test(rawCallback)
       ? rawCallback
@@ -65,12 +64,12 @@ function LoginForm() {
     <div className="animate-scale-in w-full max-w-md px-4">
       <Card className="border-0 shadow-xl sm:border">
         <CardHeader className="space-y-3 pb-2 text-center">
-          <div className="bg-primary text-primary-foreground mx-auto flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg">
-            <Shield className="h-7 w-7" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg">
+            <Leaf className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold tracking-tight">{APP_NAME}</CardTitle>
-            <CardDescription className="mt-1">계정에 로그인하여 시작하세요</CardDescription>
+            <CardDescription className="mt-1">식품 유통 통합 관리 시스템</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pt-2">

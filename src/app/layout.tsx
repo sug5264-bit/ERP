@@ -8,10 +8,10 @@ import { Toaster } from '@/components/ui/sonner'
 
 export const metadata: Metadata = {
   title: {
-    default: 'ERP System',
-    template: '%s | ERP System',
+    default: '웰그린 ERP',
+    template: '%s | 웰그린 ERP',
   },
-  description: '기업 종합 ERP 시스템 - 인사, 재무, 영업, 재고 통합 관리',
+  description: '(주)웰그린 식품 유통 ERP - 영업, 구매, 생산, 재고, 품질, 회계 통합 관리',
   robots: { index: false, follow: false },
 }
 
@@ -20,8 +20,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#1a1a1a' },
+    { media: '(prefers-color-scheme: light)', color: '#f0fdf4' },
+    { media: '(prefers-color-scheme: dark)', color: '#14532d' },
   ],
 }
 

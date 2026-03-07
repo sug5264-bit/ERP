@@ -6,16 +6,18 @@ import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
+  ShoppingCart,
+  Truck,
+  Factory,
+  Warehouse,
+  ShieldCheck,
   Calculator,
   Users,
-  Package,
-  TrendingUp,
+  CalendarCheck,
   FileCheck,
   MessageSquare,
   Settings,
   ChevronDown,
-  FolderKanban,
-  CalendarCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -37,6 +39,7 @@ interface NavItem {
   children?: NavChild[]
 }
 
+// SAP 모듈 기준 식품 유통사 메뉴 구조
 const navItems: NavItem[] = [
   {
     title: '대시보드',
@@ -44,21 +47,94 @@ const navItems: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    title: '회계',
+    title: '영업관리',
+    href: '/sales',
+    icon: ShoppingCart,
+    module: 'sales',
+    children: [
+      { title: '수주현황', href: '/sales/orders', permission: 'sales.orders' },
+      { title: '출하관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
+      { title: '매출현황', href: '/sales/summary', permission: 'sales.summary' },
+      { title: '매출처관리', href: '/sales/partners', permission: 'sales.partners' },
+      { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
+      { title: '단가관리', href: '/sales/pricing', permission: 'sales.pricing' },
+    ],
+  },
+  {
+    title: '구매관리',
+    href: '/purchasing',
+    icon: Truck,
+    module: 'purchasing',
+    children: [
+      { title: '발주관리', href: '/purchasing/orders', permission: 'purchasing.orders' },
+      { title: '입고관리', href: '/purchasing/receiving', permission: 'purchasing.receiving' },
+      { title: '매입처관리', href: '/purchasing/suppliers', permission: 'purchasing.suppliers' },
+      { title: '매입현황', href: '/purchasing/summary', permission: 'purchasing.summary' },
+    ],
+  },
+  {
+    title: '생산관리',
+    href: '/production',
+    icon: Factory,
+    module: 'production',
+    children: [
+      { title: 'OEM 위탁현황', href: '/production/oem', permission: 'production.oem' },
+      { title: '배합표(BOM)', href: '/production/bom', permission: 'production.bom' },
+      { title: '생산계획', href: '/production/plan', permission: 'production.plan' },
+      { title: '생산실적', href: '/production/result', permission: 'production.result' },
+    ],
+  },
+  {
+    title: '재고관리',
+    href: '/inventory',
+    icon: Warehouse,
+    module: 'inventory',
+    children: [
+      { title: '품목관리', href: '/inventory/items', permission: 'inventory.items' },
+      { title: '재고현황', href: '/inventory/stock-status', permission: 'inventory.status' },
+      { title: '입출고내역', href: '/inventory/stock-movement', permission: 'inventory.stock' },
+      { title: '유통기한관리', href: '/inventory/expiry', permission: 'inventory.expiry' },
+      { title: 'LOT추적', href: '/inventory/lot-tracking', permission: 'inventory.lot' },
+      { title: '창고관리', href: '/inventory/warehouses', permission: 'inventory.warehouses' },
+    ],
+  },
+  {
+    title: '품질관리',
+    href: '/quality',
+    icon: ShieldCheck,
+    module: 'quality',
+    children: [
+      { title: '입고검사', href: '/quality/incoming', permission: 'quality.incoming' },
+      { title: '출하검사', href: '/quality/outgoing', permission: 'quality.outgoing' },
+      { title: '검사기준', href: '/quality/standards', permission: 'quality.standards' },
+    ],
+  },
+  {
+    title: '정산관리',
+    href: '/closing',
+    icon: CalendarCheck,
+    module: 'closing',
+    children: [
+      { title: '매출정산', href: '/closing/sales-settlement', permission: 'closing.sales' },
+      { title: '매입정산', href: '/closing/purchase-settlement', permission: 'closing.purchase' },
+      { title: '상계내역', href: '/closing/netting', permission: 'closing.netting' },
+      { title: '대금지급', href: '/closing/payments', permission: 'closing.payments' },
+    ],
+  },
+  {
+    title: '회계관리',
     href: '/accounting',
     icon: Calculator,
     module: 'accounting',
     children: [
       { title: '전표관리', href: '/accounting/vouchers', permission: 'accounting.vouchers' },
-      { title: '분개장', href: '/accounting/journal', permission: 'accounting.journal' },
       { title: '총계정원장', href: '/accounting/ledger', permission: 'accounting.ledger' },
-      { title: '재무제표', href: '/accounting/financial-statements', permission: 'accounting.financial' },
       { title: '세금계산서', href: '/accounting/tax-invoice', permission: 'accounting.tax' },
-      { title: '예산관리', href: '/accounting/budget', permission: 'accounting.budget' },
+      { title: '재무제표', href: '/accounting/financial-statements', permission: 'accounting.financial' },
     ],
   },
   {
-    title: '인사',
+    title: '인사관리',
     href: '/hr',
     icon: Users,
     module: 'hr',
@@ -68,66 +144,7 @@ const navItems: NavItem[] = [
       { title: '근태관리', href: '/hr/attendance', permission: 'hr.attendance' },
       { title: '휴가관리', href: '/hr/leave', permission: 'hr.leave' },
       { title: '급여관리', href: '/hr/payroll', permission: 'hr.payroll' },
-      { title: '채용관리', href: '/hr/recruitment', permission: 'hr.recruitment' },
     ],
-  },
-  {
-    title: '재고',
-    href: '/inventory',
-    icon: Package,
-    module: 'inventory',
-    children: [
-      { title: '품목관리', href: '/inventory/items', permission: 'inventory.items' },
-      { title: '입출고', href: '/inventory/stock-movement', permission: 'inventory.stock' },
-      { title: '재고현황', href: '/inventory/stock-status', permission: 'inventory.status' },
-      { title: '창고관리', href: '/inventory/warehouses', permission: 'inventory.warehouses' },
-    ],
-  },
-  {
-    title: '매출',
-    href: '/sales',
-    icon: TrendingUp,
-    module: 'sales',
-    children: [
-      { title: '매출집계', href: '/sales/summary', permission: 'sales.summary' },
-      { title: '거래처관리', href: '/sales/partners', permission: 'sales.partners' },
-      {
-        title: '발주관리',
-        href: '/sales/orders',
-        permission: 'sales.orders',
-        children: [
-          { title: '특이사항', href: '/sales/orders/notes', permission: 'sales.orders' },
-          { title: '게시글', href: '/sales/orders/posts', permission: 'sales.orders' },
-        ],
-      },
-      {
-        title: '납품관리',
-        href: '/sales/deliveries',
-        permission: 'sales.deliveries',
-        children: [
-          { title: '온라인매출', href: '/sales/deliveries/online-sales', permission: 'sales.deliveries' },
-          { title: '특이사항', href: '/sales/deliveries/notes', permission: 'sales.deliveries' },
-          { title: '게시글', href: '/sales/deliveries/posts', permission: 'sales.deliveries' },
-        ],
-      },
-      { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
-    ],
-  },
-  {
-    title: '마감',
-    href: '/closing',
-    icon: CalendarCheck,
-    module: 'closing',
-    children: [
-      { title: '상계내역', href: '/closing/netting', permission: 'closing.netting' },
-      { title: '대금지급', href: '/closing/payments', permission: 'closing.payments' },
-    ],
-  },
-  {
-    title: '프로젝트',
-    href: '/projects',
-    icon: FolderKanban,
-    module: 'projects',
   },
   {
     title: '전자결재',
@@ -200,11 +217,9 @@ export function SidebarNav() {
         if (!item.module) return item
         if (isAdmin) return item
 
-        // 모듈 전체 권한 보유 시 모든 하위 페이지 표시
         const hasModuleAccess = userPermissions.some((p) => p.module === item.module && p.action === 'read')
         if (hasModuleAccess) return item
 
-        // 하위 페이지별 권한 체크
         if (item.children) {
           const filteredChildren = item.children.filter((child) => {
             if (!child.permission) return hasModuleAccess
@@ -214,7 +229,6 @@ export function SidebarNav() {
           return { ...item, children: filteredChildren }
         }
 
-        // 자식 없는 단일 항목은 모듈 또는 하위 모듈 권한 체크
         if (hasModuleAccess || hasPermission(item.module)) return item
         return null
       })
@@ -255,18 +269,18 @@ const NavChildWithChildren = memo(function NavChildWithChildren({
           className={cn(
             'flex-1 rounded-md px-3 py-2 text-sm transition-colors',
             pathname === child.href
-              ? 'bg-primary/10 text-primary font-medium'
-              : 'text-muted-foreground hover:text-foreground'
+              ? 'bg-sidebar-primary/20 text-sidebar-primary font-medium'
+              : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
           )}
         >
           {child.title}
         </Link>
-        <CollapsibleTrigger className="text-muted-foreground hover:text-foreground rounded-md p-1">
+        <CollapsibleTrigger className="text-sidebar-foreground/60 hover:text-sidebar-foreground rounded-md p-1">
           <ChevronDown className={cn('h-3 w-3 transition-transform', isOpen && 'rotate-180')} />
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent>
-        <div className="ml-3 flex flex-col gap-0.5 border-l pl-3">
+        <div className="ml-3 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
           {child.children!.map((sub) => {
             const subActive = pathname === sub.href
             return (
@@ -276,7 +290,9 @@ const NavChildWithChildren = memo(function NavChildWithChildren({
                 onClick={onNavigate}
                 className={cn(
                   'rounded-md px-3 py-1.5 text-xs transition-colors',
-                  subActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground hover:text-foreground'
+                  subActive
+                    ? 'bg-sidebar-primary/20 text-sidebar-primary font-medium'
+                    : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'
                 )}
               >
                 {sub.title}
@@ -309,8 +325,8 @@ const NavItemComponent = memo(function NavItemComponent({
         className={cn(
           'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
-            ? 'bg-primary text-primary-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
         )}
       >
         <item.icon className="h-4 w-4" />
@@ -325,8 +341,8 @@ const NavItemComponent = memo(function NavItemComponent({
         className={cn(
           'flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
           isActive
-            ? 'bg-accent text-accent-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
         )}
       >
         <div className="flex items-center gap-3">
@@ -336,7 +352,7 @@ const NavItemComponent = memo(function NavItemComponent({
         <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l pl-4">
+        <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-sidebar-border pl-4">
           {item.children.map((child) => {
             const childActive = pathname === child.href || pathname.startsWith(child.href + '/')
             if (child.children) {
@@ -350,8 +366,8 @@ const NavItemComponent = memo(function NavItemComponent({
                 className={cn(
                   'rounded-md px-3 py-2 text-sm transition-colors',
                   childActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? 'bg-sidebar-primary/20 text-sidebar-primary font-medium'
+                    : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                 )}
               >
                 {child.title}
