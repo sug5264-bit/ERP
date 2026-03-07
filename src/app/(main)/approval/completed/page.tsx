@@ -15,8 +15,8 @@ import { toast } from 'sonner'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   DRAFTED: { label: '임시저장', variant: 'secondary' },
-  IN_PROGRESS: { label: '진행중', variant: 'default' },
-  APPROVED: { label: '승인', variant: 'outline' },
+  IN_PROGRESS: { label: '결재진행', variant: 'default' },
+  APPROVED: { label: '승인완료', variant: 'outline' },
   REJECTED: { label: '반려', variant: 'destructive' },
   CANCELLED: { label: '취소', variant: 'secondary' },
 }

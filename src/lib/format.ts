@@ -56,6 +56,18 @@ export function formatPhone(phone: string | null | undefined): string {
   return phone
 }
 
+/** DateTime에서 시간(HH:mm)만 추출 (로컬 타임존 기준) */
+export function formatTime(date: string | Date | null | undefined): string {
+  if (!date) return ''
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date
+    if (isNaN(d.getTime())) return ''
+    return format(d, 'HH:mm')
+  } catch {
+    return ''
+  }
+}
+
 /** 로컬 타임존 기준 오늘 날짜를 YYYY-MM-DD 형식으로 반환 */
 export function getLocalDateString(date?: Date): string {
   return format(date ?? new Date(), 'yyyy-MM-dd')
