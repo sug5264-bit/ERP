@@ -278,18 +278,21 @@ export default function VouchersPage() {
                           <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
-                      <select
-                        className="bg-background w-full rounded border p-2 text-xs"
-                        value={line.accountSubjectId}
-                        onChange={(e) => updateLine(idx, 'accountSubjectId', e.target.value)}
+                      <Select
+                        value={line.accountSubjectId || undefined}
+                        onValueChange={(v) => updateLine(idx, 'accountSubjectId', v)}
                       >
-                        <option value="">계정과목 선택</option>
-                        {accounts.map((a: { id: string; code: string; nameKo: string }) => (
-                          <option key={a.id} value={a.id}>
-                            {a.code} - {a.nameKo}
-                          </option>
-                        ))}
-                      </select>
+                        <SelectTrigger className="w-full text-xs">
+                          <SelectValue placeholder="계정과목 선택" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {accounts.map((a: { id: string; code: string; nameKo: string }) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.code} - {a.nameKo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         <div className="space-y-1">
                           <Label className="text-xs">차변</Label>

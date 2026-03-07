@@ -121,6 +121,7 @@ export default function ApprovalPendingPage() {
     try {
       const res = (await api.get(`/approval/documents/${row.id}`)) as Record<string, unknown>
       setSelectedDoc((res.data || res) as PendingDocRow)
+      setComment('')
       setDetailOpen(true)
     } catch {
       toast.error('문서를 불러올 수 없습니다.')
