@@ -57,7 +57,7 @@ export default function GeneralBoardPage() {
   const [attachments, setAttachments] = useState<File[]>([])
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['board-general'],
     queryFn: () => api.get('/board/posts?boardCode=GENERAL&pageSize=50'),
   })
@@ -214,6 +214,8 @@ export default function GeneralBoardPage() {
         searchColumn="title"
         searchPlaceholder="제목으로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

@@ -145,6 +145,7 @@ export default function ItemsPage() {
   const [endDate, setEndDate] = useState('')
   const [editTarget, setEditTarget] = useState<ItemRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [bulkDeleteRows, setBulkDeleteRows] = useState<ItemRow[] | null>(null)
   const queryClient = useQueryClient()
 
   const qp = new URLSearchParams({ pageSize: '50' })
@@ -551,28 +552,8 @@ export default function ItemsPage() {
             label: '일괄 삭제',
             icon: <Trash2 className="mr-1.5 h-4 w-4" />,
             variant: 'destructive',
-            action: async (rows) => {
-              if (!confirm(`선택한 ${rows.length}건의 품목을 삭제하시겠습니까?`)) return
-              let success = 0
-              const failed: string[] = []
-              for (const row of rows) {
-                const r = row as ItemRow
-                try {
-                  await api.delete(`/inventory/items/${r.id}`)
-                  success++
-                } catch {
-                  failed.push(r.itemName || r.id)
-                }
-              }
-              queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
-              if (failed.length > 0) {
-                toast.error(
-                  `${failed.length}건 삭제 실패: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ' 외' : ''}`
-                )
-              }
-              if (success > 0) {
-                toast.success(`${success}건이 삭제되었습니다.`)
-              }
+            action: (rows) => {
+              setBulkDeleteRows(rows as ItemRow[])
             },
           },
         ]}
@@ -746,6 +727,37 @@ export default function ItemsPage() {
           if (deleteTarget) deleteMutation.mutate(deleteTarget.id)
         }}
         isPending={deleteMutation.isPending}
+      />
+      <ConfirmDialog
+        open={!!bulkDeleteRows}
+        onOpenChange={(open) => !open && setBulkDeleteRows(null)}
+        title="일괄 삭제"
+        description={`선택한 ${bulkDeleteRows?.length || 0}건의 품목을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        variant="destructive"
+        onConfirm={async () => {
+          if (!bulkDeleteRows) return
+          let success = 0
+          const failed: string[] = []
+          for (const r of bulkDeleteRows) {
+            try {
+              await api.delete(`/inventory/items/${r.id}`)
+              success++
+            } catch {
+              failed.push(r.itemName || r.id)
+            }
+          }
+          queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
+          if (failed.length > 0) {
+            toast.error(
+              `${failed.length}건 삭제 실패: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ' 외' : ''}`
+            )
+          }
+          if (success > 0) {
+            toast.success(`${success}건이 삭제되었습니다.`)
+          }
+          setBulkDeleteRows(null)
+        }}
       />
     </div>
   )

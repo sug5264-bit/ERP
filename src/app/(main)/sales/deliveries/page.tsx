@@ -520,14 +520,24 @@ export default function DeliveriesPage() {
     return params
   }, [startDate, endDate])
 
-  const { data: onlineData, isLoading: onlineLoading } = useQuery({
+  const {
+    data: onlineData,
+    isLoading: onlineLoading,
+    isError: onlineError,
+    refetch: onlineRefetch,
+  } = useQuery({
     queryKey: ['sales-deliveries', 'ONLINE', startDate, endDate],
     queryFn: () =>
       api.get(`/sales/deliveries?pageSize=50&salesChannel=ONLINE${dateParams}`) as Promise<
         ApiListResponse<DeliveryRow>
       >,
   })
-  const { data: offlineData, isLoading: offlineLoading } = useQuery({
+  const {
+    data: offlineData,
+    isLoading: offlineLoading,
+    isError: offlineError,
+    refetch: offlineRefetch,
+  } = useQuery({
     queryKey: ['sales-deliveries', 'OFFLINE', startDate, endDate],
     queryFn: () =>
       api.get(`/sales/deliveries?pageSize=50&salesChannel=OFFLINE${dateParams}`) as Promise<
@@ -1663,6 +1673,8 @@ export default function DeliveriesPage() {
               searchColumn="deliveryNo"
               searchPlaceholder="납품번호로 검색..."
               isLoading={onlineLoading}
+              isError={onlineError}
+              onRetry={() => onlineRefetch()}
               pageSize={50}
               onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
             />
@@ -1678,6 +1690,8 @@ export default function DeliveriesPage() {
               searchColumn="deliveryNo"
               searchPlaceholder="납품번호로 검색..."
               isLoading={offlineLoading}
+              isError={offlineError}
+              onRetry={() => offlineRefetch()}
               pageSize={50}
               onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
             />

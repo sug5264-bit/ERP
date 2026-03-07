@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate, formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
 import { Plus, Trash2 } from 'lucide-react'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 
 interface TaxInvoiceRow {
   id: string
@@ -92,7 +93,7 @@ export default function TaxInvoicePage() {
   const qp = new URLSearchParams({ pageSize: '50' })
   if (typeFilter && typeFilter !== 'all') qp.set('invoiceType', typeFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['accounting-tax-invoice', typeFilter],
     queryFn: () => api.get(`/accounting/tax-invoice?${qp.toString()}`),
   })
@@ -109,6 +110,27 @@ export default function TaxInvoicePage() {
   })
 
   const invoices: TaxInvoiceRow[] = data?.data || []
+
+  const exportColumns: ExportColumn[] = [
+    { header: '계산서번호', accessor: 'invoiceNo' },
+    { header: '발행일', accessor: (r) => r.issueDate },
+    { header: '구분', accessor: (r) => (r.invoiceType === 'SALES' ? '매출' : '매입') },
+    { header: '공급자', accessor: 'supplierName' },
+    { header: '공급자사업자번호', accessor: 'supplierBizNo' },
+    { header: '공급받는자', accessor: 'buyerName' },
+    { header: '공급받는자사업자번호', accessor: 'buyerBizNo' },
+    { header: '공급가액', accessor: (r) => Number(r.supplyAmount) },
+    { header: '세액', accessor: (r) => Number(r.taxAmount) },
+    { header: '합계', accessor: (r) => Number(r.totalAmount) },
+    { header: '전송상태', accessor: (r) => STATUS_MAP[r.transmissionStatus]?.label || r.transmissionStatus },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '세금계산서', title: '세금계산서 목록', columns: exportColumns, data: invoices }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const updateItem = (idx: number, field: keyof InvoiceItem, value: string | number) => {
     const newItems = [...items]
@@ -340,7 +362,10 @@ export default function TaxInvoicePage() {
         searchColumn="invoiceNo"
         searchPlaceholder="계산서번호로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

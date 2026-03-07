@@ -64,11 +64,21 @@ export default function MessagesPage() {
   const [tab, setTab] = useState('received')
   const queryClient = useQueryClient()
 
-  const { data: receivedData, isLoading: rLoading } = useQuery({
+  const {
+    data: receivedData,
+    isLoading: rLoading,
+    isError: rError,
+    refetch: rRefetch,
+  } = useQuery({
     queryKey: ['messages-received'],
     queryFn: () => api.get('/board/messages?box=received&pageSize=50'),
   })
-  const { data: sentData, isLoading: sLoading } = useQuery({
+  const {
+    data: sentData,
+    isLoading: sLoading,
+    isError: sError,
+    refetch: sRefetch,
+  } = useQuery({
     queryKey: ['messages-sent'],
     queryFn: () => api.get('/board/messages?box=sent&pageSize=50'),
   })
@@ -177,6 +187,8 @@ export default function MessagesPage() {
             searchColumn="subject"
             searchPlaceholder="제목으로 검색..."
             isLoading={rLoading}
+            isError={rError}
+            onRetry={() => rRefetch()}
             pageSize={50}
             onRowClick={handleRowClick}
           />
@@ -188,6 +200,8 @@ export default function MessagesPage() {
             searchColumn="subject"
             searchPlaceholder="제목으로 검색..."
             isLoading={sLoading}
+            isError={sError}
+            onRetry={() => sRefetch()}
             pageSize={50}
             onRowClick={handleRowClick}
           />

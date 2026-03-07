@@ -73,7 +73,7 @@ export default function ReturnsPage() {
   const qp = new URLSearchParams({ pageSize: '50' })
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['sales-returns', statusFilter],
     queryFn: () => api.get(`/sales/returns?${qp.toString()}`) as Promise<{ data: ReturnRow[] }>,
   })
@@ -308,6 +308,8 @@ export default function ReturnsPage() {
           searchColumn="returnNo"
           searchPlaceholder="반품번호로 검색..."
           isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
           onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
         />
       )}

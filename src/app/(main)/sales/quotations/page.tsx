@@ -197,7 +197,7 @@ export default function QuotationsPage() {
   const qp = new URLSearchParams({ pageSize: '50' })
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['sales-quotations', statusFilter],
     queryFn: () => api.get(`/sales/quotations?${qp}`) as Promise<{ data: QuotationRow[] }>,
   })
@@ -472,6 +472,8 @@ export default function QuotationsPage() {
         searchColumn="quotationNo"
         searchPlaceholder="견적번호로 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />

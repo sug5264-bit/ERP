@@ -70,7 +70,7 @@ export default function LedgerPage() {
   if (endDate) qp.set('endDate', endDate)
   if (selectedAccountId) qp.set('accountSubjectId', selectedAccountId)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['accounting-ledger', startDate, endDate, selectedAccountId],
     queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`),
   })
@@ -95,7 +95,14 @@ export default function LedgerPage() {
             </p>
           </div>
         </div>
-        <DataTable columns={detailColumns} data={details} isLoading={isLoading} pageSize={100} />
+        <DataTable
+          columns={detailColumns}
+          data={details}
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          pageSize={100}
+        />
       </div>
     )
   }

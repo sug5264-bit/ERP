@@ -17,6 +17,7 @@ import {
   FileCheck,
   MessageSquare,
   Settings,
+  FolderKanban,
   ChevronDown,
   type LucideIcon,
 } from 'lucide-react'
@@ -131,6 +132,8 @@ const navItems: NavItem[] = [
       { title: '전표관리', href: '/accounting/vouchers', permission: 'accounting.vouchers' },
       { title: '총계정원장', href: '/accounting/ledger', permission: 'accounting.ledger' },
       { title: '세금계산서', href: '/accounting/tax-invoice', permission: 'accounting.tax' },
+      { title: '분개장', href: '/accounting/journal', permission: 'accounting.journal' },
+      { title: '예산관리', href: '/accounting/budget', permission: 'accounting.budget' },
       { title: '재무제표', href: '/accounting/financial-statements', permission: 'accounting.financial' },
     ],
   },
@@ -145,7 +148,14 @@ const navItems: NavItem[] = [
       { title: '근태관리', href: '/hr/attendance', permission: 'hr.attendance' },
       { title: '휴가관리', href: '/hr/leave', permission: 'hr.leave' },
       { title: '급여관리', href: '/hr/payroll', permission: 'hr.payroll' },
+      { title: '채용관리', href: '/hr/recruitment', permission: 'hr.recruitment' },
     ],
+  },
+  {
+    title: '프로젝트',
+    href: '/projects',
+    icon: FolderKanban,
+    module: 'projects',
   },
   {
     title: '전자결재',

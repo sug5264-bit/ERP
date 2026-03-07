@@ -45,7 +45,7 @@ export default function PayrollPage() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['payroll'],
     queryFn: () => api.get('/payroll?pageSize=50'),
   })
@@ -223,6 +223,8 @@ export default function PayrollPage() {
         searchColumn="payPeriod"
         searchPlaceholder="급여기간 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}

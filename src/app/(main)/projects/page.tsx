@@ -98,7 +98,7 @@ export default function ProjectsPage() {
   const [memberOpen, setMemberOpen] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['projects'],
     queryFn: () => api.get('/projects?pageSize=50'),
   })
@@ -302,6 +302,8 @@ export default function ProjectsPage() {
         searchColumn="projectName"
         searchPlaceholder="프로젝트명 검색..."
         isLoading={isLoading}
+        isError={isError}
+        onRetry={() => refetch()}
         pageSize={50}
         onRowClick={handleRowClick}
       />

@@ -14,7 +14,8 @@ import { formatCurrency, formatDate } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { ClipboardList, Plus, ShoppingCart, Loader2, CheckCircle, DollarSign } from 'lucide-react'
+import { ClipboardList, Plus, Loader2, CheckCircle, DollarSign } from 'lucide-react'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   ORDERED: '발주완료',
@@ -82,6 +83,23 @@ export default function PurchasingOrdersPage() {
   })
 
   const items = (data?.data || []) as PurchaseOrder[]
+
+  const exportColumns: ExportColumn[] = [
+    { header: '발주번호', accessor: 'orderNo' },
+    { header: '발주일', accessor: (r) => r.orderDate },
+    { header: '매입처', accessor: 'supplierName' },
+    { header: '공급가액', accessor: (r) => Number(r.supplyAmount) },
+    { header: '합계금액', accessor: (r) => Number(r.totalAmount) },
+    { header: '상태', accessor: (r) => ORDER_STATUS_LABELS[r.status] || r.status },
+    { header: '담당자', accessor: 'managerName' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '발주목록', title: '발주 관리 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const totalCount = items.length
   const inProgressCount = items.filter((i) => i.status === 'IN_PROGRESS').length
@@ -155,6 +173,7 @@ export default function PurchasingOrdersPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )
