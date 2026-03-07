@@ -83,8 +83,8 @@ export async function requirePermission(module: string, action: Action) {
  * API route에서 메서드 기반 자동 권한 체크
  */
 export async function checkRoutePermission(pathname: string, method: string) {
-  const module = getModuleFromPath(pathname)
-  if (!module) {
+  const routeModule = getModuleFromPath(pathname)
+  if (!routeModule) {
     // 매핑되지 않은 경로는 인증만 확인 (공용 API: dashboard, search, notifications 등)
     const session = await auth()
     if (!session?.user) {
@@ -94,7 +94,7 @@ export async function checkRoutePermission(pathname: string, method: string) {
   }
 
   const action = METHOD_ACTION_MAP[method] || 'read'
-  return requirePermission(module, action)
+  return requirePermission(routeModule, action)
 }
 
 /**

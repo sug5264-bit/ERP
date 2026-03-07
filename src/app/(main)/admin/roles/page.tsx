@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
@@ -203,7 +203,7 @@ export default function RolesPage() {
     setDeleteOpen(true)
   }
 
-  const togglePermission = (permId: string) => {
+  const togglePermission = useCallback((permId: string) => {
     setFormPermissionIds((prev) => {
       const next = new Set(prev)
       if (next.has(permId)) {
@@ -213,10 +213,10 @@ export default function RolesPage() {
       }
       return next
     })
-  }
+  }, [])
 
   // 모듈의 모든 권한 토글 (행 전체 선택/해제)
-  const toggleModuleAll = (modulePerms: { action: string; permId: string }[]) => {
+  const toggleModuleAll = useCallback((modulePerms: { action: string; permId: string }[]) => {
     setFormPermissionIds((prev) => {
       const next = new Set(prev)
       const allSelected = modulePerms.every((p) => next.has(p.permId))
@@ -229,7 +229,7 @@ export default function RolesPage() {
       }
       return next
     })
-  }
+  }, [])
 
   const handleCreate = () => {
     if (!formName.trim()) {
@@ -308,7 +308,7 @@ export default function RolesPage() {
     },
   ]
 
-  const PermissionMatrix = () => (
+  const permissionMatrix = useMemo(() => (
     <div className="max-h-[50vh] overflow-auto rounded-md border">
       <table className="w-full text-sm">
         <thead className="bg-muted sticky top-0">
@@ -358,7 +358,7 @@ export default function RolesPage() {
         </tbody>
       </table>
     </div>
-  )
+  ), [allActions, modulePermissions, formPermissionIds, toggleModuleAll, togglePermission])
 
   return (
     <div className="space-y-6">
@@ -406,7 +406,7 @@ export default function RolesPage() {
                 모듈명을 클릭하면 해당 모듈의 모든 권한을 선택/해제합니다. 상위 모듈 권한이 있으면 모든 하위 페이지에
                 접근할 수 있습니다.
               </p>
-              <PermissionMatrix />
+              {permissionMatrix}
             </div>
           </div>
           <DialogFooter>
@@ -450,7 +450,7 @@ export default function RolesPage() {
                 모듈명을 클릭하면 해당 모듈의 모든 권한을 선택/해제합니다. 상위 모듈 권한이 있으면 모든 하위 페이지에
                 접근할 수 있습니다.
               </p>
-              <PermissionMatrix />
+              {permissionMatrix}
             </div>
           </div>
           <DialogFooter>

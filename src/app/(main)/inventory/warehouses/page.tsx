@@ -147,7 +147,7 @@ export default function WarehousesPage() {
         <div className="rounded-lg border p-8 text-center">
           <MapPin className="text-muted-foreground/50 mx-auto mb-3 h-10 w-10" />
           <p className="text-muted-foreground">등록된 창고가 없습니다.</p>
-          <p className="text-muted-foreground mt-1 text-xs">위의 '창고 등록' 버튼으로 첫 창고를 등록하세요.</p>
+          <p className="text-muted-foreground mt-1 text-xs">위의 &apos;창고 등록&apos; 버튼으로 첫 창고를 등록하세요.</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

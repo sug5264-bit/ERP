@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
         await Promise.all(bgTasks)
 
         successCount++
-      } catch (err) {
+      } catch {
         failCount++
         errors.push(`문서 ${docId}: 처리 오류`)
       }

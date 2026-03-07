@@ -213,7 +213,7 @@ export function SidebarNav() {
         return null
       })
       .filter(Boolean) as NavItem[]
-  }, [userPermissions, userRoles, isAdmin, hasPermission])
+  }, [userPermissions, isAdmin, hasPermission])
 
   const closeMobileSidebar = useCallback(() => {
     if (window.innerWidth < 1024) setOpen(false)

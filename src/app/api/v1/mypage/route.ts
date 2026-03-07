@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const authResult = await requireAuth()
     if (isErrorResponse(authResult)) return authResult

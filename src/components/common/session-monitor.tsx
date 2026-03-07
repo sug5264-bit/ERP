@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Clock } from 'lucide-react'
 
-const SESSION_MAX_AGE = 8 * 60 * 60 * 1000 // 8시간 (ms)
 const WARNING_THRESHOLD = 10 * 60 * 1000 // 만료 10분 전 경고
 const CHECK_INTERVAL = 60 * 1000 // 1분마다 체크
 

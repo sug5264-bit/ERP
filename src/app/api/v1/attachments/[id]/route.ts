@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, requireAuth, isErrorResponse, successResponse } from '@/lib/api-helpers'
 import { readFile, unlink } from 'fs/promises'
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 
 const UPLOAD_DIR = resolve(process.cwd(), 'uploads', 'attachments')
 

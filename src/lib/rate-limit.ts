@@ -27,7 +27,7 @@ interface RateLimitResult {
 export function checkRateLimit(
   key: string,
   maxAttempts: number = 5,
-  windowMs: number = 15 * 60 * 1000 // 15분
+  _windowMs: number = 15 * 60 * 1000 // 15분
 ): RateLimitResult {
   const now = Date.now()
   const entry = attempts.get(key)
