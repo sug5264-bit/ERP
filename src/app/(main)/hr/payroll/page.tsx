@@ -67,7 +67,7 @@ export default function PayrollPage() {
     { header: '상태', accessor: (r) => (r.status === 'CONFIRMED' ? '확정' : '임시') },
   ]
 
-  const handleExport = (type: 'excel' | 'pdf') => {
+  const _handleExport = (type: 'excel' | 'pdf') => {
     const cfg = { fileName: '급여목록', title: '급여관리 목록', columns: exportColumns, data: payrollList }
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)

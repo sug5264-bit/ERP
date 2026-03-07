@@ -15,7 +15,7 @@ export const createEmployeeSchema = z.object({
     .min(1, '입사일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   employeeType: z.enum(['REGULAR', 'CONTRACT', 'DISPATCH', 'INTERN']),
-  email: z.string().email('유효한 이메일을 입력하세요').max(200).optional().or(z.literal('')),
+  email: z.string().max(200).email('유효한 이메일을 입력하세요').or(z.literal('')).optional(),
   phone: z.string().max(20).optional(),
   address: z.string().max(500).optional(),
   bankName: z.string().max(50).optional(),

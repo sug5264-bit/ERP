@@ -43,7 +43,6 @@ import {
 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
-import { Textarea } from '@/components/ui/textarea'
 import { RecordSubTabs } from '@/components/common/record-sub-tabs'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 
@@ -1186,7 +1185,7 @@ export default function OrdersPage() {
       const rows = await readExcelFile(file, { 납품번호: 'deliveryNo', 택배사: 'carrier', 운송장번호: 'trackingNo' })
       setTrackingRows(rows as unknown as TrackingRow[])
       setTrackingResult(null)
-    } catch (err) {
+    } catch (_err) {
       toast.error('엑셀 파일을 읽을 수 없습니다.')
     }
     if (fileInputRef.current) fileInputRef.current.value = ''

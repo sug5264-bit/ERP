@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/format'
 import { FileText, ShoppingCart, Truck, Users } from 'lucide-react'
 import Link from 'next/link'
 
