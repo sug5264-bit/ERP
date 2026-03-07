@@ -138,7 +138,9 @@ export default function OrderPostsPage() {
           formData.append('file', file)
           formData.append('relatedTable', 'SalesOrderPost')
           formData.append('relatedId', noteId)
-          await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {})
+          await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {
+            toast.error(`첨부파일 "${file.name}" 업로드에 실패했습니다.`)
+          })
         }
       }
 
@@ -164,7 +166,7 @@ export default function OrderPostsPage() {
     setDeleteTarget(null)
   }
 
-  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id.slice(-6)]))
+  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
 
   // 게시글에 연결된 첨부파일 가져오기
   const getPostAttachments = (noteId: string) => allAttachments.filter((a: any) => a.relatedId === noteId)
@@ -185,7 +187,7 @@ export default function OrderPostsPage() {
             <SelectContent>
               {orders.map((o: any) => (
                 <SelectItem key={o.id} value={o.id}>
-                  {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
+                  {o.orderNo || o.id?.slice(-6) || ''} - {o.partner?.partnerName || ''}
                 </SelectItem>
               ))}
             </SelectContent>
