@@ -107,16 +107,30 @@ export async function POST(req: NextRequest) {
             where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
             data: { deliveredQty: { decrement: d.quantity }, remainingQty: { increment: d.quantity } },
           })
-          // 재고 잔량 복원 (기본 창고에 입고)
+          // 재고 잔량 복원 (기존 재고가 있는 창고에 입고, 없으면 기본 창고에 신규 생성)
           const existingBalance = await tx.stockBalance.findFirst({
             where: { itemId: d.itemId },
-            orderBy: { quantity: 'desc' },
+            orderBy: { lastMovementDate: 'desc' },
           })
           if (existingBalance) {
             await tx.stockBalance.update({
               where: { id: existingBalance.id },
-              data: { quantity: { increment: d.quantity } },
+              data: { quantity: { increment: d.quantity }, lastMovementDate: new Date() },
             })
+          } else {
+            // 재고 기록이 없는 경우 기본 창고에 신규 생성
+            const defaultWarehouse = await tx.warehouse.findFirst({ orderBy: { createdAt: 'asc' } })
+            if (defaultWarehouse) {
+              await tx.stockBalance.create({
+                data: {
+                  itemId: d.itemId,
+                  warehouseId: defaultWarehouse.id,
+                  quantity: d.quantity,
+                  averageCost: Number(d.unitPrice),
+                  lastMovementDate: new Date(),
+                },
+              })
+            }
           }
         }
       }
