@@ -7,7 +7,16 @@ import { hash } from 'bcryptjs'
  * 프로덕션에서 admin 계정이 없을 경우 초기 계정을 생성합니다.
  * 이미 admin 계정이 존재하면 아무 작업도 하지 않습니다.
  */
+// GET으로도 접근 가능 (브라우저 주소창에서 바로 실행)
+export async function GET() {
+  return initAdmin()
+}
+
 export async function POST() {
+  return initAdmin()
+}
+
+async function initAdmin() {
   try {
     // DB 연결 테스트
     await prisma.$queryRawUnsafe('SELECT 1')
