@@ -54,7 +54,7 @@ const columns: ColumnDef<PricingItem>[] = [
   {
     accessorKey: 'unitPrice',
     header: '단가',
-    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.unitPrice)}원</span>,
+    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.unitPrice)}</span>,
   },
   {
     accessorKey: 'startDate',

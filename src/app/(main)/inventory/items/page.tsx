@@ -68,8 +68,8 @@ const columns: ColumnDef<ItemRow>[] = [
   },
   {
     accessorKey: 'itemName',
-    header: '내품명',
-    cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
+    header: '품목명',
+    cell: ({ row }) => <span className="text-xs font-medium">{row.original.itemName}</span>,
   },
   {
     id: 'itemType',

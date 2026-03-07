@@ -42,19 +42,19 @@ const columns: ColumnDef<PurchaseSettlement>[] = [
   {
     accessorKey: 'purchaseAmount',
     header: '매입금액',
-    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.purchaseAmount)}원</span>,
+    cell: ({ row }) => <span className="tabular-nums">{formatCurrency(row.original.purchaseAmount)}</span>,
   },
   {
     accessorKey: 'paidAmount',
     header: '지급액',
-    cell: ({ row }) => <span className="tabular-nums text-green-600">{formatCurrency(row.original.paidAmount)}원</span>,
+    cell: ({ row }) => <span className="text-green-600 tabular-nums">{formatCurrency(row.original.paidAmount)}</span>,
   },
   {
     accessorKey: 'unpaidAmount',
     header: '미지급액',
     cell: ({ row }) => (
-      <span className={`tabular-nums ${row.original.unpaidAmount > 0 ? 'text-red-600 font-medium' : ''}`}>
-        {formatCurrency(row.original.unpaidAmount)}원
+      <span className={`tabular-nums ${row.original.unpaidAmount > 0 ? 'font-medium text-red-600' : ''}`}>
+        {formatCurrency(row.original.unpaidAmount)}
       </span>
     ),
   },
@@ -85,24 +85,42 @@ export default function PurchaseSettlementPage() {
   const totalUnpaid = items.reduce((sum, i) => sum + (i.unpaidAmount || 0), 0)
 
   const summaryItems = [
-    { label: '총매입', value: `${formatCurrency(totalPurchase)}원`, icon: DollarSign, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { label: '총지급', value: `${formatCurrency(totalPaid)}원`, icon: Wallet, color: 'text-green-600', bgColor: 'bg-green-50' },
-    { label: '총미지급', value: `${formatCurrency(totalUnpaid)}원`, icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
+    {
+      label: '총매입',
+      value: `${formatCurrency(totalPurchase)}`,
+      icon: DollarSign,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      label: '총지급',
+      value: `${formatCurrency(totalPaid)}`,
+      icon: Wallet,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      label: '총미지급',
+      value: `${formatCurrency(totalUnpaid)}`,
+      icon: AlertCircle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+    },
   ]
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="매입정산"
-        description="매입 정산 내역을 조회하고 관리합니다"
-      />
+      <PageHeader title="매입정산" description="매입 정산 내역을 조회하고 관리합니다" />
 
       <SummaryCards items={summaryItems} isLoading={isLoading} />
 
       <DateRangeFilter
         startDate={startDate}
         endDate={endDate}
-        onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+        onDateChange={(s, e) => {
+          setStartDate(s)
+          setEndDate(e)
+        }}
       />
 
       <DataTable

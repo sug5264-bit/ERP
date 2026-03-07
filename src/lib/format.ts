@@ -2,12 +2,14 @@ import { format, parseISO, formatDistanceToNow as fDistanceToNow } from 'date-fn
 import { ko } from 'date-fns/locale'
 
 export function formatCurrency(amount: number | string | null | undefined): string {
-  if (amount == null) return '0'
+  if (amount == null) return '0원'
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
-  if (!isFinite(num)) return '0'
-  return new Intl.NumberFormat('ko-KR', {
-    maximumFractionDigits: 0,
-  }).format(num)
+  if (!isFinite(num)) return '0원'
+  return (
+    new Intl.NumberFormat('ko-KR', {
+      maximumFractionDigits: 0,
+    }).format(num) + '원'
+  )
 }
 
 export function formatDate(date: string | Date | null | undefined): string {

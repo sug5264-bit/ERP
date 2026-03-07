@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDate } from '@/lib/format'
 import {
-  Users,
   Package,
   FileText,
   ClipboardList,
@@ -19,7 +18,6 @@ import {
   ArrowRight,
   Timer,
   Truck,
-  Factory,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -58,9 +56,25 @@ function KpiSkeleton() {
 
 // 식품 유통사 핵심 KPI
 const KPI_CARDS = [
-  { key: 'order', href: '/sales/orders', label: '금일 수주', unit: '건', Icon: ShoppingCart, bg: '', color: '' },
-  { key: 'delivery', href: '/sales/deliveries', label: '출하 대기', unit: '건', Icon: Truck, bg: 'bg-status-info-muted', color: 'text-status-info' },
-  { key: 'item', href: '/inventory/items', label: '등록 품목', unit: '건', Icon: Package, bg: '', color: '' },
+  {
+    key: 'order',
+    href: '/sales/orders',
+    label: '금일 수주',
+    unit: '건',
+    Icon: ShoppingCart,
+    bg: 'bg-status-success-muted',
+    color: 'text-status-success',
+  },
+  {
+    key: 'delivery',
+    href: '/sales/deliveries',
+    label: '출하 대기',
+    unit: '건',
+    Icon: Truck,
+    bg: 'bg-status-info-muted',
+    color: 'text-status-info',
+  },
+  { key: 'item', href: '/inventory/items', label: '등록 품목', unit: '건', Icon: Package, bg: 'bg-muted', color: '' },
   {
     key: 'stock',
     href: '/inventory/stock-status',

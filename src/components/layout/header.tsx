@@ -44,9 +44,11 @@ import { api } from '@/hooks/use-api'
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': '대시보드',
   // 영업관리 (SD)
-'/sales/deliveries': '출하관리',
+  '/sales/orders': '수주현황',
+  '/sales/deliveries': '출하관리',
   '/sales/summary': '매출현황',
   '/sales/partners': '매출처관리',
+  '/sales/quotations': '견적관리',
   '/sales/returns': '반품관리',
   '/sales/pricing': '단가관리',
   // 구매관리 (MM)
@@ -286,6 +288,19 @@ export function Header() {
               ref={searchRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const firstResult = menuResults[0] || dataResults[0]
+                  if (firstResult) {
+                    handleSearchNavigate(
+                      'href' in firstResult
+                        ? (firstResult as { href: string }).href
+                        : (firstResult as { url: string }).url
+                    )
+                  }
+                }
+              }}
               placeholder="통합 검색... (Ctrl+K)"
               aria-label="통합 검색"
               className="h-8 w-64 pr-8 pl-8 text-sm"
@@ -306,7 +321,7 @@ export function Header() {
               </Button>
             )}
             {searchOpen && searchQuery && (
-              <div className="bg-popover animate-fade-in-up absolute top-full left-0 z-50 mt-1.5 max-h-[70vh] w-96 overflow-hidden overflow-y-auto rounded-lg border shadow-lg">
+              <div className="bg-popover animate-fade-in-up absolute top-full right-0 z-50 mt-1.5 max-h-[70vh] w-80 overflow-hidden overflow-y-auto rounded-lg border shadow-lg lg:w-96">
                 {menuResults.length > 0 && (
                   <>
                     <div className="text-muted-foreground bg-muted/50 px-3 py-1.5 text-[11px] font-semibold tracking-wider uppercase">
@@ -444,6 +459,19 @@ export function Header() {
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const firstResult = menuResults[0] || dataResults[0]
+                  if (firstResult) {
+                    handleSearchNavigate(
+                      'href' in firstResult
+                        ? (firstResult as { href: string }).href
+                        : (firstResult as { url: string }).url
+                    )
+                  }
+                }
+              }}
               placeholder="통합 검색..."
               className="flex-1 border-0 text-base shadow-none focus-visible:ring-0"
             />

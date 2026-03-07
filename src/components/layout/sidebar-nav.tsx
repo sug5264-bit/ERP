@@ -52,9 +52,11 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
     module: 'sales',
     children: [
-{ title: '출하관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
+      { title: '수주현황', href: '/sales/orders', permission: 'sales.orders' },
+      { title: '출하관리', href: '/sales/deliveries', permission: 'sales.deliveries' },
       { title: '매출현황', href: '/sales/summary', permission: 'sales.summary' },
       { title: '매출처관리', href: '/sales/partners', permission: 'sales.partners' },
+      { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
       { title: '단가관리', href: '/sales/pricing', permission: 'sales.pricing' },
     ],
@@ -193,10 +195,7 @@ export function SidebarNav() {
     () => (Array.isArray(userRecord?.permissions) ? userRecord.permissions : []),
     [userRecord]
   )
-  const userRoles = useMemo(
-    () => (Array.isArray(userRecord?.roles) ? userRecord.roles : []),
-    [userRecord]
-  )
+  const userRoles = useMemo(() => (Array.isArray(userRecord?.roles) ? userRecord.roles : []), [userRecord])
   const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 
   const hasPermission = useCallback(
@@ -279,7 +278,7 @@ const NavChildWithChildren = memo(function NavChildWithChildren({
         </CollapsibleTrigger>
       </div>
       <CollapsibleContent>
-        <div className="ml-3 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
+        <div className="border-sidebar-border ml-3 flex flex-col gap-0.5 border-l pl-3">
           {child.children!.map((sub) => {
             const subActive = pathname === sub.href
             return (
@@ -351,7 +350,7 @@ const NavItemComponent = memo(function NavItemComponent({
         <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="mt-1 ml-4 flex flex-col gap-0.5 border-l border-sidebar-border pl-4">
+        <div className="border-sidebar-border mt-1 ml-4 flex flex-col gap-0.5 border-l pl-4">
           {item.children.map((child) => {
             const childActive = pathname === child.href || pathname.startsWith(child.href + '/')
             if (child.children) {
