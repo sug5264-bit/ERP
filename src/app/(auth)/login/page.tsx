@@ -16,7 +16,7 @@ function LoginForm() {
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard'
   // 오픈 리다이렉트 방지: 내부 경로만 허용 (//, /\, 프로토콜 등 차단)
   const callbackUrl =
-    rawCallback.startsWith('/') && !rawCallback.startsWith('//') && !rawCallback.startsWith('/\\')
+    rawCallback.startsWith('/') && !/^\/[/\\]/.test(rawCallback)
       ? rawCallback
       : '/dashboard'
   const sessionExpired = searchParams.get('error') === 'session_expired'

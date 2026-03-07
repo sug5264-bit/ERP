@@ -173,13 +173,18 @@ export function SidebarNav() {
   const setOpen = useSidebarStore((s) => s.setOpen)
 
   const userRecord = session?.user as Record<string, unknown> | undefined
-  const userPermissions = (userRecord?.permissions as { module: string; action: string }[]) || []
-  const userRoles = (userRecord?.roles as string[]) || []
+  const userPermissions = Array.isArray(userRecord?.permissions) ? userRecord.permissions : []
+  const userRoles = Array.isArray(userRecord?.roles) ? userRecord.roles : []
   const isAdmin = userRoles.includes('SYSTEM_ADMIN') || userRoles.includes('관리자')
 
   const hasPermission = useCallback(
     (module: string) =>
-      userPermissions.some((p) => (p.module === module || p.module.startsWith(module + '.')) && p.action === 'read'),
+      userPermissions.some(
+        (p) =>
+          typeof p?.module === 'string' &&
+          (p.module === module || p.module.startsWith(module + '.')) &&
+          p.action === 'read'
+      ),
     [userPermissions]
   )
 

@@ -17,7 +17,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       where: { OR: [{ sourceWarehouseId: id }, { targetWarehouseId: id }] },
     })
     if (movementCount > 0) {
-      return errorResponse('재고 이동 이력이 있는 창고는 삭제할 수 없습니다.', 'HAS_MOVEMENTS', 400)
+      return errorResponse('재고 이동 이력이 있는 창고는 삭제할 수 없습니다.', 'HAS_MOVEMENTS', 409)
     }
 
     // 재고 잔량이 있으면 삭제 차단
@@ -25,7 +25,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       where: { warehouseId: id, quantity: { gt: 0 } },
     })
     if (stockCount > 0) {
-      return errorResponse('재고가 남아있는 창고는 삭제할 수 없습니다.', 'HAS_STOCK', 400)
+      return errorResponse('재고가 남아있는 창고는 삭제할 수 없습니다.', 'HAS_STOCK', 409)
     }
 
     await prisma.$transaction(async (tx) => {

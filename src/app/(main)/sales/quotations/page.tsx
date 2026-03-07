@@ -308,7 +308,10 @@ export default function QuotationsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={(v) => {
+          setOpen(v)
+          if (v) setDetails([{ itemId: '', quantity: 1, unitPrice: 0 }])
+        }}>
           <DialogTrigger asChild>
             <Button>견적 등록</Button>
           </DialogTrigger>
@@ -367,7 +370,7 @@ export default function QuotationsPage() {
                 </div>
                 <div className="space-y-3">
                   {details.map((d, idx) => {
-                    const supply = d.quantity * d.unitPrice
+                    const supply = (Number(d.quantity) || 0) * (Number(d.unitPrice) || 0)
                     const itemTaxType = items.find((it: ItemOption) => it.id === d.itemId)?.taxType || 'TAXABLE'
                     const tax = itemTaxType === 'TAXABLE' ? Math.round(supply * 0.1) : 0
                     return (
@@ -445,7 +448,7 @@ export default function QuotationsPage() {
                   합계:{' '}
                   {formatCurrency(
                     details.reduce((s, d) => {
-                      const sup = d.quantity * d.unitPrice
+                      const sup = (Number(d.quantity) || 0) * (Number(d.unitPrice) || 0)
                       const tt = items.find((it: ItemOption) => it.id === d.itemId)?.taxType || 'TAXABLE'
                       return s + sup + (tt === 'TAXABLE' ? Math.round(sup * 0.1) : 0)
                     }, 0)

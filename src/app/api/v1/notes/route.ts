@@ -16,17 +16,17 @@ export async function GET(request: NextRequest) {
     }
 
     const VALID_TABLES = [
-      'salesOrder',
-      'quotation',
-      'delivery',
-      'salesReturn',
-      'partner',
-      'item',
-      'purchaseOrder',
-      'voucher',
-      'employee',
-      'project',
-      'recruitment',
+      'SalesOrder',
+      'Quotation',
+      'Delivery',
+      'SalesReturn',
+      'Partner',
+      'Item',
+      'PurchaseOrder',
+      'Voucher',
+      'Employee',
+      'Project',
+      'Recruitment',
     ]
     if (!VALID_TABLES.includes(relatedTable)) {
       return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
@@ -60,17 +60,17 @@ export async function POST(request: NextRequest) {
     }
 
     const VALID_TABLES = [
-      'salesOrder',
-      'quotation',
-      'delivery',
-      'salesReturn',
-      'partner',
-      'item',
-      'purchaseOrder',
-      'voucher',
-      'employee',
-      'project',
-      'recruitment',
+      'SalesOrder',
+      'Quotation',
+      'Delivery',
+      'SalesReturn',
+      'Partner',
+      'Item',
+      'PurchaseOrder',
+      'Voucher',
+      'Employee',
+      'Project',
+      'Recruitment',
     ]
     if (!VALID_TABLES.includes(relatedTable)) {
       return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)

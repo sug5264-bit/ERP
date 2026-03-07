@@ -96,7 +96,11 @@ export default function ReturnsPage() {
       const resObj = res as { data?: { id?: string } }
       const record = resObj.data || (res as { id?: string })
       if (record?.id && (pendingFiles.length > 0 || pendingNote.trim())) {
-        await savePendingData('SalesReturn', record.id, pendingFiles, pendingNote)
+        try {
+          await savePendingData('SalesReturn', record.id, pendingFiles, pendingNote)
+        } catch {
+          toast.error('첨부파일/메모 저장에 실패했습니다. 상세 화면에서 다시 시도해주세요.')
+        }
       }
       queryClient.invalidateQueries({ queryKey: ['sales-returns'] })
       setCreateOpen(false)
