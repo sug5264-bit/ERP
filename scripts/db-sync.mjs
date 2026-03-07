@@ -258,6 +258,201 @@ async function main() {
     changeCount++
   }
 
+  // ── OemContractStatus enum ──
+  try {
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN CREATE TYPE "OemContractStatus" AS ENUM ('DRAFT','ACTIVE','SUSPENDED','TERMINATED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`)
+    await prisma.$executeRawUnsafe(`DO $$ BEGIN CREATE TYPE "ProductionPlanStatus" AS ENUM ('PLANNED','IN_PROGRESS','COMPLETED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`)
+  } catch { /* enums may already exist */ }
+
+  // ── shipper_companies 테이블 ──
+  if (!(await tableExists('shipper_companies'))) {
+    console.log('  + Creating table: shipper_companies')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "shipper_companies" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "companyCode" TEXT NOT NULL UNIQUE,
+        "companyName" TEXT NOT NULL,
+        "bizNo" TEXT UNIQUE,
+        "ceoName" TEXT,
+        "phone" TEXT,
+        "email" TEXT,
+        "address" TEXT,
+        "contractStart" DATE,
+        "contractEnd" DATE,
+        "monthlyFee" DECIMAL(15,2),
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `)
+    changeCount++
+  }
+
+  // ── shipper_orders 테이블 ──
+  if (!(await tableExists('shipper_orders'))) {
+    console.log('  + Creating table: shipper_orders')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "shipper_orders" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "orderNo" TEXT NOT NULL UNIQUE,
+        "shipperId" TEXT NOT NULL REFERENCES "shipper_companies"("id"),
+        "orderDate" DATE NOT NULL,
+        "senderName" TEXT NOT NULL,
+        "senderPhone" TEXT,
+        "senderAddress" TEXT,
+        "recipientName" TEXT NOT NULL,
+        "recipientPhone" TEXT,
+        "recipientZipCode" TEXT,
+        "recipientAddress" TEXT NOT NULL,
+        "itemName" TEXT NOT NULL,
+        "quantity" INTEGER NOT NULL DEFAULT 1,
+        "weight" DECIMAL(10,2),
+        "shippingMethod" TEXT NOT NULL DEFAULT 'NORMAL',
+        "status" TEXT NOT NULL DEFAULT 'RECEIVED',
+        "trackingNo" TEXT,
+        "carrier" TEXT,
+        "shippingCost" DECIMAL(15,2),
+        "deliveredAt" TIMESTAMP(3),
+        "specialNote" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `)
+    changeCount++
+  }
+
+  // ── users: shipper 관련 컬럼 ──
+  if (await addColumnIfMissing('users', 'accountType', "TEXT NOT NULL DEFAULT 'INTERNAL'")) changeCount++
+  if (await addColumnIfMissing('users', 'shipperId', 'TEXT')) changeCount++
+
+  // ── oem_contracts 테이블 ──
+  if (!(await tableExists('oem_contracts'))) {
+    console.log('  + Creating table: oem_contracts')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "oem_contracts" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "contractNo" TEXT NOT NULL UNIQUE,
+        "partnerId" TEXT NOT NULL,
+        "contractName" TEXT NOT NULL,
+        "startDate" DATE NOT NULL,
+        "endDate" DATE,
+        "status" "OemContractStatus" NOT NULL DEFAULT 'DRAFT',
+        "minimumOrderQty" DECIMAL(15,2),
+        "leadTimeDays" INTEGER,
+        "paymentTerms" TEXT,
+        "qualityTerms" TEXT,
+        "description" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `)
+    changeCount++
+  }
+
+  // ── bom_headers 테이블 ──
+  if (!(await tableExists('bom_headers'))) {
+    console.log('  + Creating table: bom_headers')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "bom_headers" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "bomCode" TEXT NOT NULL UNIQUE,
+        "bomName" TEXT NOT NULL,
+        "itemId" TEXT NOT NULL,
+        "version" INTEGER NOT NULL DEFAULT 1,
+        "yieldRate" DECIMAL(8,4) NOT NULL DEFAULT 100,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "description" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `)
+    changeCount++
+  }
+
+  // ── bom_details 테이블 ──
+  if (!(await tableExists('bom_details'))) {
+    console.log('  + Creating table: bom_details')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "bom_details" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "bomHeaderId" TEXT NOT NULL REFERENCES "bom_headers"("id") ON DELETE CASCADE,
+        "lineNo" INTEGER NOT NULL,
+        "itemId" TEXT NOT NULL,
+        "quantity" DECIMAL(15,4) NOT NULL,
+        "unit" TEXT NOT NULL DEFAULT 'EA',
+        "lossRate" DECIMAL(8,4) NOT NULL DEFAULT 0,
+        "remark" TEXT,
+        UNIQUE("bomHeaderId", "lineNo")
+      )
+    `)
+    changeCount++
+  }
+
+  // ── production_plans 테이블 ──
+  if (!(await tableExists('production_plans'))) {
+    console.log('  + Creating table: production_plans')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "production_plans" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "planNo" TEXT NOT NULL UNIQUE,
+        "planDate" DATE NOT NULL,
+        "bomHeaderId" TEXT NOT NULL REFERENCES "bom_headers"("id"),
+        "oemContractId" TEXT REFERENCES "oem_contracts"("id"),
+        "plannedQty" DECIMAL(15,2) NOT NULL,
+        "plannedDate" DATE NOT NULL,
+        "completionDate" DATE,
+        "status" "ProductionPlanStatus" NOT NULL DEFAULT 'PLANNED',
+        "description" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL
+      )
+    `)
+    changeCount++
+  }
+
+  // ── production_results 테이블 ──
+  if (!(await tableExists('production_results'))) {
+    console.log('  + Creating table: production_results')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "production_results" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "resultNo" TEXT NOT NULL UNIQUE,
+        "productionPlanId" TEXT NOT NULL REFERENCES "production_plans"("id"),
+        "productionDate" DATE NOT NULL,
+        "producedQty" DECIMAL(15,2) NOT NULL,
+        "defectQty" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "goodQty" DECIMAL(15,2) NOT NULL,
+        "lotNo" TEXT,
+        "expiryDate" DATE,
+        "remarks" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    changeCount++
+  }
+
+  // ── sales_prices 테이블 ──
+  if (!(await tableExists('sales_prices'))) {
+    console.log('  + Creating table: sales_prices')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "sales_prices" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "partnerId" TEXT NOT NULL,
+        "itemId" TEXT NOT NULL,
+        "unitPrice" DECIMAL(15,2) NOT NULL,
+        "startDate" DATE NOT NULL,
+        "endDate" DATE,
+        "minQty" DECIMAL(15,2),
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "remark" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        UNIQUE("partnerId", "itemId", "startDate")
+      )
+    `)
+    changeCount++
+  }
+
   if (changeCount === 0) {
     console.log('[db-sync] Schema is up to date. No changes needed.')
   } else {
