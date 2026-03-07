@@ -134,7 +134,17 @@ export default auth((req) => {
     const hasHeader = req.headers.get('x-requested-with') === 'XMLHttpRequest'
     const origin = req.headers.get('origin')
     const host = req.headers.get('host')
-    const originMismatch = origin && host && !origin.includes(host)
+    // origin에서 hostname을 정확히 추출하여 비교 (subdomain bypass 방지)
+    let originMismatch = false
+    if (origin && host) {
+      try {
+        const originHost = new URL(origin).host
+        originMismatch = originHost !== host
+      } catch {
+        // origin이 유효하지 않은 URL이면 CSRF 차단
+        originMismatch = true
+      }
+    }
 
     if (!hasHeader || originMismatch) {
       return NextResponse.json(

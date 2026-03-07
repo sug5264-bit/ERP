@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hash, compare } from 'bcryptjs'
 
 /**
  * GET /api/health/seed
- * 시드 데이터 상태 확인 및 admin 비밀번호 자동 복구
- * (개발 환경에서만 접근 가능)
+ * 시드 데이터 상태 확인 (개발 환경 전용)
+ * - 민감 정보(비밀번호, 해시) 노출 없음
+ * - 자동 비밀번호 복구 기능 제거 (보안 위험)
  */
 export async function GET() {
-  // 프로덕션 환경에서는 접근 차단
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json({ error: '프로덕션 환경에서는 사용할 수 없습니다.' }, { status: 403 })
   }
@@ -16,17 +15,15 @@ export async function GET() {
   const checks: Record<string, unknown> = {}
 
   try {
-    // 0. 환경변수 확인
+    // 1. 환경변수 설정 여부 확인 (값 노출 없음)
     checks.authSecretSet = !!(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET)
 
-    // 1. admin 사용자 존재 확인
+    // 2. admin 사용자 존재 및 활성 상태 확인 (비밀번호 정보 노출 없음)
     const admin = await prisma.user.findUnique({
       where: { username: 'admin' },
       select: {
         id: true,
-        username: true,
         isActive: true,
-        passwordHash: true,
         userRoles: { include: { role: { select: { name: true } } } },
       },
     })
@@ -41,51 +38,24 @@ export async function GET() {
     checks.adminActive = admin.isActive
     checks.roles = admin.userRoles.map((r) => r.role.name)
 
-    // 2. 비밀번호 검증
-    const isValid = await compare('admin1234', admin.passwordHash)
-    checks.passwordValid = isValid
-
-    // 3. 비밀번호가 틀리면 자동 복구
-    if (!isValid) {
-      const newHash = await hash('admin1234', 10)
-      await prisma.user.update({
-        where: { username: 'admin' },
-        data: { passwordHash: newHash },
-      })
-      // 복구 후 재검증
-      const verified = await compare('admin1234', newHash)
-      checks.passwordReset = true
-      checks.passwordVerified = verified
-      checks.message = 'admin 비밀번호가 복구되었습니다. admin / admin1234 로 로그인하세요.'
-    } else {
-      checks.message = 'admin 계정 정상 (admin / admin1234)'
-    }
-
-    // 4. 다른 사용자도 비밀번호 복구
-    const otherUsers = await prisma.user.findMany({
-      where: { username: { in: ['parksales', 'leedev', 'hanacct', 'kangstaff'] } },
-      select: { username: true, passwordHash: true },
+    // 3. 기본 사용자 존재 여부 확인 (비밀번호 검증/복구 없음)
+    const seedUsernames = ['parksales', 'leedev', 'hanacct', 'kangstaff']
+    const existingUsers = await prisma.user.findMany({
+      where: { username: { in: seedUsernames } },
+      select: { username: true, isActive: true },
     })
-    const userHash = await hash('user1234', 10)
-    let userFixed = 0
-    for (const u of otherUsers) {
-      const valid = await compare('user1234', u.passwordHash)
-      if (!valid) {
-        await prisma.user.update({
-          where: { username: u.username },
-          data: { passwordHash: userHash },
-        })
-        userFixed++
-      }
-    }
-    if (userFixed > 0) {
-      checks.otherUsersFixed = userFixed
+    checks.seedUsers = {
+      expected: seedUsernames.length,
+      found: existingUsers.length,
+      active: existingUsers.filter((u) => u.isActive).length,
     }
 
-    // 5. 진단 요약
+    // 4. 진단 요약
     if (!checks.authSecretSet) {
       checks.warning = 'AUTH_SECRET이 설정되지 않았습니다! 로그인이 작동하지 않을 수 있습니다.'
     }
+
+    checks.message = 'admin 계정이 정상적으로 존재합니다.'
 
     return NextResponse.json(checks)
   } catch (error) {

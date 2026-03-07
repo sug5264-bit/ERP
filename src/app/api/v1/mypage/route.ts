@@ -98,6 +98,22 @@ export async function GET(_req: NextRequest) {
   }
 }
 
+// 비밀번호 변경 Rate Limiting (사용자별, 시간당 5회)
+const passwordChangeRateMap = new Map<string, { count: number; resetAt: number }>()
+const PASSWORD_CHANGE_LIMIT = 5
+const PASSWORD_CHANGE_WINDOW = 60 * 60 * 1000 // 1시간
+
+function checkPasswordChangeRate(userId: string): boolean {
+  const now = Date.now()
+  const entry = passwordChangeRateMap.get(userId)
+  if (!entry || entry.resetAt < now) {
+    passwordChangeRateMap.set(userId, { count: 1, resetAt: now + PASSWORD_CHANGE_WINDOW })
+    return true
+  }
+  entry.count += 1
+  return entry.count <= PASSWORD_CHANGE_LIMIT
+}
+
 // PUT: 비밀번호 변경
 export async function PUT(req: NextRequest) {
   try {
@@ -108,6 +124,17 @@ export async function PUT(req: NextRequest) {
     const { action } = body
 
     if (action === 'changePassword') {
+      const userId = authResult.session.user.id
+
+      // Rate limiting: 비밀번호 변경은 시간당 5회로 제한
+      if (!checkPasswordChangeRate(userId)) {
+        return errorResponse(
+          '비밀번호 변경 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.',
+          'RATE_LIMIT',
+          429
+        )
+      }
+
       const { currentPassword, newPassword } = body
       if (!currentPassword || !newPassword) {
         return errorResponse('현재 비밀번호와 새 비밀번호를 입력하세요.', 'BAD_REQUEST', 400)
@@ -115,8 +142,11 @@ export async function PUT(req: NextRequest) {
       if (newPassword.length < 8) {
         return errorResponse('비밀번호는 8자 이상이어야 합니다.', 'BAD_REQUEST', 400)
       }
+      if (currentPassword === newPassword) {
+        return errorResponse('새 비밀번호는 현재 비밀번호와 달라야 합니다.', 'BAD_REQUEST', 400)
+      }
 
-      const user = await prisma.user.findUnique({ where: { id: authResult.session.user.id } })
+      const user = await prisma.user.findUnique({ where: { id: userId } })
       if (!user) return errorResponse('사용자를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
       const bcrypt = await import('bcryptjs')
