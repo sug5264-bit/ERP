@@ -155,8 +155,8 @@ export default auth((req) => {
 
     // API Rate Limiting: IP + 모듈 기반
     const ip = getClientIp(req)
-    const module = getRequiredModule(pathname) || 'general'
-    const rateLimitKey = `${ip}:${module}:mutation`
+    const requiredMod = getRequiredModule(pathname) || 'general'
+    const rateLimitKey = `${ip}:${requiredMod}:mutation`
 
     if (!checkApiRateLimit(rateLimitKey)) {
       return NextResponse.json(
@@ -172,7 +172,7 @@ export default auth((req) => {
   // 권한 기반 접근 제어 (RBAC)
   const requiredModule = getRequiredModule(pathname)
   if (requiredModule) {
-    const user = req.auth.user as any
+    const user = req.auth.user as { permissions?: Array<{ module: string; action: string }>; roles?: string[] } | undefined
     const permissions = user?.permissions || []
     const roles = user?.roles || []
     const action = METHOD_ACTION_MAP[method] || 'read'

@@ -40,7 +40,7 @@ async function applySeedSQL() {
 
   try {
     sql = readFileSync(seedPath, 'utf-8')
-  } catch (err) {
+  } catch {
     console.log('[db-seed-sync] 02_seed.sql not found, skipping.')
     return false
   }

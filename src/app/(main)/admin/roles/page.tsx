@@ -116,7 +116,7 @@ export default function RolesPage() {
   })
 
   const roles: RoleRow[] = rolesData?.data || []
-  const permissions: PermissionItem[] = permissionsData?.data || []
+  const permissions: PermissionItem[] = useMemo(() => permissionsData?.data || [], [permissionsData?.data])
 
   // 모듈별 권한 그룹화
   const modulePermissions = useMemo(() => {

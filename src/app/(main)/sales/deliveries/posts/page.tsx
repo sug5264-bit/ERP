@@ -22,6 +22,27 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
+interface DeliveryItem {
+  id: string
+  deliveryNo?: string
+  salesOrder?: { partner?: { partnerName?: string } }
+  partner?: { partnerName?: string }
+}
+
+interface NoteItem {
+  id: string
+  content: string
+  relatedId: string
+  createdAt: string
+}
+
+interface AttachmentItem {
+  id: string
+  relatedId: string
+  mimeType: string
+  fileName: string
+}
+
 const ACCEPTED_TYPES = '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
 
 function getFileIcon(mimeType: string) {
@@ -67,7 +88,7 @@ export default function DeliveryPostsPage() {
       return res.json()
     },
   })
-  const deliveries = deliveriesData?.data || []
+  const deliveries: DeliveryItem[] = deliveriesData?.data || []
 
   const { data: notesData } = useQuery({
     queryKey: ['notes', 'Delivery', selectedDeliveryId],
@@ -80,7 +101,7 @@ export default function DeliveryPostsPage() {
       return res.json()
     },
   })
-  const notes = notesData?.data || []
+  const notes: NoteItem[] = notesData?.data || []
 
   const { data: allAttachmentsData } = useQuery({
     queryKey: ['attachments', 'DeliveryPost', selectedDeliveryId],
@@ -93,7 +114,7 @@ export default function DeliveryPostsPage() {
       return res.json()
     },
   })
-  const allAttachments = allAttachmentsData?.data || []
+  const allAttachments: AttachmentItem[] = allAttachmentsData?.data || []
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -155,8 +176,8 @@ export default function DeliveryPostsPage() {
     setDeleteTarget(null)
   }
 
-  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
-  const getPostAttachments = (noteId: string) => allAttachments.filter((a: any) => a.relatedId === noteId)
+  const deliveryMap = new Map(deliveries.map((d) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
+  const getPostAttachments = (noteId: string) => allAttachments.filter((a) => a.relatedId === noteId)
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -172,7 +193,7 @@ export default function DeliveryPostsPage() {
               <SelectValue placeholder="납품 선택" />
             </SelectTrigger>
             <SelectContent>
-              {deliveries.map((d: any) => (
+              {deliveries.map((d) => (
                 <SelectItem key={d.id} value={d.id}>
                   {d.deliveryNo || d.id?.slice(-6) || ''} -{' '}
                   {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
@@ -241,7 +262,7 @@ export default function DeliveryPostsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 납품</SelectItem>
-            {deliveries.map((d: any) => (
+            {deliveries.map((d) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.deliveryNo || d.id.slice(-6)} - {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
               </SelectItem>
@@ -259,7 +280,7 @@ export default function DeliveryPostsPage() {
             <p className="text-sm">작성된 게시글이 없습니다.</p>
           </div>
         ) : (
-          notes.map((note: any) => {
+          notes.map((note) => {
             const postFiles = getPostAttachments(note.id)
             return (
               <div key={note.id} className="space-y-2 rounded-lg border p-4">
@@ -276,7 +297,7 @@ export default function DeliveryPostsPage() {
                 </div>
                 {postFiles.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {postFiles.map((att: any) => {
+                    {postFiles.map((att) => {
                       const Icon = getFileIcon(att.mimeType)
                       const typeBadge = getFileTypeBadge(att.mimeType, att.fileName)
                       return (
@@ -297,7 +318,7 @@ export default function DeliveryPostsPage() {
                 )}
                 <div className="text-muted-foreground flex items-center gap-2 text-xs">
                   <Badge variant="outline" className="text-xs">
-                    납품 {deliveryMap.get(note.relatedId) || note.relatedId?.slice(-6)}
+                    납품 {deliveryMap.get(note.relatedId) || note.relatedId?.slice(-6) || ''}
                   </Badge>
                   <span>{formatDate(note.createdAt)}</span>
                 </div>

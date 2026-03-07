@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient({
@@ -89,7 +89,7 @@ async function main() {
   ]
   const actions = ['read', 'create', 'update', 'delete']
 
-  const permMap: Record<string, any> = {}
+  const permMap: Record<string, { id: string }> = {}
   for (const mod of modules) {
     for (const action of actions) {
       const perm = await prisma.permission.upsert({
@@ -102,7 +102,7 @@ async function main() {
   }
 
   // 관리자 역할에 모든 권한 할당
-  const allPermIds = Object.values(permMap).map((p: any) => p.id)
+  const allPermIds = Object.values(permMap).map((p) => p.id)
   for (const permId of allPermIds) {
     await prisma.rolePermission.upsert({
       where: { roleId_permissionId: { roleId: adminRole.id, permissionId: permId } },
@@ -321,27 +321,27 @@ async function main() {
     update: {},
     create: { code: 'STF', name: '사원', level: 5, sortOrder: 5 },
   })
-  const posExecVP = await prisma.position.upsert({
+  await prisma.position.upsert({
     where: { code: 'EVP' },
     update: {},
     create: { code: 'EVP', name: '전무', level: 2, sortOrder: 2 },
   })
-  const posSrDir = await prisma.position.upsert({
+  await prisma.position.upsert({
     where: { code: 'SMU' },
     update: {},
     create: { code: 'SMU', name: '상무', level: 2, sortOrder: 3 },
   })
-  const posGM = await prisma.position.upsert({
+  await prisma.position.upsert({
     where: { code: 'GM' },
     update: {},
     create: { code: 'GM', name: '부장', level: 3, sortOrder: 4 },
   })
-  const posDM = await prisma.position.upsert({
+  await prisma.position.upsert({
     where: { code: 'DM' },
     update: {},
     create: { code: 'DM', name: '차장', level: 4, sortOrder: 5 },
   })
-  const posAsstMgr = await prisma.position.upsert({
+  await prisma.position.upsert({
     where: { code: 'AM' },
     update: {},
     create: { code: 'AM', name: '과장', level: 5, sortOrder: 6 },
@@ -443,7 +443,7 @@ async function main() {
     },
   ]
 
-  const employees: Record<string, any> = {}
+  const employees: Record<string, { id: string; email: string | null }> = {}
   for (const e of empData) {
     employees[e.no] = await prisma.employee.upsert({
       where: { employeeNo: e.no },
@@ -497,7 +497,7 @@ async function main() {
       update: { passwordHash: userHash },
       create: {
         username: u.username,
-        email: employees[u.emp].email,
+        email: employees[u.emp].email ?? '',
         passwordHash: userHash,
         name: u.name,
         isActive: true,
@@ -543,7 +543,7 @@ async function main() {
     { code: '5700', nameKo: '소모품비', accountType: 'EXPENSE' as const, level: 2 },
     { code: '5800', nameKo: '감가상각비', accountType: 'EXPENSE' as const, level: 2 },
   ]
-  const accMap: Record<string, any> = {}
+  const accMap: Record<string, { id: string }> = {}
   for (const acc of accounts) {
     accMap[acc.code] = await prisma.accountSubject.upsert({
       where: { code: acc.code },
@@ -668,7 +668,7 @@ async function main() {
     },
   ]
 
-  const partners: Record<string, any> = {}
+  const partners: Record<string, { id: string }> = {}
   for (const p of partnerData) {
     partners[p.code] = await prisma.partner.upsert({
       where: { partnerCode: p.code },
@@ -815,7 +815,7 @@ async function main() {
     },
   ]
 
-  const items: Record<string, any> = {}
+  const items: Record<string, { id: string; standardPrice: Prisma.Decimal }> = {}
   for (const i of itemData) {
     items[i.code] = await prisma.item.upsert({
       where: { itemCode: i.code },
@@ -884,7 +884,7 @@ async function main() {
     const item = items[s.item]
     await prisma.stockBalance
       .upsert({
-        where: { itemId_warehouseId_zoneId: { itemId: item.id, warehouseId: s.wh, zoneId: null as any } },
+        where: { itemId_warehouseId_zoneId: { itemId: item.id, warehouseId: s.wh, zoneId: null as unknown as string } },
         update: { quantity: s.qty },
         create: { itemId: item.id, warehouseId: s.wh, quantity: s.qty, averageCost: item.standardPrice },
       })
@@ -1096,7 +1096,7 @@ async function main() {
   // ============================================================
   // 13. 전표 (Vouchers)
   // ============================================================
-  const v1 = await prisma.voucher.create({
+  await prisma.voucher.create({
     data: {
       voucherNo: 'V-2026-0001',
       voucherDate: new Date('2026-01-31'),

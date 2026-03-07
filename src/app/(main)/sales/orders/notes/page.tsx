@@ -22,6 +22,21 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
+interface OrderItem {
+  id: string
+  orderNo?: string
+  partner?: { partnerName?: string }
+}
+
+interface AttachmentItem {
+  id: string
+  relatedId: string
+  mimeType: string
+  fileName: string
+  fileSize: number
+  createdAt: string
+}
+
 const ACCEPTED_TYPES = '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
 
 function getFileIcon(mimeType: string) {
@@ -76,7 +91,7 @@ export default function OrderNotesPage() {
       return res.json()
     },
   })
-  const orders = ordersData?.data || []
+  const orders: OrderItem[] = ordersData?.data || []
 
   const { data: attachmentsData } = useQuery({
     queryKey: ['attachments', 'SalesOrder', selectedOrderId],
@@ -89,7 +104,7 @@ export default function OrderNotesPage() {
       return res.json()
     },
   })
-  const attachments = attachmentsData?.data || []
+  const attachments: AttachmentItem[] = attachmentsData?.data || []
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -159,7 +174,7 @@ export default function OrderNotesPage() {
     setDeleteTarget(null)
   }
 
-  const orderMap = new Map(orders.map((o: any) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
+  const orderMap = new Map(orders.map((o) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -176,7 +191,7 @@ export default function OrderNotesPage() {
                 <SelectValue placeholder="발주 선택" />
               </SelectTrigger>
               <SelectContent>
-                {orders.map((o: any) => (
+                {orders.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.orderNo || o.id?.slice(-6) || ''} - {o.partner?.partnerName || ''}
                   </SelectItem>
@@ -226,7 +241,7 @@ export default function OrderNotesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 발주</SelectItem>
-            {orders.map((o: any) => (
+            {orders.map((o) => (
               <SelectItem key={o.id} value={o.id}>
                 {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
               </SelectItem>
@@ -245,7 +260,7 @@ export default function OrderNotesPage() {
             <p className="text-xs">PDF, Excel, Word, 이미지 등 다양한 파일을 업로드할 수 있습니다.</p>
           </div>
         ) : (
-          attachments.map((att: any) => {
+          attachments.map((att) => {
             const Icon = getFileIcon(att.mimeType)
             const typeBadge = getFileTypeBadge(att.mimeType, att.fileName)
             return (

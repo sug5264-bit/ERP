@@ -518,11 +518,6 @@ export default function DeliveriesPage() {
     queryFn: () => api.get('/sales/orders?status=ORDERED&pageSize=200') as Promise<ApiListResponse<OrderOption>>,
     staleTime: 5 * 60 * 1000,
   })
-  const { data: partnersData } = useQuery({
-    queryKey: ['partners-sales'],
-    queryFn: () => api.get('/partners?pageSize=500') as Promise<ApiListResponse<{ id: string; partnerName: string }>>,
-    staleTime: 10 * 60 * 1000,
-  })
   const { data: itemsData } = useQuery({
     queryKey: ['items-all'],
     queryFn: () => api.get('/inventory/items?pageSize=500') as Promise<ApiListResponse<ItemOption>>,
@@ -577,10 +572,9 @@ export default function DeliveriesPage() {
   })
 
   const orders = ordersData?.data || []
-  const _partners = partnersData?.data || []
   const items = itemsData?.data || []
-  const onlineDeliveries = onlineData?.data || []
-  const offlineDeliveries = offlineData?.data || []
+  const onlineDeliveries = useMemo(() => onlineData?.data || [], [onlineData?.data])
+  const offlineDeliveries = useMemo(() => offlineData?.data || [], [offlineData?.data])
 
   // Calendar events
   const calendarEvents: CalendarEvent[] = useMemo(() => {

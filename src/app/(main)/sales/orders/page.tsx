@@ -786,8 +786,8 @@ export default function OrdersPage() {
 
   const partners = partnersData?.data || []
   const items = itemsData?.data || []
-  const onlineOrders = onlineData?.data || []
-  const offlineOrders = offlineData?.data || []
+  const onlineOrders = useMemo(() => onlineData?.data || [], [onlineData?.data])
+  const offlineOrders = useMemo(() => offlineData?.data || [], [offlineData?.data])
 
   // 요약 통계 계산
   const summaryOrders = activeTab === 'ONLINE' ? onlineOrders : offlineOrders
@@ -1185,7 +1185,7 @@ export default function OrdersPage() {
       const rows = await readExcelFile(file, { 납품번호: 'deliveryNo', 택배사: 'carrier', 운송장번호: 'trackingNo' })
       setTrackingRows(rows as unknown as TrackingRow[])
       setTrackingResult(null)
-    } catch (_err) {
+    } catch {
       toast.error('엑셀 파일을 읽을 수 없습니다.')
     }
     if (fileInputRef.current) fileInputRef.current.value = ''
