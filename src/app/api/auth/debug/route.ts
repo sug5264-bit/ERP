@@ -8,12 +8,6 @@ import { prisma } from '@/lib/prisma'
  * - 비밀번호, 해시, 자격증명 등 민감 정보는 절대 노출하지 않음
  */
 export async function GET() {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json(
-      { error: 'This endpoint is disabled in production' },
-      { status: 403 }
-    )
-  }
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
   }

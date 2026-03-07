@@ -250,12 +250,6 @@ interface Detail {
   description: string
 }
 
-interface TrackingRow {
-  deliveryNo: string
-  carrier: string
-  trackingNo: string
-}
-
 const emptyDetail = (): Detail => ({
   itemId: '',
   quantity: 1,
@@ -478,16 +472,7 @@ export default function DeliveriesPage() {
   ]
 
   const [open, setOpen] = useState(false)
-  const [trackingOpen, setTrackingOpen] = useState(false)
   const [details, setDetails] = useState<Detail[]>([emptyDetail()])
-  const [trackingRows, setTrackingRows] = useState<TrackingRow[]>([])
-  const [trackingResult, setTrackingResult] = useState<{
-    total: number
-    success: number
-    failed: number
-    errors: string[]
-  } | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const deliveryImportFileRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -573,24 +558,6 @@ export default function DeliveriesPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
-  const trackingMutation = useMutation({
-    mutationFn: (body: { trackings: TrackingRow[] }) => api.post('/sales/deliveries/tracking', body),
-    onSuccess: (res: unknown) => {
-      const parsed = res as {
-        data?: { total: number; success: number; failed: number; errors: string[] }
-        total?: number
-        success?: number
-        failed?: number
-        errors?: string[]
-      }
-      const result = parsed.data || (parsed as { total: number; success: number; failed: number; errors: string[] })
-      setTrackingResult(result)
-      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
-      toast.success(`운송장 업로드 완료: 성공 ${result.success}건, 실패 ${result.failed}건`)
-    },
-    onError: (err: Error) => toast.error(err.message),
-  })
-
   const qiMutation = useMutation({
     mutationFn: (body: Record<string, unknown> & { deliveryId: string }) =>
       api.post(`/sales/deliveries/${body.deliveryId}/quality-inspection`, body),
@@ -624,6 +591,20 @@ export default function DeliveriesPage() {
   const items = itemsData?.data || []
   const onlineDeliveries = useMemo(() => onlineData?.data || [], [onlineData?.data])
   const offlineDeliveries = useMemo(() => offlineData?.data || [], [offlineData?.data])
+
+  // 기간별 납품 수량/금액 요약
+  const periodSummary = useMemo(() => {
+    const deliveries = activeTab === 'ONLINE' ? onlineDeliveries : offlineDeliveries
+    let totalQty = 0
+    let totalAmt = 0
+    deliveries.forEach((d: DeliveryRow) => {
+      d.details?.forEach((det) => {
+        totalQty += det.quantity || 0
+        totalAmt += det.amount || 0
+      })
+    })
+    return { count: deliveries.length, totalQty, totalAmt }
+  }, [activeTab, onlineDeliveries, offlineDeliveries])
 
   // Calendar events
   const calendarEvents: CalendarEvent[] = useMemo(() => {
@@ -718,18 +699,6 @@ export default function DeliveriesPage() {
     })
   }
 
-  const handleTemplateDownload = () => {
-    downloadImportTemplate({
-      fileName: '운송장_업로드_템플릿',
-      sheetName: '운송장',
-      columns: [
-        { header: '납품번호', key: 'deliveryNo', example: 'DLV-20260101-001', width: 24 },
-        { header: '택배사', key: 'carrier', example: 'CJ대한통운', width: 16 },
-        { header: '운송장번호', key: 'trackingNo', example: '1234567890', width: 20 },
-      ],
-    })
-  }
-
   const handleDeliveryTemplateDownload = () => {
     // 회사 정보 가져오기
     const companies = companyData?.data || []
@@ -759,7 +728,7 @@ export default function DeliveriesPage() {
         { header: '송고번호', key: 'shipmentRef', example: '', width: 14 },
         { header: '특기사항', key: 'specialNote', example: '', width: 20 },
         { header: '메모1', key: 'memo', example: '', width: 16 },
-        { header: '내품명', key: 'itemName', example: '품목명', width: 18, required: true },
+        { header: '내품명', key: 'itemName', example: '품목명', width: 18 },
         { header: '내품수량', key: 'quantity', example: '10', width: 10, required: true },
         { header: '내품가격', key: 'unitPrice', example: '50000', width: 12 },
         { header: '상품코드', key: 'itemCode', example: '', width: 14 },
@@ -863,27 +832,6 @@ export default function DeliveriesPage() {
       toast.error(err instanceof Error ? err.message : '엑셀 파일을 읽을 수 없습니다.')
     }
     if (deliveryImportFileRef.current) deliveryImportFileRef.current.value = ''
-  }
-
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    try {
-      const rows = await readExcelFile(file, { 납품번호: 'deliveryNo', 택배사: 'carrier', 운송장번호: 'trackingNo' })
-      setTrackingRows(rows as unknown as TrackingRow[])
-      setTrackingResult(null)
-    } catch {
-      toast.error('엑셀 파일을 읽을 수 없습니다.')
-    }
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  const handleTrackingUpload = () => {
-    if (trackingRows.length === 0) {
-      toast.error('업로드할 데이터가 없습니다.')
-      return
-    }
-    trackingMutation.mutate({ trackings: trackingRows })
   }
 
   const handleExport = (type: 'excel' | 'pdf') => {
@@ -1021,10 +969,10 @@ export default function DeliveriesPage() {
                 <thead>
                   <tr className="bg-muted/50 border-b">
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
-                      내품명 <span className="text-destructive">*</span>
+                      품목(바코드) <span className="text-destructive">*</span>
                     </th>
-                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">내품수량</th>
-                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">내품가격</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">금액</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">운송장번호</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">특기사항</th>
@@ -1195,7 +1143,7 @@ export default function DeliveriesPage() {
                 <thead>
                   <tr className="bg-muted/50 border-b">
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
-                      품목명 <span className="text-destructive">*</span>
+                      품목(바코드) <span className="text-destructive">*</span>
                     </th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>
@@ -1278,100 +1226,6 @@ export default function DeliveriesPage() {
             {createMutation.isPending ? '등록 중...' : '납품 등록'}
           </Button>
         </form>
-      </DialogContent>
-    </Dialog>
-  )
-
-  // Tracking upload dialog (only for online tab)
-  const trackingDialog = (
-    <Dialog
-      open={trackingOpen}
-      onOpenChange={(v) => {
-        setTrackingOpen(v)
-        if (!v) {
-          setTrackingRows([])
-          setTrackingResult(null)
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <Upload className="mr-2 h-4 w-4" />
-          운송장 업로드
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>운송장 일괄 업로드</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
-              템플릿 다운로드
-            </Button>
-            <div className="flex-1">
-              <Input ref={fileInputRef} type="file" accept=".xlsx" onChange={handleFileSelect} />
-            </div>
-          </div>
-
-          {trackingRows.length > 0 && (
-            <div className="space-y-2">
-              <Label>미리보기 (최대 5건)</Label>
-              <div className="rounded-md border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-muted/50 border-b">
-                      <th className="p-2 text-left">납품번호</th>
-                      <th className="p-2 text-left">택배사</th>
-                      <th className="p-2 text-left">운송장번호</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trackingRows.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="p-2 font-mono text-xs">{row.deliveryNo}</td>
-                        <td className="p-2">{row.carrier}</td>
-                        <td className="p-2 font-mono text-xs">{row.trackingNo}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {trackingRows.length > 5 && (
-                <p className="text-muted-foreground text-sm">외 {trackingRows.length - 5}건</p>
-              )}
-              <Button className="w-full" onClick={handleTrackingUpload} disabled={trackingMutation.isPending}>
-                {trackingMutation.isPending ? '업로드 중...' : `업로드 (${trackingRows.length}건)`}
-              </Button>
-            </div>
-          )}
-
-          {trackingResult && (
-            <div className="space-y-2 rounded-md border p-4">
-              <div className="flex items-center gap-4 text-sm">
-                <span>
-                  전체: <strong>{trackingResult.total}건</strong>
-                </span>
-                <span className="text-status-success">
-                  성공: <strong>{trackingResult.success}건</strong>
-                </span>
-                <span className="text-status-danger">
-                  실패: <strong>{trackingResult.failed}건</strong>
-                </span>
-              </div>
-              {trackingResult.errors.length > 0 && (
-                <div className="space-y-1">
-                  <Label className="text-status-danger">오류 목록</Label>
-                  <div className="text-status-danger max-h-32 space-y-1 overflow-y-auto text-xs">
-                    {trackingResult.errors.map((err, idx) => (
-                      <p key={idx}>{err}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </DialogContent>
     </Dialog>
   )
@@ -1729,6 +1583,33 @@ export default function DeliveriesPage() {
           </div>
         </div>
 
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+          className="pt-2"
+        />
+
+        {(startDate || endDate) && (
+          <div className="grid grid-cols-3 gap-4 pt-1">
+            <div className="rounded-lg border p-3 text-center">
+              <p className="text-muted-foreground text-xs">납품건수</p>
+              <p className="text-lg font-semibold">{periodSummary.count}건</p>
+            </div>
+            <div className="rounded-lg border p-3 text-center">
+              <p className="text-muted-foreground text-xs">총 수량</p>
+              <p className="text-lg font-semibold">{periodSummary.totalQty.toLocaleString()}</p>
+            </div>
+            <div className="rounded-lg border p-3 text-center">
+              <p className="text-muted-foreground text-xs">총 금액</p>
+              <p className="text-lg font-semibold">{formatCurrency(periodSummary.totalAmt)}</p>
+            </div>
+          </div>
+        )}
+
         {viewMode === 'calendar' ? (
           <div className="space-y-4 pt-4">
             <CalendarView
@@ -1773,7 +1654,6 @@ export default function DeliveriesPage() {
                 className="hidden"
                 onChange={handleDeliveryImport}
               />
-              {trackingDialog}
             </div>
             <DataTable
               columns={columns}

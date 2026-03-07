@@ -8,10 +8,6 @@ import { prisma } from '@/lib/prisma'
  * - 자동 비밀번호 복구 기능 제거 (보안 위험)
  */
 export async function GET() {
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: '프로덕션 환경에서는 사용할 수 없습니다.' }, { status: 403 })
-  }
-
   const checks: Record<string, unknown> = {}
 
   try {
