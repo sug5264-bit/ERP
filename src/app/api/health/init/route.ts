@@ -19,7 +19,13 @@ export async function POST() {
     })
 
     if (existingAdmin) {
-      return NextResponse.json({ message: 'admin 계정이 이미 존재합니다.', created: false })
+      // admin이 존재하면 비밀번호를 admin1234로 리셋
+      const newHash = await hash('admin1234', 10)
+      await prisma.user.update({
+        where: { id: existingAdmin.id },
+        data: { passwordHash: newHash, isActive: true },
+      })
+      return NextResponse.json({ message: 'admin 비밀번호가 admin1234로 리셋되었습니다.', reset: true })
     }
 
     // Role 생성
