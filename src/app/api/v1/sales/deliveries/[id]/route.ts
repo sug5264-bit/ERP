@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         partner: true,
         details: {
           include: { item: { select: { id: true, itemName: true, specification: true, barcode: true, unit: true } } },
-          orderBy: { lineNo: 'asc' },
+          orderBy: { id: 'asc' },
         },
         qualityInspections: { orderBy: { createdAt: 'desc' } },
       },
