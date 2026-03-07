@@ -72,7 +72,7 @@ export default function LedgerPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounting-ledger', startDate, endDate, selectedAccountId],
-    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`),
   })
 
   if (selectedAccountId) {

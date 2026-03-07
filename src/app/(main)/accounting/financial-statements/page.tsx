@@ -37,7 +37,7 @@ export default function FinancialStatementsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['accounting-ledger-fs', startDate, endDate],
-    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/accounting/ledger?${qp.toString()}`),
   })
 
   const accounts: AccountRow[] = data?.data || []

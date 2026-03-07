@@ -133,9 +133,9 @@ export default function ReturnsPage() {
     })
   }
 
-  const returns: ReturnRow[] = data?.data || []
-  const orders: OrderOption[] = ordersData?.data || []
-  const partners: PartnerOption[] = partnersData?.data || []
+  const returns: ReturnRow[] = useMemo(() => data?.data || [], [data])
+  const orders: OrderOption[] = useMemo(() => ordersData?.data || [], [ordersData])
+  const partners: PartnerOption[] = useMemo(() => partnersData?.data || [], [partnersData])
 
   // 내보내기 컬럼 정의
   const exportColumns: ExportColumn[] = [

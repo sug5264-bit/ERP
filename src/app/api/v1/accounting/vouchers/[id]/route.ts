@@ -55,7 +55,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const existing = await prisma.voucher.findUnique({ where: { id } })
     if (!existing) return errorResponse('전표를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     if (existing.status !== 'DRAFT') {
-      return errorResponse('작성 상태의 전표만 수정할 수 있습니다.', 'INVALID_STATUS')
+      return errorResponse('작성 상태의 전표만 수정할 수 있습니다.', 'INVALID_STATUS', 400)
     }
 
     // 승인 처리
@@ -65,7 +65,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         select: { employeeId: true },
       })
       if (!user?.employeeId) {
-        return errorResponse('사원 정보가 연결되어 있지 않습니다. 승인 권한을 확인하세요.', 'NO_EMPLOYEE')
+        return errorResponse('사원 정보가 연결되어 있지 않습니다. 승인 권한을 확인하세요.', 'NO_EMPLOYEE', 400)
       }
       // 작성자와 승인자가 동일한 경우 차단 (직무분리 원칙)
       if (user.employeeId === existing.createdById) {
@@ -90,7 +90,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const totalDebitCents = parsedDetails.reduce((s, d) => s + Math.round(d.debitAmount * 100), 0)
       const totalCreditCents = parsedDetails.reduce((s, d) => s + Math.round(d.creditAmount * 100), 0)
       if (totalDebitCents !== totalCreditCents) {
-        return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
+        return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR', 400)
       }
       const totalDebit = totalDebitCents / 100
       const totalCredit = totalCreditCents / 100
@@ -129,7 +129,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return successResponse(voucher)
     }
 
-    return errorResponse('수정할 데이터가 없습니다.', 'NO_DATA')
+    return errorResponse('수정할 데이터가 없습니다.', 'NO_DATA', 400)
   } catch (error) {
     return handleApiError(error)
   }

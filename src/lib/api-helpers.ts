@@ -140,6 +140,11 @@ export function handleApiError(error: unknown) {
   // 비즈니스 로직 에러 (트랜잭션 내부에서 throw된 사용자 메시지)
   if (error instanceof Error) {
     const msg = error.message
+    // 코드:메시지 형식인 경우 코드를 분리하여 사용
+    const colonIdx = msg.indexOf(':')
+    const hasPrefix = colonIdx > 0 && /^[A-Z_]+$/.test(msg.slice(0, colonIdx))
+    const errorCode = hasPrefix ? msg.slice(0, colonIdx) : 'BUSINESS_ERROR'
+    const userMessage = hasPrefix ? msg.slice(colonIdx + 1) : msg
     if (
       msg.includes('부족합니다') ||
       msg.includes('올바르지 않습니다') ||
@@ -149,9 +154,10 @@ export function handleApiError(error: unknown) {
       msg.includes('0보다') ||
       msg.includes('할 수 없습니다') ||
       msg.includes('이미 존재') ||
-      msg.includes('일치하지 않습니다')
+      msg.includes('일치하지 않습니다') ||
+      msg.includes('이미 처리')
     ) {
-      return errorResponse(msg, 'BUSINESS_ERROR', 400)
+      return errorResponse(userMessage, errorCode, 400)
     }
   }
 
@@ -290,7 +296,7 @@ export function isErrorResponse(result: AuthResult | NextResponse): result is Ne
 export function getPaginationParams(searchParams: URLSearchParams) {
   const rawPage = parseInt(searchParams.get('page') || '1', 10)
   const rawSize = parseInt(searchParams.get('pageSize') || '20', 10)
-  const page = Math.max(1, Number.isFinite(rawPage) ? rawPage : 1)
+  const page = Math.min(10000, Math.max(1, Number.isFinite(rawPage) ? rawPage : 1))
   const pageSize = Math.min(100, Math.max(1, Number.isFinite(rawSize) ? rawSize : 20))
   const skip = (page - 1) * pageSize
   return { page, pageSize, skip }

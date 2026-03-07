@@ -10,19 +10,19 @@ import Link from 'next/link'
 export default function SalesPage() {
   const { data: quotations } = useQuery({
     queryKey: ['sales-qt-summary'],
-    queryFn: () => api.get('/sales/quotations?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/sales/quotations?pageSize=1'),
   })
   const { data: orders } = useQuery({
     queryKey: ['sales-so-summary'],
-    queryFn: () => api.get('/sales/orders?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/sales/orders?pageSize=1'),
   })
   const { data: deliveries } = useQuery({
     queryKey: ['sales-dlv-summary'],
-    queryFn: () => api.get('/sales/deliveries?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/sales/deliveries?pageSize=1'),
   })
   const { data: partners } = useQuery({
     queryKey: ['sales-partner-summary'],
-    queryFn: () => api.get('/partners?partnerType=SALES&pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/partners?partnerType=SALES&pageSize=1'),
   })
 
   const cards = [

@@ -69,7 +69,7 @@ export default function LogsPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-logs', action, tableName],
-    queryFn: () => api.get(`/admin/logs?${queryParams.toString()}`) as Promise<any>,
+    queryFn: () => api.get(`/admin/logs?${queryParams.toString()}`),
   })
 
   const logs: LogRow[] = data?.data || []

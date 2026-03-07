@@ -79,7 +79,7 @@ export default function CodesPage() {
     queryFn: () =>
       api.get(
         `/admin/codes${selectedGroup && selectedGroup !== 'all' ? `?groupCode=${selectedGroup}` : ''}`
-      ) as Promise<any>,
+      ),
   })
 
   const createMutation = useMutation({

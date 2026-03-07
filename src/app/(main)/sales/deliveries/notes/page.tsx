@@ -60,6 +60,22 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
 }
 
+interface DeliveryItem {
+  id: string
+  deliveryNo?: string
+  salesOrder?: { partner?: { partnerName?: string } }
+  partner?: { partnerName?: string }
+}
+
+interface AttachmentItem {
+  id: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  relatedId: string
+  createdAt: string
+}
+
 export default function DeliveryNotesPage() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -159,7 +175,7 @@ export default function DeliveryNotesPage() {
     setDeleteTarget(null)
   }
 
-  const deliveryMap = new Map(deliveries.map((d: any) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
+  const deliveryMap = new Map<string, string>(deliveries.map((d: DeliveryItem) => [d.id, d.deliveryNo || d.id?.slice(-6) || '']))
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -176,7 +192,7 @@ export default function DeliveryNotesPage() {
                 <SelectValue placeholder="납품 선택" />
               </SelectTrigger>
               <SelectContent>
-                {deliveries.map((d: any) => (
+                {deliveries.map((d: DeliveryItem) => (
                   <SelectItem key={d.id} value={d.id}>
                     {d.deliveryNo || d.id?.slice(-6) || ''} -{' '}
                     {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
@@ -227,7 +243,7 @@ export default function DeliveryNotesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 납품</SelectItem>
-            {deliveries.map((d: any) => (
+            {deliveries.map((d: DeliveryItem) => (
               <SelectItem key={d.id} value={d.id}>
                 {d.deliveryNo || d.id.slice(-6)} - {d.salesOrder?.partner?.partnerName || d.partner?.partnerName || ''}
               </SelectItem>
@@ -246,7 +262,7 @@ export default function DeliveryNotesPage() {
             <p className="text-xs">PDF, Excel, Word, 이미지 등 다양한 파일을 업로드할 수 있습니다.</p>
           </div>
         ) : (
-          attachments.map((att: any) => {
+          attachments.map((att: AttachmentItem) => {
             const Icon = getFileIcon(att.mimeType)
             const typeBadge = getFileTypeBadge(att.mimeType, att.fileName)
             return (

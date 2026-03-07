@@ -11,22 +11,22 @@ export default function HRPage() {
 
   const { data: empData } = useQuery({
     queryKey: ['hr-employees-summary'],
-    queryFn: () => api.get('/hr/employees?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/hr/employees?pageSize=1'),
   })
 
   const { data: attendanceData } = useQuery({
     queryKey: ['hr-attendance-today', today],
-    queryFn: () => api.get(`/hr/attendance?date=${today}&pageSize=1`) as Promise<any>,
+    queryFn: () => api.get(`/hr/attendance?date=${today}&pageSize=1`),
   })
 
   const { data: leaveData } = useQuery({
     queryKey: ['hr-leave-pending'],
-    queryFn: () => api.get('/hr/leave?status=REQUESTED&pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/hr/leave?status=REQUESTED&pageSize=1'),
   })
 
   const { data: recruitData } = useQuery({
     queryKey: ['hr-recruit-open'],
-    queryFn: () => api.get('/hr/recruitment?status=OPEN&pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/hr/recruitment?status=OPEN&pageSize=1'),
   })
 
   const totalEmployees = empData?.meta?.totalCount ?? 0

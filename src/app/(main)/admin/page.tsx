@@ -8,22 +8,22 @@ import { Users, Shield, ScrollText, Settings } from 'lucide-react'
 export default function AdminPage() {
   const { data: userData } = useQuery({
     queryKey: ['admin-users-summary'],
-    queryFn: () => api.get('/admin/users?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/admin/users?pageSize=1'),
   })
 
   const { data: rolesData } = useQuery({
     queryKey: ['admin-roles-summary'],
-    queryFn: () => api.get('/admin/roles') as Promise<any>,
+    queryFn: () => api.get('/admin/roles'),
   })
 
   const { data: logsData } = useQuery({
     queryKey: ['admin-logs-summary'],
-    queryFn: () => api.get('/admin/logs?pageSize=1') as Promise<any>,
+    queryFn: () => api.get('/admin/logs?pageSize=1'),
   })
 
   const { data: codesData } = useQuery({
     queryKey: ['admin-codes-summary'],
-    queryFn: () => api.get('/admin/codes') as Promise<any>,
+    queryFn: () => api.get('/admin/codes'),
   })
 
   const totalUsers = userData?.meta?.totalCount ?? 0
