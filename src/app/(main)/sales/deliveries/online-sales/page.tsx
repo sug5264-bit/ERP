@@ -17,6 +17,7 @@ import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Plus, Trash2, FileDown } from 'lucide-react'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
 
 const CHANNEL_MAP: Record<string, string> = {
   NAVER: '네이버 스토어',
@@ -61,13 +62,17 @@ export default function OnlineSalesPage() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const [channelFilter, setChannelFilter] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [items, setItems] = useState<OnlineSaleItem[]>([{ itemName: '', quantity: 1, unitPrice: 0, platformFee: 0 }])
 
   const qp = new URLSearchParams({ pageSize: '50' })
   if (channelFilter && channelFilter !== 'all') qp.set('channel', channelFilter)
+  if (startDate) qp.set('startDate', startDate)
+  if (endDate) qp.set('endDate', endDate)
 
   const { data, isLoading } = useQuery({
-    queryKey: ['online-sales', channelFilter],
+    queryKey: ['online-sales', channelFilter, startDate, endDate],
     queryFn: () => api.get(`/sales/online-sales?${qp.toString()}`) as Promise<Record<string, unknown>>,
   })
 
@@ -217,6 +222,15 @@ export default function OnlineSalesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="온라인 매출" description="온라인 판매 채널별 매출을 등록하고 관리합니다" />
+
+      <DateRangeFilter
+        startDate={startDate}
+        endDate={endDate}
+        onDateChange={(s, e) => {
+          setStartDate(s)
+          setEndDate(e)
+        }}
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
