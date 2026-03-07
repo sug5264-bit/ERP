@@ -97,10 +97,8 @@ function PricingForm({
           <Input name="partnerName" required defaultValue={pricing?.partnerName || ''} />
         </div>
         <div className="space-y-2">
-          <Label>
-            품목명 <span className="text-destructive">*</span>
-          </Label>
-          <Input name="itemName" required defaultValue={pricing?.itemName || ''} />
+          <Label>내품명</Label>
+          <Input name="itemName" defaultValue={pricing?.itemName || ''} placeholder="선택 입력" />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

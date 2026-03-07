@@ -759,7 +759,7 @@ export default function DeliveriesPage() {
         { header: '송고번호', key: 'shipmentRef', example: '', width: 14 },
         { header: '특기사항', key: 'specialNote', example: '', width: 20 },
         { header: '메모1', key: 'memo', example: '', width: 16 },
-        { header: '내품명', key: 'itemName', example: '품목명', width: 18, required: true },
+        { header: '내품명', key: 'itemName', example: '품목명', width: 18 },
         { header: '내품수량', key: 'quantity', example: '10', width: 10, required: true },
         { header: '내품가격', key: 'unitPrice', example: '50000', width: 12 },
         { header: '상품코드', key: 'itemCode', example: '', width: 14 },
@@ -1021,10 +1021,10 @@ export default function DeliveriesPage() {
                 <thead>
                   <tr className="bg-muted/50 border-b">
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
-                      내품명 <span className="text-destructive">*</span>
+                      품목(바코드) <span className="text-destructive">*</span>
                     </th>
-                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">내품수량</th>
-                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">내품가격</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
+                    <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">금액</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">운송장번호</th>
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">특기사항</th>
@@ -1195,7 +1195,7 @@ export default function DeliveriesPage() {
                 <thead>
                   <tr className="bg-muted/50 border-b">
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
-                      품목명 <span className="text-destructive">*</span>
+                      품목(바코드) <span className="text-destructive">*</span>
                     </th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>

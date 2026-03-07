@@ -1631,7 +1631,7 @@ export default function OrdersPage() {
                 <thead>
                   <tr className="bg-muted/50 border-b">
                     <th className="px-2 py-2 text-left font-medium whitespace-nowrap">
-                      품목명 <span className="text-destructive">*</span>
+                      품목(바코드) <span className="text-destructive">*</span>
                     </th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">수량</th>
                     <th className="px-2 py-2 text-right font-medium whitespace-nowrap">단가</th>

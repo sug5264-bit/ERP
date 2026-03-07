@@ -247,7 +247,8 @@ export default function ItemsPage() {
 
   const importTemplateColumns: TemplateColumn[] = [
     { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
-    { header: '품목명', key: 'itemName', example: '즉석밥 210g', required: true },
+    { header: '바코드', key: 'barcode', example: '8801234567890', required: true },
+    { header: '내품명', key: 'itemName', example: '즉석밥 210g' },
     { header: '구분', key: 'itemType', example: '상품' },
     { header: '과세구분', key: 'taxType', example: '과세' },
     { header: '분류', key: 'categoryName', example: '즉석식품' },
@@ -255,7 +256,6 @@ export default function ItemsPage() {
     { header: '단위', key: 'unit', example: 'BOX' },
     { header: '기준가', key: 'standardPrice', example: '10000' },
     { header: '안전재고', key: 'safetyStock', example: '100' },
-    { header: '바코드', key: 'barcode', example: '8801234567890' },
     { header: 'OEM제조사', key: 'manufacturer', example: '(주)식품제조' },
     { header: '원산지', key: 'originCountry', example: '국내산' },
     { header: '보관온도', key: 'storageTemp', example: '냉장(0~10℃)' },
@@ -377,12 +377,16 @@ export default function ItemsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>
-                    품목명 <span className="text-destructive">*</span>
+                    바코드 <span className="text-destructive">*</span>
                   </Label>
-                  <Input name="itemName" required aria-required="true" />
+                  <Input name="barcode" required aria-required="true" placeholder="8801234567890" />
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>내품명</Label>
+                  <Input name="itemName" />
+                </div>
                 <div className="space-y-2">
                   <Label>
                     구분 <span className="text-destructive">*</span>
@@ -433,10 +437,6 @@ export default function ItemsPage() {
                 <div className="space-y-2">
                   <Label>규격</Label>
                   <Input name="specification" placeholder="210g x 24입" />
-                </div>
-                <div className="space-y-2">
-                  <Label>바코드</Label>
-                  <Input name="barcode" />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -603,10 +603,8 @@ export default function ItemsPage() {
                   <Input value={editTarget.itemCode} disabled className="bg-muted" />
                 </div>
                 <div className="space-y-2">
-                  <Label>
-                    품목명 <span className="text-destructive">*</span>
-                  </Label>
-                  <Input name="itemName" required aria-required="true" defaultValue={editTarget.itemName} />
+                  <Label>내품명</Label>
+                  <Input name="itemName" defaultValue={editTarget.itemName} />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

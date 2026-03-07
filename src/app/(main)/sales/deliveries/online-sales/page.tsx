@@ -204,7 +204,7 @@ export default function OnlineSalesPage() {
         { header: '구매자', key: 'buyerName', example: '홍길동', width: 12 },
         { header: '구매자 연락처', key: 'buyerPhone', example: '010-1234-5678', width: 16 },
         { header: '배송지', key: 'shippingAddress', example: '서울시 강남구', width: 28 },
-        { header: '상품명', key: 'itemName', example: '상품A', width: 18, required: true },
+        { header: '상품명', key: 'itemName', example: '상품A', width: 18 },
         { header: '수량', key: 'quantity', example: '1', width: 8, required: true },
         { header: '단가', key: 'unitPrice', example: '50000', width: 12, required: true },
         { header: '수수료', key: 'platformFee', example: '5000', width: 10 },
