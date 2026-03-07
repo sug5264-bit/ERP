@@ -42,7 +42,10 @@ export async function writeAuditLog(params: AuditLogParams) {
  */
 export function getClientIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for')
-  if (forwarded) return forwarded.split(',')[0].trim()
+  if (forwarded) {
+    const ip = forwarded.split(',')[0].trim()
+    if (ip) return ip
+  }
   const real = request.headers.get('x-real-ip')
   if (real) return real
   return '0.0.0.0'

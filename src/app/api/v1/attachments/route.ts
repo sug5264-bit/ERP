@@ -10,17 +10,19 @@ const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 const VALID_TABLES = [
-  'salesOrder',
-  'quotation',
-  'delivery',
-  'salesReturn',
-  'partner',
-  'item',
-  'purchaseOrder',
-  'voucher',
-  'employee',
-  'project',
-  'recruitment',
+  'SalesOrder',
+  'SalesOrderPost',
+  'Quotation',
+  'Delivery',
+  'DeliveryPost',
+  'SalesReturn',
+  'Partner',
+  'Item',
+  'PurchaseOrder',
+  'Voucher',
+  'Employee',
+  'Project',
+  'Recruitment',
 ]
 
 /** 허용된 확장자만 업로드 가능 */

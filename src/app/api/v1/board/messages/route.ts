@@ -65,10 +65,13 @@ export async function PUT(request: NextRequest) {
     if (!body.messageId || typeof body.messageId !== 'string' || body.messageId.trim() === '') {
       return errorResponse('유효한 메시지 ID가 필요합니다.', 'INVALID_INPUT', 400)
     }
-    await prisma.message.update({
+    const result = await prisma.message.updateMany({
       where: { id: body.messageId, receiverId: authResult.session.user.id },
       data: { isRead: true, readAt: new Date() },
     })
+    if (result.count === 0) {
+      return errorResponse('메시지를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    }
     return successResponse({ updated: true })
   } catch (error) {
     return handleApiError(error)
