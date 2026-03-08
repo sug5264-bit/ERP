@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
 import { z } from 'zod'
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const authResult = await requirePermissionCheck('sales', 'read')
     if (isErrorResponse(authResult)) return authResult

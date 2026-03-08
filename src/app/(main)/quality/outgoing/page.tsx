@@ -11,7 +11,6 @@ import { StatusBadge } from '@/components/common/status-badge'
 import { formatDate } from '@/lib/format'
 import { INSPECTION_JUDGEMENT_LABELS } from '@/lib/constants'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { PackageSearch } from 'lucide-react'
 
 interface OutgoingInspection {
   id: string

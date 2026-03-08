@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ListTree, Plus, Pencil, Eye } from 'lucide-react'
+import { Plus, Pencil, Eye } from 'lucide-react'
 
 const BOM_STATUS_LABELS: Record<string, string> = {
   DRAFT: '작성중',

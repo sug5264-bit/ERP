@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Building2, Plus, Pencil, ShieldCheck } from 'lucide-react'
+import { Plus, Pencil, ShieldCheck } from 'lucide-react'
 import { formatPhone } from '@/lib/format'
 
 interface Supplier {
@@ -92,11 +92,22 @@ function SupplierForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>매입처코드 <span className="text-destructive">*</span></Label>
-          <Input name="partnerCode" required defaultValue={supplier?.partnerCode || ''} disabled={!!supplier} className={supplier ? 'bg-muted' : ''} placeholder="SUP-001" />
+          <Label>
+            매입처코드 <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            name="partnerCode"
+            required
+            defaultValue={supplier?.partnerCode || ''}
+            disabled={!!supplier}
+            className={supplier ? 'bg-muted' : ''}
+            placeholder="SUP-001"
+          />
         </div>
         <div className="space-y-2">
-          <Label>매입처명 <span className="text-destructive">*</span></Label>
+          <Label>
+            매입처명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="partnerName" required defaultValue={supplier?.partnerName || ''} />
         </div>
       </div>
@@ -136,7 +147,7 @@ function SupplierForm({
         </div>
       )}
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? (supplier ? '수정 중...' : '등록 중...') : (supplier ? '수정' : '등록')}
+        {isPending ? (supplier ? '수정 중...' : '등록 중...') : supplier ? '수정' : '등록'}
       </Button>
     </form>
   )

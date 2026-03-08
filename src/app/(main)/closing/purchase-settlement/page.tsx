@@ -10,7 +10,7 @@ import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { formatCurrency } from '@/lib/format'
-import { FileSpreadsheet, DollarSign, Wallet, AlertCircle } from 'lucide-react'
+import { DollarSign, Wallet, AlertCircle } from 'lucide-react'
 
 const SETTLEMENT_STATUS_LABELS: Record<string, string> = {
   COMPLETED: '정산완료',

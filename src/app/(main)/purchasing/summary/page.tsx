@@ -9,7 +9,7 @@ import { DataTable } from '@/components/common/data-table'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { formatCurrency } from '@/lib/format'
-import { BarChart3, ShoppingCart, Building2, DollarSign } from 'lucide-react'
+import { ShoppingCart, Building2, DollarSign } from 'lucide-react'
 
 interface PurchaseSummaryItem {
   id: string

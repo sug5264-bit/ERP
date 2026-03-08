@@ -9,7 +9,7 @@ import { DataTable } from '@/components/common/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
-import { CalendarX2, AlertTriangle } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 
 interface ExpiryItem {
   id: string
