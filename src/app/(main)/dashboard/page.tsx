@@ -67,7 +67,7 @@ const KPI_CARDS = [
   },
   {
     key: 'delivery',
-    href: '/sales/deliveries',
+    href: '/sales/orders',
     label: '출하 대기',
     unit: '건',
     Icon: Truck,
