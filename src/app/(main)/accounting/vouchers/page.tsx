@@ -14,8 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { generateVoucherPDF, type VoucherPDFData } from '@/lib/pdf-reports'
+import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, FileDown } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface VoucherRow {
@@ -133,6 +135,37 @@ export default function VouchersPage() {
 
   const handleDelete = (id: string, voucherNo: string) => {
     setDeleteTarget({ id, name: voucherNo })
+  }
+
+  const handleVoucherPDF = async (v: VoucherRow) => {
+    try {
+      const res = await api.get(`/accounting/vouchers/${v.id}`) as Record<string, unknown>
+      const detail = (res.data || res) as Record<string, unknown>
+      const vDetails = (detail.details || []) as { lineNo: number; accountSubject?: { nameKo: string; code: string }; debitAmount: number; creditAmount: number; description?: string }[]
+      const pdfData: VoucherPDFData = {
+        voucherNo: v.voucherNo,
+        voucherDate: formatDate(v.voucherDate),
+        voucherType: v.voucherType,
+        description: v.description || undefined,
+        company: { name: COMPANY_NAME },
+        createdBy: v.createdBy?.nameKo || '',
+        approvedBy: v.approvedBy?.nameKo || undefined,
+        details: vDetails.map((d) => ({
+          lineNo: d.lineNo,
+          accountName: d.accountSubject?.nameKo || '',
+          accountCode: d.accountSubject?.code || '',
+          debitAmount: Number(d.debitAmount),
+          creditAmount: Number(d.creditAmount),
+          description: d.description,
+        })),
+        totalDebit: Number(v.totalDebit),
+        totalCredit: Number(v.totalCredit),
+      }
+      generateVoucherPDF(pdfData)
+      toast.success('전표 PDF가 다운로드되었습니다.')
+    } catch {
+      toast.error('전표 상세를 불러올 수 없습니다.')
+    }
   }
 
   const vouchers: VoucherRow[] = data?.data || []
@@ -357,21 +390,33 @@ export default function VouchersPage() {
         columns={[
           ...columns,
           {
-            id: 'delete',
+            id: 'actions',
             header: '',
-            cell: ({ row }) =>
-              row.original.status === 'DRAFT' ? (
+            cell: ({ row }) => (
+              <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:text-destructive h-8 w-8"
-                  onClick={() => handleDelete(row.original.id, row.original.voucherNo)}
-                  aria-label="삭제"
+                  className="h-8 w-8"
+                  onClick={() => handleVoucherPDF(row.original)}
+                  aria-label="PDF 다운로드"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <FileDown className="h-4 w-4" />
                 </Button>
-              ) : null,
-            size: 50,
+                {row.original.status === 'DRAFT' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive h-8 w-8"
+                    onClick={() => handleDelete(row.original.id, row.original.voucherNo)}
+                    aria-label="삭제"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ),
+            size: 80,
           },
         ]}
         data={vouchers}

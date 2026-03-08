@@ -14,8 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, FileDown } from 'lucide-react'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { generateTaxInvoicePDF, type TaxInvoicePDFData } from '@/lib/pdf-reports'
 
 interface TaxInvoiceRow {
   id: string
@@ -130,6 +131,40 @@ export default function TaxInvoicePage() {
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
+  const handleInvoicePDF = async (inv: TaxInvoiceRow) => {
+    try {
+      const res = await api.get(`/accounting/tax-invoice/${inv.id}`) as Record<string, unknown>
+      const detail = (res.data || res) as Record<string, unknown>
+      const invoiceItems = (detail.items || []) as { itemDate: string; itemName: string; specification?: string; qty: number; unitPrice: number; supplyAmount: number; taxAmount: number }[]
+      const pdfData: TaxInvoicePDFData = {
+        invoiceNo: inv.invoiceNo,
+        invoiceDate: formatDate(inv.issueDate),
+        supplier: { name: inv.supplierName, bizNo: inv.supplierBizNo, ceo: (detail.supplierCeo as string) || '', address: (detail.supplierAddress as string) || '' },
+        buyer: { name: inv.buyerName, bizNo: inv.buyerBizNo, ceo: (detail.buyerCeo as string) || '', address: (detail.buyerAddress as string) || '' },
+        items: invoiceItems.map((item) => {
+          const d = new Date(item.itemDate)
+          return {
+            month: String(d.getMonth() + 1),
+            day: String(d.getDate()),
+            itemName: item.itemName,
+            spec: item.specification,
+            qty: Number(item.qty),
+            unitPrice: Number(item.unitPrice),
+            supplyAmount: Number(item.supplyAmount),
+            taxAmount: Number(item.taxAmount),
+          }
+        }),
+        totalSupply: Number(inv.supplyAmount),
+        totalTax: Number(inv.taxAmount),
+        totalAmount: Number(inv.totalAmount),
+      }
+      generateTaxInvoicePDF(pdfData)
+      toast.success('세금계산서 PDF가 다운로드되었습니다.')
+    } catch {
+      toast.error('세금계산서 상세를 불러올 수 없습니다.')
+    }
   }
 
   const updateItem = (idx: number, field: keyof InvoiceItem, value: string | number) => {
@@ -357,7 +392,25 @@ export default function TaxInvoicePage() {
         </Dialog>
       </div>
       <DataTable
-        columns={columns}
+        columns={[
+          ...columns,
+          {
+            id: 'pdf',
+            header: '',
+            cell: ({ row }) => (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handleInvoicePDF(row.original)}
+                aria-label="PDF 다운로드"
+              >
+                <FileDown className="h-4 w-4" />
+              </Button>
+            ),
+            size: 50,
+          } as ColumnDef<TaxInvoiceRow>,
+        ]}
         data={invoices}
         searchColumn="invoiceNo"
         searchPlaceholder="계산서번호로 검색..."
