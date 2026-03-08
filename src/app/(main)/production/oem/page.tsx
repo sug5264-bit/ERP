@@ -9,6 +9,7 @@ import { DataTable } from '@/components/common/data-table'
 import { StatusBadge } from '@/components/common/status-badge'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { OEM_CONTRACT_STATUS_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -220,6 +221,24 @@ export default function OemPage() {
 
   const items = (data?.data || []) as OemContract[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '계약번호', accessor: 'contractNo' },
+    { header: '계약명', accessor: 'contractName' },
+    { header: '제조사', accessor: 'manufacturerName' },
+    { header: '계약시작일', accessor: (r) => formatDate(r.startDate) },
+    { header: '계약종료일', accessor: (r) => formatDate(r.endDate) },
+    { header: '최소발주량', accessor: (r) => r.minOrderQty?.toLocaleString() || '-' },
+    { header: '리드타임(일)', accessor: (r) => r.leadTimeDays ? `${r.leadTimeDays}일` : '-' },
+    { header: '상태', accessor: (r) => OEM_CONTRACT_STATUS_LABELS[r.status] || r.status },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: 'OEM위탁현황', title: 'OEM 위탁현황 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -288,6 +307,7 @@ export default function OemPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
 
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
