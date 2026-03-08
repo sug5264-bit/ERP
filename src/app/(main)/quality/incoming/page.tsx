@@ -12,7 +12,6 @@ import { formatDate } from '@/lib/format'
 import { INSPECTION_JUDGEMENT_LABELS, QUALITY_GRADE_LABELS } from '@/lib/constants'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { SearchCheck } from 'lucide-react'
 
 interface IncomingInspection {
   id: string

@@ -9,13 +9,12 @@ import { DataTable } from '@/components/common/data-table'
 import { StatusBadge } from '@/components/common/status-badge'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { BadgeDollarSign, Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 
 const PRICING_STATUS_LABELS: Record<string, string> = {
   ACTIVE: '유효',

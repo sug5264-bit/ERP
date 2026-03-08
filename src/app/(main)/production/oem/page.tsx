@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Factory, Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 
 interface OemContract {
   id: string
@@ -62,7 +62,7 @@ const columns: ColumnDef<OemContract>[] = [
   {
     accessorKey: 'leadTimeDays',
     header: '리드타임',
-    cell: ({ row }) => row.original.leadTimeDays ? `${row.original.leadTimeDays}일` : '-',
+    cell: ({ row }) => (row.original.leadTimeDays ? `${row.original.leadTimeDays}일` : '-'),
   },
   {
     accessorKey: 'status',
@@ -84,26 +84,43 @@ function OemForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>계약번호 <span className="text-destructive">*</span></Label>
-          <Input name="contractNo" required defaultValue={contract?.contractNo || ''} disabled={!!contract} className={contract ? 'bg-muted' : ''} placeholder="OEM-001" />
+          <Label>
+            계약번호 <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            name="contractNo"
+            required
+            defaultValue={contract?.contractNo || ''}
+            disabled={!!contract}
+            className={contract ? 'bg-muted' : ''}
+            placeholder="OEM-001"
+          />
         </div>
         <div className="space-y-2">
-          <Label>계약명 <span className="text-destructive">*</span></Label>
+          <Label>
+            계약명 <span className="text-destructive">*</span>
+          </Label>
           <Input name="contractName" required defaultValue={contract?.contractName || ''} />
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>제조사 <span className="text-destructive">*</span></Label>
+          <Label>
+            제조사 <span className="text-destructive">*</span>
+          </Label>
           <Input name="manufacturerName" required defaultValue={contract?.manufacturerName || ''} />
         </div>
         <div className="space-y-2">
           <Label>상태</Label>
           <Select name="status" defaultValue={contract?.status || 'DRAFT'}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               {Object.entries(OEM_CONTRACT_STATUS_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -130,7 +147,7 @@ function OemForm({
         </div>
       </div>
       <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? (contract ? '수정 중...' : '등록 중...') : (contract ? '수정' : '등록')}
+        {isPending ? (contract ? '수정 중...' : '등록 중...') : contract ? '수정' : '등록'}
       </Button>
     </form>
   )
@@ -235,7 +252,9 @@ export default function OemPage() {
           <SelectContent>
             <SelectItem value="all">전체 상태</SelectItem>
             {Object.entries(OEM_CONTRACT_STATUS_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -249,7 +268,13 @@ export default function OemPage() {
             header: '',
             cell: ({ row }) => (
               <PermissionGuard module="production" action="update">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditTarget(row.original)} aria-label="수정">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setEditTarget(row.original)}
+                  aria-label="수정"
+                >
                   <Pencil className="h-4 w-4" />
                 </Button>
               </PermissionGuard>
@@ -271,7 +296,12 @@ export default function OemPage() {
             <DialogTitle>OEM 계약 수정</DialogTitle>
           </DialogHeader>
           {editTarget && (
-            <OemForm key={editTarget.id} contract={editTarget} onSubmit={handleUpdate} isPending={updateMutation.isPending} />
+            <OemForm
+              key={editTarget.id}
+              contract={editTarget}
+              onSubmit={handleUpdate}
+              isPending={updateMutation.isPending}
+            />
           )}
         </DialogContent>
       </Dialog>

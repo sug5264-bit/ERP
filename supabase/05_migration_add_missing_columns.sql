@@ -33,3 +33,6 @@ ALTER TABLE deliveries ADD COLUMN IF NOT EXISTS "completedBy" TEXT;
 CREATE INDEX IF NOT EXISTS idx_stock_balances_lot ON stock_balances ("lotNo");
 CREATE INDEX IF NOT EXISTS idx_stock_balances_expiry ON stock_balances ("expiryDate");
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications ("userId", "createdAt");
+CREATE INDEX IF NOT EXISTS idx_sales_order_details_item_remaining ON sales_order_details ("itemId", "remainingQty");
+CREATE INDEX IF NOT EXISTS idx_employee_histories_emp_date ON employee_histories ("employeeId", "effectiveDate");
+CREATE INDEX IF NOT EXISTS idx_recruitments_status ON recruitments ("status");

@@ -10,7 +10,7 @@ import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { formatDate } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
-import { ClipboardCheck, Package, AlertTriangle, BarChart3 } from 'lucide-react'
+import { Package, AlertTriangle, BarChart3 } from 'lucide-react'
 
 interface ProductionResult {
   id: string
@@ -42,13 +42,13 @@ const columns: ColumnDef<ProductionResult>[] = [
   {
     accessorKey: 'producedQty',
     header: '생산수량',
-    cell: ({ row }) => <span className="tabular-nums font-medium">{row.original.producedQty?.toLocaleString()}</span>,
+    cell: ({ row }) => <span className="font-medium tabular-nums">{row.original.producedQty?.toLocaleString()}</span>,
   },
   {
     accessorKey: 'defectQty',
     header: '불량수량',
     cell: ({ row }) => (
-      <span className={`tabular-nums ${row.original.defectQty > 0 ? 'text-red-600 font-medium' : ''}`}>
+      <span className={`tabular-nums ${row.original.defectQty > 0 ? 'font-medium text-red-600' : ''}`}>
         {row.original.defectQty?.toLocaleString()}
       </span>
     ),
@@ -56,7 +56,7 @@ const columns: ColumnDef<ProductionResult>[] = [
   {
     accessorKey: 'goodQty',
     header: '양품수량',
-    cell: ({ row }) => <span className="tabular-nums text-green-600">{row.original.goodQty?.toLocaleString()}</span>,
+    cell: ({ row }) => <span className="text-green-600 tabular-nums">{row.original.goodQty?.toLocaleString()}</span>,
   },
   {
     accessorKey: 'lotNo',
@@ -89,24 +89,36 @@ export default function ProductionResultPage() {
   const defectRate = totalProduced > 0 ? ((totalDefect / totalProduced) * 100).toFixed(1) : '0.0'
 
   const summaryItems = [
-    { label: '총생산', value: totalProduced.toLocaleString(), icon: Package, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-    { label: '총불량', value: totalDefect.toLocaleString(), icon: AlertTriangle, color: 'text-red-600', bgColor: 'bg-red-50' },
+    {
+      label: '총생산',
+      value: totalProduced.toLocaleString(),
+      icon: Package,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      label: '총불량',
+      value: totalDefect.toLocaleString(),
+      icon: AlertTriangle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+    },
     { label: '불량률', value: `${defectRate}%`, icon: BarChart3, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
   ]
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="생산실적"
-        description="생산 실적을 기록하고 조회합니다"
-      />
+      <PageHeader title="생산실적" description="생산 실적을 기록하고 조회합니다" />
 
       <SummaryCards items={summaryItems} isLoading={isLoading} />
 
       <DateRangeFilter
         startDate={startDate}
         endDate={endDate}
-        onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+        onDateChange={(s, e) => {
+          setStartDate(s)
+          setEndDate(e)
+        }}
       />
 
       <DataTable

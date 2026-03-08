@@ -15,7 +15,7 @@ import { PRODUCTION_STATUS_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { CalendarClock, Plus, ClipboardList, Loader2, CheckCircle, ListChecks } from 'lucide-react'
+import { Plus, ClipboardList, Loader2, CheckCircle, ListChecks } from 'lucide-react'
 
 interface ProductionPlan {
   id: string
@@ -84,9 +84,9 @@ export default function ProductionPlanPage() {
   const items = (data?.data || []) as ProductionPlan[]
 
   const totalCount = items.length
-  const plannedCount = items.filter(i => i.status === 'PLANNED').length
-  const inProgressCount = items.filter(i => i.status === 'IN_PROGRESS').length
-  const completedCount = items.filter(i => i.status === 'COMPLETED').length
+  const plannedCount = items.filter((i) => i.status === 'PLANNED').length
+  const inProgressCount = items.filter((i) => i.status === 'IN_PROGRESS').length
+  const completedCount = items.filter((i) => i.status === 'COMPLETED').length
 
   const summaryItems = [
     { label: '전체', value: totalCount, icon: ClipboardList, color: 'text-blue-600', bgColor: 'bg-blue-50' },
@@ -115,7 +115,10 @@ export default function ProductionPlanPage() {
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
-          onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="h-8 w-36 text-sm">
@@ -124,7 +127,9 @@ export default function ProductionPlanPage() {
           <SelectContent>
             <SelectItem value="all">전체 상태</SelectItem>
             {Object.entries(PRODUCTION_STATUS_LABELS).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
+              <SelectItem key={k} value={k}>
+                {v}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ShieldCheck, Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil } from 'lucide-react'
 
 const CATEGORY_OPTIONS = ['미생물', '이화학', '관능', '중금속', '위생'] as const
 

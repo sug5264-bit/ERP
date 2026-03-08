@@ -25,7 +25,6 @@ import {
   Receipt,
   Bell,
   LogOut,
-  User,
   Moon,
   Sun,
   Menu,
@@ -71,18 +70,20 @@ export function ShipperLayoutShell({ children }: { children: React.ReactNode }) 
       {/* 사이드바 */}
       <aside
         className={cn(
-          'bg-sidebar fixed inset-y-0 left-0 z-50 w-[260px] max-w-[85vw] border-r border-sidebar-border shadow-xl transition-transform duration-200 will-change-transform lg:static lg:z-auto lg:w-60 lg:max-w-none lg:translate-x-0 lg:shadow-none lg:duration-0',
+          'bg-sidebar border-sidebar-border fixed inset-y-0 left-0 z-50 w-[260px] max-w-[85vw] border-r shadow-xl transition-transform duration-200 will-change-transform lg:static lg:z-auto lg:w-60 lg:max-w-none lg:translate-x-0 lg:shadow-none lg:duration-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <div className="border-sidebar-border flex h-14 items-center border-b px-4">
           <div className="flex items-center gap-2.5">
             <div className="bg-sidebar-primary flex h-8 w-8 items-center justify-center rounded-lg">
-              <Leaf className="h-4.5 w-4.5 text-sidebar-primary-foreground" />
+              <Leaf className="text-sidebar-primary-foreground h-4.5 w-4.5" />
             </div>
             <div className="flex flex-col">
               <span className="text-sidebar-foreground text-sm font-bold">화주사 포털</span>
-              <span className="text-sidebar-foreground/50 text-[10px]">{(userRecord as Record<string, unknown>)?.companyName as string || '웰그린 3PL'}</span>
+              <span className="text-sidebar-foreground/50 text-[10px]">
+                {((userRecord as Record<string, unknown>)?.companyName as string) || '웰그린 3PL'}
+              </span>
             </div>
           </div>
         </div>
@@ -94,7 +95,9 @@ export function ShipperLayoutShell({ children }: { children: React.ReactNode }) 
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => { if (window.innerWidth < 1024) setOpen(false) }}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) setOpen(false)
+                  }}
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
                     isActive
@@ -118,7 +121,7 @@ export function ShipperLayoutShell({ children }: { children: React.ReactNode }) 
             <Menu className="h-5 w-5" />
           </Button>
           <div className="text-sm font-semibold">
-            {shipperNavItems.find(i => pathname.startsWith(i.href))?.title || '화주사 포털'}
+            {shipperNavItems.find((i) => pathname.startsWith(i.href))?.title || '화주사 포털'}
           </div>
           <div className="ml-auto flex items-center gap-1.5">
             <Button variant="ghost" size="icon" onClick={toggleTheme}>
@@ -147,7 +150,10 @@ export function ShipperLayoutShell({ children }: { children: React.ReactNode }) 
             </DropdownMenu>
           </div>
         </header>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main
+          className="flex-1 overflow-x-hidden overflow-y-auto px-4 py-3 sm:p-6"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           {children}
         </main>
       </div>

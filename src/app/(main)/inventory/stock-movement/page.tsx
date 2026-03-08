@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { toast } from 'sonner'
-import { Plus, Trash2, Download } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 

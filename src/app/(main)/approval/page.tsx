@@ -17,9 +17,19 @@ export default function ApprovalPage() {
     queryKey: ['approval-pending-summary'],
     queryFn: () => api.get('/approval/documents?filter=myApprovals&pageSize=5'),
   })
+  const { data: completed } = useQuery({
+    queryKey: ['approval-completed-summary'],
+    queryFn: () => api.get('/approval/documents?status=APPROVED&pageSize=1'),
+  })
+  const { data: rejected } = useQuery({
+    queryKey: ['approval-rejected-summary'],
+    queryFn: () => api.get('/approval/documents?status=REJECTED&pageSize=1'),
+  })
 
   const draftCount = drafts?.meta?.totalCount || 0
   const pendingCount = pending?.meta?.totalCount || 0
+  const completedCount = completed?.meta?.totalCount || 0
+  const rejectedCount = rejected?.meta?.totalCount || 0
 
   return (
     <div className="space-y-6">
@@ -57,7 +67,7 @@ export default function ApprovalPage() {
             </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <div className="text-status-success text-lg font-bold sm:text-2xl">-</div>
+            <div className="text-status-success text-lg font-bold sm:text-2xl">{completedCount}</div>
           </CardContent>
         </Card>
         <Card>
@@ -68,7 +78,9 @@ export default function ApprovalPage() {
             </div>
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-            <div className="text-status-danger text-lg font-bold sm:text-2xl">-</div>
+            <div className={`text-lg font-bold sm:text-2xl ${rejectedCount > 0 ? 'text-status-danger' : ''}`}>
+              {rejectedCount}
+            </div>
           </CardContent>
         </Card>
       </div>
