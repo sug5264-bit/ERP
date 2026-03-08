@@ -19,10 +19,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner'
 import { Plus, Pencil } from 'lucide-react'
 
+interface PartnerOption {
+  id: string
+  partnerName: string
+}
+
 interface OemContract {
   id: string
   contractNo: string
   contractName: string
+  partnerId: string
   manufacturerName: string
   startDate: string
   endDate: string
@@ -74,10 +80,12 @@ const columns: ColumnDef<OemContract>[] = [
 
 function OemForm({
   contract,
+  partners,
   onSubmit,
   isPending,
 }: {
   contract?: OemContract | null
+  partners: PartnerOption[]
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   isPending: boolean
 }) {
@@ -109,7 +117,16 @@ function OemForm({
           <Label>
             제조사 <span className="text-destructive">*</span>
           </Label>
-          <Input name="manufacturerName" required defaultValue={contract?.manufacturerName || ''} />
+          <Select name="partnerId" defaultValue={contract?.partnerId || ''} required>
+            <SelectTrigger>
+              <SelectValue placeholder="제조사 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {partners.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>상태</Label>
@@ -160,6 +177,16 @@ export default function OemPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const queryClient = useQueryClient()
 
+  const { data: partnersData } = useQuery({
+    queryKey: ['oem-partners'],
+    queryFn: () => api.get('/partners?partnerType=PURCHASE&pageSize=200'),
+    enabled: open || !!editTarget,
+  })
+  const partners: PartnerOption[] = (partnersData?.data || []).map((p: Record<string, unknown>) => ({
+    id: String(p.id),
+    partnerName: String(p.partnerName),
+  }))
+
   const qp = new URLSearchParams()
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
@@ -194,11 +221,11 @@ export default function OemPage() {
     createMutation.mutate({
       contractNo: form.get('contractNo'),
       contractName: form.get('contractName'),
-      manufacturerName: form.get('manufacturerName'),
+      partnerId: form.get('partnerId'),
       status: form.get('status'),
       startDate: form.get('startDate') || undefined,
       endDate: form.get('endDate') || undefined,
-      minOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
+      minimumOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
       leadTimeDays: form.get('leadTimeDays') ? parseInt(form.get('leadTimeDays') as string) : undefined,
     })
   }
@@ -210,11 +237,11 @@ export default function OemPage() {
     updateMutation.mutate({
       id: editTarget.id,
       contractName: form.get('contractName'),
-      manufacturerName: form.get('manufacturerName'),
+      partnerId: form.get('partnerId'),
       status: form.get('status'),
       startDate: form.get('startDate') || undefined,
       endDate: form.get('endDate') || undefined,
-      minOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
+      minimumOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
       leadTimeDays: form.get('leadTimeDays') ? parseInt(form.get('leadTimeDays') as string) : undefined,
     })
   }
@@ -256,7 +283,7 @@ export default function OemPage() {
                 <DialogHeader>
                   <DialogTitle>OEM 계약 등록</DialogTitle>
                 </DialogHeader>
-                <OemForm onSubmit={handleCreate} isPending={createMutation.isPending} />
+                <OemForm partners={partners} onSubmit={handleCreate} isPending={createMutation.isPending} />
               </DialogContent>
             </Dialog>
           </PermissionGuard>
@@ -319,6 +346,7 @@ export default function OemPage() {
             <OemForm
               key={editTarget.id}
               contract={editTarget}
+              partners={partners}
               onSubmit={handleUpdate}
               isPending={updateMutation.isPending}
             />
