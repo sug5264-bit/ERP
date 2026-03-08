@@ -245,7 +245,7 @@ export default function StockStatusPage() {
                 <tr className="bg-muted/50 border-b">
                   <th className="p-3 text-left font-medium">바코드</th>
                   <th className="p-3 text-left font-medium">품목코드</th>
-                  <th className="text-muted-foreground p-3 text-left text-xs font-medium">내품명</th>
+                  <th className="text-muted-foreground p-3 text-left text-xs font-medium">품목명</th>
                   <th className="p-3 text-left font-medium">구분</th>
                   <th className="p-3 text-left font-medium">보관</th>
                   <th className="p-3 text-left font-medium">OEM제조사</th>

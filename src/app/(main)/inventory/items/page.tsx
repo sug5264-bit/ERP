@@ -249,7 +249,7 @@ export default function ItemsPage() {
   const importTemplateColumns: TemplateColumn[] = [
     { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
     { header: '바코드', key: 'barcode', example: '8801234567890', required: true },
-    { header: '내품명', key: 'itemName', example: '즉석밥 210g' },
+    { header: '품목명', key: 'itemName', example: '즉석밥 210g' },
     { header: '구분', key: 'itemType', example: '상품' },
     { header: '과세구분', key: 'taxType', example: '과세' },
     { header: '분류', key: 'categoryName', example: '즉석식품' },
@@ -385,7 +385,7 @@ export default function ItemsPage() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>내품명</Label>
+                  <Label>품목명</Label>
                   <Input name="itemName" />
                 </div>
                 <div className="space-y-2">
@@ -584,7 +584,7 @@ export default function ItemsPage() {
                   <Input value={editTarget.itemCode} disabled className="bg-muted" />
                 </div>
                 <div className="space-y-2">
-                  <Label>내품명</Label>
+                  <Label>품목명</Label>
                   <Input name="itemName" defaultValue={editTarget.itemName} />
                 </div>
               </div>

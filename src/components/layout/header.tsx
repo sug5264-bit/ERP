@@ -81,6 +81,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/accounting/vouchers': '전표관리',
   '/accounting/ledger': '총계정원장',
   '/accounting/tax-invoice': '세금계산서',
+  '/accounting/journal': '분개장',
+  '/accounting/budget': '예산관리',
   '/accounting/financial-statements': '재무제표',
   // 인사관리 (HR)
   '/hr/employees': '사원관리',
@@ -88,6 +90,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/hr/attendance': '근태관리',
   '/hr/leave': '휴가관리',
   '/hr/payroll': '급여관리',
+  '/hr/recruitment': '채용관리',
   // 전자결재
   '/approval/draft': '기안하기',
   '/approval/pending': '결재대기',
@@ -103,6 +106,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/codes': '코드관리',
   '/admin/logs': '감사로그',
   '/admin/company': '회사관리',
+  '/admin/settings': '시스템설정',
+  // 기타
+  '/projects': '프로젝트',
   '/mypage': '마이페이지',
 }
 

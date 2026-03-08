@@ -334,7 +334,7 @@ export default function BomPage() {
                         <tr className="bg-muted/30 border-b">
                           <th className="px-3 py-2 text-left text-xs font-medium">바코드</th>
                           <th className="text-muted-foreground px-3 py-2 text-left text-xs font-medium">품목코드</th>
-                          <th className="text-muted-foreground px-3 py-2 text-left text-xs font-medium">내품명</th>
+                          <th className="text-muted-foreground px-3 py-2 text-left text-xs font-medium">품목명</th>
                           <th className="px-3 py-2 text-right text-xs font-medium">수량</th>
                           <th className="px-3 py-2 text-left text-xs font-medium">단위</th>
                           <th className="px-3 py-2 text-right text-xs font-medium">손실율(%)</th>

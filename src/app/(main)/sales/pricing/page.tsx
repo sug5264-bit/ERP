@@ -47,7 +47,7 @@ const columns: ColumnDef<PricingItem>[] = [
   },
   {
     accessorKey: 'itemName',
-    header: '내품명',
+    header: '품목명',
     cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
@@ -96,7 +96,7 @@ function PricingForm({
           <Input name="partnerName" required defaultValue={pricing?.partnerName || ''} />
         </div>
         <div className="space-y-2">
-          <Label>내품명</Label>
+          <Label>품목명</Label>
           <Input name="itemName" defaultValue={pricing?.itemName || ''} placeholder="선택 입력" />
         </div>
       </div>

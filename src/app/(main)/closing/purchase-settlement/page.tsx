@@ -10,6 +10,8 @@ import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { formatCurrency } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 import { DollarSign, Wallet, AlertCircle } from 'lucide-react'
 
 const SETTLEMENT_STATUS_LABELS: Record<string, string> = {
@@ -80,6 +82,22 @@ export default function PurchaseSettlementPage() {
 
   const items = (data?.data || []) as PurchaseSettlement[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '매입처명', accessor: 'supplierName' },
+    { header: '매입건수', accessor: (r) => `${r.purchaseCount}건` },
+    { header: '매입금액', accessor: (r) => formatCurrency(r.purchaseAmount) },
+    { header: '지급액', accessor: (r) => formatCurrency(r.paidAmount) },
+    { header: '미지급액', accessor: (r) => formatCurrency(r.unpaidAmount) },
+    { header: '정산상태', accessor: (r) => SETTLEMENT_STATUS_LABELS[r.status] || r.status },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '매입정산', title: '매입정산 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   const totalPurchase = items.reduce((sum, i) => sum + (i.purchaseAmount || 0), 0)
   const totalPaid = items.reduce((sum, i) => sum + (i.paidAmount || 0), 0)
   const totalUnpaid = items.reduce((sum, i) => sum + (i.unpaidAmount || 0), 0)
@@ -131,6 +149,7 @@ export default function PurchaseSettlementPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

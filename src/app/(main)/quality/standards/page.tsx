@@ -40,7 +40,7 @@ const columns: ColumnDef<QualityStandard>[] = [
   },
   {
     accessorKey: 'itemName',
-    header: '내품명',
+    header: '품목명',
     cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
@@ -100,7 +100,7 @@ function StandardForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>내품명</Label>
+          <Label>품목명</Label>
           <Input name="itemName" defaultValue={standard?.itemName || ''} placeholder="선택 입력" />
         </div>
         <div className="space-y-2">

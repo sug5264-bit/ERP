@@ -9,6 +9,8 @@ import { DataTable } from '@/components/common/data-table'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 import { AlertTriangle } from 'lucide-react'
 
 interface ExpiryItem {
@@ -50,7 +52,7 @@ const columns: ColumnDef<ExpiryItem>[] = [
   },
   {
     accessorKey: 'itemName',
-    header: '내품명',
+    header: '품목명',
     cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
@@ -105,6 +107,24 @@ export default function ExpiryManagementPage() {
   })
 
   const items = (data?.data || []) as ExpiryItem[]
+
+  const exportColumns: ExportColumn[] = [
+    { header: '바코드', accessor: (r) => r.barcode || r.itemCode },
+    { header: '품목코드', accessor: 'itemCode' },
+    { header: '품목명', accessor: 'itemName' },
+    { header: 'LOT번호', accessor: 'lotNo' },
+    { header: '유통기한', accessor: (r) => formatDate(r.expiryDate) },
+    { header: '남은일수', accessor: (r) => (r.daysLeft <= 0 ? '만료' : `${r.daysLeft}일`) },
+    { header: '재고수량', accessor: (r) => Number(r.stockQty) },
+    { header: '창고', accessor: 'warehouseName' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '유통기한관리', title: '유통기한 임박 품목 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const expiredCount = items.filter((i) => i.daysLeft <= 0).length
   const urgentCount = items.filter((i) => i.daysLeft > 0 && i.daysLeft <= 7).length
@@ -163,6 +183,7 @@ export default function ExpiryManagementPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

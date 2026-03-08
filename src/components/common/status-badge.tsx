@@ -33,6 +33,18 @@ const STATUS_COLORS: Record<string, string> = {
   PASS: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
   FAIL: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   CONDITIONAL: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  CONDITIONAL_PASS: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+  // BOM
+  INACTIVE: 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+  // 정산
+  PARTIAL: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300',
+  // 채용
+  OPEN: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  INTERVIEWING: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+  HIRED: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+  // 세금계산서
+  SENT: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  ERROR: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300',
   // 기본
   PENDING: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
   REQUESTED: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',

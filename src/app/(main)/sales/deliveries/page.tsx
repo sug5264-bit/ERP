@@ -872,7 +872,7 @@ export default function DeliveriesPage() {
           )
         if (!item) {
           failCount++
-          failReasons.push(`내품명 "${row.itemName || row.itemCode}" 미매칭`)
+          failReasons.push(`품목명 "${row.itemName || row.itemCode}" 미매칭`)
           continue
         }
         if (!order?.id) {

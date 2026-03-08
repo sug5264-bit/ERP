@@ -53,6 +53,7 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
     module: 'sales',
     children: [
+      { title: '수주관리', href: '/sales/orders', permission: 'sales.orders' },
       {
         title: '출하관리',
         href: '/sales/deliveries',

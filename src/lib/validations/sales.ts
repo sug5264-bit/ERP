@@ -149,6 +149,24 @@ export const createQualityStandardSchema = z.object({
   sortOrder: z.number().int().min(0).max(999).default(0),
 })
 
+// ─── 구매발주 ──────────────────────────────
+export const createPurchaseOrderSchema = z.object({
+  orderDate: z
+    .string()
+    .min(1, '발주일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
+  partnerId: z.string().min(1, '매입처를 선택하세요').max(50),
+  deliveryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  description: z.string().max(1000).optional().nullable(),
+  vatIncluded: z.boolean().optional().default(true),
+  details: z.array(lineDetailSchema).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
+})
+
 // ─── 상계 ──────────────────────────────────
 export const createNettingSchema = z.object({
   partnerId: z.string().min(1, '거래처를 선택하세요').max(50),

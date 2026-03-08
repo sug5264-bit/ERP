@@ -9,9 +9,11 @@ import { DataTable } from '@/components/common/data-table'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { INSPECTION_JUDGEMENT_LABELS, QUALITY_GRADE_LABELS } from '@/lib/constants'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
 
 interface IncomingInspection {
   id: string
@@ -48,7 +50,7 @@ const columns: ColumnDef<IncomingInspection>[] = [
   },
   {
     accessorKey: 'itemName',
-    header: '내품명',
+    header: '품목명',
     cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
@@ -86,6 +88,24 @@ export default function IncomingInspectionPage() {
 
   const items = (data?.data || []) as IncomingInspection[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '검사번호', accessor: 'inspectionNo' },
+    { header: '검사일', accessor: (r) => formatDate(r.inspectionDate) },
+    { header: '입고번호', accessor: 'receivingNo' },
+    { header: '바코드', accessor: (r) => r.barcode || '-' },
+    { header: '품목명', accessor: 'itemName' },
+    { header: '검사자', accessor: 'inspectorName' },
+    { header: '판정', accessor: (r) => INSPECTION_JUDGEMENT_LABELS[r.judgement] || r.judgement },
+    { header: '등급', accessor: (r) => QUALITY_GRADE_LABELS[r.grade] || r.grade || '-' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '입고검사', title: '입고검사 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader title="입고검사" description="입고 물품의 품질 검사를 수행하고 관리합니다" />
@@ -122,6 +142,7 @@ export default function IncomingInspectionPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )
