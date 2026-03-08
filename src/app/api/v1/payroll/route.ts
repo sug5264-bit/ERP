@@ -9,7 +9,7 @@ import {
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
-import { createPayrollSchema } from '@/lib/validations/project'
+import { createPayrollSchema } from '@/lib/validations/hr'
 
 export async function GET(request: NextRequest) {
   try {

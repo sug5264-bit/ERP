@@ -14,8 +14,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { generatePayrollSlipPDF, type PayrollSlipPDFData } from '@/lib/pdf-reports'
 
 import { toast } from 'sonner'
+import { FileDown } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface PayrollRow {
@@ -110,6 +112,65 @@ export default function PayrollPage() {
     }
   }
 
+  const handleSlipPdf = async (detail: Record<string, unknown>) => {
+    try {
+      const emp = detail.employee as Record<string, unknown> | undefined
+      const dept = emp?.department as Record<string, string> | undefined
+      const pos = emp?.position as Record<string, string> | undefined
+
+      let companyInfo: PayrollSlipPDFData['company'] = { name: '(주)웰그린' }
+      try {
+        const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
+        const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
+        if (defaultCompany) {
+          companyInfo = {
+            name: defaultCompany.companyName || companyInfo.name,
+            ceo: defaultCompany.ceoName,
+            address: defaultCompany.address,
+            tel: defaultCompany.phone,
+            bizNo: defaultCompany.bizNo,
+          }
+        }
+      } catch { /* use default */ }
+
+      const pdfData: PayrollSlipPDFData = {
+        payPeriod: String(selectedPayroll?.payPeriod || ''),
+        payDate: selectedPayroll?.payDate ? formatDate(String(selectedPayroll.payDate)) : '',
+        company: companyInfo,
+        employee: {
+          name: String(emp?.nameKo || ''),
+          employeeNo: String(emp?.employeeNo || ''),
+          department: dept?.name,
+          position: pos?.name,
+        },
+        earnings: {
+          baseSalary: Number(detail.baseSalary),
+          overtimePay: Number(detail.overtimePay || 0),
+          bonusPay: Number(detail.bonusPay || 0),
+          mealAllowance: Number(detail.mealAllowance),
+          transportAllowance: Number(detail.transportAllowance),
+          totalEarnings: Number(detail.totalEarnings),
+        },
+        deductions: {
+          nationalPension: Number(detail.nationalPension),
+          healthInsurance: Number(detail.healthInsurance),
+          longTermCare: Number(detail.longTermCare),
+          employmentInsurance: Number(detail.employmentInsurance),
+          incomeTax: Number(detail.incomeTax),
+          localIncomeTax: Number(detail.localIncomeTax),
+          totalDeductions: Number(detail.totalDeductions),
+        },
+        netPay: Number(detail.netPay),
+      }
+
+      await generatePayrollSlipPDF(pdfData)
+      toast.success('급여명세서가 다운로드되었습니다.')
+    } catch (err) {
+      toast.error('PDF 생성에 실패했습니다.')
+      console.error(err)
+    }
+  }
+
   const details = (selectedPayroll?.details || []) as Record<string, unknown>[]
   const totals = details.reduce(
     (acc: { totalEarnings: number; totalDeductions: number; netPay: number }, d: Record<string, unknown>) => ({
@@ -157,6 +218,25 @@ export default function PayrollPage() {
       id: 'netPay',
       header: '실수령액',
       cell: ({ row }) => <span className="font-bold">{formatCurrency(Number(row.original.netPay))}</span>,
+    },
+    {
+      id: 'pdf',
+      header: '',
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-xs"
+          onClick={(e) => {
+            e.stopPropagation()
+            handleSlipPdf(row.original)
+          }}
+        >
+          <FileDown className="mr-1 h-3 w-3" />
+          명세서
+        </Button>
+      ),
+      size: 80,
     },
   ]
 

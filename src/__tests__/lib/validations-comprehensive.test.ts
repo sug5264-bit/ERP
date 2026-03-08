@@ -27,7 +27,8 @@ import {
 } from '@/lib/validations/hr'
 import { createApprovalDocumentSchema } from '@/lib/validations/approval'
 import { createPostSchema, createCommentSchema, createMessageSchema } from '@/lib/validations/board'
-import { createProjectSchema, createPayrollSchema } from '@/lib/validations/project'
+import { createProjectSchema } from '@/lib/validations/project'
+import { createPayrollSchema } from '@/lib/validations/hr'
 
 describe('프론트엔드 폼 전송 시뮬레이션', () => {
   describe('입출고 (Stock Movement)', () => {

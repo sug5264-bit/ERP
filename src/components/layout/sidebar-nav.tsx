@@ -199,6 +199,7 @@ const navItems: NavItem[] = [
       { title: '코드관리', href: '/admin/codes', permission: 'admin.codes' },
       { title: '감사로그', href: '/admin/logs', permission: 'admin.logs' },
       { title: '회사관리', href: '/admin/company', permission: 'admin.company' },
+      { title: '시스템설정', href: '/admin/settings', permission: 'admin.settings' },
     ],
   },
 ]

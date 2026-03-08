@@ -12,10 +12,13 @@ import { SummaryCards } from '@/components/common/summary-cards'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { ClipboardList, Plus, Loader2, CheckCircle, DollarSign } from 'lucide-react'
+import { ClipboardList, Plus, Loader2, CheckCircle, DollarSign, FileDown } from 'lucide-react'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { generatePurchaseOrderPDF, type PurchaseOrderPDFData } from '@/lib/pdf-reports'
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   ORDERED: '발주완료',
@@ -71,6 +74,9 @@ export default function PurchasingOrdersPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedOrder, setSelectedOrder] = useState<Record<string, unknown> | null>(null)
+  const [pdfLoading, setPdfLoading] = useState(false)
 
   const qp = new URLSearchParams({ page: '1', pageSize: '50' })
   if (startDate) qp.set('startDate', startDate)
@@ -101,6 +107,81 @@ export default function PurchasingOrdersPage() {
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
+  const handleRowClick = async (row: PurchaseOrder) => {
+    try {
+      const res = (await api.get(`/purchasing/orders/${row.id}`)) as Record<string, unknown>
+      setSelectedOrder((res.data || res) as Record<string, unknown>)
+      setDetailOpen(true)
+    } catch {
+      toast.error('발주 데이터를 불러올 수 없습니다.')
+    }
+  }
+
+  const handlePdfDownload = async () => {
+    if (!selectedOrder) return
+    setPdfLoading(true)
+    try {
+      const partner = selectedOrder.partner as Record<string, string> | undefined
+      const details = (selectedOrder.details || []) as Record<string, unknown>[]
+
+      // Fetch default company info
+      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = { name: '(주)웰그린' }
+      try {
+        const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
+        const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
+        if (defaultCompany) {
+          companyInfo = {
+            name: defaultCompany.companyName || companyInfo.name,
+            ceo: defaultCompany.ceoName,
+            address: defaultCompany.address,
+            tel: defaultCompany.phone,
+            bizNo: defaultCompany.bizNo,
+          }
+        }
+      } catch { /* use default */ }
+
+      const pdfData: PurchaseOrderPDFData = {
+        orderNo: String(selectedOrder.orderNo || ''),
+        orderDate: formatDate(String(selectedOrder.orderDate || '')),
+        deliveryDate: selectedOrder.deliveryDate ? formatDate(String(selectedOrder.deliveryDate)) : undefined,
+        company: companyInfo,
+        supplier: {
+          name: partner?.partnerName || '',
+          ceo: partner?.ceoName,
+          address: partner?.address,
+          tel: partner?.phone,
+          bizNo: partner?.bizNo,
+        },
+        items: details.map((d, i) => {
+          const item = d.item as Record<string, string> | undefined
+          return {
+            no: i + 1,
+            itemName: item?.itemName || '',
+            spec: item?.specification,
+            unit: item?.unit,
+            qty: Number(d.quantity),
+            unitPrice: Number(d.unitPrice),
+            supplyAmount: Number(d.supplyAmount),
+            taxAmount: Number(d.taxAmount),
+            totalAmount: Number(d.amount),
+          }
+        }),
+        totalSupply: Number(selectedOrder.totalSupply),
+        totalTax: Number(selectedOrder.totalTax),
+        totalAmount: Number(selectedOrder.totalAmount),
+        description: selectedOrder.description as string | undefined,
+      }
+
+      await generatePurchaseOrderPDF(pdfData)
+      toast.success('발주서 PDF가 다운로드되었습니다.')
+    } catch (err) {
+      toast.error('PDF 생성에 실패했습니다.')
+      console.error(err)
+    } finally {
+      setPdfLoading(false)
+    }
+  }
+
   const totalCount = items.length
   const inProgressCount = items.filter((i) => i.status === 'IN_PROGRESS').length
   const completedCount = items.filter((i) => i.status === 'COMPLETED').length
@@ -124,6 +205,8 @@ export default function PurchasingOrdersPage() {
       bgColor: 'bg-violet-50',
     },
   ]
+
+  const orderDetails = (selectedOrder?.details || []) as Record<string, unknown>[]
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -173,8 +256,115 @@ export default function PurchasingOrdersPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onRowClick={handleRowClick}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
+
+      {/* 발주 상세 다이얼로그 */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>발주서 상세 - {String(selectedOrder?.orderNo || '')}</span>
+              <Button size="sm" variant="outline" onClick={handlePdfDownload} disabled={pdfLoading}>
+                <FileDown className="mr-1.5 h-4 w-4" />
+                {pdfLoading ? 'PDF 생성 중...' : '발주서 PDF'}
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-muted-foreground text-xs">발주번호</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <span className="font-mono text-sm font-bold">{String(selectedOrder.orderNo)}</span>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-muted-foreground text-xs">매입처</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <span className="text-sm font-bold">
+                      {(selectedOrder.partner as Record<string, string> | undefined)?.partnerName || '-'}
+                    </span>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-muted-foreground text-xs">발주일</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <span className="text-sm">{formatDate(String(selectedOrder.orderDate))}</span>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-muted-foreground text-xs">합계금액</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <span className="text-status-info text-sm font-bold">
+                      {formatCurrency(Number(selectedOrder.totalAmount))}
+                    </span>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 품목 상세 */}
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 border-b text-xs">
+                      <th className="px-3 py-2 text-left">No</th>
+                      <th className="px-3 py-2 text-left">품명</th>
+                      <th className="px-3 py-2 text-left">규격</th>
+                      <th className="px-3 py-2 text-right">수량</th>
+                      <th className="px-3 py-2 text-right">단가</th>
+                      <th className="px-3 py-2 text-right">공급가액</th>
+                      <th className="px-3 py-2 text-right">세액</th>
+                      <th className="px-3 py-2 text-right">합계</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderDetails.map((d, i) => {
+                      const item = d.item as Record<string, string> | undefined
+                      return (
+                        <tr key={String(d.id)} className="border-b last:border-0">
+                          <td className="px-3 py-2">{i + 1}</td>
+                          <td className="px-3 py-2 font-medium">{item?.itemName || '-'}</td>
+                          <td className="px-3 py-2">{item?.specification || '-'}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{Number(d.quantity).toLocaleString()}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(d.unitPrice))}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(d.supplyAmount))}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(d.taxAmount))}</td>
+                          <td className="px-3 py-2 text-right font-medium tabular-nums">{formatCurrency(Number(d.amount))}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-muted/30 font-bold">
+                      <td colSpan={5} className="px-3 py-2 text-center">합계</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(selectedOrder.totalSupply))}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(selectedOrder.totalTax))}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(selectedOrder.totalAmount))}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {typeof selectedOrder.description === 'string' && selectedOrder.description && (
+                <div className="text-muted-foreground rounded-lg border p-3 text-sm">
+                  <strong>비고:</strong> {selectedOrder.description}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

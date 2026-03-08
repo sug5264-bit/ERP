@@ -196,6 +196,7 @@ model Company {
   bankCopyPath    String?
   bizCertPath     String?
   logoPath        String?
+  sealPath        String?
   isDefault       Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

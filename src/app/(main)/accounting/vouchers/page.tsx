@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generateVoucherPDF, type VoucherPDFData } from '@/lib/pdf-reports'
-import { COMPANY_NAME } from '@/lib/constants'
+import { getDefaultCompanyInfo } from '@/lib/company-info'
 import { toast } from 'sonner'
 import { Plus, Trash2, FileDown } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
@@ -139,7 +139,10 @@ export default function VouchersPage() {
 
   const handleVoucherPDF = async (v: VoucherRow) => {
     try {
-      const res = await api.get(`/accounting/vouchers/${v.id}`) as Record<string, unknown>
+      const [res, companyInfo] = await Promise.all([
+        api.get(`/accounting/vouchers/${v.id}`) as Promise<Record<string, unknown>>,
+        getDefaultCompanyInfo(),
+      ])
       const detail = (res.data || res) as Record<string, unknown>
       const vDetails = (detail.details || []) as { lineNo: number; accountSubject?: { nameKo: string; code: string }; debitAmount: number; creditAmount: number; description?: string }[]
       const pdfData: VoucherPDFData = {
@@ -147,7 +150,7 @@ export default function VouchersPage() {
         voucherDate: formatDate(v.voucherDate),
         voucherType: v.voucherType,
         description: v.description || undefined,
-        company: { name: COMPANY_NAME },
+        company: companyInfo,
         createdBy: v.createdBy?.nameKo || '',
         approvedBy: v.approvedBy?.nameKo || undefined,
         details: vDetails.map((d) => ({

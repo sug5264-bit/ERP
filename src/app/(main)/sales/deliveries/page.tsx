@@ -17,7 +17,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
-import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
 import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2, CheckCircle, Paperclip, X } from 'lucide-react'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
@@ -308,7 +307,7 @@ export default function DeliveriesPage() {
       statementNo: delivery.deliveryNo,
       statementDate: formatDate(delivery.deliveryDate),
       supplier: {
-        name: company?.companyName || COMPANY_NAME,
+        name: company?.companyName || '(주)웰그린',
         bizNo: company?.bizNo || '',
         ceo: company?.ceoName || '',
         address: company?.address || '',
