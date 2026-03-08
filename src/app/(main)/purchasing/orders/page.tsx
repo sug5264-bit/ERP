@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/common/status-badge'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
+import { COMPANY_NAME } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -230,7 +231,7 @@ export default function PurchasingOrdersPage() {
       const details = (selectedOrder.details || []) as Record<string, unknown>[]
 
       // Fetch default company info
-      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = { name: '(주)웰그린' }
+      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = { name: COMPANY_NAME }
       try {
         const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
         const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]

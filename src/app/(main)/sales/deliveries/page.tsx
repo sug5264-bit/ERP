@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
+import { COMPANY_NAME } from '@/lib/constants'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { toast } from 'sonner'
@@ -307,7 +308,7 @@ export default function DeliveriesPage() {
       statementNo: delivery.deliveryNo,
       statementDate: formatDate(delivery.deliveryDate),
       supplier: {
-        name: company?.companyName || '(주)웰그린',
+        name: company?.companyName || COMPANY_NAME,
         bizNo: company?.bizNo || '',
         ceo: company?.ceoName || '',
         address: company?.address || '',

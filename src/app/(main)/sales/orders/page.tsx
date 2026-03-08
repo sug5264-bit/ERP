@@ -23,7 +23,7 @@ import {
   type TransactionStatementPDFData,
   type SalesOrderPDFData,
 } from '@/lib/pdf-reports'
-import { getDefaultCompanyInfo } from '@/lib/company-info'
+import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -263,7 +263,7 @@ export default function OrdersPage() {
         tel: defaultCompany.phone || '',
       }
     }
-    return { name: '(주)웰그린', bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
+    return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
   }
 
   const handleTaxInvoicePDF = async (order: SalesOrder) => {

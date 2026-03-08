@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
+import { COMPANY_NAME } from '@/lib/constants'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { FileText } from 'lucide-react'
@@ -181,7 +182,7 @@ export default function NettingPage() {
         tel: defaultCompany.phone || '',
       }
     }
-    return { name: '(주)웰그린', bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
+    return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
   }
 
   const handleTransactionStatementPDF = async (order: OrderRow) => {

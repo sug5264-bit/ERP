@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate, formatCurrency } from '@/lib/format'
+import { COMPANY_NAME } from '@/lib/constants'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generatePayrollSlipPDF, type PayrollSlipPDFData } from '@/lib/pdf-reports'
 
@@ -118,7 +119,7 @@ export default function PayrollPage() {
       const dept = emp?.department as Record<string, string> | undefined
       const pos = emp?.position as Record<string, string> | undefined
 
-      let companyInfo: PayrollSlipPDFData['company'] = { name: '(주)웰그린' }
+      let companyInfo: PayrollSlipPDFData['company'] = { name: COMPANY_NAME }
       try {
         const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
         const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
