@@ -144,9 +144,6 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   IN_PROGRESS: { label: '진행중', variant: 'secondary' },
   COMPLETED: { label: '완료', variant: 'outline' },
   CANCELLED: { label: '취소', variant: 'destructive' },
-  COMPLAINT: { label: '컨플레인', variant: 'destructive' },
-  EXCHANGE: { label: '교환', variant: 'secondary' },
-  RETURN: { label: '반품', variant: 'destructive' },
 }
 
 interface Detail {
@@ -470,6 +467,8 @@ export default function OrdersPage() {
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
       setBatchCompleteOpen(false)
       setBatchCompleteIds([])
+      setBatchCancelConfirm(null)
+      setBulkDeleteIds(null)
       if (result.failed > 0) {
         toast.error(`성공 ${result.success}건, 실패 ${result.failed}건`)
       } else {
@@ -818,9 +817,6 @@ export default function OrdersPage() {
       IN_PROGRESS: 'warning',
       COMPLETED: 'success',
       CANCELLED: 'danger',
-      COMPLAINT: 'danger',
-      EXCHANGE: 'warning',
-      RETURN: 'danger',
     }
     return orders.map((o) => ({
       id: o.id,
@@ -2519,12 +2515,14 @@ export default function OrdersPage() {
         variant="destructive"
         onConfirm={async () => {
           if (!bulkDeleteIds) return
-          try {
-            await Promise.all(bulkDeleteIds.map((id) => api.delete(`/sales/orders/${id}`)))
-            queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
-            toast.success('삭제되었습니다.')
-          } catch {
-            toast.error('일부 삭제 실패')
+          const results = await Promise.allSettled(bulkDeleteIds.map((id) => api.delete(`/sales/orders/${id}`)))
+          const succeeded = results.filter((r) => r.status === 'fulfilled').length
+          const failed = results.filter((r) => r.status === 'rejected').length
+          queryClient.invalidateQueries({ queryKey: ['sales-orders'] })
+          if (failed > 0) {
+            toast.error(`${succeeded}건 삭제 성공, ${failed}건 실패`)
+          } else {
+            toast.success(`${succeeded}건이 삭제되었습니다.`)
           }
           setBulkDeleteIds(null)
         }}

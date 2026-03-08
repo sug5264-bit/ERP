@@ -83,34 +83,50 @@ export async function POST(request: NextRequest) {
     const shipperId = user.shipperId
     const body = await request.json()
 
-    // Generate order number
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const lastOrder = await prisma.shipperOrder.findFirst({
-      where: { orderNo: { startsWith: `SH-${today}` } },
-      orderBy: { orderNo: 'desc' },
-    })
-    const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4)) + 1 : 1
-    const orderNo = `SH-${today}-${String(seq).padStart(4, '0')}`
+    // 입력값 기본 검증
+    if (!body.recipientName || typeof body.recipientName !== 'string' || !body.recipientName.trim()) {
+      return errorResponse('수취인 이름은 필수입니다.', 'VALIDATION_ERROR', 400)
+    }
+    if (!body.recipientAddress || typeof body.recipientAddress !== 'string' || !body.recipientAddress.trim()) {
+      return errorResponse('수취인 주소는 필수입니다.', 'VALIDATION_ERROR', 400)
+    }
+    if (!body.itemName || typeof body.itemName !== 'string' || !body.itemName.trim()) {
+      return errorResponse('품목명은 필수입니다.', 'VALIDATION_ERROR', 400)
+    }
+    if (body.quantity !== undefined && (typeof body.quantity !== 'number' || body.quantity <= 0)) {
+      return errorResponse('수량은 1 이상이어야 합니다.', 'VALIDATION_ERROR', 400)
+    }
 
-    const order = await prisma.shipperOrder.create({
-      data: {
-        orderNo,
-        shipperId,
-        orderDate: new Date(),
-        senderName: body.senderName || '',
-        senderPhone: body.senderPhone || null,
-        senderAddress: body.senderAddress || null,
-        recipientName: body.recipientName,
-        recipientPhone: body.recipientPhone || null,
-        recipientZipCode: body.recipientZipCode || null,
-        recipientAddress: body.recipientAddress,
-        itemName: body.itemName,
-        quantity: body.quantity || 1,
-        weight: body.weight ?? null,
-        shippingMethod: body.shippingMethod || 'NORMAL',
-        specialNote: body.specialNote || null,
-        status: 'RECEIVED',
-      },
+    // 트랜잭션으로 주문번호 생성 + 주문 생성 (race condition 방지)
+    const order = await prisma.$transaction(async (tx) => {
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const lastOrder = await tx.shipperOrder.findFirst({
+        where: { orderNo: { startsWith: `SH-${today}` } },
+        orderBy: { orderNo: 'desc' },
+      })
+      const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4)) + 1 : 1
+      const orderNo = `SH-${today}-${String(seq).padStart(4, '0')}`
+
+      return tx.shipperOrder.create({
+        data: {
+          orderNo,
+          shipperId,
+          orderDate: new Date(),
+          senderName: body.senderName || '',
+          senderPhone: body.senderPhone || null,
+          senderAddress: body.senderAddress || null,
+          recipientName: body.recipientName,
+          recipientPhone: body.recipientPhone || null,
+          recipientZipCode: body.recipientZipCode || null,
+          recipientAddress: body.recipientAddress,
+          itemName: body.itemName,
+          quantity: body.quantity || 1,
+          weight: body.weight ?? null,
+          shippingMethod: body.shippingMethod || 'NORMAL',
+          specialNote: body.specialNote || null,
+          status: 'RECEIVED',
+        },
+      })
     })
 
     return successResponse(order)

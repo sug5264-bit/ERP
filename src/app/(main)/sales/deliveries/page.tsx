@@ -674,8 +674,8 @@ export default function DeliveriesPage() {
     let totalAmt = 0
     deliveries.forEach((d: DeliveryRow) => {
       d.details?.forEach((det) => {
-        totalQty += det.quantity || 0
-        totalAmt += det.amount || 0
+        totalQty += Number(det.quantity) || 0
+        totalAmt += Number(det.amount) || 0
       })
     })
     return { count: deliveries.length, totalQty, totalAmt }

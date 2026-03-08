@@ -121,6 +121,11 @@ export async function POST(request: NextRequest) {
       if (isErrorResponse(deleteAuth)) return deleteAuth
 
       for (const order of orders) {
+        if (order.status === 'COMPLETED') {
+          errors.push(`${order.orderNo}: 완료된 발주는 삭제할 수 없습니다.`)
+          failed++
+          continue
+        }
         try {
           await prisma.$transaction(async (tx) => {
             const deliveries = await tx.delivery.findMany({ where: { salesOrderId: order.id }, select: { id: true } })
@@ -130,6 +135,16 @@ export async function POST(request: NextRequest) {
                 where: { qualityInspection: { deliveryId: { in: deliveryIds } } },
               })
               await tx.qualityInspection.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
+              // 재고이동 관련 데이터 삭제
+              const stockMovements = await tx.stockMovement.findMany({
+                where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
+                select: { id: true },
+              })
+              if (stockMovements.length > 0) {
+                const smIds = stockMovements.map((sm) => sm.id)
+                await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: smIds } } })
+                await tx.stockMovement.deleteMany({ where: { id: { in: smIds } } })
+              }
               await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
               await tx.delivery.deleteMany({ where: { salesOrderId: order.id } })
             }
