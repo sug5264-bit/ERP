@@ -125,8 +125,10 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
           where: { id },
           data: {
             voucherDate: body.voucherDate ? new Date(body.voucherDate) : undefined,
-            voucherType: body.voucherType,
-            description: body.description,
+            ...(body.voucherType && ['RECEIPT', 'PAYMENT', 'TRANSFER', 'PURCHASE', 'SALES'].includes(body.voucherType)
+              ? { voucherType: body.voucherType }
+              : {}),
+            ...(body.description !== undefined ? { description: body.description } : {}),
             totalDebit,
             totalCredit,
             details: {

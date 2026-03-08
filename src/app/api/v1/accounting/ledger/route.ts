@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
           const sums = aggMap.get(account.id)
           return {
             ...account,
-            totalDebit: sums?.debitAmount || 0,
-            totalCredit: sums?.creditAmount || 0,
+            totalDebit: Number(sums?.debitAmount) || 0,
+            totalCredit: Number(sums?.creditAmount) || 0,
           }
         })
         .filter((r) => Number(r.totalDebit) !== 0 || Number(r.totalCredit) !== 0)

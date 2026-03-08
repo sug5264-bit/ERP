@@ -113,11 +113,11 @@ export default function JournalPage() {
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Label className="whitespace-nowrap">기간</Label>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
+          <Input type="date" value={startDate} onChange={(e) => { setStartDate(e.target.value); setPage(1) }} className="w-40" />
           <span>~</span>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
+          <Input type="date" value={endDate} onChange={(e) => { setEndDate(e.target.value); setPage(1) }} className="w-40" />
         </div>
-        <Select value={accountId} onValueChange={setAccountId}>
+        <Select value={accountId} onValueChange={(v) => { setAccountId(v); setPage(1) }}>
           <SelectTrigger className="w-56">
             <SelectValue placeholder="전체 계정과목" />
           </SelectTrigger>

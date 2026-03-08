@@ -171,6 +171,11 @@ export default function VouchersPage() {
 
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const incompleteLines = details.filter((d) => !d.accountSubjectId && (d.debitAmount > 0 || d.creditAmount > 0))
+    if (incompleteLines.length > 0) {
+      toast.error('계정과목이 선택되지 않은 분개 항목이 있습니다.')
+      return
+    }
     const form = new FormData(e.currentTarget)
     createMutation.mutate({
       voucherDate: form.get('voucherDate'),
