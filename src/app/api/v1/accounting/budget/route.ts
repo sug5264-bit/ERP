@@ -6,6 +6,8 @@ import {
   handleApiError,
   requirePermissionCheck,
   isErrorResponse,
+  getPaginationParams,
+  buildMeta,
 } from '@/lib/api-helpers'
 import { createBudgetSchema } from '@/lib/validations/accounting'
 
@@ -14,29 +16,35 @@ export async function GET(request: NextRequest) {
     const authResult = await requirePermissionCheck('accounting', 'read')
     if (isErrorResponse(authResult)) return authResult
 
-    const { searchParams } = request.nextUrl
-    const fiscalYearId = searchParams.get('fiscalYearId')
-    const departmentId = searchParams.get('departmentId')
+    const sp = request.nextUrl.searchParams
+    const { page, pageSize, skip } = getPaginationParams(sp)
+    const fiscalYearId = sp.get('fiscalYearId')
+    const departmentId = sp.get('departmentId')
 
     const where: Record<string, unknown> = {}
     if (fiscalYearId) where.fiscalYearId = fiscalYearId
     if (departmentId) where.departmentId = departmentId
 
-    const budgets = await prisma.budgetHeader.findMany({
-      where,
-      include: {
-        fiscalYear: { select: { year: true } },
-        department: { select: { name: true } },
-        details: {
-          include: {
-            accountSubject: { select: { code: true, nameKo: true } },
+    const [budgets, totalCount] = await Promise.all([
+      prisma.budgetHeader.findMany({
+        where,
+        include: {
+          fiscalYear: { select: { year: true } },
+          department: { select: { name: true } },
+          details: {
+            include: {
+              accountSubject: { select: { code: true, nameKo: true } },
+            },
           },
         },
-      },
-      orderBy: { department: { name: 'asc' } },
-    })
+        orderBy: { department: { name: 'asc' } },
+        skip,
+        take: pageSize,
+      }),
+      prisma.budgetHeader.count({ where }),
+    ])
 
-    return successResponse(budgets)
+    return successResponse(budgets, buildMeta(page, pageSize, totalCount))
   } catch (error) {
     return handleApiError(error)
   }

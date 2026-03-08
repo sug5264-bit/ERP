@@ -1178,3 +1178,159 @@ export async function generateSalesOrderPDF(data: SalesOrderPDFData) {
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
   doc.save(`수주확인서_${data.orderNo}.pdf`)
 }
+
+// ---------------------------------------------------------------------------
+// 7. 급여명세서 (Payroll Slip)
+// ---------------------------------------------------------------------------
+
+export interface PayrollSlipPDFData {
+  payPeriod: string
+  payDate: string
+  company: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string }
+  employee: {
+    name: string
+    employeeNo: string
+    department?: string
+    position?: string
+  }
+  earnings: {
+    baseSalary: number
+    overtimePay: number
+    bonusPay: number
+    mealAllowance: number
+    transportAllowance: number
+    totalEarnings: number
+  }
+  deductions: {
+    nationalPension: number
+    healthInsurance: number
+    longTermCare: number
+    employmentInsurance: number
+    incomeTax: number
+    localIncomeTax: number
+    totalDeductions: number
+  }
+  netPay: number
+}
+
+export async function generatePayrollSlipPDF(data: PayrollSlipPDFData) {
+  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
+  const cell = makeCell(doc, fontName, 8)
+
+  let y = 14
+
+  // --- 제목 ---
+  doc.setFontSize(20)
+  doc.setFont(fontName, 'normal')
+  doc.text('급   여   명   세   서', pageWidth / 2, y, { align: 'center' })
+  y += 5
+  doc.setFontSize(8)
+  doc.setTextColor(100, 100, 100)
+  doc.text(`${data.payPeriod} (지급일: ${data.payDate})`, pageWidth / 2, y + 2, { align: 'center' })
+  doc.setTextColor(0, 0, 0)
+  y += 10
+
+  // --- 사원 정보 ---
+  const rh = 7
+  const infoW = (pageWidth - 2 * PAGE_MARGIN) / 4
+  cell(PAGE_MARGIN, y, infoW, rh, '성    명', { align: 'center', fill: true, fontSize: 8 })
+  cell(PAGE_MARGIN + infoW, y, infoW, rh, data.employee.name, { align: 'center', fontSize: 9 })
+  cell(PAGE_MARGIN + infoW * 2, y, infoW, rh, '사    번', { align: 'center', fill: true, fontSize: 8 })
+  cell(PAGE_MARGIN + infoW * 3, y, infoW, rh, data.employee.employeeNo, { align: 'center', fontSize: 9 })
+  y += rh
+  cell(PAGE_MARGIN, y, infoW, rh, '부    서', { align: 'center', fill: true, fontSize: 8 })
+  cell(PAGE_MARGIN + infoW, y, infoW, rh, data.employee.department || '-', { align: 'center', fontSize: 9 })
+  cell(PAGE_MARGIN + infoW * 2, y, infoW, rh, '직    급', { align: 'center', fill: true, fontSize: 8 })
+  cell(PAGE_MARGIN + infoW * 3, y, infoW, rh, data.employee.position || '-', { align: 'center', fontSize: 9 })
+  y += rh + 6
+
+  // --- 지급 내역 / 공제 내역 ---
+  const halfW = (pageWidth - 2 * PAGE_MARGIN - 4) / 2
+  const labelW = halfW * 0.5
+  const valW = halfW * 0.5
+
+  // 지급 헤더
+  cell(PAGE_MARGIN, y, halfW, 7, '지  급  내  역', {
+    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 9,
+  })
+  // 공제 헤더
+  cell(PAGE_MARGIN + halfW + 4, y, halfW, 7, '공  제  내  역', {
+    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 9,
+  })
+  y += 7
+
+  const earningsRows = [
+    ['기 본 급', data.earnings.baseSalary],
+    ['시간외수당', data.earnings.overtimePay],
+    ['상 여 금', data.earnings.bonusPay],
+    ['식    대', data.earnings.mealAllowance],
+    ['교 통 비', data.earnings.transportAllowance],
+  ] as const
+
+  const deductionsRows = [
+    ['국민연금', data.deductions.nationalPension],
+    ['건강보험', data.deductions.healthInsurance],
+    ['장기요양', data.deductions.longTermCare],
+    ['고용보험', data.deductions.employmentInsurance],
+    ['소 득 세', data.deductions.incomeTax],
+    ['지방소득세', data.deductions.localIncomeTax],
+  ] as const
+
+  const maxRows = Math.max(earningsRows.length, deductionsRows.length)
+  for (let i = 0; i < maxRows; i++) {
+    // Left: earnings
+    if (i < earningsRows.length) {
+      cell(PAGE_MARGIN, y, labelW, rh, earningsRows[i][0], { align: 'center', fill: true, fontSize: 7.5 })
+      cell(PAGE_MARGIN + labelW, y, valW, rh, fmtNumber(earningsRows[i][1]), { align: 'right', fontSize: 8 })
+    } else {
+      cell(PAGE_MARGIN, y, labelW, rh, '', {})
+      cell(PAGE_MARGIN + labelW, y, valW, rh, '', {})
+    }
+    // Right: deductions
+    if (i < deductionsRows.length) {
+      cell(PAGE_MARGIN + halfW + 4, y, labelW, rh, deductionsRows[i][0], { align: 'center', fill: true, fontSize: 7.5 })
+      cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, fmtNumber(deductionsRows[i][1]), { align: 'right', fontSize: 8 })
+    } else {
+      cell(PAGE_MARGIN + halfW + 4, y, labelW, rh, '', {})
+      cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, '', {})
+    }
+    y += rh
+  }
+
+  // 소계
+  cell(PAGE_MARGIN, y, labelW, rh, '지급 합계', {
+    align: 'center', fill: true, fillColor: [220, 230, 250], fontSize: 8,
+  })
+  cell(PAGE_MARGIN + labelW, y, valW, rh, fmtNumber(data.earnings.totalEarnings), {
+    align: 'right', fontSize: 9,
+  })
+  cell(PAGE_MARGIN + halfW + 4, y, labelW, rh, '공제 합계', {
+    align: 'center', fill: true, fillColor: [250, 220, 220], fontSize: 8,
+  })
+  cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, fmtNumber(data.deductions.totalDeductions), {
+    align: 'right', fontSize: 9,
+  })
+  y += rh + 6
+
+  // --- 실수령액 ---
+  const netW = pageWidth - 2 * PAGE_MARGIN
+  cell(PAGE_MARGIN, y, netW * 0.3, 10, '실 수 령 액', {
+    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 11,
+  })
+  cell(PAGE_MARGIN + netW * 0.3, y, netW * 0.7, 10, `₩ ${fmtNumber(data.netPay)}`, {
+    align: 'right', fontSize: 14,
+  })
+  y += 16
+
+  // --- 회사 정보 ---
+  doc.setFontSize(9)
+  doc.text(data.company.name, pageWidth / 2, y, { align: 'center' })
+  if (data.company.ceo) {
+    y += 5
+    doc.setFontSize(8)
+    doc.text(`대표이사  ${data.company.ceo}`, pageWidth / 2, y, { align: 'center' })
+  }
+
+  addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
+  doc.save(`급여명세서_${data.payPeriod}_${data.employee.name}.pdf`)
+}

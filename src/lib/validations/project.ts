@@ -59,11 +59,3 @@ export const addProjectMemberSchema = z.object({
   employeeId: z.string().min(1, '사원을 선택하세요').max(50),
   role: z.enum(['PM', 'MEMBER', 'REVIEWER']).optional(),
 })
-
-export const createPayrollSchema = z.object({
-  payPeriod: z.string().min(1, '급여기간을 입력하세요').max(20),
-  payDate: z
-    .string()
-    .min(1, '지급일을 입력하세요')
-    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
-})

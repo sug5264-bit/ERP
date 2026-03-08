@@ -16,7 +16,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
-import { COMPANY_NAME } from '@/lib/constants'
 import { FileText } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -181,7 +180,7 @@ export default function NettingPage() {
         tel: defaultCompany.phone || '',
       }
     }
-    return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
+    return { name: '(주)웰그린', bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
   }
 
   const handleTransactionStatementPDF = async (order: OrderRow) => {

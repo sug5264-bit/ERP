@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generateQuotationPDF, type QuotationPDFData } from '@/lib/pdf-reports'
-import { COMPANY_NAME } from '@/lib/constants'
+import { getDefaultCompanyInfo } from '@/lib/company-info'
 import { toast } from 'sonner'
 import { Plus, Trash2, FileDown, ArrowRightLeft } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
@@ -92,12 +92,13 @@ export default function QuotationsPage() {
   const [details, setDetails] = useState<Detail[]>([{ itemId: '', quantity: 1, unitPrice: 0 }])
   const queryClient = useQueryClient()
 
-  const handlePDF = (q: QuotationRow) => {
+  const handlePDF = async (q: QuotationRow) => {
+    const companyInfo = await getDefaultCompanyInfo()
     const pdfData: QuotationPDFData = {
       quotationNo: q.quotationNo,
       quotationDate: formatDate(q.quotationDate),
       validUntil: q.validUntil ? formatDate(q.validUntil) : undefined,
-      company: { name: COMPANY_NAME },
+      company: companyInfo,
       partner: { name: q.partner?.partnerName || '' },
       items: (q.details || []).map((d: QuotationDetailRow, i: number) => ({
         no: i + 1,
