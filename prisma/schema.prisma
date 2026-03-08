@@ -1067,6 +1067,17 @@ model Delivery {
   qualityStatus   String?
   createdAt       DateTime @default(now())
 
+  // 수주/출하 추적 필드
+  orderConfirmed    Boolean   @default(false) // 수주 예정 확인
+  orderConfirmedAt  DateTime?                // 수주 확인 일시
+  shipmentCompleted Boolean   @default(false) // 출하 완료 확인
+  shipmentCompletedAt DateTime?              // 출하 완료 일시
+
+  // 온라인 매출 별도 기입
+  actualRevenue    Decimal?  @db.Decimal(15, 2) // 실제 매출액 (온라인 변동가 대응)
+  platformFee      Decimal?  @db.Decimal(15, 2) // 플랫폼 수수료
+  revenueNote      String?                      // 매출 관련 메모
+
   salesOrder SalesOrder          @relation(fields: [salesOrderId], references: [id])
   partner    Partner             @relation(fields: [partnerId], references: [id])
   details    DeliveryDetail[]
@@ -1080,6 +1091,8 @@ model Delivery {
   @@index([partnerId])
   @@index([status])
   @@index([qualityStatus])
+  @@index([orderConfirmed])
+  @@index([shipmentCompleted])
   @@map("deliveries")
 }
 
@@ -1098,6 +1111,27 @@ model DeliveryDetail {
   @@index([deliveryId])
   @@index([itemId])
   @@map("delivery_details")
+}
+
+// 온라인 매출 일괄 기입 (판매가 수시 변동 대응)
+model OnlineSalesRevenue {
+  id            String   @id @default(cuid())
+  revenueDate   DateTime @db.Date
+  channel       String                      // NAVER, COUPANG, GMARKET, 11ST 등
+  description   String?
+  totalSales    Decimal  @db.Decimal(15, 2) // 총 매출액
+  totalFee      Decimal  @default(0) @db.Decimal(15, 2) // 플랫폼 수수료
+  netRevenue    Decimal  @db.Decimal(15, 2) // 순매출 (totalSales - totalFee)
+  orderCount    Int      @default(0)        // 주문 건수
+  memo          String?  @db.Text
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([revenueDate])
+  @@index([channel])
+  @@index([revenueDate, channel])
+  @@map("online_sales_revenues")
 }
 
 enum ReturnReason {

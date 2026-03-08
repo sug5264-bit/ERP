@@ -182,10 +182,43 @@ export class ApiError extends Error {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = Record<string, any>
 
+async function uploadRequest(url: string, formData: FormData): Promise<unknown> {
+  const requestId = generateClientRequestId()
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS * 2) // longer timeout for uploads
+  try {
+    const res = await fetch(`${BASE_URL}${url}`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Request-Id': requestId,
+      },
+      signal: controller.signal,
+      body: formData,
+    })
+    clearTimeout(timeoutId)
+    if (res.status === 401) {
+      window.location.href = '/login?error=session_expired'
+      throw new Error('세션이 만료되었습니다.')
+    }
+    if (res.status === 403) throw new PermissionError('권한이 없습니다.')
+    const json = await res.json()
+    if (!res.ok) throw new ApiError(json?.error?.message || '업로드 실패', json?.error?.code || 'ERROR', res.status)
+    return json
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('업로드 시간이 초과되었습니다.')
+    }
+    throw error
+  }
+}
+
 export const api = {
   get: (url: string) => request('GET', url) as Promise<ApiResponse>,
   post: (url: string, data?: unknown) => request('POST', url, data) as Promise<ApiResponse>,
   put: (url: string, data?: unknown) => request('PUT', url, data) as Promise<ApiResponse>,
   patch: (url: string, data?: unknown) => request('PATCH', url, data) as Promise<ApiResponse>,
   delete: (url: string) => request('DELETE', url) as Promise<ApiResponse>,
+  upload: (url: string, formData: FormData) => uploadRequest(url, formData) as Promise<ApiResponse>,
 }

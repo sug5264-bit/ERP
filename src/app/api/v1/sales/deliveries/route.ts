@@ -23,6 +23,22 @@ export async function GET(request: NextRequest) {
     if (status) where.status = status
     const salesChannel = sp.get('salesChannel')
     if (salesChannel) where.salesOrder = { salesChannel }
+    // 수주/출하 추적 필터
+    const orderConfirmed = sp.get('orderConfirmed')
+    if (orderConfirmed === 'true') where.orderConfirmed = true
+    else if (orderConfirmed === 'false') where.orderConfirmed = false
+    const shipmentCompleted = sp.get('shipmentCompleted')
+    if (shipmentCompleted === 'true') where.shipmentCompleted = true
+    else if (shipmentCompleted === 'false') where.shipmentCompleted = false
+    // 날짜 필터
+    const startDate = sp.get('startDate')
+    const endDate = sp.get('endDate')
+    if (startDate || endDate) {
+      const dateRange: { gte?: Date; lte?: Date } = {}
+      if (startDate) { const d = new Date(startDate); if (!isNaN(d.getTime())) dateRange.gte = d }
+      if (endDate) { const d = new Date(endDate); if (!isNaN(d.getTime())) dateRange.lte = d }
+      where.deliveryDate = dateRange
+    }
     const [items, totalCount] = await Promise.all([
       prisma.delivery.findMany({
         where,
@@ -40,7 +56,7 @@ export async function GET(request: NextRequest) {
             },
           },
           details: {
-            include: { item: { select: { id: true, itemName: true, specification: true, barcode: true, unit: true } } },
+            include: { item: { select: { id: true, itemName: true, specification: true, barcode: true, unit: true, itemCode: true } } },
           },
           qualityInspections: {
             select: {

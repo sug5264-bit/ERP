@@ -19,7 +19,7 @@ import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2, CheckCircle } from 'lucide-react'
+import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2, CheckCircle, Paperclip, X } from 'lucide-react'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
@@ -430,6 +430,21 @@ export default function DeliveriesPage() {
     },
     { id: 'carrier', header: '택배사', cell: ({ row }) => row.original.carrier || '-' },
     {
+      id: 'attachments',
+      header: '첨부',
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => openAttachDialog(row.original)}
+          title="첨부파일 (거래명세서, 인수증 등)"
+        >
+          <Paperclip className="h-3.5 w-3.5" />
+        </Button>
+      ),
+    },
+    {
       id: 'pdf',
       header: '',
       cell: ({ row }) => (
@@ -475,10 +490,58 @@ export default function DeliveriesPage() {
   const [open, setOpen] = useState(false)
   const [details, setDetails] = useState<Detail[]>([emptyDetail()])
   const deliveryImportFileRef = useRef<HTMLInputElement>(null)
+  const attachFileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   // 출하완료 확인 state
   const [shipCompleteTarget, setShipCompleteTarget] = useState<string | null>(null)
+
+  // 첨부파일 state
+  const [attachDialogOpen, setAttachDialogOpen] = useState(false)
+  const [attachTarget, setAttachTarget] = useState<DeliveryRow | null>(null)
+  const [attachments, setAttachments] = useState<{ id: string; fileName: string; fileSize: number; createdAt: string }[]>([])
+
+  const loadAttachments = async (deliveryId: string) => {
+    try {
+      const res = (await api.get(`/attachments?relatedTable=Delivery&relatedId=${deliveryId}`)) as { data?: { id: string; fileName: string; fileSize: number; createdAt: string }[] }
+      setAttachments(Array.isArray(res) ? res : res.data || [])
+    } catch {
+      setAttachments([])
+    }
+  }
+
+  const openAttachDialog = (delivery: DeliveryRow) => {
+    setAttachTarget(delivery)
+    setAttachDialogOpen(true)
+    loadAttachments(delivery.id)
+  }
+
+  const handleAttachUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !attachTarget) return
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('relatedTable', 'Delivery')
+      formData.append('relatedId', attachTarget.id)
+      await api.upload('/attachments', formData)
+      toast.success('파일이 업로드되었습니다.')
+      loadAttachments(attachTarget.id)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '파일 업로드 실패')
+    }
+    if (attachFileInputRef.current) attachFileInputRef.current.value = ''
+  }
+
+  const deleteAttachment = async (id: string) => {
+    try {
+      await api.delete(`/attachments/${id}`)
+      toast.success('파일이 삭제되었습니다.')
+      if (attachTarget) loadAttachments(attachTarget.id)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '삭제 실패')
+    }
+  }
 
   // 품질검사 state
   const [qiOpen, setQiOpen] = useState(false)
@@ -1716,6 +1779,80 @@ export default function DeliveriesPage() {
         }}
         isPending={shipCompleteMutation.isPending}
       />
+
+      {/* 첨부파일 관리 다이얼로그 */}
+      <Dialog open={attachDialogOpen} onOpenChange={setAttachDialogOpen}>
+        <DialogContent className="max-w-sm sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>첨부파일 - {attachTarget?.deliveryNo}</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground text-xs">
+            거래명세서, 인수증 등 출고 관련 서류를 업로드할 수 있습니다. (Excel, PDF, 이미지 등)
+          </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => attachFileInputRef.current?.click()}
+              >
+                <Upload className="h-3.5 w-3.5" /> 파일 업로드
+              </Button>
+              <input
+                ref={attachFileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.png,.jpg,.jpeg,.gif,.zip"
+                onChange={handleAttachUpload}
+              />
+              <span className="text-muted-foreground text-xs">최대 50MB</span>
+            </div>
+            {attachments.length > 0 ? (
+              <div className="space-y-1">
+                {attachments.map((att) => (
+                  <div key={att.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Paperclip className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium">{att.fileName}</p>
+                        <p className="text-muted-foreground text-[10px]">
+                          {att.fileSize < 1024 * 1024
+                            ? `${(att.fileSize / 1024).toFixed(1)}KB`
+                            : `${(att.fileSize / (1024 * 1024)).toFixed(1)}MB`}
+                          {' · '}{formatDate(att.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <a
+                        href={`/api/v1/attachments/${att.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:bg-muted rounded p-1"
+                        title="다운로드"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </a>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => deleteAttachment(att.id)}
+                        title="삭제"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground py-6 text-center text-xs">첨부파일이 없습니다.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
