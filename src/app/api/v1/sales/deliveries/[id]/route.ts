@@ -63,12 +63,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json()
     const delivery = await prisma.delivery.findUnique({ where: { id } })
     if (!delivery) return errorResponse('납품을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    const updateData: Record<string, unknown> = {}
+    if (body.status) updateData.status = body.status
+    if (body.completedAt) updateData.completedAt = new Date(body.completedAt)
+    // 수주 확인 체크
+    if (body.orderConfirmed !== undefined) {
+      updateData.orderConfirmed = body.orderConfirmed
+      if (body.orderConfirmed) updateData.orderConfirmedAt = new Date()
+      else updateData.orderConfirmedAt = null
+    }
+    // 출하 완료 체크
+    if (body.shipmentCompleted !== undefined) {
+      updateData.shipmentCompleted = body.shipmentCompleted
+      if (body.shipmentCompleted) updateData.shipmentCompletedAt = new Date()
+      else updateData.shipmentCompletedAt = null
+    }
+    // 온라인 매출 관련
+    if (body.actualRevenue !== undefined) updateData.actualRevenue = body.actualRevenue
+    if (body.platformFee !== undefined) updateData.platformFee = body.platformFee
+    if (body.revenueNote !== undefined) updateData.revenueNote = body.revenueNote
     const updated = await prisma.delivery.update({
       where: { id },
-      data: {
-        ...(body.status && { status: body.status }),
-        ...(body.completedAt && { completedAt: new Date(body.completedAt) }),
-      },
+      data: updateData,
     })
     return successResponse(updated)
   } catch (error) {
