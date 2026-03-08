@@ -55,7 +55,7 @@ export const createTaxInvoiceSchema = z.object({
   items: z
     .array(
       z.object({
-        itemDate: z.string().min(1),
+        itemDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)'),
         itemName: z.string().min(1, '품목명을 입력하세요'),
         specification: z.string().optional(),
         qty: z.number().min(1, '수량은 1 이상이어야 합니다'),

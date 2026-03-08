@@ -164,6 +164,7 @@ export async function POST(req: NextRequest) {
           voucherDate,
           voucherType: 'TRANSFER',
           status: 'APPROVED',
+          approvedById: employeeId,
           description: description || '상계 처리',
           totalDebit: parsedAmount,
           totalCredit: parsedAmount,
