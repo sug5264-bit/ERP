@@ -11,7 +11,10 @@ import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
+import { exportApprovalPdf } from '@/lib/export'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { FileDown } from 'lucide-react'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   DRAFTED: { label: '임시저장', variant: 'secondary' },
@@ -95,6 +98,35 @@ export default function ApprovalCompletedPage() {
     }
   }
 
+  const handleApprovalPDF = () => {
+    if (!selectedDoc) return
+    exportApprovalPdf({
+      documentNo: selectedDoc.documentNo,
+      title: selectedDoc.title,
+      docType: selectedDoc.content?.docType as string | undefined,
+      draftDate: formatDate(selectedDoc.draftDate),
+      urgency: 'NORMAL',
+      status: selectedDoc.status,
+      content: selectedDoc.content
+        ? { ...selectedDoc.content, amount: selectedDoc.content.amount != null ? String(selectedDoc.content.amount) : undefined }
+        : null,
+      drafter: {
+        nameKo: selectedDoc.drafter?.nameKo || '',
+      },
+      steps: (selectedDoc.steps || []).map((s, i) => ({
+        stepOrder: i + 1,
+        approver: {
+          nameKo: s.approver?.nameKo || '',
+          position: s.approver?.position || null,
+        },
+        status: s.status,
+        comment: s.comment,
+        actionDate: s.actionDate,
+      })),
+    })
+    toast.success('결재문서 PDF가 다운로드되었습니다.')
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title="결재 완료" description="처리가 완료된 결재 문서입니다" />
@@ -126,7 +158,12 @@ export default function ApprovalCompletedPage() {
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-xl md:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{selectedDoc?.title}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>{selectedDoc?.title}</DialogTitle>
+              <Button variant="outline" size="sm" onClick={handleApprovalPDF}>
+                <FileDown className="mr-1.5 h-4 w-4" /> PDF
+              </Button>
+            </div>
           </DialogHeader>
           {selectedDoc && (
             <div className="space-y-4">

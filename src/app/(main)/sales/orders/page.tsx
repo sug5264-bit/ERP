@@ -18,8 +18,10 @@ import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type
 import {
   generateTaxInvoicePDF,
   generateTransactionStatementPDF,
+  generateSalesOrderPDF,
   type TaxInvoicePDFData,
   type TransactionStatementPDFData,
+  type SalesOrderPDFData,
 } from '@/lib/pdf-reports'
 import { COMPANY_NAME } from '@/lib/constants'
 import { toast } from 'sonner'
@@ -365,6 +367,43 @@ export default function OrdersPage() {
     toast.success('거래명세서 PDF가 다운로드되었습니다.')
   }
 
+  // 수주확인서 PDF
+  const handleSalesOrderPDF = async (order: SalesOrder) => {
+    let orderDetail = order as SalesOrder
+    if (!orderDetail.details) {
+      try {
+        const res = (await api.get(`/sales/orders/${order.id}`)) as Record<string, unknown>
+        orderDetail = (res.data || res) as SalesOrder
+      } catch {
+        toast.error('주문 상세를 불러올 수 없습니다.')
+        return
+      }
+    }
+    const pdfData: SalesOrderPDFData = {
+      orderNo: orderDetail.orderNo,
+      orderDate: formatDate(orderDetail.orderDate),
+      deliveryDate: orderDetail.deliveryDate ? formatDate(orderDetail.deliveryDate) : undefined,
+      company: { name: COMPANY_NAME },
+      partner: { name: orderDetail.partner?.partnerName || '' },
+      items: (orderDetail.details || []).map((d, i) => ({
+        no: i + 1,
+        itemName: d.item?.itemName || '',
+        spec: d.item?.specification || '',
+        unit: d.item?.unit || '',
+        qty: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        supplyAmount: Number(d.supplyAmount || 0),
+        taxAmount: Number(d.taxAmount || 0),
+        totalAmount: Number(d.supplyAmount || 0) + Number(d.taxAmount || 0),
+      })),
+      totalSupply: Number(orderDetail.totalSupply),
+      totalTax: Number(orderDetail.totalTax),
+      totalAmount: Number(orderDetail.totalAmount),
+    }
+    generateSalesOrderPDF(pdfData)
+    toast.success('수주확인서 PDF가 다운로드되었습니다.')
+  }
+
   // 발주 수정
   const [editTarget, setEditTarget] = useState<SalesOrder | null>(null)
   const [editDetails, setEditDetails] = useState<Detail[]>([])
@@ -515,6 +554,10 @@ export default function OrdersPage() {
             <DropdownMenuItem onClick={() => handleTransactionStatementPDF(row.original)}>
               <FileText className="mr-2 h-4 w-4" />
               거래명세서 PDF
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleSalesOrderPDF(row.original)}>
+              <FileDown className="mr-2 h-4 w-4" />
+              수주확인서 PDF
             </DropdownMenuItem>
             {canComplete && (
               <DropdownMenuItem onClick={() => handleEdit(row.original)}>
