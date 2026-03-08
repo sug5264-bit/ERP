@@ -132,7 +132,7 @@ export default function DashboardPage() {
   const kpiValues: Record<string, number> = useMemo(
     () => ({
       order: kpi?.todayOrderCount || 0,
-      delivery: kpi?.deliveryPendingCount || kpi?.approvalCount || 0,
+      delivery: kpi?.deliveryPendingCount || 0,
       item: kpi?.itemCount || 0,
       stock: kpi?.stockAlertCount || 0,
       expiry: kpi?.expiryAlertCount || 0,
