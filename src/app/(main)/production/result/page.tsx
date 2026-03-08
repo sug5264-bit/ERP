@@ -9,7 +9,9 @@ import { DataTable } from '@/components/common/data-table'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 import { Package, AlertTriangle, BarChart3 } from 'lucide-react'
 
 interface ProductionResult {
@@ -84,6 +86,23 @@ export default function ProductionResultPage() {
 
   const items = (data?.data || []) as ProductionResult[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '실적번호', accessor: 'resultNo' },
+    { header: '생산일', accessor: (r) => formatDate(r.productionDate) },
+    { header: '계획번호', accessor: 'planNo' },
+    { header: '생산수량', accessor: (r) => r.producedQty?.toLocaleString() },
+    { header: '불량수량', accessor: (r) => r.defectQty?.toLocaleString() },
+    { header: '양품수량', accessor: (r) => r.goodQty?.toLocaleString() },
+    { header: 'LOT번호', accessor: (r) => r.lotNo || '-' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '생산실적', title: '생산실적 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   const totalProduced = items.reduce((sum, i) => sum + (i.producedQty || 0), 0)
   const totalDefect = items.reduce((sum, i) => sum + (i.defectQty || 0), 0)
   const defectRate = totalProduced > 0 ? ((totalDefect / totalProduced) * 100).toFixed(1) : '0.0'
@@ -129,6 +148,7 @@ export default function ProductionResultPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

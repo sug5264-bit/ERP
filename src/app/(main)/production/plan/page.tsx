@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/common/status-badge'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { PRODUCTION_STATUS_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -83,6 +84,23 @@ export default function ProductionPlanPage() {
 
   const items = (data?.data || []) as ProductionPlan[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '계획번호', accessor: 'planNo' },
+    { header: '계획일', accessor: (r) => formatDate(r.planDate) },
+    { header: '배합표명', accessor: 'bomName' },
+    { header: 'OEM계약', accessor: (r) => r.oemContractName || '-' },
+    { header: '계획수량', accessor: (r) => r.plannedQty?.toLocaleString() },
+    { header: '예정일', accessor: (r) => formatDate(r.scheduledDate) },
+    { header: '상태', accessor: (r) => PRODUCTION_STATUS_LABELS[r.status] || r.status },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '생산계획', title: '생산계획 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   const totalCount = items.length
   const plannedCount = items.filter((i) => i.status === 'PLANNED').length
   const inProgressCount = items.filter((i) => i.status === 'IN_PROGRESS').length
@@ -143,6 +161,7 @@ export default function ProductionPlanPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

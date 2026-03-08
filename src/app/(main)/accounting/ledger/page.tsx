@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ColumnDef } from '@tanstack/react-table'
 import { formatDate, formatCurrency } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 
 const ACCOUNT_TYPE_MAP: Record<string, string> = {
@@ -80,6 +82,22 @@ export default function LedgerPage() {
     const account = ledgerData.account
     const details: LedgerDetail[] = ledgerData.details || []
 
+    const detailExportColumns: ExportColumn[] = [
+      { header: '전표번호', accessor: (r) => r.voucher.voucherNo },
+      { header: '일자', accessor: (r) => formatDate(r.voucher.voucherDate) },
+      { header: '차변', accessor: (r) => Number(r.debitAmount) > 0 ? formatCurrency(r.debitAmount) : '-' },
+      { header: '대변', accessor: (r) => Number(r.creditAmount) > 0 ? formatCurrency(r.creditAmount) : '-' },
+      { header: '거래처', accessor: (r) => r.partner?.partnerName || '-' },
+      { header: '적요', accessor: (r) => r.description || r.voucher.description || '-' },
+    ]
+
+    const handleDetailExport = (type: 'excel' | 'pdf') => {
+      const cfg = { fileName: `총계정원장_${account?.code}`, title: `총계정원장 상세 - ${account?.code} ${account?.nameKo}`, columns: detailExportColumns, data: details }
+      if (type === 'excel') exportToExcel(cfg)
+      else exportToPDF(cfg)
+      toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+    }
+
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
@@ -102,6 +120,7 @@ export default function LedgerPage() {
           isError={isError}
           onRetry={() => refetch()}
           pageSize={100}
+          onExport={{ excel: () => handleDetailExport('excel'), pdf: () => handleDetailExport('pdf') }}
         />
       </div>
     )

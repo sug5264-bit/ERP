@@ -928,7 +928,7 @@ export default function DeliveriesPage() {
     return companies.find((c: CompanyOption) => c.isDefault) || companies[0] || {}
   })()
 
-  // ── 온라인: 택배 양식 (보내는분/받는분 + 내품 테이블) ──
+  // ── 온라인: 택배 양식 (보내는분/받는분 + 품목 테이블) ──
   const onlineCreateDialog = (
     <Dialog
       open={open}
@@ -1018,7 +1018,7 @@ export default function DeliveriesPage() {
           {/* 품목 테이블 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">내품 상세</Label>
+              <Label className="text-xs font-medium">품목 상세</Label>
               <Button
                 type="button"
                 variant="outline"

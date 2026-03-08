@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 
 interface PaymentRow {
@@ -95,6 +96,23 @@ export default function PaymentsPage() {
   }))
 
   const totalAmount = rows.reduce((sum, r) => sum + r.totalAmount, 0)
+
+  const paymentExportColumns: ExportColumn[] = [
+    { header: '전표번호', accessor: 'voucherNo' },
+    { header: '지급일', accessor: (r) => formatDate(r.voucherDate) },
+    { header: '거래처', accessor: (r) => r.partner?.partnerName || '-' },
+    { header: '적요', accessor: (r) => r.description || '-' },
+    { header: '지급금액(원)', accessor: (r) => formatCurrency(r.totalAmount) },
+    { header: '상태', accessor: (r) => STATUS_LABELS[r.status] || r.status },
+    { header: '작성자', accessor: 'createdBy' },
+  ]
+
+  const handlePaymentExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '대금지급', title: '대금지급 내역', columns: paymentExportColumns, data: rows }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => api.post('/accounting/vouchers', data),
@@ -290,6 +308,7 @@ export default function PaymentsPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handlePaymentExport('excel'), pdf: () => handlePaymentExport('pdf') }}
       />
 
       {/* 대금지급 등록 Dialog */}

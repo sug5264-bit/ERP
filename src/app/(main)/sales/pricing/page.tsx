@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Plus, Pencil } from 'lucide-react'
 
@@ -191,6 +192,24 @@ export default function PricingPage() {
 
   const items = (data?.data || []) as PricingItem[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '거래처명', accessor: 'partnerName' },
+    { header: '바코드', accessor: (r) => r.barcode || '-' },
+    { header: '품목명', accessor: 'itemName' },
+    { header: '단가', accessor: (r) => formatCurrency(r.unitPrice) },
+    { header: '적용시작일', accessor: (r) => formatDate(r.startDate) },
+    { header: '적용종료일', accessor: (r) => formatDate(r.endDate) },
+    { header: '최소수량', accessor: (r) => r.minQty?.toLocaleString() || '-' },
+    { header: '상태', accessor: (r) => PRICING_STATUS_LABELS[r.status] || r.status },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '단가관리', title: '단가관리 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -243,6 +262,7 @@ export default function PricingPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
 
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>

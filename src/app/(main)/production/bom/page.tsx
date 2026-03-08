@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Plus, Pencil, Eye } from 'lucide-react'
 
@@ -217,6 +218,22 @@ export default function BomPage() {
   const items = (data?.data || []) as BomItem[]
   const detailMaterials = ((detailData?.data as BomItem)?.materials || []) as BomMaterial[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: 'BOM코드', accessor: 'bomCode' },
+    { header: 'BOM명', accessor: 'bomName' },
+    { header: '완제품명', accessor: 'productName' },
+    { header: '버전', accessor: (r) => r.version || 'v1.0' },
+    { header: '수율(%)', accessor: (r) => r.yieldRate != null ? `${r.yieldRate}%` : '-' },
+    { header: '상태', accessor: (r) => BOM_STATUS_LABELS[r.status] || r.status },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '배합표(BOM)', title: '배합표(BOM) 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -280,6 +297,7 @@ export default function BomPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
 
       {/* Edit Dialog */}

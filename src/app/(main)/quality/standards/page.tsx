@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
 import { Plus, Pencil } from 'lucide-react'
 
@@ -224,6 +225,25 @@ export default function QualityStandardsPage() {
 
   const items = (data?.data || []) as QualityStandard[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '바코드', accessor: (r) => r.barcode || '-' },
+    { header: '품목명', accessor: 'itemName' },
+    { header: '기준명', accessor: 'standardName' },
+    { header: '카테고리', accessor: (r) => r.category || '-' },
+    { header: '검사방법', accessor: (r) => r.testMethod || '-' },
+    { header: '규격', accessor: (r) => r.specification || '-' },
+    { header: '최소값', accessor: (r) => r.minValue != null ? String(r.minValue) : '-' },
+    { header: '최대값', accessor: (r) => r.maxValue != null ? String(r.maxValue) : '-' },
+    { header: '필수', accessor: (r) => r.isRequired ? '필수' : '선택' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '검사기준', title: '검사기준 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -292,6 +312,7 @@ export default function QualityStandardsPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
 
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>

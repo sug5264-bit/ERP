@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { FileText } from 'lucide-react'
 import { toast } from 'sonner'
@@ -296,6 +297,22 @@ export default function NettingPage() {
 
   const rows: NettingRow[] = data?.data || []
 
+  const nettingExportColumns: ExportColumn[] = [
+    { header: '거래처코드', accessor: 'partnerCode' },
+    { header: '거래처명', accessor: 'partnerName' },
+    { header: '매출채권(원)', accessor: (r) => formatCurrency(r.receivable) },
+    { header: '매입채무(원)', accessor: (r) => formatCurrency(r.payable) },
+    { header: '상계금액(원)', accessor: (r) => formatCurrency(r.netAmount) },
+    { header: '거래건수', accessor: (r) => `${r.details.length}건` },
+  ]
+
+  const handleNettingExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: `상계내역_${year}년${month}월`, title: `상계내역 (${year}년 ${month}월)`, columns: nettingExportColumns, data: rows }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   const totalReceivable = rows.reduce((sum, r) => sum + r.receivable, 0)
   const totalPayable = rows.reduce((sum, r) => sum + r.payable, 0)
   const totalNet = rows.reduce((sum, r) => sum + r.netAmount, 0)
@@ -441,6 +458,7 @@ export default function NettingPage() {
             isLoading={isLoading}
             isError={isError}
             onRetry={() => refetch()}
+            onExport={{ excel: () => handleNettingExport('excel'), pdf: () => handleNettingExport('pdf') }}
           />
         </TabsContent>
 
