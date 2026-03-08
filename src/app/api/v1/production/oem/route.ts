@@ -19,15 +19,27 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // partnerId로 제조사명 조회
+    const partnerIds = [...new Set(contracts.map((c) => c.partnerId).filter(Boolean))]
+    const partners = partnerIds.length > 0
+      ? await prisma.partner.findMany({
+          where: { id: { in: partnerIds } },
+          select: { id: true, partnerName: true },
+        })
+      : []
+    const partnerMap = new Map(partners.map((p) => [p.id, p.partnerName]))
+
     const data = contracts.map((c) => ({
       id: c.id,
       contractNo: c.contractNo,
       partnerId: c.partnerId,
       contractName: c.contractName,
+      manufacturerName: partnerMap.get(c.partnerId) || '',
       startDate: c.startDate,
       endDate: c.endDate,
       status: c.status,
       minimumOrderQty: c.minimumOrderQty ? Number(c.minimumOrderQty) : null,
+      minOrderQty: c.minimumOrderQty ? Number(c.minimumOrderQty) : null,
       leadTimeDays: c.leadTimeDays,
       paymentTerms: c.paymentTerms,
       qualityTerms: c.qualityTerms,

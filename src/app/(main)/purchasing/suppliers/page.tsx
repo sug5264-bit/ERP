@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner'
 import { Plus, Pencil, ShieldCheck } from 'lucide-react'
 import { formatPhone } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 
 interface Supplier {
   id: string
@@ -215,6 +216,23 @@ export default function SuppliersPage() {
 
   const items = (data?.data || []) as Supplier[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '매입처코드', accessor: 'partnerCode' },
+    { header: '매입처명', accessor: 'partnerName' },
+    { header: '사업자번호', accessor: (r) => r.businessNo || '-' },
+    { header: '대표자', accessor: (r) => r.ceoName || '-' },
+    { header: '연락처', accessor: (r) => formatPhone(r.phone) || '-' },
+    { header: 'HACCP인증', accessor: (r) => r.haccpCertNo ? '인증' : '미인증' },
+    { header: '활성', accessor: (r) => r.isActive ? '활성' : '비활성' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '매입처관리', title: '매입처 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader
@@ -267,6 +285,7 @@ export default function SuppliersPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
 
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>

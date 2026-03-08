@@ -9,6 +9,7 @@ import { DataTable } from '@/components/common/data-table'
 import { StatusBadge } from '@/components/common/status-badge'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { OEM_CONTRACT_STATUS_LABELS } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,10 +19,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from 'sonner'
 import { Plus, Pencil } from 'lucide-react'
 
+interface PartnerOption {
+  id: string
+  partnerName: string
+}
+
 interface OemContract {
   id: string
   contractNo: string
   contractName: string
+  partnerId: string
   manufacturerName: string
   startDate: string
   endDate: string
@@ -73,10 +80,12 @@ const columns: ColumnDef<OemContract>[] = [
 
 function OemForm({
   contract,
+  partners,
   onSubmit,
   isPending,
 }: {
   contract?: OemContract | null
+  partners: PartnerOption[]
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   isPending: boolean
 }) {
@@ -108,7 +117,16 @@ function OemForm({
           <Label>
             제조사 <span className="text-destructive">*</span>
           </Label>
-          <Input name="manufacturerName" required defaultValue={contract?.manufacturerName || ''} />
+          <Select name="partnerId" defaultValue={contract?.partnerId || ''} required>
+            <SelectTrigger>
+              <SelectValue placeholder="제조사 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {partners.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label>상태</Label>
@@ -159,6 +177,16 @@ export default function OemPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const queryClient = useQueryClient()
 
+  const { data: partnersData } = useQuery({
+    queryKey: ['oem-partners'],
+    queryFn: () => api.get('/partners?partnerType=PURCHASE&pageSize=200'),
+    enabled: open || !!editTarget,
+  })
+  const partners: PartnerOption[] = (partnersData?.data || []).map((p: Record<string, unknown>) => ({
+    id: String(p.id),
+    partnerName: String(p.partnerName),
+  }))
+
   const qp = new URLSearchParams()
   if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
 
@@ -193,11 +221,11 @@ export default function OemPage() {
     createMutation.mutate({
       contractNo: form.get('contractNo'),
       contractName: form.get('contractName'),
-      manufacturerName: form.get('manufacturerName'),
+      partnerId: form.get('partnerId'),
       status: form.get('status'),
       startDate: form.get('startDate') || undefined,
       endDate: form.get('endDate') || undefined,
-      minOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
+      minimumOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
       leadTimeDays: form.get('leadTimeDays') ? parseInt(form.get('leadTimeDays') as string) : undefined,
     })
   }
@@ -209,16 +237,34 @@ export default function OemPage() {
     updateMutation.mutate({
       id: editTarget.id,
       contractName: form.get('contractName'),
-      manufacturerName: form.get('manufacturerName'),
+      partnerId: form.get('partnerId'),
       status: form.get('status'),
       startDate: form.get('startDate') || undefined,
       endDate: form.get('endDate') || undefined,
-      minOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
+      minimumOrderQty: form.get('minOrderQty') ? parseInt(form.get('minOrderQty') as string) : undefined,
       leadTimeDays: form.get('leadTimeDays') ? parseInt(form.get('leadTimeDays') as string) : undefined,
     })
   }
 
   const items = (data?.data || []) as OemContract[]
+
+  const exportColumns: ExportColumn[] = [
+    { header: '계약번호', accessor: 'contractNo' },
+    { header: '계약명', accessor: 'contractName' },
+    { header: '제조사', accessor: 'manufacturerName' },
+    { header: '계약시작일', accessor: (r) => formatDate(r.startDate) },
+    { header: '계약종료일', accessor: (r) => formatDate(r.endDate) },
+    { header: '최소발주량', accessor: (r) => r.minOrderQty?.toLocaleString() || '-' },
+    { header: '리드타임(일)', accessor: (r) => r.leadTimeDays ? `${r.leadTimeDays}일` : '-' },
+    { header: '상태', accessor: (r) => OEM_CONTRACT_STATUS_LABELS[r.status] || r.status },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: 'OEM위탁현황', title: 'OEM 위탁현황 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -237,7 +283,7 @@ export default function OemPage() {
                 <DialogHeader>
                   <DialogTitle>OEM 계약 등록</DialogTitle>
                 </DialogHeader>
-                <OemForm onSubmit={handleCreate} isPending={createMutation.isPending} />
+                <OemForm partners={partners} onSubmit={handleCreate} isPending={createMutation.isPending} />
               </DialogContent>
             </Dialog>
           </PermissionGuard>
@@ -288,6 +334,7 @@ export default function OemPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
 
       <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
@@ -299,6 +346,7 @@ export default function OemPage() {
             <OemForm
               key={editTarget.id}
               contract={editTarget}
+              partners={partners}
               onSubmit={handleUpdate}
               isPending={updateMutation.isPending}
             />

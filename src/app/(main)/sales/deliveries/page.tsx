@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
+import { COMPANY_NAME } from '@/lib/constants'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
 import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
 import { toast } from 'sonner'
@@ -307,7 +308,7 @@ export default function DeliveriesPage() {
       statementNo: delivery.deliveryNo,
       statementDate: formatDate(delivery.deliveryDate),
       supplier: {
-        name: company?.companyName || '(주)웰그린',
+        name: company?.companyName || COMPANY_NAME,
         bizNo: company?.bizNo || '',
         ceo: company?.ceoName || '',
         address: company?.address || '',
@@ -872,7 +873,7 @@ export default function DeliveriesPage() {
           )
         if (!item) {
           failCount++
-          failReasons.push(`내품명 "${row.itemName || row.itemCode}" 미매칭`)
+          failReasons.push(`품목명 "${row.itemName || row.itemCode}" 미매칭`)
           continue
         }
         if (!order?.id) {
@@ -928,7 +929,7 @@ export default function DeliveriesPage() {
     return companies.find((c: CompanyOption) => c.isDefault) || companies[0] || {}
   })()
 
-  // ── 온라인: 택배 양식 (보내는분/받는분 + 내품 테이블) ──
+  // ── 온라인: 택배 양식 (보내는분/받는분 + 품목 테이블) ──
   const onlineCreateDialog = (
     <Dialog
       open={open}
@@ -1018,7 +1019,7 @@ export default function DeliveriesPage() {
           {/* 품목 테이블 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">내품 상세</Label>
+              <Label className="text-xs font-medium">품목 상세</Label>
               <Button
                 type="button"
                 variant="outline"

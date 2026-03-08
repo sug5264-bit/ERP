@@ -69,7 +69,7 @@ export default function SalesSummaryPage() {
 
   const exportItemColumns: ExportColumn[] = [
     { header: '바코드', accessor: (r) => (r.barcode as string) || (r.itemCode as string) },
-    { header: '내품명', accessor: 'itemName' },
+    { header: '품목명', accessor: 'itemName' },
     { header: '수량', accessor: 'qty' },
     { header: '온라인', accessor: (r) => formatCurrency(r.online) },
     { header: '오프라인', accessor: (r) => formatCurrency(r.offline) },
@@ -294,7 +294,7 @@ export default function SalesSummaryPage() {
                       <tr className="bg-muted/50 border-b">
                         <th className="p-3 text-left">순위</th>
                         <th className="p-3 text-left">바코드</th>
-                        <th className="text-muted-foreground p-3 text-left text-xs">내품명</th>
+                        <th className="text-muted-foreground p-3 text-left text-xs">품목명</th>
                         <th className="p-3 text-right">수량</th>
                         <th className="p-3 text-right">온라인</th>
                         <th className="p-3 text-right">오프라인</th>

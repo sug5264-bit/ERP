@@ -9,6 +9,8 @@ import { DataTable } from '@/components/common/data-table'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { formatCurrency } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 import { ShoppingCart, Building2, DollarSign } from 'lucide-react'
 
 interface PurchaseSummaryItem {
@@ -77,6 +79,20 @@ export default function PurchasingSummaryPage() {
   }) as PurchaseSummaryData
   const items = summaryData.items || []
 
+  const exportColumns: ExportColumn[] = [
+    { header: '거래처명', accessor: 'supplierName' },
+    { header: '매입건수', accessor: (r) => `${r.purchaseCount}건` },
+    { header: '매입금액', accessor: (r) => formatCurrency(r.purchaseAmount) },
+    { header: '비중(%)', accessor: (r) => `${r.ratio.toFixed(1)}%` },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '매입현황', title: '매입현황 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   const summaryItems = [
     {
       label: '총매입액',
@@ -124,6 +140,7 @@ export default function PurchasingSummaryPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

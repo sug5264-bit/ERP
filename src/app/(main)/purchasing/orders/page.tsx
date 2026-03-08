@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
@@ -10,15 +10,38 @@ import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { SummaryCards } from '@/components/common/summary-cards'
 import { PermissionGuard } from '@/components/common/permission-guard'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
+import { COMPANY_NAME } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { ClipboardList, Plus, Loader2, CheckCircle, DollarSign, FileDown } from 'lucide-react'
+import { ClipboardList, Plus, Loader2, CheckCircle, DollarSign, FileDown, Trash2 } from 'lucide-react'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { generatePurchaseOrderPDF, type PurchaseOrderPDFData } from '@/lib/pdf-reports'
+
+interface PartnerOption {
+  id: string
+  partnerName: string
+}
+
+interface ItemOption {
+  id: string
+  itemName: string
+  specification: string | null
+  unit: string | null
+}
+
+interface OrderLine {
+  itemId: string
+  quantity: number
+  unitPrice: number
+  remark: string
+}
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   ORDERED: '발주완료',
@@ -70,13 +93,25 @@ const columns: ColumnDef<PurchaseOrder>[] = [
   },
 ]
 
+const emptyLine = (): OrderLine => ({ itemId: '', quantity: 1, unitPrice: 0, remark: '' })
+
 export default function PurchasingOrdersPage() {
+  const queryClient = useQueryClient()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [detailOpen, setDetailOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState<Record<string, unknown> | null>(null)
   const [pdfLoading, setPdfLoading] = useState(false)
+
+  // 발주 등록 상태
+  const [createOpen, setCreateOpen] = useState(false)
+  const [formOrderDate, setFormOrderDate] = useState(getLocalDateString())
+  const [formPartnerId, setFormPartnerId] = useState('')
+  const [formDeliveryDate, setFormDeliveryDate] = useState('')
+  const [formDescription, setFormDescription] = useState('')
+  const [formVatIncluded, setFormVatIncluded] = useState(true)
+  const [formLines, setFormLines] = useState<OrderLine[]>([emptyLine()])
 
   const qp = new URLSearchParams({ page: '1', pageSize: '50' })
   if (startDate) qp.set('startDate', startDate)
@@ -87,6 +122,77 @@ export default function PurchasingOrdersPage() {
     queryKey: ['purchasing-orders', startDate, endDate, statusFilter],
     queryFn: () => api.get(`/purchasing/orders?${qp.toString()}`),
   })
+
+  const { data: partnersData } = useQuery({
+    queryKey: ['purchasing-partners'],
+    queryFn: () => api.get('/partners?partnerType=PURCHASE&pageSize=200'),
+    enabled: createOpen,
+  })
+  const partners: PartnerOption[] = (partnersData?.data || []).map((p: Record<string, unknown>) => ({
+    id: String(p.id),
+    partnerName: String(p.partnerName),
+  }))
+
+  const { data: itemsData } = useQuery({
+    queryKey: ['inventory-items-all'],
+    queryFn: () => api.get('/inventory/items?pageSize=500'),
+    enabled: createOpen,
+  })
+  const itemOptions: ItemOption[] = (itemsData?.data || []).map((i: Record<string, unknown>) => ({
+    id: String(i.id),
+    itemName: String(i.itemName),
+    specification: i.specification as string | null,
+    unit: i.unit as string | null,
+  }))
+
+  const createMutation = useMutation({
+    mutationFn: (body: Record<string, unknown>) => api.post('/purchasing/orders', body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['purchasing-orders'] })
+      setCreateOpen(false)
+      resetCreateForm()
+      toast.success('발주서가 등록되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message || '발주 등록에 실패했습니다.'),
+  })
+
+  const resetCreateForm = () => {
+    setFormOrderDate(getLocalDateString())
+    setFormPartnerId('')
+    setFormDeliveryDate('')
+    setFormDescription('')
+    setFormVatIncluded(true)
+    setFormLines([emptyLine()])
+  }
+
+  const handleCreateSubmit = () => {
+    if (!formOrderDate || !formPartnerId) {
+      toast.error('발주일과 매입처를 입력하세요.')
+      return
+    }
+    const validLines = formLines.filter((l) => l.itemId && l.quantity > 0 && l.unitPrice >= 0)
+    if (validLines.length === 0) {
+      toast.error('최소 1개 이상의 품목을 입력하세요.')
+      return
+    }
+    createMutation.mutate({
+      orderDate: formOrderDate,
+      partnerId: formPartnerId,
+      deliveryDate: formDeliveryDate || undefined,
+      description: formDescription || undefined,
+      vatIncluded: formVatIncluded,
+      details: validLines.map((l) => ({
+        itemId: l.itemId,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        remark: l.remark || undefined,
+      })),
+    })
+  }
+
+  const updateLine = (index: number, field: keyof OrderLine, value: string | number) => {
+    setFormLines((prev) => prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)))
+  }
 
   const items = (data?.data || []) as PurchaseOrder[]
 
@@ -125,7 +231,7 @@ export default function PurchasingOrdersPage() {
       const details = (selectedOrder.details || []) as Record<string, unknown>[]
 
       // Fetch default company info
-      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = { name: '(주)웰그린' }
+      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = { name: COMPANY_NAME }
       try {
         const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
         const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
@@ -215,7 +321,7 @@ export default function PurchasingOrdersPage() {
         description="원자재 및 부자재 발주를 등록하고 관리합니다"
         actions={
           <PermissionGuard module="purchasing" action="create">
-            <Button size="sm" onClick={() => toast.info('발주 등록 기능은 준비 중입니다.')}>
+            <Button size="sm" onClick={() => { resetCreateForm(); setCreateOpen(true) }}>
               <Plus className="mr-1.5 h-4 w-4" /> 발주 등록
             </Button>
           </PermissionGuard>
@@ -259,6 +365,98 @@ export default function PurchasingOrdersPage() {
         onRowClick={handleRowClick}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
+
+      {/* 발주 등록 다이얼로그 */}
+      <Dialog open={createOpen} onOpenChange={(v) => { setCreateOpen(v); if (!v) resetCreateForm() }}>
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>발주서 등록</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>발주일 <span className="text-destructive">*</span></Label>
+                <Input type="date" value={formOrderDate} onChange={(e) => setFormOrderDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>매입처 <span className="text-destructive">*</span></Label>
+                <Select value={formPartnerId} onValueChange={setFormPartnerId}>
+                  <SelectTrigger><SelectValue placeholder="매입처 선택" /></SelectTrigger>
+                  <SelectContent>
+                    {partners.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>납기일</Label>
+                <Input type="date" value={formDeliveryDate} onChange={(e) => setFormDeliveryDate(e.target.value)} />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input type="checkbox" id="vatIncluded" checked={formVatIncluded} onChange={(e) => setFormVatIncluded(e.target.checked)} className="rounded border" />
+                <Label htmlFor="vatIncluded">부가세 포함</Label>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>비고</Label>
+              <Textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="비고 사항을 입력하세요" rows={2} />
+            </div>
+
+            {/* 품목 라인 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">발주 품목</Label>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setFormLines([...formLines, emptyLine()])}>
+                  <Plus className="mr-1 h-3 w-3" /> 행 추가
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {formLines.map((line, idx) => (
+                  <div key={idx} className="flex flex-wrap items-end gap-2 rounded-md border p-2">
+                    <div className="min-w-[140px] flex-1 space-y-1">
+                      <Label className="text-xs">품목 <span className="text-destructive">*</span></Label>
+                      <Select value={line.itemId} onValueChange={(v) => updateLine(idx, 'itemId', v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                        <SelectContent>
+                          {itemOptions.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.itemName}{item.specification ? ` (${item.specification})` : ''}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-20 space-y-1">
+                      <Label className="text-xs">수량</Label>
+                      <Input type="number" min={1} className="h-8 text-xs" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
+                    </div>
+                    <div className="w-28 space-y-1">
+                      <Label className="text-xs">단가</Label>
+                      <Input type="number" min={0} className="h-8 text-xs" value={line.unitPrice} onChange={(e) => updateLine(idx, 'unitPrice', Number(e.target.value))} />
+                    </div>
+                    <div className="min-w-[80px] flex-1 space-y-1">
+                      <Label className="text-xs">비고</Label>
+                      <Input className="h-8 text-xs" value={line.remark} onChange={(e) => updateLine(idx, 'remark', e.target.value)} placeholder="선택" />
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={formLines.length <= 1} onClick={() => setFormLines(formLines.filter((_, i) => i !== idx))}>
+                      <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button onClick={handleCreateSubmit} disabled={createMutation.isPending}>
+              {createMutation.isPending ? '등록 중...' : '발주 등록'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 발주 상세 다이얼로그 */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>

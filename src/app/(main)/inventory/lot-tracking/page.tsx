@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { toast } from 'sonner'
 import { ScanBarcode, Search } from 'lucide-react'
 
 const MOVEMENT_TYPE_LABELS: Record<string, string> = {
@@ -75,6 +77,22 @@ export default function LotTrackingPage() {
 
   const items = (data?.data || []) as LotMovement[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '이동번호', accessor: 'movementNo' },
+    { header: '이동일', accessor: (r) => formatDate(r.movementDate) },
+    { header: '이동유형', accessor: (r) => MOVEMENT_TYPE_LABELS[r.movementType] || r.movementType },
+    { header: '수량', accessor: (r) => r.quantity?.toLocaleString() },
+    { header: '출발창고', accessor: (r) => r.fromWarehouse || '-' },
+    { header: '도착창고', accessor: (r) => r.toWarehouse || '-' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: `LOT추적_${searchLotNo}`, title: `LOT추적 이력 (${searchLotNo})`, columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   const handleSearch = () => {
     if (lotNo.trim()) {
       setSearchLotNo(lotNo.trim())
@@ -132,6 +150,7 @@ export default function LotTrackingPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

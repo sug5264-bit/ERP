@@ -380,13 +380,27 @@ export function DataTable<TData, TValue>({
       </div>
 
       <div className="flex items-center justify-between gap-2" role="navigation" aria-label="페이지 네비게이션">
-        <p className="text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
-          총 <span className="text-foreground font-medium">{table.getFilteredRowModel().rows.length}</span>건
-          {table.getFilteredRowModel().rows.length !== data.length && (
-            <span className="ml-1 opacity-60">/ {data.length}건 중</span>
-          )}
-          {hasSelection && <span className="text-primary ml-1.5 font-medium">({selectedCount}건 선택)</span>}
-        </p>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <p className="text-muted-foreground text-xs whitespace-nowrap sm:text-sm">
+            총 <span className="text-foreground font-medium">{table.getFilteredRowModel().rows.length}</span>건
+            {table.getFilteredRowModel().rows.length !== data.length && (
+              <span className="ml-1 opacity-60">/ {data.length}건 중</span>
+            )}
+            {hasSelection && <span className="text-primary ml-1.5 font-medium">({selectedCount}건 선택)</span>}
+          </p>
+          <select
+            className="border-input bg-background text-muted-foreground hidden rounded-md border px-2 py-1 text-xs sm:inline-block"
+            value={table.getState().pagination.pageSize}
+            onChange={(e) => table.setPageSize(Number(e.target.value))}
+            aria-label="페이지당 행 수"
+          >
+            {[10, 20, 30, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}건씩
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex items-center gap-1.5 sm:gap-1">
           <Button
             variant="outline"

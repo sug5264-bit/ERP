@@ -10,6 +10,7 @@ import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { PermissionGuard } from '@/components/common/permission-guard'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
@@ -57,6 +58,22 @@ export default function ReceivingPage() {
   })
 
   const items = (data?.data || []) as ReceivingItem[]
+
+  const exportColumns: ExportColumn[] = [
+    { header: '입고번호', accessor: 'receivingNo' },
+    { header: '입고일', accessor: (r) => formatDate(r.receivingDate) },
+    { header: '발주번호', accessor: 'orderNo' },
+    { header: '매입처명', accessor: 'supplierName' },
+    { header: '상태', accessor: (r) => RECEIVING_STATUS_LABELS[r.status] || r.status },
+    { header: '검수자', accessor: (r) => r.inspectorName || '-' },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '입고관리', title: '입고관리 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
 
   const columns: ColumnDef<ReceivingItem>[] = [
     {
@@ -145,6 +162,7 @@ export default function ReceivingPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )

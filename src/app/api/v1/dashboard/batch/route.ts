@@ -44,6 +44,7 @@ export async function GET() {
       thisMonthNewEmp,
       lastMonthNewEmp,
       todayOrderCount,
+      deliveryPendingCount,
     ] = await Promise.all([
       // KPI
       prisma.employee.count({ where: { status: 'ACTIVE' } }),
@@ -154,6 +155,10 @@ export async function GET() {
           status: { not: 'CANCELLED' },
         },
       }),
+      // 출하 대기 건수
+      prisma.delivery.count({
+        where: { status: 'PREPARING' },
+      }),
     ])
 
     // 안전재고 이하 품목 수 & 유통기한 임박 품목 수
@@ -256,7 +261,7 @@ export async function GET() {
 
     return successResponse(
       {
-        kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount, expiryAlertCount },
+        kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount, expiryAlertCount, deliveryPendingCount, todayOrderCount },
         trends: {
           salesAmount: { current: thisMonthAmount, previous: lastMonthAmount, change: salesTrend },
           orderCount: { current: thisMonthSales._count, previous: lastMonthSales._count, change: orderTrend },

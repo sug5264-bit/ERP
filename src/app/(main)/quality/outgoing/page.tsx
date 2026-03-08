@@ -9,8 +9,10 @@ import { DataTable } from '@/components/common/data-table'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { formatDate } from '@/lib/format'
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { INSPECTION_JUDGEMENT_LABELS } from '@/lib/constants'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
 
 interface OutgoingInspection {
   id: string
@@ -48,7 +50,7 @@ const columns: ColumnDef<OutgoingInspection>[] = [
   },
   {
     accessorKey: 'itemName',
-    header: '내품명',
+    header: '품목명',
     cell: ({ row }) => <span className="text-muted-foreground text-xs">{row.original.itemName}</span>,
   },
   {
@@ -98,6 +100,25 @@ export default function OutgoingInspectionPage() {
 
   const items = (data?.data || []) as OutgoingInspection[]
 
+  const exportColumns: ExportColumn[] = [
+    { header: '검사번호', accessor: 'inspectionNo' },
+    { header: '검사일', accessor: (r) => formatDate(r.inspectionDate) },
+    { header: '출하번호', accessor: 'shipmentNo' },
+    { header: '바코드', accessor: (r) => r.barcode || '-' },
+    { header: '품목명', accessor: 'itemName' },
+    { header: '시료수', accessor: (r) => Number(r.sampleCount) },
+    { header: '불량수', accessor: (r) => Number(r.defectCount) },
+    { header: '불량률', accessor: (r) => r.defectRate != null ? `${r.defectRate.toFixed(1)}%` : '-' },
+    { header: '판정', accessor: (r) => INSPECTION_JUDGEMENT_LABELS[r.judgement] || r.judgement },
+  ]
+
+  const handleExport = (type: 'excel' | 'pdf') => {
+    const cfg = { fileName: '출하검사', title: '출하검사 목록', columns: exportColumns, data: items }
+    if (type === 'excel') exportToExcel(cfg)
+    else exportToPDF(cfg)
+    toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader title="출하검사" description="출하 물품의 품질 검사를 수행하고 관리합니다" />
@@ -134,6 +155,7 @@ export default function OutgoingInspectionPage() {
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
+        onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
     </div>
   )
