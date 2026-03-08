@@ -21,7 +21,10 @@ export const createVoucherSchema = z.object({
           costCenterId: z.string().optional(),
         })
         .refine((d) => d.accountSubjectId || d.accountCode, { message: '계정과목 ID 또는 코드를 입력하세요' })
-        .refine((d) => (d.debitAmount > 0 || d.creditAmount > 0) && !(d.debitAmount > 0 && d.creditAmount > 0), {
+        .refine((d) => d.debitAmount > 0 || d.creditAmount > 0, {
+          message: '차변 또는 대변 금액을 입력하세요',
+        })
+        .refine((d) => !(d.debitAmount > 0 && d.creditAmount > 0), {
           message: '차변 또는 대변 중 하나만 입력하세요',
         })
     )
@@ -55,7 +58,7 @@ export const createTaxInvoiceSchema = z.object({
         itemDate: z.string().min(1),
         itemName: z.string().min(1, '품목명을 입력하세요'),
         specification: z.string().optional(),
-        qty: z.number().min(0),
+        qty: z.number().min(1, '수량은 1 이상이어야 합니다'),
         unitPrice: z.number().min(0),
         supplyAmount: z.number().min(0),
         taxAmount: z.number().min(0),

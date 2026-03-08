@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // 매입처별 발주 금액 집계
     const orders = await prisma.purchaseOrder.findMany({
-      where: dateFilter,
+      where: { ...dateFilter, status: { not: 'CANCELLED' } },
       include: {
         partner: { select: { id: true, partnerName: true } },
       },

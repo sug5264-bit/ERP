@@ -65,25 +65,52 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        // 결재 단계 + 문서 상태를 트랜잭션으로 원자적 처리
-        const docStatus =
-          action === 'reject' ? ('REJECTED' as const) : doc.currentStep >= doc.totalSteps ? ('APPROVED' as const) : null
+        if (doc.status !== 'IN_PROGRESS') {
+          failCount++
+          errors.push(`문서 ${doc.documentNo}: 결재 진행 중이 아닙니다`)
+          continue
+        }
 
         const actionLabel = action === 'approve' ? '승인' : '반려'
 
+        // 결재 단계 + 문서 상태를 트랜잭션으로 원자적 처리
         await prisma.$transaction(async (tx) => {
+          // Re-read document inside transaction to avoid stale data
+          const freshDoc = await tx.approvalDocument.findUnique({
+            where: { id: docId },
+            include: { steps: { orderBy: { stepOrder: 'asc' } } },
+          })
+          if (!freshDoc || freshDoc.status !== 'IN_PROGRESS') {
+            throw new Error('INVALID_STATUS')
+          }
+
+          const freshStep = freshDoc.steps.find(
+            (s) => s.stepOrder === freshDoc.currentStep && s.approverId === employee.id
+          )
+          if (!freshStep || freshStep.status !== 'PENDING') {
+            throw new Error('STEP_ALREADY_PROCESSED')
+          }
+
           await tx.approvalStep.update({
-            where: { id: currentStepData.id },
+            where: { id: freshStep.id },
             data: {
               status: action === 'approve' ? 'APPROVED' : 'REJECTED',
               comment: comment || null,
               actionDate: new Date(),
             },
           })
+
+          const docStatus =
+            action === 'reject'
+              ? ('REJECTED' as const)
+              : freshDoc.currentStep >= freshDoc.totalSteps
+                ? ('APPROVED' as const)
+                : null
+
           if (docStatus) {
             await tx.approvalDocument.update({ where: { id: docId }, data: { status: docStatus } })
           } else {
-            await tx.approvalDocument.update({ where: { id: docId }, data: { currentStep: doc.currentStep + 1 } })
+            await tx.approvalDocument.update({ where: { id: docId }, data: { currentStep: freshDoc.currentStep + 1 } })
           }
         })
 

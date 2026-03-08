@@ -20,7 +20,13 @@ export async function GET(request: NextRequest) {
     const { page, pageSize, skip } = getPaginationParams(sp)
     const where: Record<string, unknown> = {}
     const status = sp.get('status')
-    if (status) where.status = status
+    if (status) {
+      if (status.includes(',')) {
+        where.status = { in: status.split(',') }
+      } else {
+        where.status = status
+      }
+    }
     const drafterId = sp.get('drafterId')
     if (drafterId) where.drafterId = drafterId
 

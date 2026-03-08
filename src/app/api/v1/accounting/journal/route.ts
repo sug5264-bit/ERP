@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {}
     if (accountSubjectId) where.accountSubjectId = accountSubjectId
+    const voucherFilter: Record<string, unknown> = { status: { in: ['APPROVED', 'CONFIRMED'] } }
     if (startDate || endDate) {
       const voucherDateRange: { gte?: Date; lte?: Date } = {}
       if (startDate) {
@@ -33,8 +34,9 @@ export async function GET(request: NextRequest) {
         const d = new Date(endDate)
         if (!isNaN(d.getTime())) voucherDateRange.lte = d
       }
-      where.voucher = { voucherDate: voucherDateRange }
+      voucherFilter.voucherDate = voucherDateRange
     }
+    where.voucher = voucherFilter
 
     const [details, totalCount] = await Promise.all([
       prisma.voucherDetail.findMany({

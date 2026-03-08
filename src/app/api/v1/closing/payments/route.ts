@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       where: {
         voucherType: 'PAYMENT',
         voucherDate: { gte: startDate, lte: endDate },
-        status: { in: ['APPROVED', 'CONFIRMED'] },
+        status: { in: ['DRAFT', 'APPROVED', 'CONFIRMED'] },
       },
       include: {
         details: {

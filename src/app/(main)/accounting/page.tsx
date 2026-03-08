@@ -21,18 +21,24 @@ export default function AccountingPage() {
   const voucherCount = vouchersData?.meta?.totalCount || 0
   const accounts = ledgerData?.data || []
 
-  const totalRevenue = accounts
-    .filter((a: { accountType: string }) => a.accountType === 'REVENUE')
-    .reduce(
-      (s: number, a: { totalCredit: number; totalDebit: number }) => s + (Number(a.totalCredit) - Number(a.totalDebit)),
-      0
-    )
-  const totalExpense = accounts
-    .filter((a: { accountType: string }) => a.accountType === 'EXPENSE')
-    .reduce(
-      (s: number, a: { totalDebit: number; totalCredit: number }) => s + (Number(a.totalDebit) - Number(a.totalCredit)),
-      0
-    )
+  const totalRevenue = Math.round(
+    accounts
+      .filter((a: { accountType: string }) => a.accountType === 'REVENUE')
+      .reduce(
+        (s: number, a: { totalCredit: number; totalDebit: number }) =>
+          s + Math.round((Number(a.totalCredit) - Number(a.totalDebit)) * 100) / 100,
+        0
+      ) * 100
+  ) / 100
+  const totalExpense = Math.round(
+    accounts
+      .filter((a: { accountType: string }) => a.accountType === 'EXPENSE')
+      .reduce(
+        (s: number, a: { totalDebit: number; totalCredit: number }) =>
+          s + Math.round((Number(a.totalDebit) - Number(a.totalCredit)) * 100) / 100,
+        0
+      ) * 100
+  ) / 100
 
   const cards = [
     { title: '총 전표 수', value: `${voucherCount}건`, icon: FileText, href: '/accounting/vouchers' },

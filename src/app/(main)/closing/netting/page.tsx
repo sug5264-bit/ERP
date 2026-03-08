@@ -257,12 +257,12 @@ export default function NettingPage() {
   const orderColumns: ColumnDef<OrderRow>[] = [
     {
       accessorKey: 'orderNo',
-      header: '발주번호',
+      header: '주문번호',
       cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
     },
     {
       id: 'orderDate',
-      header: '발주일',
+      header: '주문일',
       cell: ({ row }) => formatDate(row.original.orderDate),
     },
     {
@@ -447,20 +447,20 @@ export default function NettingPage() {
 
         <TabsContent value="transactionStatement" className="space-y-6">
           <div className="rounded-lg border p-4">
-            <h3 className="mb-1 text-lg font-semibold">거래명세서 발행 (발주관리 연동)</h3>
+            <h3 className="mb-1 text-lg font-semibold">거래명세서 발행 (매출관리 연동)</h3>
             <p className="text-muted-foreground text-sm">
-              {year}년 {month}월 발주 내역을 기반으로 거래명세서를 발행합니다. 발주 상세정보와 거래처 정보가 자동으로
+              {year}년 {month}월 매출 내역을 기반으로 거래명세서를 발행합니다. 매출 상세정보와 거래처 정보가 자동으로
               반영됩니다.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-lg border p-4">
-              <p className="text-muted-foreground text-sm">해당 기간 발주 건수</p>
+              <p className="text-muted-foreground text-sm">해당 기간 매출 건수</p>
               <p className="text-2xl font-bold">{orders.length}건</p>
             </div>
             <div className="rounded-lg border p-4">
-              <p className="text-muted-foreground text-sm">발주 합계금액</p>
+              <p className="text-muted-foreground text-sm">매출 합계금액</p>
               <p className="text-2xl font-bold">
                 {formatCurrency(orders.reduce((sum: number, o: OrderRow) => sum + Number(o.totalAmount || 0), 0))}
               </p>

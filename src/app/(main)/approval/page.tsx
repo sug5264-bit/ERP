@@ -19,11 +19,11 @@ export default function ApprovalPage() {
   })
   const { data: completed } = useQuery({
     queryKey: ['approval-completed-summary'],
-    queryFn: () => api.get('/approval/documents?status=APPROVED&pageSize=1'),
+    queryFn: () => api.get('/approval/documents?filter=myDrafts&status=APPROVED&pageSize=1'),
   })
   const { data: rejected } = useQuery({
     queryKey: ['approval-rejected-summary'],
-    queryFn: () => api.get('/approval/documents?status=REJECTED&pageSize=1'),
+    queryFn: () => api.get('/approval/documents?filter=myDrafts&status=REJECTED&pageSize=1'),
   })
 
   const draftCount = drafts?.meta?.totalCount || 0

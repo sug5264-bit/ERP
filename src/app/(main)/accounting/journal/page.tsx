@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import { formatDate, formatCurrency } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
@@ -67,13 +68,14 @@ export default function JournalPage() {
   const [endDate, setEndDate] = useState('')
   const [accountId, setAccountId] = useState('')
 
-  const qp = new URLSearchParams({ pageSize: '100' })
+  const [page, setPage] = useState(1)
+  const qp = new URLSearchParams({ pageSize: '100', page: page.toString() })
   if (startDate) qp.set('startDate', startDate)
   if (endDate) qp.set('endDate', endDate)
   if (accountId && accountId !== 'all') qp.set('accountSubjectId', accountId)
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['accounting-journal', startDate, endDate, accountId],
+    queryKey: ['accounting-journal', startDate, endDate, accountId, page],
     queryFn: () => api.get(`/accounting/journal?${qp.toString()}`),
   })
   const { data: accountsData } = useQuery({
@@ -82,6 +84,8 @@ export default function JournalPage() {
   })
 
   const entries: JournalRow[] = data?.data || []
+  const totalCount = data?.meta?.totalCount || 0
+  const totalPages = Math.ceil(totalCount / 100)
   const accounts = accountsData?.data || []
 
   const exportColumns: ExportColumn[] = [
@@ -136,6 +140,19 @@ export default function JournalPage() {
         pageSize={100}
         onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
       />
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            이전
+          </Button>
+          <span className="text-sm">
+            {page} / {totalPages} (총 {totalCount}건)
+          </span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            다음
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
