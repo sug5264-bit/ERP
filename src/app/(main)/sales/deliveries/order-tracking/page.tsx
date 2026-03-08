@@ -19,7 +19,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { toast } from 'sonner'
-import { CheckCircle, Clock, Truck, Package, FileDown, Upload, Paperclip, X, Eye } from 'lucide-react'
+import { CheckCircle, Clock, Package, Upload, Paperclip, X, Eye } from 'lucide-react'
 
 const STATUS_MAP: Record<string, string> = {
   PREPARING: '준비중',

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       },
     })
     if (existing) {
-      return errorResponse('이미 해당 연도/부서의 예산이 존재합니다.', 'DUPLICATE')
+      return errorResponse('이미 해당 연도/부서의 예산이 존재합니다.', 'DUPLICATE', 409)
     }
 
     const budget = await prisma.budgetHeader.create({

@@ -87,7 +87,8 @@ export default function OrderNotesPage() {
 
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-all'],
-    queryFn: () => api.get('/sales/orders?pageSize=9999'),
+    queryFn: () => api.get('/sales/orders?pageSize=500'),
+    staleTime: 5 * 60 * 1000,
   })
   const orders: OrderItem[] = ordersData?.data || []
 

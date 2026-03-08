@@ -24,7 +24,7 @@ interface SalesSettlement {
   salesCount: number
   salesAmount: number
   collectedAmount: number
-  outstandingAmount: number
+  uncollectedAmount: number
   status: string
 }
 
@@ -52,11 +52,11 @@ const columns: ColumnDef<SalesSettlement>[] = [
     ),
   },
   {
-    accessorKey: 'outstandingAmount',
+    accessorKey: 'uncollectedAmount',
     header: '미수금액',
     cell: ({ row }) => (
-      <span className={`tabular-nums ${row.original.outstandingAmount > 0 ? 'font-medium text-red-600' : ''}`}>
-        {formatCurrency(row.original.outstandingAmount)}
+      <span className={`tabular-nums ${row.original.uncollectedAmount > 0 ? 'font-medium text-red-600' : ''}`}>
+        {formatCurrency(row.original.uncollectedAmount)}
       </span>
     ),
   },
@@ -84,7 +84,7 @@ export default function SalesSettlementPage() {
 
   const totalSales = items.reduce((sum, i) => sum + (i.salesAmount || 0), 0)
   const totalCollected = items.reduce((sum, i) => sum + (i.collectedAmount || 0), 0)
-  const totalOutstanding = items.reduce((sum, i) => sum + (i.outstandingAmount || 0), 0)
+  const totalOutstanding = items.reduce((sum, i) => sum + (i.uncollectedAmount || 0), 0)
 
   const summaryItems = [
     {

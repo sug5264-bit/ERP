@@ -103,23 +103,29 @@ export default function OnlineSalesPage() {
   const [items, setItems] = useState<OnlineSaleItem[]>([{ itemName: '', quantity: 1, unitPrice: 0, platformFee: 0 }])
   const [bulkEntries, setBulkEntries] = useState<BulkRevenueEntry[]>([emptyBulkEntry()])
 
-  const qp = new URLSearchParams({ pageSize: '50' })
-  if (channelFilter && channelFilter !== 'all') qp.set('channel', channelFilter)
-  if (startDate) qp.set('startDate', startDate)
-  if (endDate) qp.set('endDate', endDate)
+  const queryParamsStr = useMemo(() => {
+    const qp = new URLSearchParams({ pageSize: '50' })
+    if (channelFilter && channelFilter !== 'all') qp.set('channel', channelFilter)
+    if (startDate) qp.set('startDate', startDate)
+    if (endDate) qp.set('endDate', endDate)
+    return qp.toString()
+  }, [channelFilter, startDate, endDate])
+
+  const revQueryParamsStr = useMemo(() => {
+    const revQp = new URLSearchParams({ pageSize: '100' })
+    if (channelFilter && channelFilter !== 'all') revQp.set('channel', channelFilter)
+    if (startDate) revQp.set('startDate', startDate)
+    if (endDate) revQp.set('endDate', endDate)
+    return revQp.toString()
+  }, [channelFilter, startDate, endDate])
 
   // Online sales query
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['online-sales', channelFilter, startDate, endDate],
-    queryFn: () => api.get(`/sales/online-sales?${qp.toString()}`) as Promise<Record<string, unknown>>,
+    queryFn: () => api.get(`/sales/online-sales?${queryParamsStr}`) as Promise<Record<string, unknown>>,
   })
 
   // Revenue query
-  const revQp = new URLSearchParams({ pageSize: '100' })
-  if (channelFilter && channelFilter !== 'all') revQp.set('channel', channelFilter)
-  if (startDate) revQp.set('startDate', startDate)
-  if (endDate) revQp.set('endDate', endDate)
-
   const {
     data: revenueData,
     isLoading: revenueLoading,
@@ -127,7 +133,7 @@ export default function OnlineSalesPage() {
     refetch: revenueRefetch,
   } = useQuery({
     queryKey: ['online-revenue', channelFilter, startDate, endDate],
-    queryFn: () => api.get(`/sales/online-revenue?${revQp.toString()}`) as Promise<{ data: RevenueRow[] }>,
+    queryFn: () => api.get(`/sales/online-revenue?${revQueryParamsStr}`) as Promise<{ data: RevenueRow[] }>,
   })
 
   const revenues = useMemo(() => (revenueData?.data || []) as RevenueRow[], [revenueData?.data])

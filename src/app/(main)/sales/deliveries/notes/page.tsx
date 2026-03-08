@@ -88,7 +88,8 @@ export default function DeliveryNotesPage() {
 
   const { data: deliveriesData } = useQuery({
     queryKey: ['sales-deliveries-all'],
-    queryFn: () => api.get('/sales/deliveries?pageSize=9999'),
+    queryFn: () => api.get('/sales/deliveries?pageSize=500'),
+    staleTime: 5 * 60 * 1000,
   })
   const deliveries = deliveriesData?.data || []
 

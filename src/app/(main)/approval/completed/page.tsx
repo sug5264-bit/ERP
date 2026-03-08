@@ -72,16 +72,18 @@ export default function ApprovalCompletedPage() {
   const [selectedDoc, setSelectedDoc] = useState<CompletedDocRow | null>(null)
 
   const qp = new URLSearchParams({ pageSize: '50', filter: 'myDrafts' })
-  if (statusFilter && statusFilter !== 'all') qp.set('status', statusFilter)
+  if (statusFilter && statusFilter !== 'all') {
+    qp.set('status', statusFilter)
+  } else {
+    qp.set('status', 'APPROVED,REJECTED,CANCELLED')
+  }
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['approval-completed', statusFilter],
     queryFn: () => api.get(`/approval/documents?${qp}`),
   })
 
-  const completedData = (data?.data || []).filter((d: { status: string }) =>
-    ['APPROVED', 'REJECTED', 'CANCELLED'].includes(d.status)
-  )
+  const completedData = (data?.data || []) as CompletedDocRow[]
 
   const handleRowClick = async (row: CompletedDocRow) => {
     try {

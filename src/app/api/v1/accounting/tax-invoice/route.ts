@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import {
   successResponse,
+  errorResponse,
   handleApiError,
   requirePermissionCheck,
   isErrorResponse,
@@ -74,6 +75,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const data = createTaxInvoiceSchema.parse(body)
+
+    // Validate item amount consistency
+    for (const item of data.items) {
+      const expectedSupply = item.qty * item.unitPrice
+      if (Math.abs(item.supplyAmount - expectedSupply) > 1) {
+        return errorResponse(
+          `품목 "${item.itemName}"의 공급가액이 수량 × 단가와 일치하지 않습니다.`,
+          'VALIDATION_ERROR',
+          400
+        )
+      }
+    }
 
     const supplyAmount = data.items.reduce((s, i) => s + i.supplyAmount, 0)
     const taxAmount = data.items.reduce((s, i) => s + i.taxAmount, 0)
