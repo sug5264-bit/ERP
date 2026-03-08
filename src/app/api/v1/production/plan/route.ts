@@ -8,6 +8,8 @@ import {
   getPaginationParams,
   buildMeta,
 } from '@/lib/api-helpers'
+import { z } from 'zod'
+import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(request: NextRequest) {
   try {
@@ -57,6 +59,62 @@ export async function GET(request: NextRequest) {
     }))
 
     return successResponse(data, buildMeta(page, pageSize, totalCount))
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+
+const createProductionPlanSchema = z.object({
+  planDate: z
+    .string()
+    .min(1, '계획일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
+  bomHeaderId: z.string().min(1, '배합표를 선택하세요'),
+  oemContractId: z.string().optional().nullable(),
+  plannedQty: z.number().min(1, '계획수량은 1 이상이어야 합니다').max(999_999_999),
+  plannedDate: z
+    .string()
+    .min(1, '생산예정일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
+  description: z.string().max(1000).optional().nullable(),
+})
+
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await requirePermissionCheck('inventory', 'create')
+    if (isErrorResponse(authResult)) return authResult
+
+    const body = await request.json()
+    const data = createProductionPlanSchema.parse(body)
+
+    const planNo = await generateDocumentNumber('PP', new Date(data.planDate))
+
+    const plan = await prisma.productionPlan.create({
+      data: {
+        planNo,
+        planDate: new Date(data.planDate),
+        bomHeaderId: data.bomHeaderId,
+        oemContractId: data.oemContractId || undefined,
+        plannedQty: data.plannedQty,
+        plannedDate: new Date(data.plannedDate),
+        description: data.description || undefined,
+      },
+      include: {
+        bomHeader: { select: { bomName: true } },
+        oemContract: { select: { contractName: true } },
+      },
+    })
+
+    return successResponse({
+      id: plan.id,
+      planNo: plan.planNo,
+      planDate: plan.planDate,
+      bomName: plan.bomHeader.bomName,
+      oemContractName: plan.oemContract?.contractName || null,
+      plannedQty: Number(plan.plannedQty),
+      plannedDate: plan.plannedDate,
+      status: plan.status,
+    })
   } catch (error) {
     return handleApiError(error)
   }
