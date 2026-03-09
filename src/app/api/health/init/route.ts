@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { hash, compare } from 'bcryptjs'
+import { hash } from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
