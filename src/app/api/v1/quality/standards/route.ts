@@ -12,7 +12,7 @@ import { createQualityStandardSchema } from '@/lib/validations/sales'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('sales', 'read')
+    const authResult = await requirePermissionCheck('quality', 'read')
     if (isErrorResponse(authResult)) return authResult
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('sales', 'create')
+    const authResult = await requirePermissionCheck('quality', 'create')
     if (isErrorResponse(authResult)) return authResult
     const body = await request.json()
     const data = createQualityStandardSchema.parse(body)

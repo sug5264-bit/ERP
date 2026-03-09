@@ -38,6 +38,7 @@ interface SessionUser {
   employeeName?: string | null
   departmentName?: string | null
   positionName?: string | null
+  accountType?: string | null
 }
 
 export interface AuthResult {
@@ -246,6 +247,7 @@ export async function requireAuth(): Promise<AuthResult | NextResponse> {
         employeeName: user.employeeName as string | null,
         departmentName: user.departmentName as string | null,
         positionName: user.positionName as string | null,
+        accountType: (user.accountType as string) || 'INTERNAL',
       },
     },
   }

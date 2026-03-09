@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { successResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
+import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
 import { logger } from '@/lib/logger'
 
 // GET: 대시보드 전체 데이터를 단일 요청으로 통합 (5개 HTTP 요청 → 1개)
@@ -7,6 +7,11 @@ export async function GET() {
   try {
     const authResult = await requireAuth()
     if (isErrorResponse(authResult)) return authResult
+
+    // 화주사(SHIPPER)는 전용 대시보드(/shipper/dashboard)만 사용
+    if (authResult.session.user.accountType === 'SHIPPER') {
+      return errorResponse('대시보드 접근 권한이 없습니다. 화주사 전용 대시보드를 이용해주세요.', 'FORBIDDEN', 403)
+    }
 
     const now = new Date()
     const yearStart = new Date(now.getFullYear(), 0, 1)
