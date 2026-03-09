@@ -50,10 +50,8 @@ function LoginForm() {
           setError(`로그인 실패: ${result.error}`)
         }
       } else if (result?.ok) {
-        // signIn 성공 시 result.url이 있으면 그 URL로, 없으면 callbackUrl로 이동
-        const redirectTo = result?.url || callbackUrl
-        console.log('[Login] Redirecting to:', redirectTo)
-        router.push(redirectTo)
+        console.log('[Login] Redirecting to:', callbackUrl)
+        router.push(callbackUrl)
         router.refresh()
       } else {
         setError(`로그인 응답을 처리할 수 없습니다. (${JSON.stringify(result)})`)
