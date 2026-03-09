@@ -226,11 +226,15 @@ export async function POST(request: NextRequest) {
                   data: { quantity: { decrement: deduct }, lastMovementDate: new Date() },
                 })
                 if (result.count === 0) {
-                  // 동시 접근으로 재고가 이미 변경됨 - 건너뛰기
+                  // 동시 접근으로 재고 변경됨 - 경고 기록 후 재시도 (해당 창고는 건너뛰기)
+                  warnings.push(`원자재 ${md.itemId}: 창고 재고가 동시 처리로 변경되어 일부 차감 누락 가능`)
                   continue
                 }
                 remaining -= deduct
               }
+            }
+            if (remaining > 0) {
+              warnings.push(`원자재 ${md.itemId}: 요청 수량 대비 ${remaining}개 미차감 (재고 부족 또는 동시 처리)`)
             }
           }
         }
