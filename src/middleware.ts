@@ -3,8 +3,9 @@ import type { NextRequest } from 'next/server'
 
 const publicPaths = ['/login', '/api/auth']
 
-// 헬스체크는 인증/레이트리밋 없이 항상 허용
+// 헬스체크 메인 엔드포인트만 인증 없이 허용 (init, reset-admin, seed는 인증 필요)
 const bypassPaths = ['/api/health']
+const bypassExcludePaths = ['/api/health/init', '/api/health/reset-admin', '/api/health/seed']
 
 // ─── In-memory Rate Limiter (프록시용 경량 버전) ───
 interface RLEntry {
@@ -71,8 +72,11 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 헬스체크 경로 바이패스 (정확 매칭 또는 하위 경로만 허용)
-  if (bypassPaths.some((path) => pathname === path || pathname.startsWith(path + '/'))) {
+  // 헬스체크 경로 바이패스 (메인 헬스체크만 - init/reset-admin/seed는 인증 필요)
+  if (
+    bypassPaths.some((path) => pathname === path || pathname.startsWith(path + '/')) &&
+    !bypassExcludePaths.some((path) => pathname === path || pathname.startsWith(path + '/'))
+  ) {
     return NextResponse.next()
   }
 

@@ -45,9 +45,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               passwordHash: string
               isActive: boolean
               employeeId: string | null
+              accountType: string
+              shipperId: string | null
             }[]
           >(
-            'SELECT "id", "email", "name", "passwordHash", "isActive", "employeeId" FROM "users" WHERE "username" = $1 LIMIT 1',
+            'SELECT "id", "email", "name", "passwordHash", "isActive", "employeeId", "accountType", "shipperId" FROM "users" WHERE "username" = $1 LIMIT 1',
             usernameStr
           )
 
@@ -129,8 +131,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             employeeName,
             departmentName,
             positionName,
-            accountType: 'INTERNAL',
-            shipperId: null,
+            accountType: user.accountType || 'INTERNAL',
+            shipperId: user.shipperId,
           }
         } catch (error) {
           logger.error('Auth authorize error', {

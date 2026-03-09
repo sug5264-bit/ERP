@@ -81,8 +81,9 @@ export async function requirePermission(module: string, action: Action) {
   const user = session.user as Record<string, unknown>
   const permissions: Permission[] = Array.isArray(user.permissions) ? user.permissions : []
   const roles: string[] = Array.isArray(user.roles) ? user.roles : []
+  const accountType = typeof user.accountType === 'string' ? user.accountType : 'INTERNAL'
 
-  if (!hasPermission(permissions, roles, module, action)) {
+  if (!hasPermission(permissions, roles, module, action, accountType)) {
     return { error: 'FORBIDDEN' as const, status: 403, session: null }
   }
 
