@@ -4,15 +4,9 @@ import { prisma } from '@/lib/prisma'
 /**
  * GET /api/auth/debug
  * 인증 시스템 기본 진단 (DB 연결, 사용자 존재 여부)
- * - 개발 환경에서만 사용 가능
  * - 비밀번호, 해시, 자격증명 등 민감 정보는 절대 노출하지 않음
  */
 export async function GET() {
-  // 프로덕션 환경에서는 접근 차단
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ error: 'Not available in production' }, { status: 404 })
-  }
-
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
   }
