@@ -11,7 +11,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'read')
+    const authResult = await requirePermissionCheck('quality', 'read')
     if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
