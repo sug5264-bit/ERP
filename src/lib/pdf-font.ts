@@ -63,5 +63,6 @@ export async function loadKoreanFont(doc: InstanceType<typeof jsPDF>): Promise<s
 
   // 실패 시 다음 호출에서 재시도할 수 있도록 캐시 초기화
   cachedFontPromise = null
+  console.warn('[PDF] 한글 폰트 로드 실패 — PDF에 한글이 정상 출력되지 않을 수 있습니다.')
   return 'helvetica'
 }

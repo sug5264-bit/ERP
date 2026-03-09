@@ -53,6 +53,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     })
     if (!delivery) return errorResponse('납품을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
+    // 불량 수가 있을 때 검사 수량이 0이면 불량률 계산 불가
+    if (data.defectCount > 0 && data.sampleSize <= 0) {
+      return errorResponse(
+        '불량 수가 0보다 클 때 검사 수량(sampleSize)은 0보다 커야 합니다.',
+        'INVALID_SAMPLE_SIZE',
+        400
+      )
+    }
+
     // 불량률을 비율(0~1)로 계산 — Decimal(8,4)에 안전하게 저장
     const defectRate = data.sampleSize > 0 ? Math.min(9999.9999, (data.defectCount / data.sampleSize) * 100) : 0
 

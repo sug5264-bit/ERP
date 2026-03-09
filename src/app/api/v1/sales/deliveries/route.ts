@@ -101,6 +101,29 @@ export async function POST(request: NextRequest) {
     if (salesOrder.status === 'COMPLETED') return errorResponse('이미 완료된 발주입니다.', 'INVALID_STATUS', 400)
     if (!salesOrder.partnerId) return errorResponse('발주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
 
+    // 납품 수량이 발주 잔량을 초과하는지 검증
+    const salesOrderDetails = await prisma.salesOrderDetail.findMany({
+      where: { salesOrderId: data.salesOrderId },
+      select: { itemId: true, remainingQty: true },
+    })
+    for (const detail of data.details) {
+      const orderDetail = salesOrderDetails.find((sod) => sod.itemId === detail.itemId)
+      if (!orderDetail) {
+        return errorResponse(
+          `발주에 포함되지 않은 품목입니다. (itemId: ${detail.itemId})`,
+          'INVALID_ITEM',
+          400
+        )
+      }
+      if (detail.quantity > Number(orderDetail.remainingQty)) {
+        return errorResponse(
+          `납품 수량이 발주 잔량을 초과합니다. (품목: ${detail.itemId}, 잔량: ${orderDetail.remainingQty}, 납품수량: ${detail.quantity})`,
+          'QUANTITY_EXCEEDED',
+          400
+        )
+      }
+    }
+
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     const result = await prisma.$transaction(async (tx) => {
