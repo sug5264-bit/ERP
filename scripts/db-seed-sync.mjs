@@ -15,7 +15,16 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const prisma = new PrismaClient()
+
+// 커넥션 풀 제한을 위해 URL에 connection_limit 추가
+let dbUrl = process.env.DATABASE_URL || ''
+if (dbUrl && !dbUrl.includes('connection_limit')) {
+  const sep = dbUrl.includes('?') ? '&' : '?'
+  dbUrl = `${dbUrl}${sep}connection_limit=2&pool_timeout=20`
+}
+const prisma = new PrismaClient({
+  datasources: dbUrl ? { db: { url: dbUrl } } : undefined,
+})
 
 /** 핵심 시드 데이터 존재 여부 확인 */
 async function checkSeedDataExists() {
