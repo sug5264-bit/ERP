@@ -61,8 +61,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse('발주서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
+    const VALID_STATUSES = ['ORDERED', 'CONFIRMED', 'SHIPPED', 'RECEIVED', 'CANCELLED']
     const updateData: Record<string, unknown> = {}
-    if (body.status) updateData.status = body.status
+    if (body.status) {
+      if (!VALID_STATUSES.includes(body.status)) {
+        return errorResponse('유효하지 않은 상태입니다.', 'INVALID_STATUS', 400)
+      }
+      updateData.status = body.status
+    }
     if (body.deliveryDate) updateData.deliveryDate = new Date(body.deliveryDate)
     if (body.description !== undefined) updateData.description = body.description
 

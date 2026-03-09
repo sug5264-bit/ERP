@@ -122,6 +122,7 @@ function FileUploadCard({
           <div className="space-y-2">
             {isImage && !isPdf ? (
               <div className="flex h-24 items-center justify-center overflow-hidden rounded border bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={getFileUrl(currentPath)}
                   alt={label}

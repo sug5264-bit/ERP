@@ -266,6 +266,11 @@ export function OrdersPanel() {
     return { name: COMPANY_NAME, bizNo: '', ceo: '', address: '', bizType: '', bizItem: '', tel: '' }
   }
 
+  const getDefaultCompany = () => {
+    const companies = companyData?.data || []
+    return companies.find((c) => c.isDefault) || companies[0] || null
+  }
+
   const handleTaxInvoicePDF = async (order: SalesOrder) => {
     let orderDetail = order as SalesOrder
     try {
@@ -1247,11 +1252,6 @@ export function OrdersPanel() {
       return
     }
     trackingMutation.mutate({ trackings: trackingRows })
-  }
-
-  const getDefaultCompany = () => {
-    const companies = companyData?.data || []
-    return companies.find((c) => c.isDefault) || companies[0] || null
   }
 
   const updateOrderRow = (idx: number, field: keyof OrderRow, value: string | number) => {
