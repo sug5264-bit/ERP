@@ -17,6 +17,7 @@ import { sanitizeFileName } from '@/lib/sanitize'
 
 /** 숫자를 한글 금액으로 변환 (예: 12300 → "일만이천삼백", -5000 → "마이너스 오천") */
 function numberToKorean(n: number): string {
+  if (!isFinite(n) || isNaN(n)) return '영'
   if (n === 0) return '영'
   const prefix = n < 0 ? '마이너스 ' : ''
   const d = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
@@ -47,7 +48,9 @@ function numberToKorean(n: number): string {
 function splitAmountDigits(amount: number, digitCount: number): string[] {
   const isNeg = amount < 0
   const str = Math.floor(Math.abs(amount)).toString()
-  const padded = str.padStart(digitCount, ' ')
+  // 자릿수 초과 시 뒤에서 digitCount만큼만 사용
+  const truncated = str.length > digitCount ? str.slice(str.length - digitCount) : str
+  const padded = truncated.padStart(digitCount, ' ')
   const digits = padded.split('').map((c) => (c === ' ' ? '' : c))
   if (isNeg && digits.length > 0) {
     // 첫 번째 비어있지 않은 자리 앞에 △ 표시
@@ -99,13 +102,6 @@ function makeCell(
 // ---------------------------------------------------------------------------
 // 공통 스타일 프리셋
 // ---------------------------------------------------------------------------
-
-const infoTableStyles = {
-  theme: 'grid' as const,
-  styles: { fontSize: 8, cellPadding: 2 },
-  headStyles: defaultHeadStyles,
-  margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
-}
 
 const itemTableStyles = {
   theme: 'grid' as const,
@@ -456,8 +452,6 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   const halfW = W / 2
   const labelW1 = 24
   const subLabelW = 18
-  const bizNoW = halfW - labelW1
-
   // 공급자 헤더
   cell(M, y, 12, rh * 5, '공\n급\n자', { align: 'center', fill: true, fillColor: [220, 230, 255], fontSize: 7 })
 
@@ -1397,7 +1391,7 @@ export interface PayrollSlipPDFData {
 }
 
 export async function generatePayrollSlipPDF(data: PayrollSlipPDFData) {
-  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
+  const { doc, fontName, pageWidth } = await createPDFDocument()
   const cell = makeCell(doc, fontName, 8)
 
   let y = 14

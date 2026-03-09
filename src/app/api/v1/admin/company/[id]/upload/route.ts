@@ -13,7 +13,7 @@ const VALID_FIELDS = ['logoPath', 'sealPath', 'bizCertPath', 'bankCopyPath'] as 
 type UploadField = (typeof VALID_FIELDS)[number]
 
 const ALLOWED_EXTENSIONS: Record<UploadField, Set<string>> = {
-  logoPath: new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']),
+  logoPath: new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']),
   sealPath: new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']),
   bizCertPath: new Set(['pdf', 'png', 'jpg', 'jpeg']),
   bankCopyPath: new Set(['pdf', 'png', 'jpg', 'jpeg']),

@@ -88,6 +88,13 @@ async function request(method: string, url: string, data?: unknown) {
         }
 
         clearTimeout(timeoutId)
+
+        // 204 No Content 등 body가 없는 응답 처리
+        const contentType = res.headers.get('content-type') || ''
+        if (res.status === 204 || !contentType.includes('application/json')) {
+          if (res.ok) return { success: true }
+        }
+
         const json = await res.json()
 
         if (!res.ok) {

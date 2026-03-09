@@ -10,7 +10,7 @@ import {
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authResult = await requirePermissionCheck('sales', 'update')
+    const authResult = await requirePermissionCheck('quality', 'update')
     if (isErrorResponse(authResult)) return authResult
     const { id } = await params
     const body = await request.json()
@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const authResult = await requirePermissionCheck('sales', 'delete')
+    const authResult = await requirePermissionCheck('quality', 'delete')
     if (isErrorResponse(authResult)) return authResult
     const { id } = await params
 

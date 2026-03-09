@@ -164,7 +164,7 @@ export default function ProductionPlanPage() {
     createMutation.mutate({
       planDate: formPlanDate,
       bomHeaderId: formBomHeaderId,
-      oemContractId: formOemContractId || undefined,
+      oemContractId: formOemContractId && formOemContractId !== 'none' ? formOemContractId : undefined,
       plannedQty: formPlannedQty,
       plannedDate: formPlannedDate,
       description: formDescription || undefined,
