@@ -7,6 +7,7 @@ import {
   requirePermissionCheck,
   isErrorResponse,
 } from '@/lib/api-helpers'
+import { format } from 'date-fns'
 
 export async function POST(req: NextRequest) {
   try {
@@ -56,17 +57,37 @@ export async function POST(req: NextRequest) {
       return parseFloat(String(val).replace(/,/g, ''))
     }
 
+    /** 거래처코드 미입력 시 자동생성 (PTN-YYYYMM-XXXXX) */
+    async function generateAutoPartnerCode(): Promise<string> {
+      const yearMonth = format(new Date(), 'yyyyMM')
+      const prefix = 'PTN'
+      const sequence = await prisma.documentSequence.upsert({
+        where: { prefix_yearMonth: { prefix, yearMonth } },
+        update: { lastSeq: { increment: 1 } },
+        create: { prefix, yearMonth, lastSeq: 1 },
+      })
+      return `${prefix}-${yearMonth}-${String(sequence.lastSeq).padStart(5, '0')}`
+    }
+
+    const autoCreated: string[] = []
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
       const rowNum = i + 2
       try {
-        if (!row.partnerCode || !row.partnerName) {
-          throw new Error('거래처코드와 거래처명은 필수입니다.')
+        if (!row.partnerName) {
+          throw new Error('거래처명은 필수입니다.')
         }
 
-        const partnerCode = String(row.partnerCode).trim()
-        if (!PARTNER_CODE_RE.test(partnerCode)) {
+        let partnerCode = row.partnerCode ? String(row.partnerCode).trim() : ''
+        if (partnerCode && !PARTNER_CODE_RE.test(partnerCode)) {
           throw new Error('거래처코드는 영문, 숫자, 하이픈만 사용 가능합니다 (최대 50자).')
+        }
+
+        // 거래처코드 미입력 시 자동생성
+        if (!partnerCode) {
+          partnerCode = await generateAutoPartnerCode()
+          autoCreated.push(`행 ${rowNum}: 거래처코드 "${partnerCode}" 자동 생성`)
         }
 
         const partnerName = String(row.partnerName).trim()
@@ -103,6 +124,15 @@ export async function POST(req: NextRequest) {
           throw new Error(`거래처코드 '${partnerCode}'가 이미 존재합니다.`)
         }
 
+        // 동일 거래처명이 이미 DB에 존재하면 중복 생성 방지
+        const existingByName = await prisma.partner.findFirst({
+          where: { partnerName },
+          select: { id: true, partnerCode: true },
+        })
+        if (existingByName) {
+          throw new Error(`거래처명 '${partnerName}'이(가) 이미 존재합니다. (코드: ${existingByName.partnerCode})`)
+        }
+
         await prisma.partner.create({
           data: {
             partnerCode,
@@ -133,7 +163,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return successResponse({ success, failed, errors })
+    return successResponse({ success, failed, errors, autoCreated })
   } catch (error) {
     return handleApiError(error)
   }

@@ -6,9 +6,19 @@
  */
 import { prisma } from '@/lib/prisma'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { format } from 'date-fns'
+import { logger } from '@/lib/logger'
 
 // Prisma 트랜잭션 클라이언트 타입
-type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+export type TransactionClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+/** Prisma unique constraint violation code */
+const PRISMA_UNIQUE_VIOLATION = 'P2002'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isPrismaUniqueError(error: any): boolean {
+  return error?.code === PRISMA_UNIQUE_VIOLATION
+}
 
 // ─── 품목 자동 생성 ──────────────────────────────
 
@@ -27,6 +37,10 @@ export interface AutoItemInput {
   standardPrice?: number | null
   /** 바코드 */
   barcode?: string | null
+  /** 품목유형 */
+  itemType?: 'GOODS' | 'PRODUCT' | 'RAW_MATERIAL' | 'SUBSIDIARY' | null
+  /** 과세유형 */
+  taxType?: 'TAXABLE' | 'TAX_FREE' | 'ZERO_RATE' | null
 }
 
 /**
@@ -35,12 +49,11 @@ export interface AutoItemInput {
  * - itemId가 있고 DB에 없으면 → itemName이 있으면 자동 생성
  * - itemId가 없고 itemName이 있으면 → 동일 이름 품목 검색 후 없으면 자동 생성
  *
+ * 동시성 보호: unique constraint 위반 시 기존 레코드를 다시 조회하여 반환
+ *
  * @returns 품목 ID
  */
-export async function ensureItemExists(
-  input: AutoItemInput,
-  tx?: TransactionClient
-): Promise<string> {
+export async function ensureItemExists(input: AutoItemInput, tx?: TransactionClient): Promise<string> {
   const client = tx || prisma
 
   // 1. itemId가 있으면 먼저 DB에서 찾기
@@ -84,47 +97,67 @@ export async function ensureItemExists(
     throw new Error(`품목 ID "${input.itemId}"를 찾을 수 없고, 자동 생성을 위한 품목명이 없습니다.`)
   }
 
-  const itemCode = input.itemCode || await generateAutoItemCode(client)
-  const newItem = await client.item.create({
-    data: {
-      itemCode,
-      itemName: input.itemName,
-      specification: input.specification || null,
-      unit: input.unit || 'EA',
-      standardPrice: input.standardPrice || 0,
-      barcode: input.barcode || null,
-      itemType: 'GOODS',
-      taxType: 'TAXABLE',
-      isActive: true,
-    },
-  })
-
-  return newItem.id
+  const itemCode = input.itemCode || (await generateAutoCode('ITEM', client))
+  try {
+    const newItem = await client.item.create({
+      data: {
+        itemCode,
+        itemName: input.itemName,
+        specification: input.specification || null,
+        unit: input.unit || 'EA',
+        standardPrice: input.standardPrice || 0,
+        barcode: input.barcode || null,
+        itemType: input.itemType || 'GOODS',
+        taxType: input.taxType || 'TAXABLE',
+        isActive: true,
+      },
+    })
+    return newItem.id
+  } catch (error) {
+    // 동시 생성으로 인한 unique 위반 시, 기존 레코드 재조회
+    if (isPrismaUniqueError(error)) {
+      logger.warn('품목 자동 생성 중 중복 감지, 기존 레코드 조회', { itemCode, itemName: input.itemName })
+      const existing = await client.item.findFirst({
+        where: {
+          OR: [{ itemCode }, { itemName: input.itemName }, ...(input.barcode ? [{ barcode: input.barcode }] : [])],
+        },
+        select: { id: true },
+      })
+      if (existing) return existing.id
+    }
+    throw error
+  }
 }
 
 /**
- * 자동 품목코드 생성: AUTO-YYYYMM-XXXXX 형식
+ * 원자적 자동 코드 생성: DocumentSequence 테이블을 활용하여 race condition 방지.
+ * ITEM → AUTO-YYYYMM-XXXXX
+ * PARTNER → PTN-YYYYMM-XXXXX
  */
-async function generateAutoItemCode(client: TransactionClient | typeof prisma): Promise<string> {
-  const now = new Date()
-  const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
-  const prefix = `AUTO-${yearMonth}`
+async function generateAutoCode(type: 'ITEM' | 'PARTNER', client: TransactionClient | typeof prisma): Promise<string> {
+  const prefixMap = { ITEM: 'AUTO', PARTNER: 'PTN' }
+  const seqPrefix = prefixMap[type]
+  const yearMonth = format(new Date(), 'yyyyMM')
 
-  // 마지막 자동생성 코드 찾기
-  const lastItem = await client.item.findFirst({
-    where: { itemCode: { startsWith: prefix } },
-    orderBy: { itemCode: 'desc' },
-    select: { itemCode: true },
+  const sequence = await client.documentSequence.upsert({
+    where: {
+      prefix_yearMonth: { prefix: seqPrefix, yearMonth },
+    },
+    update: {
+      lastSeq: { increment: 1 },
+    },
+    create: {
+      prefix: seqPrefix,
+      yearMonth,
+      lastSeq: 1,
+    },
   })
 
-  let seq = 1
-  if (lastItem) {
-    const parts = lastItem.itemCode.split('-')
-    const lastSeq = parseInt(parts[parts.length - 1], 10)
-    if (!isNaN(lastSeq)) seq = lastSeq + 1
+  if (sequence.lastSeq > 99999) {
+    throw new Error(`자동 코드 시퀀스 초과: ${seqPrefix}-${yearMonth} (최대 99999)`)
   }
 
-  return `${prefix}-${String(seq).padStart(5, '0')}`
+  return `${seqPrefix}-${yearMonth}-${String(sequence.lastSeq).padStart(5, '0')}`
 }
 
 // ─── 거래처 자동 생성 ──────────────────────────────
@@ -151,12 +184,11 @@ export interface AutoPartnerInput {
 /**
  * 거래처가 존재하는지 확인하고, 없으면 자동 생성.
  *
+ * 동시성 보호: unique constraint 위반 시 기존 레코드를 다시 조회하여 반환
+ *
  * @returns 거래처 ID 또는 null (입력이 모두 없는 경우)
  */
-export async function ensurePartnerExists(
-  input: AutoPartnerInput,
-  tx?: TransactionClient
-): Promise<string | null> {
+export async function ensurePartnerExists(input: AutoPartnerInput, tx?: TransactionClient): Promise<string | null> {
   const client = tx || prisma
 
   // 입력이 모두 없으면 null 반환
@@ -205,45 +237,34 @@ export async function ensurePartnerExists(
     throw new Error(`거래처 ID "${input.partnerId}"를 찾을 수 없고, 자동 생성을 위한 거래처명이 없습니다.`)
   }
 
-  const partnerCode = input.partnerCode || await generateAutoPartnerCode(client)
-  const newPartner = await client.partner.create({
-    data: {
-      partnerCode,
-      partnerName: input.partnerName,
-      partnerType: input.partnerType || 'BOTH',
-      bizNo: input.bizNo || null,
-      ceoName: input.ceoName || null,
-      phone: input.phone || null,
-      address: input.address || null,
-      isActive: true,
-    },
-  })
-
-  return newPartner.id
-}
-
-/**
- * 자동 거래처코드 생성: PTN-YYYYMM-XXXXX 형식
- */
-async function generateAutoPartnerCode(client: TransactionClient | typeof prisma): Promise<string> {
-  const now = new Date()
-  const yearMonth = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
-  const prefix = `PTN-${yearMonth}`
-
-  const lastPartner = await client.partner.findFirst({
-    where: { partnerCode: { startsWith: prefix } },
-    orderBy: { partnerCode: 'desc' },
-    select: { partnerCode: true },
-  })
-
-  let seq = 1
-  if (lastPartner) {
-    const parts = lastPartner.partnerCode.split('-')
-    const lastSeq = parseInt(parts[parts.length - 1], 10)
-    if (!isNaN(lastSeq)) seq = lastSeq + 1
+  const partnerCode = input.partnerCode || (await generateAutoCode('PARTNER', client))
+  try {
+    const newPartner = await client.partner.create({
+      data: {
+        partnerCode,
+        partnerName: input.partnerName,
+        partnerType: input.partnerType || 'BOTH',
+        bizNo: input.bizNo || null,
+        ceoName: input.ceoName || null,
+        phone: input.phone || null,
+        address: input.address || null,
+        isActive: true,
+      },
+    })
+    return newPartner.id
+  } catch (error) {
+    if (isPrismaUniqueError(error)) {
+      logger.warn('거래처 자동 생성 중 중복 감지, 기존 레코드 조회', { partnerCode, partnerName: input.partnerName })
+      const existing = await client.partner.findFirst({
+        where: {
+          OR: [{ partnerCode }, { partnerName: input.partnerName }, ...(input.bizNo ? [{ bizNo: input.bizNo }] : [])],
+        },
+        select: { id: true },
+      })
+      if (existing) return existing.id
+    }
+    throw error
   }
-
-  return `${prefix}-${String(seq).padStart(5, '0')}`
 }
 
 // ─── 재고이동 자동 생성 ──────────────────────────────
@@ -267,10 +288,7 @@ export interface AutoStockMovementInput {
 /**
  * 재고이동을 자동으로 생성하고, 재고잔량도 함께 업데이트.
  */
-export async function createAutoStockMovement(
-  input: AutoStockMovementInput,
-  tx: TransactionClient
-): Promise<string> {
+export async function createAutoStockMovement(input: AutoStockMovementInput, tx: TransactionClient): Promise<string> {
   const prefix = 'SM'
   const movementNo = await generateDocumentNumber(prefix, input.movementDate, tx)
 

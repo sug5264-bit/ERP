@@ -7,6 +7,7 @@ import {
   requirePermissionCheck,
   isErrorResponse,
 } from '@/lib/api-helpers'
+import { format } from 'date-fns'
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,17 +79,37 @@ export async function POST(req: NextRequest) {
     const ITEM_CODE_RE = /^[A-Za-z0-9-]{1,50}$/
     const VALID_TYPES = new Set(['GOODS', 'PRODUCT', 'RAW_MATERIAL', 'SUBSIDIARY'])
 
+    /** 품목코드 미입력 시 자동생성 (AUTO-YYYYMM-XXXXX) */
+    async function generateAutoItemCode(): Promise<string> {
+      const yearMonth = format(new Date(), 'yyyyMM')
+      const prefix = 'AUTO'
+      const sequence = await prisma.documentSequence.upsert({
+        where: { prefix_yearMonth: { prefix, yearMonth } },
+        update: { lastSeq: { increment: 1 } },
+        create: { prefix, yearMonth, lastSeq: 1 },
+      })
+      return `${prefix}-${yearMonth}-${String(sequence.lastSeq).padStart(5, '0')}`
+    }
+
+    const autoCreated: string[] = []
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i] as Record<string, unknown>
       const rowNum = i + 2
       try {
-        if (!row.itemCode || !row.itemName) {
-          throw new Error('품목코드와 품목명은 필수입니다.')
+        if (!row.itemName) {
+          throw new Error('품목명은 필수입니다.')
         }
 
-        const itemCode = String(row.itemCode).trim()
-        if (!ITEM_CODE_RE.test(itemCode)) {
+        let itemCode = row.itemCode ? String(row.itemCode).trim() : ''
+        if (itemCode && !ITEM_CODE_RE.test(itemCode)) {
           throw new Error('품목코드는 영문, 숫자, 하이픈만 사용 가능합니다 (최대 50자).')
+        }
+
+        // 품목코드 미입력 시 자동생성
+        if (!itemCode) {
+          itemCode = await generateAutoItemCode()
+          autoCreated.push(`행 ${rowNum}: 품목코드 "${itemCode}" 자동 생성`)
         }
 
         const itemName = String(row.itemName).trim()
@@ -128,6 +149,15 @@ export async function POST(req: NextRequest) {
 
         if (existingCodeSet.has(itemCode)) {
           throw new Error(`품목코드 '${itemCode}'가 이미 존재합니다.`)
+        }
+
+        // 동일 품목명이 이미 DB에 존재하면 중복 생성 방지
+        const existingByName = await prisma.item.findFirst({
+          where: { itemName },
+          select: { id: true, itemCode: true },
+        })
+        if (existingByName) {
+          throw new Error(`품목명 '${itemName}'이(가) 이미 존재합니다. (코드: ${existingByName.itemCode})`)
         }
 
         if (row.barcode && existingBarcodeSet.has(String(row.barcode))) {
@@ -178,7 +208,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return successResponse({ success, failed, errors })
+    return successResponse({ success, failed, errors, autoCreated })
   } catch (error) {
     return handleApiError(error)
   }
