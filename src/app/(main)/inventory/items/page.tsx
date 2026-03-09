@@ -248,9 +248,9 @@ export default function ItemsPage() {
   )
 
   const importTemplateColumns: TemplateColumn[] = [
-    { header: '품목코드', key: 'itemCode', example: 'ITM-001', required: true },
-    { header: '바코드', key: 'barcode', example: '8801234567890', required: true },
-    { header: '품목명', key: 'itemName', example: '즉석밥 210g' },
+    { header: '품목코드', key: 'itemCode', example: 'ITM-001 (미입력 시 자동생성)' },
+    { header: '바코드', key: 'barcode', example: '8801234567890' },
+    { header: '품목명', key: 'itemName', example: '즉석밥 210g', required: true },
     { header: '구분', key: 'itemType', example: '상품' },
     { header: '과세구분', key: 'taxType', example: '과세' },
     { header: '분류', key: 'categoryName', example: '즉석식품' },

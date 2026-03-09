@@ -213,7 +213,7 @@ export default function PartnersPage() {
   ]
 
   const importTemplateColumns: TemplateColumn[] = [
-    { header: '거래처코드', key: 'partnerCode', example: 'PTN-001', required: true },
+    { header: '거래처코드', key: 'partnerCode', example: 'PTN-001 (미입력 시 자동생성)' },
     { header: '거래처명', key: 'partnerName', example: '(주)식품제조', required: true },
     { header: '구분', key: 'partnerType', example: '매입' },
     { header: '채널', key: 'salesChannel', example: '오프라인' },

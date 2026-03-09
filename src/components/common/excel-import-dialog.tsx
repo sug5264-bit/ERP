@@ -23,6 +23,7 @@ interface ImportResult {
   success: number
   failed: number
   errors: { row: number; message: string }[]
+  autoCreated?: string[]
 }
 
 export function ExcelImportDialog({
@@ -83,6 +84,7 @@ export function ExcelImportDialog({
         success: (body.success as number) || 0,
         failed: (body.failed as number) || 0,
         errors: (body.errors as { row: number; message: string }[]) || [],
+        autoCreated: (body.autoCreated as string[]) || [],
       }
       setResult(importResult)
       if (importResult.success > 0) {
@@ -115,7 +117,7 @@ export function ExcelImportDialog({
               <Download className="mr-1 h-4 w-4" /> 템플릿 다운로드
             </Button>
             <span className="text-muted-foreground text-xs">
-              템플릿을 다운로드하여 데이터를 입력한 후 업로드하세요.
+              템플릿을 다운로드하여 데이터를 입력한 후 업로드하세요. 코드 미입력 시 자동 생성됩니다.
             </span>
           </div>
 
@@ -180,6 +182,16 @@ export function ExcelImportDialog({
                   </span>
                 )}
               </div>
+              {result.autoCreated && result.autoCreated.length > 0 && (
+                <div className="mt-2 max-h-28 overflow-y-auto rounded border border-blue-200 bg-blue-50 p-2">
+                  <p className="mb-1 text-xs font-medium text-blue-700">자동 생성 항목</p>
+                  {result.autoCreated.map((msg, i) => (
+                    <p key={i} className="text-xs text-blue-600">
+                      {msg}
+                    </p>
+                  ))}
+                </div>
+              )}
               {result.errors.length > 0 && (
                 <div className="mt-2 max-h-40 overflow-y-auto rounded border p-2">
                   {result.errors.map((e, i) => (
