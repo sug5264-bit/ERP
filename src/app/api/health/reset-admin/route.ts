@@ -8,19 +8,13 @@ export async function GET() {
   // Require admin authentication
   const session = await auth()
   if (!session?.user) {
-    return NextResponse.json(
-      { success: false, error: '인증이 필요합니다. 관리자로 로그인해주세요.' },
-      { status: 401 }
-    )
+    return NextResponse.json({ success: false, error: '인증이 필요합니다. 관리자로 로그인해주세요.' }, { status: 401 })
   }
 
   const user = session.user as Record<string, unknown>
   const roles: string[] = Array.isArray(user.roles) ? user.roles : []
   if (!roles.includes('관리자') && !roles.includes('SYSTEM_ADMIN')) {
-    return NextResponse.json(
-      { success: false, error: '관리자 권한이 필요합니다.' },
-      { status: 403 }
-    )
+    return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
   }
 
   const logs: string[] = []

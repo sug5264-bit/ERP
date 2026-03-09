@@ -19,9 +19,7 @@ async function initAdmin() {
 
   try {
     // Check if any users exist - if yes, require admin authentication
-    const userCount = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
-      'SELECT COUNT(*)::bigint as count FROM "users"'
-    )
+    const userCount = await prisma.$queryRawUnsafe<{ count: bigint }[]>('SELECT COUNT(*)::bigint as count FROM "users"')
     const hasExistingUsers = userCount.length > 0 && Number(userCount[0].count) > 0
 
     if (hasExistingUsers) {
@@ -37,10 +35,7 @@ async function initAdmin() {
       const user = session.user as Record<string, unknown>
       const roles: string[] = Array.isArray(user.roles) ? user.roles : []
       if (!roles.includes('관리자') && !roles.includes('SYSTEM_ADMIN')) {
-        return NextResponse.json(
-          { success: false, error: '관리자 권한이 필요합니다.' },
-          { status: 403 }
-        )
+        return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
       }
     }
 

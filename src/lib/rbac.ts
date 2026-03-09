@@ -23,7 +23,7 @@ const ROUTE_MODULE_MAP: Record<string, string> = {
   '/production': 'production',
   '/quality': 'quality',
   '/closing': 'closing',
-  '/shipper': 'shipper',  // 3PL 화주사
+  '/shipper': 'shipper', // 3PL 화주사
 }
 
 /**
@@ -52,7 +52,13 @@ export function getModuleFromPath(pathname: string): string | null {
 /**
  * 서버사이드 권한 체크 (API route에서 사용)
  */
-export function hasPermission(permissions: Permission[], roles: string[], module: string, action: Action, accountType?: string): boolean {
+export function hasPermission(
+  permissions: Permission[],
+  roles: string[],
+  module: string,
+  action: Action,
+  accountType?: string
+): boolean {
   // 화주사 유저는 'shipper' 모듈만 접근 가능
   if (accountType === 'SHIPPER') {
     return module === 'shipper'

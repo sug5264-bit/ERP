@@ -7,10 +7,10 @@ export async function GET(_req: NextRequest) {
     const authResult = await requireAuth()
     if (isErrorResponse(authResult)) return authResult
 
-    const yearStart = new Date(new Date().getFullYear(), 0, 1)
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setDate(1) // 날짜 오버플로 방지 (예: 3월31일 - 6개월 → 잘못된 날짜)
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const now = new Date()
+    const yearStart = new Date(now.getFullYear(), 0, 1)
+    // 날짜 오버플로 방지: new Date(year, month, day) 방식으로 안전하게 계산
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1)
 
     // 모든 DB 쿼리를 병렬 실행 (순차 → 병렬로 ~3-5x 빠름)
     const [deptStats, departments, stockBalances, approvalDocs, leaveStats] = await Promise.all([
