@@ -385,6 +385,9 @@ async function ensureStockBalanceInbound(
           lastMovementDate: new Date(),
         },
       })
+    } else {
+      const { logger } = await import('@/lib/logger')
+      logger.error('No active warehouse found for stock balance creation', { itemId, quantity })
     }
   }
 }
