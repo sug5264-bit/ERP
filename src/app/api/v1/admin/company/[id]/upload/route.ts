@@ -9,6 +9,26 @@ import { existsSync } from 'fs'
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'company')
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
+// 파일 매직 바이트로 실제 MIME 타입 검증 (확장자 위조 방지)
+const MAGIC_BYTES: [string, number[]][] = [
+  ['png', [0x89, 0x50, 0x4e, 0x47]],
+  ['jpg', [0xff, 0xd8, 0xff]],
+  ['jpeg', [0xff, 0xd8, 0xff]],
+  ['gif', [0x47, 0x49, 0x46]],
+  ['webp', [0x52, 0x49, 0x46, 0x46]],
+  ['pdf', [0x25, 0x50, 0x44, 0x46]],
+]
+
+function validateMagicBytes(buffer: Buffer, ext: string): boolean {
+  const entry = MAGIC_BYTES.find(([e]) => e === ext)
+  if (!entry) return true
+  const [, bytes] = entry
+  for (let i = 0; i < bytes.length; i++) {
+    if (buffer[i] !== bytes[i]) return false
+  }
+  return true
+}
+
 const VALID_FIELDS = ['logoPath', 'sealPath', 'bizCertPath', 'bankCopyPath'] as const
 type UploadField = (typeof VALID_FIELDS)[number]
 
@@ -82,6 +102,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const filePath = join(UPLOAD_DIR, uniqueName)
 
     const buffer = Buffer.from(await file.arrayBuffer())
+
+    // 매직 바이트 검증: 확장자 위조 방지
+    if (!validateMagicBytes(buffer, ext)) {
+      return errorResponse(
+        '파일 내용이 확장자와 일치하지 않습니다. 올바른 파일을 업로드해주세요.',
+        'INVALID_FILE_CONTENT',
+        400
+      )
+    }
+
     await writeFile(filePath, buffer)
 
     const updated = await prisma.company.update({

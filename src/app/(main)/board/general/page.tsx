@@ -15,6 +15,7 @@ import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import { Eye, FileText, MessageCircle, Paperclip, Trash2 } from 'lucide-react'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
+import { PermissionGuard } from '@/components/common/permission-guard'
 
 interface PostRow {
   id: string
@@ -197,15 +198,17 @@ export default function GeneralBoardPage() {
             id: 'delete',
             header: '',
             cell: ({ row }) => (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-destructive hover:text-destructive h-8 w-8"
-                onClick={(e) => handleDelete(e, row.original.id, row.original.title)}
-                aria-label="삭제"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <PermissionGuard module="board" action="delete">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:text-destructive h-8 w-8"
+                  onClick={(e) => handleDelete(e, row.original.id, row.original.title)}
+                  aria-label="삭제"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </PermissionGuard>
             ),
             size: 50,
           },

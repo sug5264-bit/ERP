@@ -8,6 +8,7 @@ import {
   isErrorResponse,
 } from '@/lib/api-helpers'
 import { updateItemSchema } from '@/lib/validations/inventory'
+import { writeAuditLog, getClientIp } from '@/lib/audit-log'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -36,6 +37,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const data = updateItemSchema.parse(body)
 
     const item = await prisma.item.update({ where: { id }, data })
+
+    writeAuditLog({ action: 'UPDATE', tableName: 'Item', recordId: id, ipAddress: getClientIp(request) }).catch(
+      () => {}
+    )
+
     return successResponse(item)
   } catch (error) {
     return handleApiError(error)
@@ -70,6 +76,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       await tx.stockBalance.deleteMany({ where: { itemId: id } })
       await tx.item.delete({ where: { id } })
     })
+    writeAuditLog({ action: 'DELETE', tableName: 'Item', recordId: id, ipAddress: getClientIp(request) }).catch(
+      () => {}
+    )
+
     return successResponse({ deleted: true })
   } catch (error) {
     return handleApiError(error)

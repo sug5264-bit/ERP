@@ -61,12 +61,17 @@ export async function exportToExcel(config: ExportConfig) {
   })
   headerRow.height = 24
 
-  // 데이터
+  // 데이터 (수식 인젝션 방지)
   data.forEach((row, rowIdx) => {
     const excelRow = sheet.getRow(startRow + 1 + rowIdx)
     columns.forEach((col, colIdx) => {
       const cell = excelRow.getCell(colIdx + 1)
-      cell.value = getValue(row, col.accessor) as CellValue
+      let val = getValue(row, col.accessor) as CellValue
+      // 문자열이 수식 문자(=, +, -, @)로 시작하면 앞에 ' 추가
+      if (typeof val === 'string' && /^[=+\-@\t\r|]/.test(val)) {
+        val = `'${val}`
+      }
+      cell.value = val
       cell.border = {
         top: { style: 'thin' },
         bottom: { style: 'thin' },

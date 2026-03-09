@@ -37,10 +37,16 @@ interface ItemOption {
 }
 
 interface OrderLine {
+  _key: string
   itemId: string
   quantity: number
   unitPrice: number
   remark: string
+}
+
+let _lineKeyCounter = 0
+function nextLineKey() {
+  return `line-${Date.now()}-${++_lineKeyCounter}`
 }
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -93,7 +99,7 @@ const columns: ColumnDef<PurchaseOrder>[] = [
   },
 ]
 
-const emptyLine = (): OrderLine => ({ itemId: '', quantity: 1, unitPrice: 0, remark: '' })
+const emptyLine = (): OrderLine => ({ _key: nextLineKey(), itemId: '', quantity: 1, unitPrice: 0, remark: '' })
 
 export default function PurchasingOrdersPage() {
   const queryClient = useQueryClient()
@@ -231,10 +237,13 @@ export default function PurchasingOrdersPage() {
       const details = (selectedOrder.details || []) as Record<string, unknown>[]
 
       // Fetch default company info
-      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = { name: COMPANY_NAME }
+      let companyInfo: { name: string; ceo?: string; address?: string; tel?: string; bizNo?: string } = {
+        name: COMPANY_NAME,
+      }
       try {
         const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
-        const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
+        const defaultCompany =
+          companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
         if (defaultCompany) {
           companyInfo = {
             name: defaultCompany.companyName || companyInfo.name,
@@ -244,7 +253,9 @@ export default function PurchasingOrdersPage() {
             bizNo: defaultCompany.bizNo,
           }
         }
-      } catch { /* use default */ }
+      } catch {
+        /* use default */
+      }
 
       const pdfData: PurchaseOrderPDFData = {
         orderNo: String(selectedOrder.orderNo || ''),
@@ -321,7 +332,13 @@ export default function PurchasingOrdersPage() {
         description="원자재 및 부자재 발주를 등록하고 관리합니다"
         actions={
           <PermissionGuard module="purchasing" action="create">
-            <Button size="sm" onClick={() => { resetCreateForm(); setCreateOpen(true) }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                resetCreateForm()
+                setCreateOpen(true)
+              }}
+            >
               <Plus className="mr-1.5 h-4 w-4" /> 발주 등록
             </Button>
           </PermissionGuard>
@@ -367,7 +384,13 @@ export default function PurchasingOrdersPage() {
       />
 
       {/* 발주 등록 다이얼로그 */}
-      <Dialog open={createOpen} onOpenChange={(v) => { setCreateOpen(v); if (!v) resetCreateForm() }}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(v) => {
+          setCreateOpen(v)
+          if (!v) resetCreateForm()
+        }}
+      >
         <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>발주서 등록</DialogTitle>
@@ -375,16 +398,24 @@ export default function PurchasingOrdersPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>발주일 <span className="text-destructive">*</span></Label>
+                <Label>
+                  발주일 <span className="text-destructive">*</span>
+                </Label>
                 <Input type="date" value={formOrderDate} onChange={(e) => setFormOrderDate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>매입처 <span className="text-destructive">*</span></Label>
+                <Label>
+                  매입처 <span className="text-destructive">*</span>
+                </Label>
                 <Select value={formPartnerId} onValueChange={setFormPartnerId}>
-                  <SelectTrigger><SelectValue placeholder="매입처 선택" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="매입처 선택" />
+                  </SelectTrigger>
                   <SelectContent>
                     {partners.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.partnerName}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.partnerName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -396,34 +427,56 @@ export default function PurchasingOrdersPage() {
                 <Input type="date" value={formDeliveryDate} onChange={(e) => setFormDeliveryDate(e.target.value)} />
               </div>
               <div className="flex items-center gap-2 pt-6">
-                <input type="checkbox" id="vatIncluded" checked={formVatIncluded} onChange={(e) => setFormVatIncluded(e.target.checked)} className="rounded border" />
+                <input
+                  type="checkbox"
+                  id="vatIncluded"
+                  checked={formVatIncluded}
+                  onChange={(e) => setFormVatIncluded(e.target.checked)}
+                  className="rounded border"
+                />
                 <Label htmlFor="vatIncluded">부가세 포함</Label>
               </div>
             </div>
             <div className="space-y-2">
               <Label>비고</Label>
-              <Textarea value={formDescription} onChange={(e) => setFormDescription(e.target.value)} placeholder="비고 사항을 입력하세요" rows={2} />
+              <Textarea
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="비고 사항을 입력하세요"
+                rows={2}
+              />
             </div>
 
             {/* 품목 라인 */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">발주 품목</Label>
-                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setFormLines([...formLines, emptyLine()])}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setFormLines([...formLines, emptyLine()])}
+                >
                   <Plus className="mr-1 h-3 w-3" /> 행 추가
                 </Button>
               </div>
               <div className="space-y-2">
                 {formLines.map((line, idx) => (
-                  <div key={idx} className="flex flex-wrap items-end gap-2 rounded-md border p-2">
+                  <div key={line._key} className="flex flex-wrap items-end gap-2 rounded-md border p-2">
                     <div className="min-w-[140px] flex-1 space-y-1">
-                      <Label className="text-xs">품목 <span className="text-destructive">*</span></Label>
+                      <Label className="text-xs">
+                        품목 <span className="text-destructive">*</span>
+                      </Label>
                       <Select value={line.itemId} onValueChange={(v) => updateLine(idx, 'itemId', v)}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="품목 선택" />
+                        </SelectTrigger>
                         <SelectContent>
                           {itemOptions.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
-                              {item.itemName}{item.specification ? ` (${item.specification})` : ''}
+                              {item.itemName}
+                              {item.specification ? ` (${item.specification})` : ''}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -431,17 +484,41 @@ export default function PurchasingOrdersPage() {
                     </div>
                     <div className="w-20 space-y-1">
                       <Label className="text-xs">수량</Label>
-                      <Input type="number" min={1} className="h-8 text-xs" value={line.quantity} onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))} />
+                      <Input
+                        type="number"
+                        min={1}
+                        className="h-8 text-xs"
+                        value={line.quantity}
+                        onChange={(e) => updateLine(idx, 'quantity', Number(e.target.value))}
+                      />
                     </div>
                     <div className="w-28 space-y-1">
                       <Label className="text-xs">단가</Label>
-                      <Input type="number" min={0} className="h-8 text-xs" value={line.unitPrice} onChange={(e) => updateLine(idx, 'unitPrice', Number(e.target.value))} />
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-8 text-xs"
+                        value={line.unitPrice}
+                        onChange={(e) => updateLine(idx, 'unitPrice', Number(e.target.value))}
+                      />
                     </div>
                     <div className="min-w-[80px] flex-1 space-y-1">
                       <Label className="text-xs">비고</Label>
-                      <Input className="h-8 text-xs" value={line.remark} onChange={(e) => updateLine(idx, 'remark', e.target.value)} placeholder="선택" />
+                      <Input
+                        className="h-8 text-xs"
+                        value={line.remark}
+                        onChange={(e) => updateLine(idx, 'remark', e.target.value)}
+                        placeholder="선택"
+                      />
                     </div>
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" disabled={formLines.length <= 1} onClick={() => setFormLines(formLines.filter((_, i) => i !== idx))}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      disabled={formLines.length <= 1}
+                      onClick={() => setFormLines(formLines.filter((_, i) => i !== idx))}
+                    >
                       <Trash2 className="h-3.5 w-3.5 text-red-500" />
                     </Button>
                   </div>
@@ -450,7 +527,9 @@ export default function PurchasingOrdersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              취소
+            </Button>
             <Button onClick={handleCreateSubmit} disabled={createMutation.isPending}>
               {createMutation.isPending ? '등록 중...' : '발주 등록'}
             </Button>
@@ -536,19 +615,31 @@ export default function PurchasingOrdersPage() {
                           <td className="px-3 py-2">{item?.specification || '-'}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{Number(d.quantity).toLocaleString()}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(d.unitPrice))}</td>
-                          <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(d.supplyAmount))}</td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {formatCurrency(Number(d.supplyAmount))}
+                          </td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(d.taxAmount))}</td>
-                          <td className="px-3 py-2 text-right font-medium tabular-nums">{formatCurrency(Number(d.amount))}</td>
+                          <td className="px-3 py-2 text-right font-medium tabular-nums">
+                            {formatCurrency(Number(d.amount))}
+                          </td>
                         </tr>
                       )
                     })}
                   </tbody>
                   <tfoot>
                     <tr className="bg-muted/30 font-bold">
-                      <td colSpan={5} className="px-3 py-2 text-center">합계</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(selectedOrder.totalSupply))}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(selectedOrder.totalTax))}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(Number(selectedOrder.totalAmount))}</td>
+                      <td colSpan={5} className="px-3 py-2 text-center">
+                        합계
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {formatCurrency(Number(selectedOrder.totalSupply))}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {formatCurrency(Number(selectedOrder.totalTax))}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {formatCurrency(Number(selectedOrder.totalAmount))}
+                      </td>
                     </tr>
                   </tfoot>
                 </table>

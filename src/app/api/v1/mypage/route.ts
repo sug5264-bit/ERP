@@ -128,19 +128,22 @@ export async function PUT(req: NextRequest) {
 
       // Rate limiting: 비밀번호 변경은 시간당 5회로 제한
       if (!checkPasswordChangeRate(userId)) {
-        return errorResponse(
-          '비밀번호 변경 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.',
-          'RATE_LIMIT',
-          429
-        )
+        return errorResponse('비밀번호 변경 요청이 너무 많습니다. 1시간 후 다시 시도해주세요.', 'RATE_LIMIT', 429)
       }
 
       const { currentPassword, newPassword } = body
       if (!currentPassword || !newPassword) {
         return errorResponse('현재 비밀번호와 새 비밀번호를 입력하세요.', 'BAD_REQUEST', 400)
       }
-      if (newPassword.length < 8) {
-        return errorResponse('비밀번호는 8자 이상이어야 합니다.', 'BAD_REQUEST', 400)
+      if (newPassword.length < 8 || newPassword.length > 72) {
+        return errorResponse('비밀번호는 8자 이상 72자 이하여야 합니다.', 'BAD_REQUEST', 400)
+      }
+      if (
+        !/[A-Za-z]/.test(newPassword) ||
+        !/\d/.test(newPassword) ||
+        !/[!@#$%^&*()_+\-=\[\]{}|;:',.<>?/`~]/.test(newPassword)
+      ) {
+        return errorResponse('비밀번호는 영문, 숫자, 특수문자를 각각 1자 이상 포함해야 합니다.', 'BAD_REQUEST', 400)
       }
       if (currentPassword === newPassword) {
         return errorResponse('새 비밀번호는 현재 비밀번호와 달라야 합니다.', 'BAD_REQUEST', 400)

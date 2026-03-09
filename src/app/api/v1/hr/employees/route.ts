@@ -104,30 +104,7 @@ export async function POST(req: NextRequest) {
       return errorResponse('이미 존재하는 사번입니다.', 'DUPLICATE_EMPLOYEE_NO', 409)
     }
 
-    const employee = await prisma.employee.create({
-      data: {
-        employeeNo: validated.employeeNo,
-        nameKo: validated.nameKo,
-        nameEn: validated.nameEn,
-        departmentId: validated.departmentId,
-        positionId: validated.positionId,
-        joinDate: new Date(validated.joinDate),
-        employeeType: validated.employeeType,
-        email: validated.email || null,
-        phone: validated.phone,
-        address: validated.address,
-        bankName: validated.bankName,
-        bankAccount: validated.bankAccount,
-        gender: validated.gender,
-        birthDate: validated.birthDate ? new Date(validated.birthDate) : null,
-      },
-      include: {
-        department: true,
-        position: true,
-      },
-    })
-
-    // 자동으로 사용자 계정 생성 (랜덤 비밀번호 - 관리자가 재설정 필요)
+    // 사원 + 사용자 계정을 트랜잭션으로 생성 (원자적 처리)
     const crypto = await import('crypto')
     const bcrypt = await import('bcryptjs')
     const randomPassword = crypto.randomBytes(16).toString('base64url')
@@ -136,35 +113,54 @@ export async function POST(req: NextRequest) {
       ? validated.email.split('@')[0]
       : validated.employeeNo.toLowerCase().replace(/[^a-z0-9]/g, '')
 
-    try {
-      const existingUser = await prisma.user.findUnique({ where: { username } })
+    const employee = await prisma.$transaction(async (tx) => {
+      const emp = await tx.employee.create({
+        data: {
+          employeeNo: validated.employeeNo,
+          nameKo: validated.nameKo,
+          nameEn: validated.nameEn,
+          departmentId: validated.departmentId,
+          positionId: validated.positionId,
+          joinDate: new Date(validated.joinDate),
+          employeeType: validated.employeeType,
+          email: validated.email || null,
+          phone: validated.phone,
+          address: validated.address,
+          bankName: validated.bankName,
+          bankAccount: validated.bankAccount,
+          gender: validated.gender,
+          birthDate: validated.birthDate ? new Date(validated.birthDate) : null,
+        },
+        include: {
+          department: true,
+          position: true,
+        },
+      })
+
+      // 자동으로 사용자 계정 생성 (랜덤 비밀번호 - 관리자가 재설정 필요)
+      const existingUser = await tx.user.findUnique({ where: { username } })
       if (!existingUser) {
-        const newUser = await prisma.user.create({
+        const newUser = await tx.user.create({
           data: {
             username,
             email: validated.email || `${username}@company.com`,
             passwordHash: defaultPassword,
             name: validated.nameKo,
             isActive: true,
-            employeeId: employee.id,
+            employeeId: emp.id,
           },
         })
         // 일반사용자 역할 할당
-        const userRole = await prisma.role.findFirst({ where: { name: '일반사용자' } })
+        const userRole = await tx.role.findFirst({ where: { name: '일반사용자' } })
         if (userRole) {
-          await prisma.userRole.create({
+          await tx.userRole.create({
             data: { userId: newUser.id, roleId: userRole.id },
           })
         }
       }
-    } catch (userErr) {
-      // 사용자 생성 실패해도 사원 등록은 유지
-      const { logger } = await import('@/lib/logger')
-      logger.error('Auto user creation failed', {
-        error: userErr instanceof Error ? userErr.message : String(userErr),
-        employeeId: employee.id,
-      })
-    }
+
+      return emp
+    })
 
     return successResponse(employee)
   } catch (error) {
