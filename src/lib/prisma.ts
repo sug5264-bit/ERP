@@ -44,6 +44,72 @@ export function resetQueryStats(): void {
   queryStats.lastReset = Date.now()
 }
 
+/** DB 연결 재시도 (지수 백오프) */
+async function connectWithRetry(client: PrismaClient, maxRetries = 3): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await client.$connect()
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isTransient =
+        message.includes('Circuit breaker') ||
+        message.includes('connection') ||
+        message.includes('ECONNREFUSED') ||
+        message.includes('ETIMEDOUT')
+
+      if (!isTransient || attempt === maxRetries) {
+        console.error(
+          JSON.stringify({
+            level: 'error',
+            type: 'DB_CONNECTION_FAILED',
+            attempt,
+            maxRetries,
+            error: message.slice(0, 300),
+            timestamp: new Date().toISOString(),
+          })
+        )
+        throw error
+      }
+
+      const delayMs = Math.min(1000 * 2 ** (attempt - 1), 8000)
+      console.warn(
+        JSON.stringify({
+          level: 'warn',
+          type: 'DB_CONNECTION_RETRY',
+          attempt,
+          nextRetryMs: delayMs,
+          error: message.slice(0, 200),
+          timestamp: new Date().toISOString(),
+        })
+      )
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+}
+
+/** 쿼리 실행 재시도 (Circuit breaker 등 일시적 오류 대응) */
+export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      const isTransient =
+        message.includes('Circuit breaker') ||
+        message.includes('Unable to establish connection')
+
+      if (!isTransient || attempt > maxRetries) {
+        throw error
+      }
+
+      const delayMs = Math.min(1000 * 2 ** (attempt - 1), 4000)
+      await new Promise((resolve) => setTimeout(resolve, delayMs))
+    }
+  }
+  throw new Error('withRetry: unreachable')
+}
+
 function createPrismaClient() {
   // Supabase 서버리스 환경에서 커넥션 풀 제한
   let datasourceUrl = process.env.DATABASE_URL || ''
@@ -94,6 +160,11 @@ function createPrismaClient() {
       }
     }
   )
+
+  // 초기 연결 시도 (비동기, non-blocking)
+  connectWithRetry(client).catch(() => {
+    // 초기 연결 실패는 로그만 남기고 lazy connection으로 fallback
+  })
 
   return client
 }
