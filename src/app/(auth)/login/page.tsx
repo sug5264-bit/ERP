@@ -39,6 +39,8 @@ function LoginForm() {
         callbackUrl,
       })
 
+      console.log('[Login] signIn result:', JSON.stringify(result))
+
       if (result?.error) {
         if (result.error === 'CredentialsSignin') {
           setError('아이디 또는 비밀번호가 올바르지 않습니다.')
@@ -48,12 +50,16 @@ function LoginForm() {
           setError(`로그인 실패: ${result.error}`)
         }
       } else if (result?.ok) {
-        router.push(callbackUrl)
+        // signIn 성공 시 result.url이 있으면 그 URL로, 없으면 callbackUrl로 이동
+        const redirectTo = result?.url || callbackUrl
+        console.log('[Login] Redirecting to:', redirectTo)
+        router.push(redirectTo)
         router.refresh()
       } else {
-        setError('로그인 응답을 처리할 수 없습니다.')
+        setError(`로그인 응답을 처리할 수 없습니다. (${JSON.stringify(result)})`)
       }
-    } catch {
+    } catch (err) {
+      console.error('[Login] Error:', err)
       setError('로그인 중 오류가 발생했습니다. 네트워크를 확인하세요.')
     } finally {
       setIsLoading(false)
