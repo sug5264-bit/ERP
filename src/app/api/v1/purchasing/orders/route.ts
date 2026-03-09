@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createPurchaseOrderSchema } from '@/lib/validations/sales'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { ensureItemExists, ensurePartnerExists } from '@/lib/auto-sync'
 
 export async function GET(request: NextRequest) {
   try {
@@ -79,41 +80,76 @@ export async function POST(request: NextRequest) {
       employeeId = employee.id
     }
 
-    const isVatIncluded = data.vatIncluded !== false
-
-    const itemIds = data.details.map((d) => d.itemId)
-    const itemsInfo = await prisma.item.findMany({
-      where: { id: { in: itemIds } },
-      select: { id: true, taxType: true },
-    })
-    const itemInfoMap = new Map(itemsInfo.map((i) => [i.id, i]))
-
-    const details = data.details.map((d, idx) => {
-      const supplyAmount = Math.round(d.quantity * d.unitPrice)
-      const taxType = itemInfoMap.get(d.itemId)?.taxType || 'TAXABLE'
-      const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
-      return {
-        lineNo: idx + 1,
-        itemId: d.itemId,
-        quantity: d.quantity,
-        unitPrice: d.unitPrice,
-        supplyAmount,
-        taxAmount,
-        amount: supplyAmount + taxAmount,
-        remainingQty: d.quantity,
-        remark: d.remark || null,
-      }
-    })
-    const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
-    const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
+    const autoCreated: string[] = []
 
     const result = await prisma.$transaction(async (tx) => {
+      // 거래처 자동 생성/확인
+      const partnerId = await ensurePartnerExists({
+        partnerId: data.partnerId,
+        partnerName: data.partnerName,
+        partnerCode: data.partnerCode,
+        bizNo: data.bizNo,
+        partnerType: 'PURCHASE',
+      }, tx)
+      if (!partnerId) {
+        throw new Error('거래처 ID 또는 거래처명을 입력하세요.')
+      }
+      if (!data.partnerId && data.partnerName) {
+        autoCreated.push(`거래처 "${data.partnerName}" 자동 생성`)
+      }
+
+      // 품목 자동 생성/확인
+      const resolvedDetails = []
+      for (const d of data.details) {
+        const itemId = await ensureItemExists({
+          itemId: d.itemId,
+          itemCode: d.itemCode,
+          itemName: d.itemName,
+          specification: d.specification,
+          unit: d.unit,
+          standardPrice: d.unitPrice,
+          barcode: d.barcode,
+        }, tx)
+        if (!d.itemId && d.itemName) {
+          autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
+        }
+        resolvedDetails.push({ ...d, itemId })
+      }
+
+      const isVatIncluded = data.vatIncluded !== false
+
+      const itemIds = resolvedDetails.map((d) => d.itemId)
+      const itemsInfo = await tx.item.findMany({
+        where: { id: { in: itemIds } },
+        select: { id: true, taxType: true },
+      })
+      const itemInfoMap = new Map(itemsInfo.map((i) => [i.id, i]))
+
+      const details = resolvedDetails.map((d, idx) => {
+        const supplyAmount = Math.round(d.quantity * d.unitPrice)
+        const taxType = itemInfoMap.get(d.itemId)?.taxType || 'TAXABLE'
+        const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+        return {
+          lineNo: idx + 1,
+          itemId: d.itemId,
+          quantity: d.quantity,
+          unitPrice: d.unitPrice,
+          supplyAmount,
+          taxAmount,
+          amount: supplyAmount + taxAmount,
+          remainingQty: d.quantity,
+          remark: d.remark || null,
+        }
+      })
+      const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
+      const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
+
       const orderNo = await generateDocumentNumber('PO', new Date(data.orderDate), tx)
       return tx.purchaseOrder.create({
         data: {
           orderNo,
           orderDate: new Date(data.orderDate),
-          partnerId: data.partnerId,
+          partnerId,
           deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
           totalSupply,
           totalTax,
@@ -130,7 +166,7 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    return successResponse(result)
+    return successResponse({ ...result, autoCreated })
   } catch (error) {
     return handleApiError(error)
   }

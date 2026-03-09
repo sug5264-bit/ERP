@@ -1,11 +1,20 @@
 import { z } from 'zod'
 
 const lineDetailSchema = z.object({
-  itemId: z.string().min(1, '품목을 선택하세요').max(50),
+  itemId: z.string().max(50).optional().nullable(),
+  // 자동 생성용 필드: itemId가 없거나 품목이 존재하지 않을 때 사용
+  itemCode: z.string().max(30).optional().nullable(),
+  itemName: z.string().max(200).optional().nullable(),
+  specification: z.string().max(500).optional().nullable(),
+  unit: z.string().max(10).optional().nullable(),
+  barcode: z.string().max(50).optional().nullable(),
   quantity: z.number().min(0.01, '수량은 0보다 커야 합니다').max(999_999_999),
   unitPrice: z.number().min(0, '단가는 0 이상이어야 합니다').max(999_999_999_999),
   remark: z.string().max(500).optional().nullable(),
-})
+}).refine(
+  (data) => data.itemId || data.itemName,
+  { message: '품목 ID 또는 품목명을 입력하세요' }
+)
 
 // ─── 견적 ──────────────────────────────────
 export const createQuotationSchema = z.object({
@@ -13,7 +22,11 @@ export const createQuotationSchema = z.object({
     .string()
     .min(1, '견적일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
-  partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
+  partnerId: z.string().max(50).optional().nullable(),
+  // 자동 거래처 생성용 필드
+  partnerName: z.string().max(200).optional().nullable(),
+  partnerCode: z.string().max(30).optional().nullable(),
+  bizNo: z.string().max(20).optional().nullable(),
   validUntil: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -31,6 +44,10 @@ export const createSalesOrderSchema = z.object({
     .min(1, '발주일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   partnerId: z.string().max(50).optional().nullable(),
+  // 자동 거래처 생성용 필드
+  partnerName: z.string().max(200).optional().nullable(),
+  partnerCode: z.string().max(30).optional().nullable(),
+  bizNo: z.string().max(20).optional().nullable(),
   quotationId: z.string().max(50).optional().nullable(),
   deliveryDate: z
     .string()
@@ -72,10 +89,15 @@ export const createDeliverySchema = z.object({
   details: z
     .array(
       z.object({
-        itemId: z.string().min(1).max(50),
+        itemId: z.string().max(50).optional().nullable(),
+        itemCode: z.string().max(30).optional().nullable(),
+        itemName: z.string().max(200).optional().nullable(),
         quantity: z.number().min(0.01).max(999_999_999),
         unitPrice: z.number().min(0).max(999_999_999_999),
-      })
+      }).refine(
+        (data) => data.itemId || data.itemName,
+        { message: '품목 ID 또는 품목명을 입력하세요' }
+      )
     )
     .min(1, '최소 1개 이상의 품목이 필요합니다')
     .max(100),
@@ -88,18 +110,23 @@ export const createSalesReturnSchema = z.object({
     .min(1, '반품일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
   salesOrderId: z.string().min(1, '발주를 선택하세요').max(50),
-  partnerId: z.string().min(1, '거래처를 선택하세요').max(50),
+  partnerId: z.string().max(50).optional().nullable(),
+  partnerName: z.string().max(200).optional().nullable(),
   reason: z.enum(['DEFECT', 'WRONG_ITEM', 'CUSTOMER_CHANGE', 'QUALITY_ISSUE', 'OTHER']).optional().default('OTHER'),
   reasonDetail: z.string().max(1000).optional().nullable(),
   totalAmount: z.number().min(0).max(999_999_999_999).optional().default(0),
   details: z
     .array(
       z.object({
-        itemId: z.string().min(1, '품목을 선택하세요').max(50),
+        itemId: z.string().max(50).optional().nullable(),
+        itemName: z.string().max(200).optional().nullable(),
         quantity: z.number().min(0.01, '수량은 0보다 커야 합니다').max(999_999_999),
         unitPrice: z.number().min(0, '단가는 0 이상이어야 합니다').max(999_999_999_999),
         remark: z.string().max(500).optional().nullable(),
-      })
+      }).refine(
+        (data) => data.itemId || data.itemName,
+        { message: '품목 ID 또는 품목명을 입력하세요' }
+      )
     )
     .optional()
     .default([]),
@@ -155,7 +182,11 @@ export const createPurchaseOrderSchema = z.object({
     .string()
     .min(1, '발주일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
-  partnerId: z.string().min(1, '매입처를 선택하세요').max(50),
+  partnerId: z.string().max(50).optional().nullable(),
+  // 자동 거래처 생성용 필드
+  partnerName: z.string().max(200).optional().nullable(),
+  partnerCode: z.string().max(30).optional().nullable(),
+  bizNo: z.string().max(20).optional().nullable(),
   deliveryDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -165,6 +196,36 @@ export const createPurchaseOrderSchema = z.object({
   description: z.string().max(1000).optional().nullable(),
   vatIncluded: z.boolean().optional().default(true),
   details: z.array(lineDetailSchema).min(1, '최소 1개 이상의 품목이 필요합니다').max(100),
+}).refine(
+  (data) => data.partnerId || data.partnerName,
+  { message: '거래처 ID 또는 거래처명을 입력하세요' }
+)
+
+// ─── 입고 ──────────────────────────────────
+export const createReceivingSchema = z.object({
+  receivingDate: z
+    .string()
+    .min(1, '입고일을 입력하세요')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
+  purchaseOrderId: z.string().min(1, '구매발주를 선택하세요').max(50),
+  warehouseId: z.string().max(50).optional().nullable(),
+  description: z.string().max(1000).optional().nullable(),
+  details: z
+    .array(
+      z.object({
+        itemId: z.string().max(50).optional().nullable(),
+        itemName: z.string().max(200).optional().nullable(),
+        quantity: z.number().min(0.01, '수량은 0보다 커야 합니다').max(999_999_999),
+        unitPrice: z.number().min(0, '단가는 0 이상이어야 합니다').max(999_999_999_999),
+        lotNo: z.string().max(100).optional().nullable(),
+        expiryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal('')),
+      }).refine(
+        (data) => data.itemId || data.itemName,
+        { message: '품목 ID 또는 품목명을 입력하세요' }
+      )
+    )
+    .min(1, '최소 1개 이상의 품목이 필요합니다')
+    .max(100),
 })
 
 // ─── 상계 ──────────────────────────────────
