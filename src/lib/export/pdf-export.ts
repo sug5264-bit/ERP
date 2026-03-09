@@ -25,7 +25,16 @@ export async function exportToPDF(config: ExportConfig) {
   const body = data.map((row) =>
     columns.map((col) => {
       const val = getValue(row, col.accessor)
-      return val != null ? String(val) : ''
+      if (val == null) return ''
+      // Object/Array가 [object Object]로 표시되는 것 방지
+      if (typeof val === 'object') {
+        try {
+          return JSON.stringify(val)
+        } catch {
+          return ''
+        }
+      }
+      return String(val)
     })
   )
 

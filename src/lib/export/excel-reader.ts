@@ -98,6 +98,15 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
       if (val && typeof val === 'object' && 'text' in val) {
         val = (val as { text: string }).text
       }
+      // Excel 시리얼 번호(숫자 날짜)를 Date로 변환 (예: 45000 → 2023-03-15)
+      if (typeof val === 'number' && val > 25569 && val < 2958466) {
+        // Excel epoch (1900-01-01) 기준, JS epoch 변환
+        const date = new Date((val - 25569) * 86400 * 1000)
+        const y = date.getUTCFullYear()
+        const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+        const d = String(date.getUTCDate()).padStart(2, '0')
+        val = `${y}-${m}-${d}`
+      }
       // 날짜 객체는 로컬 날짜 문자열로 (UTC 변환 시 KST -1일 오차 방지)
       if (val instanceof Date) {
         const y = val.getFullYear()
