@@ -87,7 +87,7 @@ async function main() {
     'admin.codes',
     'admin.logs',
   ]
-  const actions = ['read', 'create', 'update', 'delete']
+  const actions = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
   const permMap: Record<string, { id: string }> = {}
   for (const mod of modules) {
