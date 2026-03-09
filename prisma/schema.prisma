@@ -757,6 +757,7 @@ model Item {
   qualityStandards       QualityStandard[]
   bomHeaders             BomHeader[]
   bomDetails             BomDetail[]
+  salesPrices            SalesPrice[]
 
   @@index([itemName])
   @@index([isActive, itemType])
@@ -909,6 +910,7 @@ model Partner {
   purchasePayments PurchasePayment[]
   salesReturns     SalesReturn[]
   oemContracts     OemContract[]
+  salesPrices      SalesPrice[]
 
   @@index([partnerName])
   @@index([bizNo])
@@ -1830,7 +1832,9 @@ model ProductionResult {
 model SalesPrice {
   id          String    @id @default(cuid())
   partnerId   String
+  partner     Partner   @relation(fields: [partnerId], references: [id])
   itemId      String
+  item        Item      @relation(fields: [itemId], references: [id])
   unitPrice   Decimal   @db.Decimal(15, 2)
   startDate   DateTime  @db.Date
   endDate     DateTime? @db.Date

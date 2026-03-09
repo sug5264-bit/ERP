@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const data = createProductionPlanSchema.parse(body)
 
     const plan = await prisma.$transaction(async (tx) => {
-      const planNo = await generateDocumentNumber('PP', new Date(data.planDate))
+      const planNo = await generateDocumentNumber('PP', new Date(data.planDate), tx)
       return tx.productionPlan.create({
         data: {
           planNo,
