@@ -38,6 +38,11 @@ async function main() {
     update: {},
     create: { name: '재무 관리자', description: '회계/재무 모듈 관리자' },
   })
+  const salesManagerRole = await prisma.role.upsert({
+    where: { name: '영업 관리자' },
+    update: {},
+    create: { name: '영업 관리자', description: '영업/마감 모듈 관리자' },
+  })
 
   // ============================================================
   // 1-2. 권한 (Permissions) - 모듈 및 하위 페이지별
@@ -195,6 +200,66 @@ async function main() {
           where: { roleId_permissionId: { roleId: financeManagerRole.id, permissionId: permMap[key].id } },
           update: {},
           create: { roleId: financeManagerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+
+  // 영업 관리자 역할: 영업 + 마감 + 재고(읽기) 모듈 전체
+  const salesManagerModules = [
+    'sales',
+    'sales.summary',
+    'sales.partners',
+    'sales.quotations',
+    'sales.orders',
+    'sales.deliveries',
+    'closing',
+    'closing.netting',
+    'closing.payments',
+  ]
+  for (const mod of salesManagerModules) {
+    for (const action of actions) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: salesManagerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: salesManagerRole.id, permissionId: permMap[key].id },
+        })
+      }
+    }
+  }
+  // 영업 관리자: 재고 읽기 (재고 확인 필요)
+  for (const mod of ['inventory', 'inventory.items', 'inventory.stock', 'inventory.status', 'inventory.warehouses']) {
+    const key = `${mod}:read`
+    if (permMap[key]) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: salesManagerRole.id, permissionId: permMap[key].id } },
+        update: {},
+        create: { roleId: salesManagerRole.id, permissionId: permMap[key].id },
+      })
+    }
+  }
+  // 영업 관리자도 게시판/결재/프로젝트 접근
+  for (const mod of [
+    'board',
+    'board.notices',
+    'board.general',
+    'board.messages',
+    'approval',
+    'approval.draft',
+    'approval.pending',
+    'approval.completed',
+    'approval.rejected',
+    'projects',
+  ]) {
+    for (const action of ['read', 'create']) {
+      const key = `${mod}:${action}`
+      if (permMap[key]) {
+        await prisma.rolePermission.upsert({
+          where: { roleId_permissionId: { roleId: salesManagerRole.id, permissionId: permMap[key].id } },
+          update: {},
+          create: { roleId: salesManagerRole.id, permissionId: permMap[key].id },
         })
       }
     }
