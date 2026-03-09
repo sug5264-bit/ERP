@@ -76,6 +76,9 @@ const nextConfig: NextConfig = {
   },
   // 대용량 패키지 트리쉐이킹 최적화
   experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
     optimizePackageImports: [
       'lucide-react',
       'recharts',
