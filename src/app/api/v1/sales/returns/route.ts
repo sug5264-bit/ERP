@@ -78,6 +78,10 @@ export async function POST(req: NextRequest) {
         tx
       )
 
+      if (!data.partnerId && data.partnerName && partnerId) {
+        autoCreated.push(`거래처 "${data.partnerName}" 자동 생성`)
+      }
+
       if (salesOrder.partnerId && partnerId && salesOrder.partnerId !== partnerId) {
         throw new Error('반품 거래처가 발주 거래처와 일치하지 않습니다.')
       }

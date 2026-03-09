@@ -135,13 +135,30 @@ export async function POST(request: NextRequest) {
                 where: { qualityInspection: { deliveryId: { in: deliveryIds } } },
               })
               await tx.qualityInspection.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
-              // 재고이동 관련 데이터 삭제
+              // 재고이동 관련 데이터 삭제 (재고 잔량 복원 후 삭제)
               const stockMovements = await tx.stockMovement.findMany({
                 where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
-                select: { id: true },
+                select: { id: true, movementType: true },
               })
               if (stockMovements.length > 0) {
                 const smIds = stockMovements.map((sm) => sm.id)
+                // 출고된 재고를 복원
+                const smDetails = await tx.stockMovementDetail.findMany({
+                  where: { stockMovementId: { in: smIds } },
+                  select: { itemId: true, quantity: true },
+                })
+                for (const detail of smDetails) {
+                  const balance = await tx.stockBalance.findFirst({
+                    where: { itemId: detail.itemId },
+                    orderBy: { lastMovementDate: 'desc' },
+                  })
+                  if (balance) {
+                    await tx.stockBalance.update({
+                      where: { id: balance.id },
+                      data: { quantity: { increment: Number(detail.quantity) }, lastMovementDate: new Date() },
+                    })
+                  }
+                }
                 await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: smIds } } })
                 await tx.stockMovement.deleteMany({ where: { id: { in: smIds } } })
               }

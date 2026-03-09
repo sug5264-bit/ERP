@@ -105,8 +105,8 @@ export async function readExcelFile(file: File, keyMap: Record<string, string>):
         const d = String(val.getDate()).padStart(2, '0')
         val = `${y}-${m}-${d}`
       }
-      // 숫자인 경우 문자열로 변환하지 않음 (그대로 유지)
-      if (val != null && val !== '') {
+      // 숫자(0 포함), boolean(false 포함)은 유효한 값으로 처리
+      if (val !== null && val !== undefined && val !== '') {
         obj[key] = val
         hasValue = true
       }

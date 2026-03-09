@@ -45,11 +45,21 @@ export async function POST(req: NextRequest) {
     const allCodes = rows
       .filter((r: Record<string, unknown>) => r.partnerCode)
       .map((r: Record<string, unknown>) => String(r.partnerCode).trim())
-    const existingPartners = await prisma.partner.findMany({
-      where: { partnerCode: { in: allCodes } },
-      select: { partnerCode: true },
-    })
+    const allNames = rows
+      .filter((r: Record<string, unknown>) => r.partnerName)
+      .map((r: Record<string, unknown>) => String(r.partnerName).trim())
+
+    const [existingPartners, existingNames] = await Promise.all([
+      prisma.partner.findMany({ where: { partnerCode: { in: allCodes } }, select: { partnerCode: true } }),
+      allNames.length > 0
+        ? prisma.partner.findMany({
+            where: { partnerName: { in: allNames } },
+            select: { partnerName: true, partnerCode: true },
+          })
+        : Promise.resolve([]),
+    ])
     const existingCodeSet = new Set(existingPartners.map((p) => p.partnerCode))
+    const existingNameMap = new Map(existingNames.map((p) => [p.partnerName, p.partnerCode]))
 
     /** 콤마 포함 숫자 문자열을 파싱 */
     function parseNumber(val: unknown): number {
@@ -124,13 +134,10 @@ export async function POST(req: NextRequest) {
           throw new Error(`거래처코드 '${partnerCode}'가 이미 존재합니다.`)
         }
 
-        // 동일 거래처명이 이미 DB에 존재하면 중복 생성 방지
-        const existingByName = await prisma.partner.findFirst({
-          where: { partnerName },
-          select: { id: true, partnerCode: true },
-        })
-        if (existingByName) {
-          throw new Error(`거래처명 '${partnerName}'이(가) 이미 존재합니다. (코드: ${existingByName.partnerCode})`)
+        // 동일 거래처명이 이미 DB에 존재하면 중복 생성 방지 (배치 조회)
+        const existingNameCode = existingNameMap.get(partnerName)
+        if (existingNameCode) {
+          throw new Error(`거래처명 '${partnerName}'이(가) 이미 존재합니다. (코드: ${existingNameCode})`)
         }
 
         await prisma.partner.create({
@@ -156,6 +163,7 @@ export async function POST(req: NextRequest) {
           },
         })
         existingCodeSet.add(partnerCode)
+        existingNameMap.set(partnerName, partnerCode)
         success++
       } catch (err: unknown) {
         failed++
