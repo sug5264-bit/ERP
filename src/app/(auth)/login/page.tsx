@@ -15,7 +15,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard'
   const callbackUrl =
-    rawCallback.startsWith('/') && !/^\/[/\\]/.test(rawCallback)
+    rawCallback.startsWith('/') && rawCallback !== '/' && !/^\/[/\\]/.test(rawCallback)
       ? rawCallback
       : '/dashboard'
   const sessionExpired = searchParams.get('error') === 'session_expired'
