@@ -21,8 +21,8 @@ describe('formatCurrency', () => {
     expect(formatCurrency(0)).toBe('0원')
   })
 
-  it('음수를 처리', () => {
-    expect(formatCurrency(-1500)).toBe('-1,500원')
+  it('음수를 처리 (△ 표기)', () => {
+    expect(formatCurrency(-1500)).toBe('△1,500원')
   })
 
   it('소수점 이하 버림 (최대 소수점 0자리)', () => {
