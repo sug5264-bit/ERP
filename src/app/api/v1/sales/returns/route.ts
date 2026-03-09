@@ -69,11 +69,14 @@ export async function POST(req: NextRequest) {
 
     const salesReturn = await prisma.$transaction(async (tx) => {
       // 거래처 자동 확인/생성
-      const partnerId = await ensurePartnerExists({
-        partnerId: data.partnerId || salesOrder.partnerId,
-        partnerName: data.partnerName,
-        partnerType: 'SALES',
-      }, tx)
+      const partnerId = await ensurePartnerExists(
+        {
+          partnerId: data.partnerId || salesOrder.partnerId,
+          partnerName: data.partnerName,
+          partnerType: 'SALES',
+        },
+        tx
+      )
 
       if (salesOrder.partnerId && partnerId && salesOrder.partnerId !== partnerId) {
         throw new Error('반품 거래처가 발주 거래처와 일치하지 않습니다.')
@@ -87,10 +90,14 @@ export async function POST(req: NextRequest) {
       const rawDetails = data.details || []
       const resolvedDetails = []
       for (const d of rawDetails) {
-        const itemId = await ensureItemExists({
-          itemId: d.itemId,
-          itemName: d.itemName,
-        }, tx)
+        const itemId = await ensureItemExists(
+          {
+            itemId: d.itemId,
+            itemCode: d.itemCode,
+            itemName: d.itemName,
+          },
+          tx
+        )
         if (!d.itemId && d.itemName) {
           autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
         }
@@ -134,18 +141,21 @@ export async function POST(req: NextRequest) {
       // 반품 시 재고 복원 (입고 처리) 및 발주 잔량 복원
       if (resolvedDetails.length > 0) {
         // 재고이동 자동 생성 (반품 입고)
-        await createAutoStockMovement({
-          movementType: 'INBOUND',
-          relatedDocType: 'SALES_RETURN',
-          relatedDocId: created.id,
-          movementDate: new Date(data.returnDate),
-          details: resolvedDetails.map((d) => ({
-            itemId: d.itemId,
-            quantity: d.quantity,
-            unitPrice: d.unitPrice,
-          })),
-          createdBy: employee.id,
-        }, tx)
+        await createAutoStockMovement(
+          {
+            movementType: 'INBOUND',
+            relatedDocType: 'SALES_RETURN',
+            relatedDocId: created.id,
+            movementDate: new Date(data.returnDate),
+            details: resolvedDetails.map((d) => ({
+              itemId: d.itemId,
+              quantity: d.quantity,
+              unitPrice: d.unitPrice,
+            })),
+            createdBy: employee.id,
+          },
+          tx
+        )
 
         // 발주 상세의 납품수량 감소, 잔량 증가
         for (const d of resolvedDetails) {

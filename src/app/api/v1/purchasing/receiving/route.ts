@@ -83,8 +83,7 @@ export async function POST(request: NextRequest) {
     if (!purchaseOrder) return errorResponse('구매발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     if (purchaseOrder.status === 'CANCELLED')
       return errorResponse('취소된 구매발주에는 입고를 생성할 수 없습니다.', 'INVALID_STATUS', 400)
-    if (purchaseOrder.status === 'COMPLETED')
-      return errorResponse('이미 완료된 구매발주입니다.', 'INVALID_STATUS', 400)
+    if (purchaseOrder.status === 'COMPLETED') return errorResponse('이미 완료된 구매발주입니다.', 'INVALID_STATUS', 400)
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
@@ -95,11 +94,15 @@ export async function POST(request: NextRequest) {
       // 품목 자동 생성/확인
       const resolvedDetails = []
       for (const d of data.details) {
-        const itemId = await ensureItemExists({
-          itemId: d.itemId,
-          itemName: d.itemName,
-          standardPrice: d.unitPrice,
-        }, tx)
+        const itemId = await ensureItemExists(
+          {
+            itemId: d.itemId,
+            itemCode: d.itemCode,
+            itemName: d.itemName,
+            standardPrice: d.unitPrice,
+          },
+          tx
+        )
         if (!d.itemId && d.itemName) {
           autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
         }
@@ -161,21 +164,24 @@ export async function POST(request: NextRequest) {
       )
 
       // 재고이동 자동 생성 (입고)
-      await createAutoStockMovement({
-        movementType: 'INBOUND',
-        relatedDocType: 'RECEIVING',
-        relatedDocId: receiving.id,
-        movementDate: new Date(data.receivingDate),
-        details: resolvedDetails.map((d) => ({
-          itemId: d.itemId,
-          quantity: d.quantity,
-          unitPrice: d.unitPrice,
-          lotNo: d.lotNo || null,
-          expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
-        })),
-        createdBy: employee.id,
-        warehouseId: data.warehouseId || null,
-      }, tx)
+      await createAutoStockMovement(
+        {
+          movementType: 'INBOUND',
+          relatedDocType: 'RECEIVING',
+          relatedDocId: receiving.id,
+          movementDate: new Date(data.receivingDate),
+          details: resolvedDetails.map((d) => ({
+            itemId: d.itemId,
+            quantity: d.quantity,
+            unitPrice: d.unitPrice,
+            lotNo: d.lotNo || null,
+            expiryDate: d.expiryDate ? new Date(d.expiryDate) : null,
+          })),
+          createdBy: employee.id,
+          warehouseId: data.warehouseId || null,
+        },
+        tx
+      )
 
       // 구매발주 전체 입고 완료 시 상태 자동 변경
       const remainingDetails = await tx.purchaseOrderDetail.findMany({

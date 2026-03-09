@@ -36,8 +36,14 @@ export async function GET(request: NextRequest) {
     const endDate = sp.get('endDate')
     if (startDate || endDate) {
       const dateRange: { gte?: Date; lte?: Date } = {}
-      if (startDate) { const d = new Date(startDate); if (!isNaN(d.getTime())) dateRange.gte = d }
-      if (endDate) { const d = new Date(endDate); if (!isNaN(d.getTime())) dateRange.lte = d }
+      if (startDate) {
+        const d = new Date(startDate)
+        if (!isNaN(d.getTime())) dateRange.gte = d
+      }
+      if (endDate) {
+        const d = new Date(endDate)
+        if (!isNaN(d.getTime())) dateRange.lte = d
+      }
       where.deliveryDate = dateRange
     }
     const [items, totalCount] = await Promise.all([
@@ -57,7 +63,11 @@ export async function GET(request: NextRequest) {
             },
           },
           details: {
-            include: { item: { select: { id: true, itemName: true, specification: true, barcode: true, unit: true, itemCode: true } } },
+            include: {
+              item: {
+                select: { id: true, itemName: true, specification: true, barcode: true, unit: true, itemCode: true },
+              },
+            },
           },
           qualityInspections: {
             select: {
@@ -104,16 +114,23 @@ export async function POST(request: NextRequest) {
 
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+    const autoCreated: string[] = []
     const result = await prisma.$transaction(async (tx) => {
       // 품목 자동 생성/확인
       const resolvedDetails = []
       for (const d of data.details) {
-        const itemId = await ensureItemExists({
-          itemId: d.itemId,
-          itemCode: d.itemCode,
-          itemName: d.itemName,
-          standardPrice: d.unitPrice,
-        }, tx)
+        const itemId = await ensureItemExists(
+          {
+            itemId: d.itemId,
+            itemCode: d.itemCode,
+            itemName: d.itemName,
+            standardPrice: d.unitPrice,
+          },
+          tx
+        )
+        if (!d.itemId && d.itemName) {
+          autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
+        }
         resolvedDetails.push({ ...d, itemId })
       }
 
@@ -241,7 +258,7 @@ export async function POST(request: NextRequest) {
 
       return delivery
     })
-    return successResponse(result)
+    return successResponse({ ...result, autoCreated })
   } catch (error) {
     return handleApiError(error)
   }
