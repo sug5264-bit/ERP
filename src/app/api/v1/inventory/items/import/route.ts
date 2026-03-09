@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
       ),
     ]
 
-    const [existingItems, existingBarcodes, categories] = await Promise.all([
+    const allNames = rows
+      .filter((r: Record<string, unknown>) => r.itemName)
+      .map((r: Record<string, unknown>) => String(r.itemName).trim())
+
+    const [existingItems, existingBarcodes, categories, existingNames] = await Promise.all([
       prisma.item.findMany({ where: { itemCode: { in: allCodes } }, select: { itemCode: true } }),
       allBarcodes.length > 0
         ? prisma.item.findMany({ where: { barcode: { in: allBarcodes } }, select: { barcode: true } })
@@ -50,10 +54,14 @@ export async function POST(req: NextRequest) {
       allCategoryNames.length > 0
         ? prisma.itemCategory.findMany({ where: { name: { in: allCategoryNames } }, select: { id: true, name: true } })
         : Promise.resolve([]),
+      allNames.length > 0
+        ? prisma.item.findMany({ where: { itemName: { in: allNames } }, select: { itemName: true, itemCode: true } })
+        : Promise.resolve([]),
     ])
     const existingCodeSet = new Set(existingItems.map((i) => i.itemCode))
     const existingBarcodeSet = new Set(existingBarcodes.map((i) => i.barcode))
     const categoryMap = new Map(categories.map((c) => [c.name, c.id]))
+    const existingNameMap = new Map(existingNames.map((i) => [i.itemName, i.itemCode]))
 
     const itemTypeMap: Record<string, string> = {
       상품: 'GOODS',
@@ -151,13 +159,10 @@ export async function POST(req: NextRequest) {
           throw new Error(`품목코드 '${itemCode}'가 이미 존재합니다.`)
         }
 
-        // 동일 품목명이 이미 DB에 존재하면 중복 생성 방지
-        const existingByName = await prisma.item.findFirst({
-          where: { itemName },
-          select: { id: true, itemCode: true },
-        })
-        if (existingByName) {
-          throw new Error(`품목명 '${itemName}'이(가) 이미 존재합니다. (코드: ${existingByName.itemCode})`)
+        // 동일 품목명이 이미 DB에 존재하면 중복 생성 방지 (배치 조회)
+        const existingNameCode = existingNameMap.get(itemName)
+        if (existingNameCode) {
+          throw new Error(`품목명 '${itemName}'이(가) 이미 존재합니다. (코드: ${existingNameCode})`)
         }
 
         if (row.barcode && existingBarcodeSet.has(String(row.barcode))) {
@@ -200,6 +205,7 @@ export async function POST(req: NextRequest) {
           },
         })
         existingCodeSet.add(itemCode)
+        existingNameMap.set(itemName, itemCode)
         if (row.barcode) existingBarcodeSet.add(String(row.barcode))
         success++
       } catch (err: unknown) {

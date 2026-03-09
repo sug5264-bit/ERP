@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
+    const warnings: string[] = []
+
     const result = await prisma.$transaction(async (tx) => {
       // 생산계획과 BOM 정보 조회
       const plan = await tx.productionPlan.findUnique({
@@ -142,19 +144,24 @@ export async function POST(request: NextRequest) {
 
       // 완제품 입고 재고이동 자동 생성 (양품만)
       if (goodQty > 0) {
-        await createAutoStockMovement({
-          movementType: 'INBOUND',
-          relatedDocType: 'PRODUCTION',
-          relatedDocId: productionResult.id,
-          movementDate: new Date(data.productionDate),
-          details: [{
-            itemId: plan.bomHeader.itemId,
-            quantity: goodQty,
-            lotNo: data.lotNo || null,
-            expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
-          }],
-          createdBy: employee.id,
-        }, tx)
+        await createAutoStockMovement(
+          {
+            movementType: 'INBOUND',
+            relatedDocType: 'PRODUCTION',
+            relatedDocId: productionResult.id,
+            movementDate: new Date(data.productionDate),
+            details: [
+              {
+                itemId: plan.bomHeader.itemId,
+                quantity: goodQty,
+                lotNo: data.lotNo || null,
+                expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
+              },
+            ],
+            createdBy: employee.id,
+          },
+          tx
+        )
       }
 
       // BOM 원자재 출고 재고이동 자동 생성
@@ -162,10 +169,10 @@ export async function POST(request: NextRequest) {
         const yieldRate = Number(plan.bomHeader.yieldRate) / 100
         const materialDetails = plan.bomHeader.details.map((bomDetail) => ({
           itemId: bomDetail.itemId,
-          quantity: Math.ceil(Number(bomDetail.quantity) * data.producedQty / (yieldRate || 1)),
+          quantity: Math.ceil((Number(bomDetail.quantity) * data.producedQty) / (yieldRate || 1)),
         }))
 
-        // 원자재 재고 확인 (부족 시 경고만, 차단하지 않음)
+        // 원자재 재고 확인 (부족 시 경고 반환, 차단하지 않음)
         for (const md of materialDetails) {
           const stockAgg = await tx.stockBalance.aggregate({
             where: { itemId: md.itemId },
@@ -173,7 +180,9 @@ export async function POST(request: NextRequest) {
           })
           const currentStock = Number(stockAgg._sum.quantity ?? 0)
           if (currentStock < md.quantity) {
-            // 재고가 부족한 경우에도 생산 실적은 등록하되, 차감은 가용량까지만
+            const bomDetail = plan.bomHeader.details.find((d) => d.itemId === md.itemId)
+            const itemName = bomDetail?.item?.itemName ?? md.itemId
+            warnings.push(`원자재 "${itemName}": 필요수량 ${md.quantity}, 가용재고 ${currentStock} (부족)`)
             md.quantity = Math.min(md.quantity, Math.max(0, currentStock))
           }
         }
@@ -200,7 +209,7 @@ export async function POST(request: NextRequest) {
             },
           })
 
-          // 원자재 재고 차감
+          // 원자재 재고 차감 (낙관적 잠금: 동시성 보호)
           for (const md of validMaterials) {
             const balances = await tx.stockBalance.findMany({
               where: { itemId: md.itemId },
@@ -212,10 +221,14 @@ export async function POST(request: NextRequest) {
               const available = Number(bal.quantity)
               const deduct = Math.min(available, remaining)
               if (deduct > 0) {
-                await tx.stockBalance.update({
-                  where: { id: bal.id },
-                  data: { quantity: { decrement: deduct } },
+                const result = await tx.stockBalance.updateMany({
+                  where: { id: bal.id, quantity: { gte: deduct } },
+                  data: { quantity: { decrement: deduct }, lastMovementDate: new Date() },
                 })
+                if (result.count === 0) {
+                  // 동시 접근으로 재고가 이미 변경됨 - 건너뛰기
+                  continue
+                }
                 remaining -= deduct
               }
             }
@@ -241,6 +254,7 @@ export async function POST(request: NextRequest) {
       defectQty: Number(result.defectQty),
       goodQty: Number(result.goodQty),
       lotNo: result.lotNo,
+      warnings,
     })
   } catch (error) {
     return handleApiError(error)
