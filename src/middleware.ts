@@ -48,7 +48,8 @@ function rateLimitCheck(
 }
 
 function getIp(req: NextRequest): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown'
+  // x-real-ip(리버스 프록시 설정)를 우선 신뢰, x-forwarded-for는 마지막 프록시가 추가한 첫 번째 IP 사용
+  return req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 }
 
 // ─── Request ID 생성 (Edge Runtime 호환) ───

@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, description, permissionIds } = body
 
-    if (!name) return errorResponse('역할명은 필수입니다.', 'VALIDATION_ERROR', 400)
+    if (!name || typeof name !== 'string') return errorResponse('역할명은 필수입니다.', 'VALIDATION_ERROR', 400)
+    if (name.trim().length > 50) return errorResponse('역할명은 50자 이내여야 합니다.', 'VALIDATION_ERROR', 400)
+    if (permissionIds !== undefined && !Array.isArray(permissionIds)) {
+      return errorResponse('권한 ID 목록이 올바르지 않습니다.', 'VALIDATION_ERROR', 400)
+    }
 
     const existing = await prisma.role.findUnique({ where: { name } })
     if (existing) return errorResponse('이미 존재하는 역할명입니다.', 'CONFLICT', 409)
