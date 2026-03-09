@@ -47,49 +47,7 @@ async function main() {
   // ============================================================
   // 1-2. 권한 (Permissions) - 모듈 및 하위 페이지별
   // ============================================================
-  // 사이드바 메뉴와 완전히 일치하는 권한 모듈 목록
   const modules = [
-    // 영업관리
-    'sales',
-    'sales.orders',
-    'sales.summary',
-    'sales.partners',
-    'sales.quotations',
-    'sales.deliveries',
-    'sales.returns',
-    'sales.pricing',
-    // 구매관리
-    'purchasing',
-    'purchasing.orders',
-    'purchasing.receiving',
-    'purchasing.suppliers',
-    'purchasing.summary',
-    // 생산관리
-    'production',
-    'production.oem',
-    'production.bom',
-    'production.plan',
-    'production.result',
-    // 재고관리
-    'inventory',
-    'inventory.items',
-    'inventory.stock',
-    'inventory.status',
-    'inventory.warehouses',
-    'inventory.expiry',
-    'inventory.lot',
-    // 품질관리
-    'quality',
-    'quality.incoming',
-    'quality.outgoing',
-    'quality.standards',
-    // 정산관리
-    'closing',
-    'closing.sales',
-    'closing.purchase',
-    'closing.netting',
-    'closing.payments',
-    // 회계관리
     'accounting',
     'accounting.vouchers',
     'accounting.journal',
@@ -97,7 +55,6 @@ async function main() {
     'accounting.financial',
     'accounting.tax',
     'accounting.budget',
-    // 인사관리
     'hr',
     'hr.employees',
     'hr.organization',
@@ -105,27 +62,35 @@ async function main() {
     'hr.leave',
     'hr.payroll',
     'hr.recruitment',
-    // 프로젝트
+    'inventory',
+    'inventory.items',
+    'inventory.stock',
+    'inventory.status',
+    'inventory.warehouses',
+    'sales',
+    'sales.summary',
+    'sales.partners',
+    'sales.quotations',
+    'sales.orders',
+    'sales.deliveries',
+    'closing',
+    'closing.netting',
+    'closing.payments',
     'projects',
-    // 전자결재
     'approval',
     'approval.draft',
     'approval.pending',
     'approval.completed',
     'approval.rejected',
-    // 게시판
     'board',
     'board.notices',
     'board.general',
     'board.messages',
-    // 시스템관리
     'admin',
     'admin.users',
     'admin.roles',
     'admin.codes',
     'admin.logs',
-    'admin.company',
-    'admin.settings',
   ]
   const actions = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
@@ -200,8 +165,6 @@ async function main() {
     'accounting.tax',
     'accounting.budget',
     'closing',
-    'closing.sales',
-    'closing.purchase',
     'closing.netting',
     'closing.payments',
   ]
@@ -250,11 +213,7 @@ async function main() {
     'sales.quotations',
     'sales.orders',
     'sales.deliveries',
-    'sales.returns',
-    'sales.pricing',
     'closing',
-    'closing.sales',
-    'closing.purchase',
     'closing.netting',
     'closing.payments',
   ]
@@ -271,15 +230,7 @@ async function main() {
     }
   }
   // 영업 관리자: 재고 읽기 (재고 확인 필요)
-  for (const mod of [
-    'inventory',
-    'inventory.items',
-    'inventory.stock',
-    'inventory.status',
-    'inventory.warehouses',
-    'inventory.expiry',
-    'inventory.lot',
-  ]) {
+  for (const mod of ['inventory', 'inventory.items', 'inventory.stock', 'inventory.status', 'inventory.warehouses']) {
     const key = `${mod}:read`
     if (permMap[key]) {
       await prisma.rolePermission.upsert({

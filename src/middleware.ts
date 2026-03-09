@@ -3,9 +3,9 @@ import type { NextRequest } from 'next/server'
 
 const publicPaths = ['/login', '/api/auth']
 
-// 헬스체크 및 초기화 엔드포인트는 인증 없이 허용 (init 자체에서 보안 로직 처리)
+// 헬스체크 메인 엔드포인트만 인증 없이 허용 (init, reset-admin, seed는 인증 필요)
 const bypassPaths = ['/api/health']
-const bypassExcludePaths: string[] = []
+const bypassExcludePaths = ['/api/health/init', '/api/health/reset-admin', '/api/health/seed']
 
 // ─── In-memory Rate Limiter (프록시용 경량 버전) ───
 interface RLEntry {
