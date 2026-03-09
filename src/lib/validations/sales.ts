@@ -21,7 +21,7 @@ export const createQuotationSchema = z.object({
     .string()
     .min(1, '견적일을 입력하세요')
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
-  partnerId: z.string().max(50).optional().nullable(),
+  partnerId: z.string().min(1).max(50).optional().nullable(),
   // 자동 거래처 생성용 필드
   partnerName: z.string().max(200).optional().nullable(),
   partnerCode: z.string().max(30).optional().nullable(),

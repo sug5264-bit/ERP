@@ -28,7 +28,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         salesOrder: { select: { id: true, orderNo: true, orderDate: true, status: true, salesChannel: true } },
         partner: true,
         details: {
-          include: { item: { select: { id: true, itemName: true, specification: true, barcode: true, unit: true, itemCode: true } } },
+          include: {
+            item: {
+              select: { id: true, itemName: true, specification: true, barcode: true, unit: true, itemCode: true },
+            },
+          },
           orderBy: { id: 'asc' },
         },
         qualityInspections: { orderBy: { createdAt: 'desc' } },
@@ -179,7 +183,15 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         }
       }
 
-      // 3. 관련 재고이동 삭제
+      // 3. 품질검사 관련 데이터 삭제 (QualityInspection에 onDelete: Cascade 없음)
+      await tx.qualityInspectionItem.deleteMany({
+        where: { qualityInspection: { deliveryId: id } },
+      })
+      await tx.qualityInspection.deleteMany({
+        where: { deliveryId: id },
+      })
+
+      // 4. 관련 재고이동 삭제
       await tx.stockMovementDetail.deleteMany({
         where: {
           stockMovement: { relatedDocType: 'DELIVERY', relatedDocId: id },
@@ -189,7 +201,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         where: { relatedDocType: 'DELIVERY', relatedDocId: id },
       })
 
-      // 4. 발주 상태 복원 (잔여 품목이 있으면 IN_PROGRESS, 없으면 ORDERED)
+      // 5. 발주 상태 복원 (잔여 품목이 있으면 IN_PROGRESS, 없으면 ORDERED)
       const remainingDetails = await tx.salesOrderDetail.findMany({
         where: { salesOrderId: delivery.salesOrderId },
         select: { remainingQty: true, deliveredQty: true },
@@ -200,7 +212,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         data: { status: hasDelivered ? 'IN_PROGRESS' : 'ORDERED' },
       })
 
-      // 5. 납품 삭제 (DeliveryDetail은 onDelete: Cascade로 자동 삭제)
+      // 6. 납품 삭제 (DeliveryDetail은 onDelete: Cascade로 자동 삭제)
       await tx.delivery.delete({ where: { id } })
     })
 
