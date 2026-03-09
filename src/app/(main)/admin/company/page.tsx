@@ -309,6 +309,7 @@ export default function CompanyManagementPage() {
     mutationFn: (id: string) => api.delete(`/admin/company/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
+      setDeleteTarget(null)
       toast.success('회사 정보가 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),

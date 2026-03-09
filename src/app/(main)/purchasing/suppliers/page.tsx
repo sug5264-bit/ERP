@@ -89,6 +89,7 @@ function SupplierForm({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
   isPending: boolean
 }) {
+  const [isActive, setIsActive] = useState(supplier?.isActive ?? true)
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -144,7 +145,8 @@ function SupplierForm({
       {supplier && (
         <div className="flex items-center gap-2">
           <Label>활성 상태</Label>
-          <Switch name="isActive" defaultChecked={supplier.isActive} />
+          <input type="hidden" name="isActive" value={isActive ? 'on' : 'off'} />
+          <Switch checked={isActive} onCheckedChange={setIsActive} />
         </div>
       )}
       <Button type="submit" className="w-full" disabled={isPending}>
