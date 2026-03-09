@@ -1,5 +1,8 @@
+import NextAuth from 'next-auth'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { authConfig } from '@/lib/auth.config'
+
+const { auth } = NextAuth(authConfig)
 
 const publicPaths = ['/login', '/api/auth']
 
@@ -48,7 +51,7 @@ function rateLimitCheck(
   return { ok: true, remaining: max - entry.count, resetAt: entry.resetAt }
 }
 
-function getIp(req: NextRequest): string {
+function getIp(req: { headers: Headers }): string {
   // x-real-ip(리버스 프록시 설정)를 우선 신뢰, x-forwarded-for는 마지막 프록시가 추가한 첫 번째 IP 사용
   return req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
 }
@@ -61,7 +64,7 @@ function generateEdgeRequestId(): string {
   return `${ts}-${seq}`
 }
 
-export function middleware(request: NextRequest) {
+export default auth((request) => {
   const { pathname } = request.nextUrl
 
   // 정적 파일 허용 (확장자 패턴을 명시적으로 제한하여 API 경로 우회 방지)
@@ -191,11 +194,8 @@ export function middleware(request: NextRequest) {
     })
   }
 
-  // NextAuth 세션 토큰 쿠키 확인
-  const token =
-    request.cookies.get('authjs.session-token')?.value || request.cookies.get('__Secure-authjs.session-token')?.value
-
-  if (!token) {
+  // NextAuth auth() 래퍼가 자동으로 JWT/쿠키를 파싱하여 request.auth에 세션 주입
+  if (!request.auth) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
@@ -215,7 +215,7 @@ export function middleware(request: NextRequest) {
   }
 
   return response
-}
+})
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)', '/shipper/:path*'],
