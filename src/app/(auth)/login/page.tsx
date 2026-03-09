@@ -15,9 +15,7 @@ function LoginForm() {
   const searchParams = useSearchParams()
   const rawCallback = searchParams.get('callbackUrl') || '/dashboard'
   const callbackUrl =
-    rawCallback.startsWith('/') && rawCallback !== '/' && !/^\/[/\\]/.test(rawCallback)
-      ? rawCallback
-      : '/dashboard'
+    rawCallback.startsWith('/') && rawCallback !== '/' && !/^\/[/\\]/.test(rawCallback) ? rawCallback : '/dashboard'
   const sessionExpired = searchParams.get('error') === 'session_expired'
 
   const [username, setUsername] = useState('')
@@ -39,8 +37,6 @@ function LoginForm() {
         callbackUrl,
       })
 
-      console.log('[Login] signIn result:', JSON.stringify(result))
-
       if (result?.error) {
         if (result.error === 'CredentialsSignin') {
           setError('아이디 또는 비밀번호가 올바르지 않습니다.')
@@ -50,14 +46,12 @@ function LoginForm() {
           setError(`로그인 실패: ${result.error}`)
         }
       } else if (result?.ok) {
-        console.log('[Login] Redirecting to:', callbackUrl)
         router.push(callbackUrl)
         router.refresh()
       } else {
-        setError(`로그인 응답을 처리할 수 없습니다. (${JSON.stringify(result)})`)
+        setError('로그인 응답을 처리할 수 없습니다. 다시 시도해주세요.')
       }
     } catch (err) {
-      console.error('[Login] Error:', err)
       setError('로그인 중 오류가 발생했습니다. 네트워크를 확인하세요.')
     } finally {
       setIsLoading(false)
@@ -68,8 +62,8 @@ function LoginForm() {
     <div className="animate-scale-in w-full max-w-md px-4">
       <Card className="border-0 shadow-xl sm:border">
         <CardHeader className="space-y-3 pb-2 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg">
-            <Leaf className="h-8 w-8 text-primary-foreground" />
+          <div className="bg-primary mx-auto flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg">
+            <Leaf className="text-primary-foreground h-8 w-8" />
           </div>
           <div>
             <CardTitle className="text-2xl font-bold tracking-tight">{APP_NAME}</CardTitle>
