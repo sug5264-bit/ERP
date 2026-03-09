@@ -81,7 +81,13 @@ export default function ShipperSettlementPage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['shipper-settlement', startDate, endDate],
-    queryFn: () => api.get(`/shipper/settlement?startDate=${startDate}&endDate=${endDate}`),
+    queryFn: () => {
+      const qp = new URLSearchParams()
+      if (startDate) qp.set('startDate', startDate)
+      if (endDate) qp.set('endDate', endDate)
+      const qs = qp.toString()
+      return api.get(`/shipper/settlement${qs ? `?${qs}` : ''}`)
+    },
   })
 
   const settlements = (data?.data || []) as Settlement[]

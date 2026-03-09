@@ -163,12 +163,12 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         )
       )
 
-      // 2. 재고 잔량 복원
+      // 2. 재고 잔량 복원 (출고 시 재고가 많은 창고에서 차감했으므로 동일 기준으로 복원)
       for (const d of delivery.details) {
         const balances = await tx.stockBalance.findMany({
           where: { itemId: d.itemId },
           select: { id: true },
-          orderBy: { quantity: 'asc' },
+          orderBy: { quantity: 'desc' },
           take: 1,
         })
         if (balances.length > 0) {
