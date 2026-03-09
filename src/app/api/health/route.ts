@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import { getQueryStats } from '@/lib/prisma'
 import { getApiMetrics } from '@/lib/api-helpers'
 
@@ -58,10 +58,10 @@ export async function GET() {
     },
   }
 
-  // DB 연결 체크
+  // DB 연결 체크 (일시적 오류 시 재시도)
   try {
     const dbStart = performance.now()
-    await prisma.$queryRaw`SELECT 1`
+    await withRetry(() => prisma.$queryRaw`SELECT 1`)
     const dbLatency = Math.round(performance.now() - dbStart)
     health.checks.database = { status: 'connected', latencyMs: dbLatency }
 
