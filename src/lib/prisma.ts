@@ -45,8 +45,15 @@ export function resetQueryStats(): void {
 }
 
 function createPrismaClient() {
+  // Supabase 서버리스 환경에서 커넥션 풀 제한
+  let datasourceUrl = process.env.DATABASE_URL || ''
+  if (datasourceUrl && !datasourceUrl.includes('connection_limit')) {
+    const separator = datasourceUrl.includes('?') ? '&' : '?'
+    datasourceUrl = `${datasourceUrl}${separator}connection_limit=5&pool_timeout=20`
+  }
+
   const client = new PrismaClient({
-    datasourceUrl: process.env.DATABASE_URL,
+    datasourceUrl,
     log:
       process.env.NODE_ENV === 'development'
         ? [
