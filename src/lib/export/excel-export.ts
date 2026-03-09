@@ -21,6 +21,10 @@ export async function exportToExcel(config: ExportConfig) {
 
   const { fileName, sheetName = 'Sheet1', title, columns, data } = config
 
+  if (columns.length === 0) {
+    throw new Error('내보내기 컬럼이 설정되지 않았습니다.')
+  }
+
   const workbook = new ExcelJS.Workbook()
   workbook.creator = '웰그린 ERP'
   workbook.created = new Date()
@@ -30,7 +34,7 @@ export async function exportToExcel(config: ExportConfig) {
   let startRow = 1
 
   // 제목 행
-  if (title) {
+  if (title && columns.length > 0) {
     sheet.mergeCells(1, 1, 1, columns.length)
     const titleCell = sheet.getCell(1, 1)
     titleCell.value = title
@@ -72,14 +76,21 @@ export async function exportToExcel(config: ExportConfig) {
     })
   })
 
-  // 열 너비 자동 조정 (CJK 문자 폭 고려)
+  // 열 너비 자동 조정 (CJK 문자 폭 고려, 샘플링으로 대용량 최적화)
+  const sampleSize = Math.min(data.length, 200)
+  const sampleRows =
+    sampleSize === data.length ? data : data.filter((_, i) => i % Math.ceil(data.length / sampleSize) === 0)
   columns.forEach((col, i) => {
-    const column = sheet.getColumn(i + 1)
-    const maxLen = Math.max(
-      estimateWidth(col.header),
-      ...data.map((row) => estimateWidth(String(getValue(row, col.accessor) ?? '')))
-    )
-    column.width = col.width || Math.min(Math.max(maxLen + 2, 10), 40)
+    if (col.width) {
+      sheet.getColumn(i + 1).width = col.width
+      return
+    }
+    let maxLen = estimateWidth(col.header)
+    for (const row of sampleRows) {
+      const len = estimateWidth(String(getValue(row, col.accessor) ?? ''))
+      if (len > maxLen) maxLen = len
+    }
+    sheet.getColumn(i + 1).width = Math.min(Math.max(maxLen + 2, 10), 40)
   })
 
   // 다운로드
