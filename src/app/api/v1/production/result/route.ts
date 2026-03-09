@@ -101,23 +101,24 @@ export async function POST(request: NextRequest) {
       return errorResponse('불량수량이 생산수량을 초과할 수 없습니다.', 'VALIDATION_ERROR', 400)
     }
 
-    const resultNo = await generateDocumentNumber('PR', new Date(data.productionDate))
-
-    const result = await prisma.productionResult.create({
-      data: {
-        resultNo,
-        productionPlanId: data.productionPlanId,
-        productionDate: new Date(data.productionDate),
-        producedQty: data.producedQty,
-        defectQty: data.defectQty,
-        goodQty,
-        lotNo: data.lotNo || undefined,
-        expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
-        remarks: data.remarks || undefined,
-      },
-      include: {
-        productionPlan: { select: { planNo: true } },
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const resultNo = await generateDocumentNumber('PR', new Date(data.productionDate))
+      return tx.productionResult.create({
+        data: {
+          resultNo,
+          productionPlanId: data.productionPlanId,
+          productionDate: new Date(data.productionDate),
+          producedQty: data.producedQty,
+          defectQty: data.defectQty,
+          goodQty,
+          lotNo: data.lotNo || undefined,
+          expiryDate: data.expiryDate ? new Date(data.expiryDate) : undefined,
+          remarks: data.remarks || undefined,
+        },
+        include: {
+          productionPlan: { select: { planNo: true } },
+        },
+      })
     })
 
     return successResponse({

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { resolve } from 'path'
 import { existsSync } from 'fs'
 import { requireAuth, isErrorResponse } from '@/lib/api-helpers'
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads', 'company')
+const UPLOAD_DIR = resolve(process.cwd(), 'uploads', 'company')
 
 const MIME_TYPES: Record<string, string> = {
   png: 'image/png',
@@ -23,12 +23,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ fil
 
     const { filename } = await params
 
-    // Prevent path traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+    // Prevent path traversal - resolved path must stay within UPLOAD_DIR
+    const filePath = resolve(UPLOAD_DIR, filename)
+    if (!filePath.startsWith(UPLOAD_DIR + '/')) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 })
     }
-
-    const filePath = join(UPLOAD_DIR, filename)
     if (!existsSync(filePath)) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }

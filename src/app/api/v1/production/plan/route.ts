@@ -87,22 +87,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createProductionPlanSchema.parse(body)
 
-    const planNo = await generateDocumentNumber('PP', new Date(data.planDate))
-
-    const plan = await prisma.productionPlan.create({
-      data: {
-        planNo,
-        planDate: new Date(data.planDate),
-        bomHeaderId: data.bomHeaderId,
-        oemContractId: data.oemContractId || undefined,
-        plannedQty: data.plannedQty,
-        plannedDate: new Date(data.plannedDate),
-        description: data.description || undefined,
-      },
-      include: {
-        bomHeader: { select: { bomName: true } },
-        oemContract: { select: { contractName: true } },
-      },
+    const plan = await prisma.$transaction(async (tx) => {
+      const planNo = await generateDocumentNumber('PP', new Date(data.planDate))
+      return tx.productionPlan.create({
+        data: {
+          planNo,
+          planDate: new Date(data.planDate),
+          bomHeaderId: data.bomHeaderId,
+          oemContractId: data.oemContractId || undefined,
+          plannedQty: data.plannedQty,
+          plannedDate: new Date(data.plannedDate),
+          description: data.description || undefined,
+        },
+        include: {
+          bomHeader: { select: { bomName: true } },
+          oemContract: { select: { contractName: true } },
+        },
+      })
     })
 
     return successResponse({

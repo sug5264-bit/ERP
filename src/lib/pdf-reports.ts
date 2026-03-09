@@ -786,6 +786,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
     }
   }
 
+  addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
   doc.save(sanitizeFileName(`거래명세서_${data.statementNo}`) + '.pdf')
 }
 

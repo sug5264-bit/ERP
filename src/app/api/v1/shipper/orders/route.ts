@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         where: { orderNo: { startsWith: `SH-${today}` } },
         orderBy: { orderNo: 'desc' },
       })
-      const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4)) + 1 : 1
+      const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4), 10) + 1 : 1
       const orderNo = `SH-${today}-${String(seq).padStart(4, '0')}`
 
       return tx.shipperOrder.create({

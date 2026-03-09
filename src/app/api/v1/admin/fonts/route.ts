@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
 import { writeFile, mkdir, readdir, unlink, stat } from 'fs/promises'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { existsSync } from 'fs'
 
-const FONT_DIR = join(process.cwd(), 'public', 'fonts')
+const FONT_DIR = resolve(process.cwd(), 'public', 'fonts')
 const MAX_FILE_SIZE = 30 * 1024 * 1024 // 30MB for font files
 const ALLOWED_EXTENSIONS = new Set(['ttf', 'otf', 'woff', 'woff2'])
 
@@ -60,7 +60,10 @@ export async function POST(req: NextRequest) {
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
 
     await mkdir(FONT_DIR, { recursive: true })
-    const filePath = join(FONT_DIR, sanitizedName)
+    const filePath = resolve(FONT_DIR, sanitizedName)
+    if (!filePath.startsWith(FONT_DIR + '/')) {
+      return errorResponse('유효하지 않은 파일명입니다.', 'INVALID_FILENAME', 400)
+    }
 
     const buffer = Buffer.from(await file.arrayBuffer())
     await writeFile(filePath, buffer)
@@ -83,12 +86,11 @@ export async function DELETE(req: NextRequest) {
       return errorResponse('파일명이 필요합니다.', 'VALIDATION_ERROR', 400)
     }
 
-    // Prevent path traversal
-    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return NextResponse.json({ error: 'Invalid filename' }, { status: 400 })
+    // Prevent path traversal - resolved path must stay within FONT_DIR
+    const filePath = resolve(FONT_DIR, filename)
+    if (!filePath.startsWith(FONT_DIR + '/')) {
+      return errorResponse('유효하지 않은 파일명입니다.', 'INVALID_FILENAME', 400)
     }
-
-    const filePath = join(FONT_DIR, filename)
     if (!existsSync(filePath)) {
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }

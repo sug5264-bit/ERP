@@ -144,10 +144,11 @@ export default function TaxInvoicePage() {
         supplier: { name: inv.supplierName, bizNo: inv.supplierBizNo, ceo: (detail.supplierCeo as string) || '', address: (detail.supplierAddress as string) || '' },
         buyer: { name: inv.buyerName, bizNo: inv.buyerBizNo, ceo: (detail.buyerCeo as string) || '', address: (detail.buyerAddress as string) || '' },
         items: invoiceItems.map((item) => {
-          const d = new Date(item.itemDate)
+          const d = item.itemDate ? new Date(item.itemDate) : null
+          const isValidDate = d && !isNaN(d.getTime())
           return {
-            month: String(d.getMonth() + 1),
-            day: String(d.getDate()),
+            month: isValidDate ? String(d.getMonth() + 1) : '',
+            day: isValidDate ? String(d.getDate()) : '',
             itemName: item.itemName,
             spec: item.specification,
             qty: Number(item.qty),
