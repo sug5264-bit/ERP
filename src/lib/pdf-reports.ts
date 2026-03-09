@@ -15,9 +15,10 @@ import { sanitizeFileName } from '@/lib/sanitize'
 // 공통 유틸리티
 // ---------------------------------------------------------------------------
 
-/** 숫자를 한글 금액으로 변환 (예: 12300 → "일만이천삼백") */
+/** 숫자를 한글 금액으로 변환 (예: 12300 → "일만이천삼백", -5000 → "마이너스 오천") */
 function numberToKorean(n: number): string {
   if (n === 0) return '영'
+  const prefix = n < 0 ? '마이너스 ' : ''
   const d = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
   const s = ['', '십', '백', '천']
   const b = ['', '만', '억', '조']
@@ -39,14 +40,22 @@ function numberToKorean(n: number): string {
     num = Math.floor(num / 10000)
     bi++
   }
-  return result
+  return prefix + result
 }
 
-/** 금액을 자릿수 배열로 분해 (억/천만/백만/십만/만/천/백/십/일) */
+/** 금액을 자릿수 배열로 분해 (억/천만/백만/십만/만/천/백/십/일) — 음수는 △ 접두 */
 function splitAmountDigits(amount: number, digitCount: number): string[] {
+  const isNeg = amount < 0
   const str = Math.floor(Math.abs(amount)).toString()
   const padded = str.padStart(digitCount, ' ')
-  return padded.split('').map((c) => (c === ' ' ? '' : c))
+  const digits = padded.split('').map((c) => (c === ' ' ? '' : c))
+  if (isNeg && digits.length > 0) {
+    // 첫 번째 비어있지 않은 자리 앞에 △ 표시
+    const firstIdx = digits.findIndex((d) => d !== '')
+    if (firstIdx > 0) digits[firstIdx - 1] = '△'
+    else if (firstIdx === 0) digits[0] = `△${digits[0]}`
+  }
+  return digits
 }
 
 /** 셀 그리기 헬퍼 (직선 그리드 셀) */

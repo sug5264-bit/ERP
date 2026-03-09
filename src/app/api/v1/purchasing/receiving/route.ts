@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
       id: r.id,
       receivingNo: r.receivingNo,
       receivingDate: r.receivingDate,
-      orderNo: r.purchaseOrder.orderNo,
-      supplierName: r.partner.partnerName,
+      orderNo: r.purchaseOrder?.orderNo || '-',
+      supplierName: r.partner?.partnerName || '-',
       status: r.status,
       inspectorName: r.inspectedBy || '-',
     }))

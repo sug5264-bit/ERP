@@ -109,10 +109,12 @@ export async function POST(request: NextRequest) {
     const orderNo = `ON-${today}-${String(seq).padStart(4, '0')}`
 
     let totalSupply = 0
+    let totalTax = 0
     const details = data.items.map((item, i) => {
       const supply = item.quantity * item.unitPrice
       const tax = Math.round(supply * 0.1)
       totalSupply += supply
+      totalTax += tax
       return {
         lineNo: i + 1,
         itemId: item.itemId,
@@ -124,8 +126,6 @@ export async function POST(request: NextRequest) {
         remainingQty: item.quantity,
       }
     })
-
-    const totalTax = Math.round(totalSupply * 0.1)
 
     const order = await prisma.salesOrder.create({
       data: {
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         recipientZipCode: data.recipientZipCode,
         recipientAddress: data.recipientAddress,
         requirements: data.requirements,
-        employeeId: (authResult as { session: { user: { employeeId: string | null } } }).session.user.employeeId || '',
+        employeeId: (authResult as { session: { user: { employeeId: string | null } } }).session.user.employeeId ?? '',
         details: { create: details },
       },
     })

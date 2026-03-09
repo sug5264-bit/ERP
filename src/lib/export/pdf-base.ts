@@ -131,6 +131,7 @@ export const labelColumnStyle = {
 // ---------------------------------------------------------------------------
 export const fmtNumber = (n: number | null | undefined) => {
   if (n == null || isNaN(n)) return '0'
+  if (n < 0) return `△${Math.abs(n).toLocaleString('ko-KR')}`
   return n.toLocaleString('ko-KR')
 }
 
