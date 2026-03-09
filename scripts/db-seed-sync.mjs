@@ -15,7 +15,16 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const prisma = new PrismaClient()
+
+// 커넥션 풀 제한을 위해 URL에 connection_limit 추가
+let dbUrl = process.env.DATABASE_URL || ''
+if (dbUrl && !dbUrl.includes('connection_limit')) {
+  const sep = dbUrl.includes('?') ? '&' : '?'
+  dbUrl = `${dbUrl}${sep}connection_limit=2&pool_timeout=20`
+}
+const prisma = new PrismaClient({
+  datasources: dbUrl ? { db: { url: dbUrl } } : undefined,
+})
 
 /** 핵심 시드 데이터 존재 여부 확인 */
 async function checkSeedDataExists() {
@@ -82,25 +91,45 @@ async function applySeedSQL() {
 
 /** 권한(Permissions) 시드 데이터 적용 - SQL 파일에 없는 부분 */
 async function applyPermissions() {
+  // 사이드바 메뉴와 완전히 일치하는 권한 모듈 목록
   const modules = [
-    'accounting', 'accounting.vouchers', 'accounting.journal', 'accounting.ledger',
-    'accounting.financial', 'accounting.tax', 'accounting.budget',
+    // 영업관리
+    'sales', 'sales.orders', 'sales.summary', 'sales.partners',
+    'sales.quotations', 'sales.deliveries', 'sales.returns', 'sales.pricing',
+    // 구매관리
+    'purchasing', 'purchasing.orders', 'purchasing.receiving',
+    'purchasing.suppliers', 'purchasing.summary',
+    // 생산관리
+    'production', 'production.oem', 'production.bom',
+    'production.plan', 'production.result',
+    // 재고관리
+    'inventory', 'inventory.items', 'inventory.stock',
+    'inventory.status', 'inventory.warehouses',
+    'inventory.expiry', 'inventory.lot',
+    // 품질관리
+    'quality', 'quality.incoming', 'quality.outgoing', 'quality.standards',
+    // 정산관리
+    'closing', 'closing.sales', 'closing.purchase',
+    'closing.netting', 'closing.payments',
+    // 회계관리
+    'accounting', 'accounting.vouchers', 'accounting.journal',
+    'accounting.ledger', 'accounting.financial',
+    'accounting.tax', 'accounting.budget',
+    // 인사관리
     'hr', 'hr.employees', 'hr.organization', 'hr.attendance',
     'hr.leave', 'hr.payroll', 'hr.recruitment',
-    'inventory', 'inventory.items', 'inventory.stock', 'inventory.status', 'inventory.warehouses',
-    'sales', 'sales.summary', 'sales.partners', 'sales.quotations', 'sales.orders', 'sales.deliveries',
-    'sales.pricing', 'sales.online-sales',
-    'purchasing', 'purchasing.orders', 'purchasing.receiving', 'purchasing.summary',
-    'production', 'production.plan', 'production.result', 'production.bom', 'production.oem',
-    'quality', 'quality.incoming', 'quality.outgoing', 'quality.standards',
-    'closing', 'closing.netting', 'closing.payments',
-    'closing.purchase-settlement', 'closing.sales-settlement',
+    // 프로젝트
     'projects',
-    'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
+    // 전자결재
+    'approval', 'approval.draft', 'approval.pending',
+    'approval.completed', 'approval.rejected',
+    // 게시판
     'board', 'board.notices', 'board.general', 'board.messages',
-    'admin', 'admin.users', 'admin.roles', 'admin.codes', 'admin.logs', 'admin.company',
+    // 시스템관리
+    'admin', 'admin.users', 'admin.roles', 'admin.codes',
+    'admin.logs', 'admin.company', 'admin.settings',
   ]
-  const actions = ['read', 'create', 'update', 'delete']
+  const actions = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
   // 권한이 이미 존재하는지 확인
   try {
@@ -155,7 +184,8 @@ async function applyPermissions() {
     if (managerRole.length > 0) {
       const roleId = managerRole[0].id
       const managerModules = [
-        'inventory', 'sales', 'closing', 'projects', 'hr.leave',
+        'inventory', 'sales', 'closing', 'closing.sales', 'closing.purchase',
+        'closing.netting', 'closing.payments', 'projects', 'hr.leave',
         'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
         'board', 'board.notices', 'board.general', 'board.messages',
       ]
