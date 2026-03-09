@@ -14,6 +14,8 @@ declare module 'next-auth' {
     employeeName: string | null
     departmentName: string | null
     positionName: string | null
+    accountType: string
+    shipperId: string | null
   }
 
   interface Session {
@@ -27,6 +29,8 @@ declare module 'next-auth' {
       employeeName: string | null
       departmentName: string | null
       positionName: string | null
+      accountType: string
+      shipperId: string | null
     }
   }
 }
@@ -40,5 +44,7 @@ declare module 'next-auth/jwt' {
     employeeName: string | null
     departmentName: string | null
     positionName: string | null
+    accountType: string
+    shipperId: string | null
   }
 }

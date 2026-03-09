@@ -58,6 +58,8 @@ export const authConfig: NextAuthConfig = {
         token.employeeName = user.employeeName
         token.departmentName = user.departmentName
         token.positionName = user.positionName
+        token.accountType = user.accountType || 'INTERNAL'
+        token.shipperId = user.shipperId || null
         token.loginAt = Date.now()
       }
 
@@ -78,6 +80,8 @@ export const authConfig: NextAuthConfig = {
         session.user.employeeName = token.employeeName
         session.user.departmentName = token.departmentName
         session.user.positionName = token.positionName
+        session.user.accountType = token.accountType || 'INTERNAL'
+        session.user.shipperId = token.shipperId || null
       }
       return session
     },

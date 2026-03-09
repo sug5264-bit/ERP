@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hash, compare } from 'bcryptjs'
+import { auth } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
+  // Require admin authentication
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ success: false, error: '인증이 필요합니다. 관리자로 로그인해주세요.' }, { status: 401 })
+  }
+
+  const user = session.user as Record<string, unknown>
+  const roles: string[] = Array.isArray(user.roles) ? user.roles : []
+  if (!roles.includes('관리자') && !roles.includes('SYSTEM_ADMIN')) {
+    return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
+  }
+
   const logs: string[] = []
   const PASSWORD = 'admin1234'
 
@@ -18,62 +32,17 @@ export async function GET() {
     )
 
     if (users.length === 0) {
-      logs.push('admin 사용자가 없음 - 새로 생성합니다')
-
-      const roles = await prisma.$queryRawUnsafe<{ id: string }[]>(
-        'SELECT "id" FROM "roles" WHERE "name" = $1 LIMIT 1',
-        '관리자'
-      )
-      let roleId: string
-      if (roles.length > 0) {
-        roleId = roles[0].id
-        logs.push('관리자 역할 존재: ' + roleId)
-      } else {
-        const newRole = await prisma.role.create({
-          data: { name: '관리자', description: '시스템 관리자', isSystem: true },
-        })
-        roleId = newRole.id
-        logs.push('관리자 역할 생성: ' + roleId)
-      }
-
-      const newHash = await hash(PASSWORD, 10)
-      const newUser = await prisma.$queryRawUnsafe<{ id: string }[]>(
-        `INSERT INTO "users" ("id", "username", "email", "passwordHash", "name", "isActive", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW())
-         RETURNING "id"`,
-        'admin',
-        'admin@wellgreen.co.kr',
-        newHash,
-        '관리자'
-      )
-
-      if (newUser.length > 0) {
-        await prisma.$executeRawUnsafe(
-          'INSERT INTO "user_roles" ("id", "userId", "roleId", "createdAt") VALUES (gen_random_uuid(), $1, $2, NOW())',
-          newUser[0].id,
-          roleId
-        )
-        logs.push('admin 계정 생성 완료: ' + newUser[0].id)
-      }
-
-      const verifyCompare = await compare(PASSWORD, newHash)
-      logs.push(`비밀번호 검증: ${verifyCompare}`)
-
-      return NextResponse.json({
-        success: true,
-        action: 'created',
-        credentials: { username: 'admin', password: PASSWORD },
-        logs,
-      })
+      logs.push('admin 사용자가 존재하지 않습니다. /api/health/init을 사용해주세요.')
+      return NextResponse.json({ success: false, logs, error: 'admin 사용자가 존재하지 않습니다.' }, { status: 404 })
     }
 
     const admin = users[0]
-    logs.push(`admin 사용자 존재: id=${admin.id}, isActive=${admin.isActive}, email=${admin.email}`)
+    logs.push(`admin 사용자 존재: id=${admin.id}, isActive=${admin.isActive}`)
 
     const oldCompare = await compare(PASSWORD, admin.passwordHash)
     logs.push(`기존 해시로 비교: ${oldCompare}`)
 
-    const newHash = await hash(PASSWORD, 10)
+    const newHash = await hash(PASSWORD, 12)
     const newCompare = await compare(PASSWORD, newHash)
     logs.push(`새 해시 검증: ${newCompare}`)
 
@@ -100,10 +69,12 @@ export async function GET() {
     )
     logs.push(`역할: ${roleCheck.map((r) => r.roleName).join(', ') || '없음'}`)
 
+    logger.info('Admin password reset', { module: 'auth', action: 'reset-admin', userId: admin.id })
+
     return NextResponse.json({
       success: true,
       action: 'reset',
-      credentials: { username: 'admin', password: PASSWORD },
+      message: '관리자 비밀번호가 리셋되었습니다. 기본 비밀번호로 로그인 후 즉시 변경해주세요.',
       logs,
     })
   } catch (error) {

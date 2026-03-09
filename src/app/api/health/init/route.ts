@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { hash, compare } from 'bcryptjs'
+import { auth } from '@/lib/auth'
+import { logger } from '@/lib/logger'
 
-const PASSWORD = 'admin1234'
+const DEFAULT_PASSWORD = 'admin1234'
 
 export async function GET() {
   return initAdmin()
@@ -16,6 +18,27 @@ async function initAdmin() {
   const logs: string[] = []
 
   try {
+    // Check if any users exist - if yes, require admin authentication
+    const userCount = await prisma.$queryRawUnsafe<{ count: bigint }[]>('SELECT COUNT(*)::bigint as count FROM "users"')
+    const hasExistingUsers = userCount.length > 0 && Number(userCount[0].count) > 0
+
+    if (hasExistingUsers) {
+      // Require admin session for non-initial setup
+      const session = await auth()
+      if (!session?.user) {
+        return NextResponse.json(
+          { success: false, error: '인증이 필요합니다. 관리자로 로그인해주세요.' },
+          { status: 401 }
+        )
+      }
+
+      const user = session.user as Record<string, unknown>
+      const roles: string[] = Array.isArray(user.roles) ? user.roles : []
+      if (!roles.includes('관리자') && !roles.includes('SYSTEM_ADMIN')) {
+        return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
+      }
+    }
+
     await prisma.$queryRawUnsafe('SELECT 1')
     logs.push('DB 연결 성공')
 
@@ -44,7 +67,7 @@ async function initAdmin() {
         roleId = newRole.id
       }
 
-      const newHash = await hash(PASSWORD, 10)
+      const newHash = await hash(DEFAULT_PASSWORD, 12)
       const newUser = await prisma.$queryRawUnsafe<{ id: string }[]>(
         `INSERT INTO "users" ("id", "username", "email", "passwordHash", "name", "isActive", "createdAt", "updatedAt")
          VALUES (gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW())
@@ -63,13 +86,13 @@ async function initAdmin() {
         )
       }
 
-      const verifyCompare = await compare(PASSWORD, newHash)
-      logs.push(`비밀번호 검증: ${verifyCompare}`)
+      logger.info('Admin user created via init endpoint', { module: 'auth', action: 'init' })
+      logs.push('admin 계정 생성 완료')
 
       return NextResponse.json({
         success: true,
         action: 'created',
-        credentials: { username: 'admin', password: PASSWORD },
+        message: '관리자 계정이 생성되었습니다. 기본 비밀번호로 로그인 후 즉시 변경해주세요.',
         logs,
       })
     }
@@ -77,21 +100,14 @@ async function initAdmin() {
     const admin = users[0]
     logs.push(`admin 존재: id=${admin.id}, isActive=${admin.isActive}`)
 
-    // 기존 비밀번호 비교 테스트
-    const oldCompare = await compare(PASSWORD, admin.passwordHash)
-    logs.push(`기존 해시로 비교: ${oldCompare}`)
-
-    // 새 해시 생성 및 업데이트
-    const newHash = await hash(PASSWORD, 10)
-    const newCompare = await compare(PASSWORD, newHash)
-    logs.push(`새 해시 검증: ${newCompare}`)
-
+    // 비밀번호 리셋
+    const newHash = await hash(DEFAULT_PASSWORD, 12)
     await prisma.$executeRawUnsafe(
       'UPDATE "users" SET "passwordHash" = $1, "isActive" = true WHERE "id" = $2',
       newHash,
       admin.id
     )
-    logs.push('DB 업데이트 완료')
+    logs.push('비밀번호 리셋 완료')
 
     // 업데이트 후 재검증
     const verifyUsers = await prisma.$queryRawUnsafe<{ passwordHash: string; isActive: boolean }[]>(
@@ -99,7 +115,7 @@ async function initAdmin() {
       admin.id
     )
     if (verifyUsers.length > 0) {
-      const finalCompare = await compare(PASSWORD, verifyUsers[0].passwordHash)
+      const finalCompare = await compare(DEFAULT_PASSWORD, verifyUsers[0].passwordHash)
       logs.push(`DB 재검증: ${finalCompare}, isActive: ${verifyUsers[0].isActive}`)
     }
 
@@ -110,10 +126,12 @@ async function initAdmin() {
     )
     logs.push(`역할: ${roleCheck.map((r) => r.roleName).join(', ') || '없음'}`)
 
+    logger.info('Admin password reset via init endpoint', { module: 'auth', action: 'init', userId: admin.id })
+
     return NextResponse.json({
       success: true,
       action: 'reset',
-      credentials: { username: 'admin', password: PASSWORD },
+      message: '관리자 비밀번호가 리셋되었습니다. 기본 비밀번호로 로그인 후 즉시 변경해주세요.',
       logs,
     })
   } catch (error) {
