@@ -755,6 +755,8 @@ model Item {
   receivingDetails       ReceivingDetail[]
   salesReturnDetails     SalesReturnDetail[]
   qualityStandards       QualityStandard[]
+  bomHeaders             BomHeader[]
+  bomDetails             BomDetail[]
 
   @@index([itemName])
   @@index([isActive, itemType])
@@ -906,6 +908,7 @@ model Partner {
   taxInvoices      TaxInvoice[]
   purchasePayments PurchasePayment[]
   salesReturns     SalesReturn[]
+  oemContracts     OemContract[]
 
   @@index([partnerName])
   @@index([bizNo])
@@ -1722,6 +1725,7 @@ model OemContract {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
+  partner         Partner           @relation(fields: [partnerId], references: [id])
   productionPlans ProductionPlan[]
 
   @@index([partnerId])
@@ -1741,6 +1745,7 @@ model BomHeader {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  item            Item             @relation(fields: [itemId], references: [id])
   details         BomDetail[]
   productionPlans ProductionPlan[]
 
@@ -1759,6 +1764,7 @@ model BomDetail {
   remark       String?
 
   bomHeader BomHeader @relation(fields: [bomHeaderId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id])
 
   @@unique([bomHeaderId, lineNo])
   @@index([itemId])

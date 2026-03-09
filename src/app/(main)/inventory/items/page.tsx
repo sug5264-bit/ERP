@@ -188,6 +188,7 @@ export default function ItemsPage() {
     mutationFn: (id: string) => api.delete(`/inventory/items/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] })
+      setDeleteTarget(null)
       toast.success('품목이 삭제되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
