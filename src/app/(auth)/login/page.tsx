@@ -51,7 +51,8 @@ function LoginForm() {
         }
       } else if (result?.ok) {
         console.log('[Login] Redirecting to:', callbackUrl)
-        window.location.href = callbackUrl
+        router.push(callbackUrl)
+        router.refresh()
       } else {
         setError(`로그인 응답을 처리할 수 없습니다. (${JSON.stringify(result)})`)
       }
