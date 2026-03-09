@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createDeliverySchema } from '@/lib/validations/sales'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { ensureItemExists } from '@/lib/auto-sync'
 
 export async function GET(request: NextRequest) {
   try {
@@ -101,32 +102,38 @@ export async function POST(request: NextRequest) {
     if (salesOrder.status === 'COMPLETED') return errorResponse('이미 완료된 발주입니다.', 'INVALID_STATUS', 400)
     if (!salesOrder.partnerId) return errorResponse('발주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
 
-    // 납품 수량이 발주 잔량을 초과하는지 검증
-    const salesOrderDetails = await prisma.salesOrderDetail.findMany({
-      where: { salesOrderId: data.salesOrderId },
-      select: { itemId: true, remainingQty: true },
-    })
-    for (const detail of data.details) {
-      const orderDetail = salesOrderDetails.find((sod) => sod.itemId === detail.itemId)
-      if (!orderDetail) {
-        return errorResponse(
-          `발주에 포함되지 않은 품목입니다. (itemId: ${detail.itemId})`,
-          'INVALID_ITEM',
-          400
-        )
-      }
-      if (detail.quantity > Number(orderDetail.remainingQty)) {
-        return errorResponse(
-          `납품 수량이 발주 잔량을 초과합니다. (품목: ${detail.itemId}, 잔량: ${orderDetail.remainingQty}, 납품수량: ${detail.quantity})`,
-          'QUANTITY_EXCEEDED',
-          400
-        )
-      }
-    }
-
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     const result = await prisma.$transaction(async (tx) => {
+      // 품목 자동 생성/확인
+      const resolvedDetails = []
+      for (const d of data.details) {
+        const itemId = await ensureItemExists({
+          itemId: d.itemId,
+          itemCode: d.itemCode,
+          itemName: d.itemName,
+          standardPrice: d.unitPrice,
+        }, tx)
+        resolvedDetails.push({ ...d, itemId })
+      }
+
+      // 납품 수량이 발주 잔량을 초과하는지 검증
+      const salesOrderDetails = await tx.salesOrderDetail.findMany({
+        where: { salesOrderId: data.salesOrderId },
+        select: { itemId: true, remainingQty: true },
+      })
+      for (const detail of resolvedDetails) {
+        const orderDetail = salesOrderDetails.find((sod) => sod.itemId === detail.itemId)
+        if (!orderDetail) {
+          throw new Error(`발주에 포함되지 않은 품목입니다. (itemId: ${detail.itemId})`)
+        }
+        if (detail.quantity > Number(orderDetail.remainingQty)) {
+          throw new Error(
+            `납품 수량이 발주 잔량을 초과합니다. (품목: ${detail.itemId}, 잔량: ${orderDetail.remainingQty}, 납품수량: ${detail.quantity})`
+          )
+        }
+      }
+
       const deliveryNo = await generateDocumentNumber('DLV', new Date(data.deliveryDate), tx)
       const delivery = await tx.delivery.create({
         data: {
@@ -138,7 +145,7 @@ export async function POST(request: NextRequest) {
           trackingNo: data.trackingNo || null,
           carrier: data.carrier || null,
           details: {
-            create: data.details.map((d) => ({
+            create: resolvedDetails.map((d) => ({
               itemId: d.itemId,
               quantity: d.quantity,
               unitPrice: d.unitPrice,
@@ -151,7 +158,7 @@ export async function POST(request: NextRequest) {
 
       // 발주 상세 업데이트 (납품수량 증가, 잔량 감소)
       await Promise.all(
-        data.details.map((d) =>
+        resolvedDetails.map((d) =>
           tx.salesOrderDetail.updateMany({
             where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
             data: { deliveredQty: { increment: d.quantity }, remainingQty: { decrement: d.quantity } },
@@ -170,7 +177,7 @@ export async function POST(request: NextRequest) {
           relatedDocId: delivery.id,
           createdBy: employee.id,
           details: {
-            create: data.details.map((d) => ({
+            create: resolvedDetails.map((d) => ({
               itemId: d.itemId,
               quantity: d.quantity,
               unitPrice: d.unitPrice,
@@ -181,7 +188,7 @@ export async function POST(request: NextRequest) {
       })
 
       // 재고 잔량 차감 (창고별 순차 차감, 음수 방지 검증)
-      for (const d of data.details) {
+      for (const d of resolvedDetails) {
         const balances = await tx.stockBalance.findMany({
           where: { itemId: d.itemId },
           select: { id: true, quantity: true, warehouseId: true },

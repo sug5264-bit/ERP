@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createSalesReturnSchema } from '@/lib/validations/sales'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { ensureItemExists, ensurePartnerExists, createAutoStockMovement } from '@/lib/auto-sync'
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = createSalesReturnSchema.parse(body)
 
-    // 발주 존재 확인 및 거래처 일치 검증
+    // 발주 존재 확인
     const salesOrder = await prisma.salesOrder.findUnique({
       where: { id: data.salesOrderId },
       select: { id: true, partnerId: true, status: true },
@@ -60,29 +61,60 @@ export async function POST(req: NextRequest) {
     if (!salesOrder) {
       return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
-    if (salesOrder.partnerId && salesOrder.partnerId !== data.partnerId) {
-      return errorResponse('반품 거래처가 발주 거래처와 일치하지 않습니다.', 'PARTNER_MISMATCH', 400)
-    }
 
-    // 반품 상세가 있으면 totalAmount를 자동 계산
-    const details = data.details || []
-    const computedTotal =
-      details.length > 0 ? details.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0) : data.totalAmount
+    const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
+    if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
+    const autoCreated: string[] = []
 
     const salesReturn = await prisma.$transaction(async (tx) => {
+      // 거래처 자동 확인/생성
+      const partnerId = await ensurePartnerExists({
+        partnerId: data.partnerId || salesOrder.partnerId,
+        partnerName: data.partnerName,
+        partnerType: 'SALES',
+      }, tx)
+
+      if (salesOrder.partnerId && partnerId && salesOrder.partnerId !== partnerId) {
+        throw new Error('반품 거래처가 발주 거래처와 일치하지 않습니다.')
+      }
+      const finalPartnerId = partnerId || salesOrder.partnerId
+      if (!finalPartnerId) {
+        throw new Error('거래처 정보가 필요합니다.')
+      }
+
+      // 반품 상세 품목 자동 생성/확인
+      const rawDetails = data.details || []
+      const resolvedDetails = []
+      for (const d of rawDetails) {
+        const itemId = await ensureItemExists({
+          itemId: d.itemId,
+          itemName: d.itemName,
+        }, tx)
+        if (!d.itemId && d.itemName) {
+          autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
+        }
+        resolvedDetails.push({ ...d, itemId })
+      }
+
+      const computedTotal =
+        resolvedDetails.length > 0
+          ? resolvedDetails.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0)
+          : data.totalAmount
+
       const returnNo = await generateDocumentNumber('RT', new Date(data.returnDate), tx)
       const created = await tx.salesReturn.create({
         data: {
           returnNo,
           returnDate: new Date(data.returnDate),
           salesOrderId: data.salesOrderId,
-          partnerId: data.partnerId,
+          partnerId: finalPartnerId,
           reason: data.reason,
           reasonDetail: data.reasonDetail || null,
           totalAmount: computedTotal,
-          ...(details.length > 0 && {
+          ...(resolvedDetails.length > 0 && {
             details: {
-              create: details.map((d) => ({
+              create: resolvedDetails.map((d) => ({
                 itemId: d.itemId,
                 quantity: d.quantity,
                 unitPrice: d.unitPrice,
@@ -100,45 +132,42 @@ export async function POST(req: NextRequest) {
       })
 
       // 반품 시 재고 복원 (입고 처리) 및 발주 잔량 복원
-      if (details.length > 0) {
-        for (const d of details) {
-          // 발주 상세의 납품수량 감소, 잔량 증가
+      if (resolvedDetails.length > 0) {
+        // 재고이동 자동 생성 (반품 입고)
+        await createAutoStockMovement({
+          movementType: 'INBOUND',
+          relatedDocType: 'SALES_RETURN',
+          relatedDocId: created.id,
+          movementDate: new Date(data.returnDate),
+          details: resolvedDetails.map((d) => ({
+            itemId: d.itemId,
+            quantity: d.quantity,
+            unitPrice: d.unitPrice,
+          })),
+          createdBy: employee.id,
+        }, tx)
+
+        // 발주 상세의 납품수량 감소, 잔량 증가
+        for (const d of resolvedDetails) {
           await tx.salesOrderDetail.updateMany({
             where: { salesOrderId: data.salesOrderId, itemId: d.itemId },
             data: { deliveredQty: { decrement: d.quantity }, remainingQty: { increment: d.quantity } },
           })
-          // 재고 잔량 복원 (기존 재고가 있는 창고에 입고, 없으면 기본 창고에 신규 생성)
-          const existingBalance = await tx.stockBalance.findFirst({
-            where: { itemId: d.itemId },
-            orderBy: { lastMovementDate: 'desc' },
+        }
+
+        // 발주 상태를 IN_PROGRESS로 복원 (완료였던 경우)
+        if (salesOrder.status === 'COMPLETED') {
+          await tx.salesOrder.update({
+            where: { id: data.salesOrderId },
+            data: { status: 'IN_PROGRESS' },
           })
-          if (existingBalance) {
-            await tx.stockBalance.update({
-              where: { id: existingBalance.id },
-              data: { quantity: { increment: d.quantity }, lastMovementDate: new Date() },
-            })
-          } else {
-            // 재고 기록이 없는 경우 기본 창고에 신규 생성
-            const defaultWarehouse = await tx.warehouse.findFirst({ where: { isActive: true }, orderBy: { code: 'asc' } })
-            if (defaultWarehouse) {
-              await tx.stockBalance.create({
-                data: {
-                  itemId: d.itemId,
-                  warehouseId: defaultWarehouse.id,
-                  quantity: d.quantity,
-                  averageCost: Number(d.unitPrice),
-                  lastMovementDate: new Date(),
-                },
-              })
-            }
-          }
         }
       }
 
       return created
     })
 
-    return successResponse(salesReturn)
+    return successResponse({ ...salesReturn, autoCreated })
   } catch (error) {
     return handleApiError(error)
   }

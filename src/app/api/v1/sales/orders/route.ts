@@ -12,6 +12,7 @@ import {
 import { createSalesOrderSchema } from '@/lib/validations/sales'
 import { generateDocumentNumber } from '@/lib/doc-number'
 import { sanitizeSearchQuery } from '@/lib/sanitize'
+import { ensureItemExists, ensurePartnerExists } from '@/lib/auto-sync'
 
 export async function GET(request: NextRequest) {
   try {
@@ -108,73 +109,103 @@ export async function POST(request: NextRequest) {
       employeeId = employee.id
     }
 
-    // 가용재고 체크: 현재고 - 기존 미처리 발주잔량
     const warnings: string[] = []
-    const orderItemIds = data.details.map((d) => d.itemId)
-
-    // 재고, 발주잔량, 품목정보를 병렬 조회
-    const [stockAggs, orderedAggs, itemsInfo] = await Promise.all([
-      prisma.stockBalance.groupBy({
-        by: ['itemId'],
-        where: { itemId: { in: orderItemIds } },
-        _sum: { quantity: true },
-      }),
-      prisma.salesOrderDetail.groupBy({
-        by: ['itemId'],
-        where: {
-          itemId: { in: orderItemIds },
-          salesOrder: { status: { in: ['ORDERED', 'IN_PROGRESS'] } },
-          remainingQty: { gt: 0 },
-        },
-        _sum: { remainingQty: true },
-      }),
-      prisma.item.findMany({
-        where: { id: { in: orderItemIds } },
-        select: { id: true, itemName: true, taxType: true },
-      }),
-    ])
-    const stockMap = new Map(stockAggs.map((s) => [s.itemId, Number(s._sum.quantity ?? 0)]))
-    const orderedMap = new Map(orderedAggs.map((o) => [o.itemId, Number(o._sum.remainingQty ?? 0)]))
-    const itemInfoMap = new Map(itemsInfo.map((i) => [i.id, i]))
-
-    for (const d of data.details) {
-      const currentStock = stockMap.get(d.itemId) || 0
-      const existingOrdered = orderedMap.get(d.itemId) || 0
-      const availableQty = Math.max(0, currentStock - existingOrdered)
-      if (d.quantity > availableQty) {
-        const itemName = itemInfoMap.get(d.itemId)?.itemName ?? d.itemId
-        warnings.push(`품목 ${itemName}: 주문수량 ${d.quantity}개, 가용재고 ${availableQty}개 (재고 부족)`)
-      }
-    }
-
-    const isVatIncluded = data.vatIncluded !== false
-    const details = data.details.map((d, idx) => {
-      const supplyAmount = Math.round(d.quantity * d.unitPrice)
-      const taxType = itemInfoMap.get(d.itemId)?.taxType || 'TAXABLE'
-      const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
-      return {
-        lineNo: idx + 1,
-        itemId: d.itemId,
-        quantity: d.quantity,
-        unitPrice: d.unitPrice,
-        supplyAmount,
-        taxAmount,
-        totalAmount: supplyAmount + taxAmount,
-        deliveredQty: 0,
-        remainingQty: d.quantity,
-        remark: d.remark || null,
-      }
-    })
-    const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
-    const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
+    const autoCreated: string[] = []
 
     const result = await prisma.$transaction(async (tx) => {
+      // 거래처 자동 생성/확인
+      const partnerId = await ensurePartnerExists({
+        partnerId: data.partnerId,
+        partnerName: data.partnerName,
+        partnerCode: data.partnerCode,
+        bizNo: data.bizNo,
+        partnerType: 'SALES',
+      }, tx)
+      if (partnerId && !data.partnerId && data.partnerName) {
+        autoCreated.push(`거래처 "${data.partnerName}" 자동 생성`)
+      }
+
+      // 품목 자동 생성/확인 및 ID 해소
+      const resolvedDetails = []
+      for (const d of data.details) {
+        const itemId = await ensureItemExists({
+          itemId: d.itemId,
+          itemCode: d.itemCode,
+          itemName: d.itemName,
+          specification: d.specification,
+          unit: d.unit,
+          standardPrice: d.unitPrice,
+          barcode: d.barcode,
+        }, tx)
+        if (!d.itemId && d.itemName) {
+          autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
+        }
+        resolvedDetails.push({ ...d, itemId })
+      }
+
+      // 가용재고 체크
+      const orderItemIds = resolvedDetails.map((d) => d.itemId)
+      const [stockAggs, orderedAggs, itemsInfo] = await Promise.all([
+        tx.stockBalance.groupBy({
+          by: ['itemId'],
+          where: { itemId: { in: orderItemIds } },
+          _sum: { quantity: true },
+        }),
+        tx.salesOrderDetail.groupBy({
+          by: ['itemId'],
+          where: {
+            itemId: { in: orderItemIds },
+            salesOrder: { status: { in: ['ORDERED', 'IN_PROGRESS'] } },
+            remainingQty: { gt: 0 },
+          },
+          _sum: { remainingQty: true },
+        }),
+        tx.item.findMany({
+          where: { id: { in: orderItemIds } },
+          select: { id: true, itemName: true, taxType: true },
+        }),
+      ])
+      const stockMap = new Map(stockAggs.map((s) => [s.itemId, Number(s._sum.quantity ?? 0)]))
+      const orderedMap = new Map(orderedAggs.map((o) => [o.itemId, Number(o._sum.remainingQty ?? 0)]))
+      const itemInfoMap = new Map(itemsInfo.map((i) => [i.id, i]))
+
+      for (const d of resolvedDetails) {
+        const currentStock = stockMap.get(d.itemId) || 0
+        const existingOrdered = orderedMap.get(d.itemId) || 0
+        const availableQty = Math.max(0, currentStock - existingOrdered)
+        if (d.quantity > availableQty) {
+          const itemName = itemInfoMap.get(d.itemId)?.itemName ?? d.itemId
+          warnings.push(`품목 ${itemName}: 주문수량 ${d.quantity}개, 가용재고 ${availableQty}개 (재고 부족)`)
+        }
+      }
+
+      const isVatIncluded = data.vatIncluded !== false
+      const details = resolvedDetails.map((d, idx) => {
+        const supplyAmount = Math.round(d.quantity * d.unitPrice)
+        const taxType = itemInfoMap.get(d.itemId)?.taxType || 'TAXABLE'
+        const taxAmount = isVatIncluded && taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+        return {
+          lineNo: idx + 1,
+          itemId: d.itemId,
+          quantity: d.quantity,
+          unitPrice: d.unitPrice,
+          supplyAmount,
+          taxAmount,
+          totalAmount: supplyAmount + taxAmount,
+          deliveredQty: 0,
+          remainingQty: d.quantity,
+          remark: d.remark || null,
+        }
+      })
+      const totalSupply = details.reduce((s, d) => s + d.supplyAmount, 0)
+      const totalTax = details.reduce((s, d) => s + d.taxAmount, 0)
+
       const orderNo = await generateDocumentNumber('SO', new Date(data.orderDate), tx)
       const order = await tx.salesOrder.create({
         data: {
           orderNo,
           orderDate: new Date(data.orderDate),
-          partnerId: data.partnerId || null,
+          partnerId: partnerId || null,
           quotationId: data.quotationId || null,
           deliveryDate: data.deliveryDate ? new Date(data.deliveryDate) : null,
           salesChannel: data.salesChannel || 'OFFLINE',
@@ -207,7 +238,7 @@ export async function POST(request: NextRequest) {
       }
       return order
     })
-    return successResponse({ ...result, warnings })
+    return successResponse({ ...result, warnings, autoCreated })
   } catch (error) {
     return handleApiError(error)
   }
