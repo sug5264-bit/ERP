@@ -111,11 +111,18 @@ export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promis
 }
 
 function createPrismaClient() {
-  // Supabase 서버리스 환경에서 커넥션 풀 제한
+  // Supabase PgBouncer Transaction 모드: pgbouncer=true & statement_cache_size=0 필수
   let datasourceUrl = process.env.DATABASE_URL || ''
-  if (datasourceUrl && !datasourceUrl.includes('connection_limit')) {
+  if (datasourceUrl) {
     const separator = datasourceUrl.includes('?') ? '&' : '?'
-    datasourceUrl = `${datasourceUrl}${separator}connection_limit=5&pool_timeout=20`
+    const params: string[] = []
+    if (!datasourceUrl.includes('pgbouncer=')) params.push('pgbouncer=true')
+    if (!datasourceUrl.includes('statement_cache_size=')) params.push('statement_cache_size=0')
+    if (!datasourceUrl.includes('connection_limit=')) params.push('connection_limit=5')
+    if (!datasourceUrl.includes('pool_timeout=')) params.push('pool_timeout=20')
+    if (params.length > 0) {
+      datasourceUrl = `${datasourceUrl}${separator}${params.join('&')}`
+    }
   }
 
   const client = new PrismaClient({
