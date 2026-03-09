@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
 import { COMPANY_NAME } from '@/lib/constants'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
-import { generateTransactionStatementPDF, type TransactionStatementPDFData } from '@/lib/pdf-reports'
+import { generateTransactionStatementPDF, generateDeliveryStatementPDF, type TransactionStatementPDFData, type DeliveryStatementPDFData } from '@/lib/pdf-reports'
 import { toast } from 'sonner'
 import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2, CheckCircle, Paperclip, X } from 'lucide-react'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
@@ -334,6 +334,52 @@ export function DeliveriesPanel() {
     toast.success('거래명세서 PDF가 다운로드되었습니다.')
   }
 
+  const handleDeliveryStatementPDF = (delivery: DeliveryRow) => {
+    const companies: CompanyOption[] = companyData?.data || []
+    const company = companies.find((c) => c.isDefault) || companies[0]
+    const details = delivery.details || []
+    const items = details.map((d: DeliveryDetailRow, i: number) => ({
+      no: i + 1,
+      itemName: d.item?.itemName || '',
+      spec: d.item?.specification || '',
+      unit: d.item?.unit || 'EA',
+      qty: Number(d.quantity),
+      unitPrice: Number(d.unitPrice),
+      amount: Number(d.amount),
+    }))
+    const totalQty = items.reduce((s, it) => s + it.qty, 0)
+    const totalAmount = items.reduce((s, it) => s + it.amount, 0)
+    const pdfData: DeliveryStatementPDFData = {
+      deliveryNo: delivery.deliveryNo,
+      deliveryDate: formatDate(delivery.deliveryDate),
+      orderNo: delivery.salesOrder?.orderNo || '',
+      supplier: {
+        name: company?.companyName || COMPANY_NAME,
+        bizNo: company?.bizNo || '',
+        ceo: company?.ceoName || '',
+        address: company?.address || '',
+        tel: company?.phone || '',
+        bankName: company?.bankName || '',
+        bankAccount: company?.bankAccount || '',
+        bankHolder: company?.bankHolder || '',
+      },
+      buyer: {
+        name: delivery.partner?.partnerName || '',
+        bizNo: delivery.partner?.bizNo || '',
+        ceo: delivery.partner?.ceoName || '',
+        address: delivery.partner?.address || '',
+        tel: delivery.partner?.phone || '',
+      },
+      items,
+      totalQty,
+      totalAmount,
+      carrier: delivery.carrier || undefined,
+      trackingNo: delivery.trackingNo || undefined,
+    }
+    generateDeliveryStatementPDF(pdfData)
+    toast.success('납품명세서 PDF가 다운로드되었습니다.')
+  }
+
   const columns: ColumnDef<DeliveryRow>[] = [
     {
       accessorKey: 'deliveryNo',
@@ -446,18 +492,30 @@ export function DeliveriesPanel() {
     },
     {
       id: 'pdf',
-      header: '',
+      header: '문서',
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => handleStatementPDF(row.original)}
-          title="거래명세서 PDF"
-          aria-label="거래명세서 PDF 다운로드"
-        >
-          <FileDown className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-1.5 text-[10px]"
+            onClick={() => handleStatementPDF(row.original)}
+            title="거래명세서 PDF"
+          >
+            <FileDown className="mr-0.5 h-3 w-3" />
+            명세서
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-1.5 text-[10px]"
+            onClick={() => handleDeliveryStatementPDF(row.original)}
+            title="납품명세서 PDF"
+          >
+            <FileDown className="mr-0.5 h-3 w-3" />
+            납품서
+          </Button>
+        </div>
       ),
     },
   ]

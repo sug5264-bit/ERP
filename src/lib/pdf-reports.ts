@@ -1180,6 +1180,179 @@ export async function generateSalesOrderPDF(data: SalesOrderPDFData) {
 }
 
 // ---------------------------------------------------------------------------
+// 6-1. 납품명세서 (Delivery Statement) — 한국 표준 양식
+// ---------------------------------------------------------------------------
+
+export interface DeliveryStatementPDFData {
+  deliveryNo: string
+  deliveryDate: string
+  orderNo: string
+  supplier: {
+    name: string
+    bizNo?: string
+    ceo?: string
+    address?: string
+    tel?: string
+    bankName?: string
+    bankAccount?: string
+    bankHolder?: string
+  }
+  buyer: { name: string; bizNo?: string; ceo?: string; address?: string; tel?: string }
+  items: {
+    no: number
+    itemName: string
+    spec?: string
+    unit?: string
+    qty: number
+    unitPrice: number
+    amount: number
+  }[]
+  totalQty: number
+  totalAmount: number
+  deliveryAddress?: string
+  carrier?: string
+  trackingNo?: string
+}
+
+export async function generateDeliveryStatementPDF(data: DeliveryStatementPDFData) {
+  const { doc, autoTable, fontName, pageWidth } = await createPDFDocument()
+  const cell = makeCell(doc, fontName, 8)
+
+  let y = 12
+
+  // --- 제목 ---
+  doc.setFontSize(22)
+  doc.setFont(fontName, 'normal')
+  doc.text('납 품 명 세 서', pageWidth / 2, y, { align: 'center' })
+  y += 5
+  doc.setFontSize(9)
+  doc.setTextColor(100, 100, 100)
+  doc.text('(Delivery Statement)', pageWidth / 2, y + 2, { align: 'center' })
+  doc.setTextColor(0, 0, 0)
+  y += 8
+
+  // --- 문서번호/일자 ---
+  doc.setFontSize(10)
+  doc.text(`${data.buyer.name}  귀하`, PAGE_MARGIN, y)
+  doc.setFontSize(8)
+  doc.text(`납품번호: ${data.deliveryNo}`, pageWidth - PAGE_MARGIN, y, { align: 'right' })
+  y += 5
+  doc.text(`납품일자: ${data.deliveryDate}`, pageWidth - PAGE_MARGIN, y, { align: 'right' })
+  y += 4
+  doc.text(`발주번호: ${data.orderNo}`, pageWidth - PAGE_MARGIN, y, { align: 'right' })
+  y += 6
+
+  // --- 금액 ---
+  const rh = 8
+  cell(PAGE_MARGIN, y, 28, rh, '합 계 금 액', { align: 'center', fill: true, fontSize: 9 })
+  cell(PAGE_MARGIN + 28, y, pageWidth - 2 * PAGE_MARGIN - 28, rh,
+    `₩${fmtNumber(data.totalAmount)}`, { fontSize: 10 })
+  y += rh + 2
+
+  doc.setFontSize(9)
+  doc.text('아래와 같이 납품합니다.', PAGE_MARGIN, y + 3)
+  y += 8
+
+  // --- 공급자/수신처 정보 ---
+  const infoW = (pageWidth - 2 * PAGE_MARGIN - 4) / 2
+  const labelW = 24
+  const irh = 6.5
+
+  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
+  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '수  령  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
+  y += 7
+
+  const valW = infoW - labelW
+  const infoRows = [
+    ['상 호', data.supplier.name, '상 호', data.buyer.name],
+    ['대 표 자', `${data.supplier.ceo ?? ''}          (인)`, '대 표 자', data.buyer.ceo ?? ''],
+    ['사업자번호', data.supplier.bizNo ?? '', '사업자번호', data.buyer.bizNo ?? ''],
+    ['주 소', data.supplier.address ?? '', '주 소', data.buyer.address ?? ''],
+    ['전 화', data.supplier.tel ?? '', '전 화', data.buyer.tel ?? ''],
+  ]
+  for (const row of infoRows) {
+    cell(PAGE_MARGIN, y, labelW, irh, row[0], { align: 'center', fill: true, fontSize: 7 })
+    cell(PAGE_MARGIN + labelW, y, valW, irh, row[1], { fontSize: 7.5 })
+    cell(PAGE_MARGIN + infoW + 4, y, labelW, irh, row[2], { align: 'center', fill: true, fontSize: 7 })
+    cell(PAGE_MARGIN + infoW + 4 + labelW, y, valW, irh, row[3], { fontSize: 7.5 })
+    y += irh
+  }
+  y += 4
+
+  // --- 품목 테이블 ---
+  autoTable({
+    ...itemTableStyles,
+    startY: y,
+    head: [['No', '품명', '규격', '단위', '수량', '단가', '금액']],
+    body: data.items.map((item) => [
+      String(item.no),
+      item.itemName,
+      item.spec ?? '',
+      item.unit ?? '',
+      fmtNumber(item.qty),
+      fmtNumber(item.unitPrice),
+      fmtNumber(item.amount),
+    ]),
+    columnStyles: {
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 45 },
+      2: { cellWidth: 25 },
+      3: { cellWidth: 16, halign: 'center' },
+      4: { cellWidth: 20, halign: 'right' },
+      5: { cellWidth: 25, halign: 'right' },
+      6: { cellWidth: 30, halign: 'right' },
+    },
+    foot: [[
+      '', '합 계', '', '',
+      fmtNumber(data.totalQty),
+      '',
+      fmtNumber(data.totalAmount),
+    ]],
+    footStyles: { fillColor: PDF_COLORS.LIGHT_GRAY, fontStyle: 'bold' },
+  })
+  y = getLastTableY(doc) + 6
+
+  // --- 배송 정보 ---
+  const deliveryInfo = [
+    ...(data.deliveryAddress ? [['배송주소', data.deliveryAddress]] : []),
+    ...(data.carrier ? [['운송사', data.carrier]] : []),
+    ...(data.trackingNo ? [['운송장번호', data.trackingNo]] : []),
+  ]
+  if (deliveryInfo.length > 0) {
+    autoTable({
+      startY: y,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 3 },
+      margin: { left: PAGE_MARGIN, right: PAGE_MARGIN },
+      body: deliveryInfo,
+      columnStyles: { 0: { cellWidth: 28, ...labelColumnStyle } },
+    })
+    y = getLastTableY(doc) + 6
+  }
+
+  // --- 입금계좌 ---
+  if (data.supplier.bankName) {
+    doc.setFontSize(8)
+    doc.text(
+      `입금계좌:  ${data.supplier.bankName}  ${data.supplier.bankAccount || ''}  ${data.supplier.bankHolder || ''}`,
+      PAGE_MARGIN, y
+    )
+    y += 6
+  }
+
+  // --- 인수확인 ---
+  y += 4
+  doc.setFontSize(8)
+  doc.text('위와 같이 납품물품을 인수하였습니다.', PAGE_MARGIN, y)
+  y += 10
+  doc.text('인수자:                          (서명)', pageWidth - PAGE_MARGIN - 60, y)
+  doc.text(`일자:  ${data.deliveryDate}`, pageWidth - PAGE_MARGIN - 60, y + 6)
+
+  addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
+  doc.save(`납품명세서_${data.deliveryNo}.pdf`)
+}
+
+// ---------------------------------------------------------------------------
 // 7. 급여명세서 (Payroll Slip)
 // ---------------------------------------------------------------------------
 
