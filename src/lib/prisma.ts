@@ -46,6 +46,7 @@ export function resetQueryStats(): void {
 
 function createPrismaClient() {
   const client = new PrismaClient({
+    datasourceUrl: process.env.DATABASE_URL,
     log:
       process.env.NODE_ENV === 'development'
         ? [
@@ -96,3 +97,9 @@ export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
+
+// Graceful shutdown: 프로세스 종료 시 커넥션 풀 정리
+const shutdownHandler = async () => {
+  await prisma.$disconnect()
+}
+process.on('beforeExit', shutdownHandler)

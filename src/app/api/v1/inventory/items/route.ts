@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createItemSchema } from '@/lib/validations/inventory'
 import { sanitizeSearchQuery } from '@/lib/sanitize'
+import { cached, invalidateCache } from '@/lib/cache'
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,16 +38,22 @@ export async function GET(request: NextRequest) {
     const isActive = sp.get('isActive')
     if (isActive) where.isActive = isActive === 'true'
 
-    const [items, totalCount] = await Promise.all([
-      prisma.item.findMany({
-        where,
-        include: { category: { select: { id: true, code: true, name: true } } },
-        orderBy: { itemCode: 'asc' },
-        skip,
-        take: pageSize,
-      }),
-      prisma.item.count({ where }),
-    ])
+    // 필터 없는 대량 조회(Select 옵션용)는 캐시 적용
+    const cacheKey = !rawSearch && !itemType && !categoryId && !isActive ? `items:list:${page}:${pageSize}` : null
+
+    const fetchData = () =>
+      Promise.all([
+        prisma.item.findMany({
+          where,
+          include: { category: { select: { id: true, code: true, name: true } } },
+          orderBy: { itemCode: 'asc' },
+          skip,
+          take: pageSize,
+        }),
+        prisma.item.count({ where }),
+      ])
+
+    const [items, totalCount] = cacheKey ? await cached(cacheKey, fetchData, 3 * 60 * 1000) : await fetchData()
 
     return successResponse(items, buildMeta(page, pageSize, totalCount))
   } catch (error) {
@@ -66,6 +73,7 @@ export async function POST(request: NextRequest) {
     if (exists) return errorResponse('이미 존재하는 품목코드입니다.', 'DUPLICATE', 409)
 
     const item = await prisma.item.create({ data: { ...data, standardPrice: data.standardPrice } })
+    invalidateCache('items:*')
     return successResponse(item)
   } catch (error) {
     return handleApiError(error)

@@ -61,11 +61,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return errorResponse('발주서를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
-    const VALID_STATUSES = ['ORDERED', 'CONFIRMED', 'SHIPPED', 'RECEIVED', 'CANCELLED']
+    // 허용된 상태 전이 매트릭스 (현재상태 → 가능한 다음상태)
+    const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+      ORDERED: ['CONFIRMED', 'CANCELLED'],
+      CONFIRMED: ['SHIPPED', 'CANCELLED'],
+      SHIPPED: ['RECEIVED'],
+      RECEIVED: [], // 최종 상태
+      CANCELLED: [], // 최종 상태
+    }
     const updateData: Record<string, unknown> = {}
     if (body.status) {
-      if (!VALID_STATUSES.includes(body.status)) {
-        return errorResponse('유효하지 않은 상태입니다.', 'INVALID_STATUS', 400)
+      const allowed = ALLOWED_TRANSITIONS[existing.status] || []
+      if (!allowed.includes(body.status)) {
+        return errorResponse(
+          `현재 상태(${existing.status})에서 ${body.status}(으)로 변경할 수 없습니다.`,
+          'INVALID_STATUS_TRANSITION',
+          400
+        )
       }
       updateData.status = body.status
     }

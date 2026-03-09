@@ -173,8 +173,9 @@ export async function POST(request: NextRequest) {
             await tx.salesOrder.delete({ where: { id: order.id } })
           })
           success++
-        } catch {
-          errors.push(`${order.orderNo}: 삭제 처리 중 오류 발생`)
+        } catch (err) {
+          const detail = err instanceof Error ? err.message : ''
+          errors.push(`${order.orderNo}: 삭제 처리 중 오류${detail ? ` - ${detail}` : ''}`)
           failed++
         }
       }

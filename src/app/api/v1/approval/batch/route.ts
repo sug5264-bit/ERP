@@ -133,12 +133,14 @@ export async function POST(req: NextRequest) {
             })
           )
         }
-        await Promise.all(bgTasks)
+        // allSettled: 알림/감사로그 실패해도 결재 자체는 성공 유지
+        await Promise.allSettled(bgTasks)
 
         successCount++
-      } catch {
+      } catch (err) {
         failCount++
-        errors.push(`문서 ${docId}: 처리 오류`)
+        const detail = err instanceof Error ? err.message : ''
+        errors.push(`문서 ${docId}: 처리 오류${detail ? ` (${detail})` : ''}`)
       }
     }
 

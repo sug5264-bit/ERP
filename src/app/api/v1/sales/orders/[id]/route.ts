@@ -7,6 +7,7 @@ import {
   requirePermissionCheck,
   isErrorResponse,
 } from '@/lib/api-helpers'
+import { writeAuditLog, getClientIp } from '@/lib/audit-log'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -208,6 +209,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
       await tx.salesOrder.delete({ where: { id } })
     })
+
+    writeAuditLog({ action: 'DELETE', tableName: 'SalesOrder', recordId: id, ipAddress: getClientIp(request) }).catch(
+      () => {}
+    )
 
     return successResponse({ message: '발주가 삭제되었습니다.' })
   } catch (error) {

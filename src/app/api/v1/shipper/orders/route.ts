@@ -97,37 +97,55 @@ export async function POST(request: NextRequest) {
       return errorResponse('수량은 1 이상이어야 합니다.', 'VALIDATION_ERROR', 400)
     }
 
-    // 트랜잭션으로 주문번호 생성 + 주문 생성 (race condition 방지)
-    const order = await prisma.$transaction(async (tx) => {
-      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const lastOrder = await tx.shipperOrder.findFirst({
-        where: { orderNo: { startsWith: `SH-${today}` } },
-        orderBy: { orderNo: 'desc' },
-      })
-      const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4), 10) + 1 : 1
-      const orderNo = `SH-${today}-${String(seq).padStart(4, '0')}`
+    // 트랜잭션 + 유니크 제약 위반 시 재시도 (동시 요청 race condition 방지)
+    let order
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        order = await prisma.$transaction(async (tx) => {
+          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+          const lastOrder = await tx.shipperOrder.findFirst({
+            where: { orderNo: { startsWith: `SH-${today}` } },
+            orderBy: { orderNo: 'desc' },
+          })
+          const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4), 10) + 1 : 1
+          const orderNo = `SH-${today}-${String(seq).padStart(4, '0')}`
 
-      return tx.shipperOrder.create({
-        data: {
-          orderNo,
-          shipperId,
-          orderDate: new Date(),
-          senderName: body.senderName || '',
-          senderPhone: body.senderPhone || null,
-          senderAddress: body.senderAddress || null,
-          recipientName: body.recipientName,
-          recipientPhone: body.recipientPhone || null,
-          recipientZipCode: body.recipientZipCode || null,
-          recipientAddress: body.recipientAddress,
-          itemName: body.itemName,
-          quantity: body.quantity || 1,
-          weight: body.weight ?? null,
-          shippingMethod: body.shippingMethod || 'NORMAL',
-          specialNote: body.specialNote || null,
-          status: 'RECEIVED',
-        },
-      })
-    })
+          return tx.shipperOrder.create({
+            data: {
+              orderNo,
+              shipperId,
+              orderDate: new Date(),
+              senderName: body.senderName || '',
+              senderPhone: body.senderPhone || null,
+              senderAddress: body.senderAddress || null,
+              recipientName: body.recipientName,
+              recipientPhone: body.recipientPhone || null,
+              recipientZipCode: body.recipientZipCode || null,
+              recipientAddress: body.recipientAddress,
+              itemName: body.itemName,
+              quantity: body.quantity || 1,
+              weight: body.weight ?? null,
+              shippingMethod: body.shippingMethod || 'NORMAL',
+              specialNote: body.specialNote || null,
+              status: 'RECEIVED',
+            },
+          })
+        })
+        break // 성공 시 루프 종료
+      } catch (err) {
+        // P2002: unique constraint violation → 재시도
+        if (
+          attempt < 2 &&
+          err &&
+          typeof err === 'object' &&
+          'code' in err &&
+          (err as { code: string }).code === 'P2002'
+        ) {
+          continue
+        }
+        throw err
+      }
+    }
 
     return successResponse(order)
   } catch (error) {
