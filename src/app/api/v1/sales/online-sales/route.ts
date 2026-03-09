@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     const where: Record<string, unknown> = {}
     if (channel && channel !== 'all') {
-      where.partner = { salesChannel: channel }
+      where.salesChannel = channel
     }
     if (startDate || endDate) {
       where.orderDate = {
@@ -140,7 +140,12 @@ export async function POST(request: NextRequest) {
         recipientZipCode: data.recipientZipCode,
         recipientAddress: data.recipientAddress,
         requirements: data.requirements,
-        employeeId: (authResult as { session: { user: { employeeId: string | null } } }).session.user.employeeId ?? '',
+        employeeId: await (async () => {
+          const empId = (authResult as { session: { user: { employeeId: string | null } } }).session.user.employeeId
+          if (empId) return empId
+          const emp = await prisma.employee.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } })
+          return emp?.id ?? ''
+        })(),
         details: { create: details },
       },
     })
