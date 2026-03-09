@@ -9,6 +9,7 @@ import {
   fmtNumber,
   fmtPrintDate,
 } from '@/lib/export/pdf-base'
+import { sanitizeFileName } from '@/lib/sanitize'
 
 // ---------------------------------------------------------------------------
 // 공통 유틸리티
@@ -411,7 +412,7 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
   doc.setTextColor(0, 0, 0)
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`견적서_${data.quotationNo}.pdf`)
+  doc.save(sanitizeFileName(`견적서_${data.quotationNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -454,7 +455,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   // 사업자등록번호
   cell(M + 12, y, labelW1, rh, '등록번호', { align: 'center', fill: true, fontSize: 6.5 })
   // 사업자번호를 3-2-5 포맷으로 분리
-  const sBizNo = data.supplier.bizNo.replace(/-/g, '')
+  const sBizNo = (data.supplier.bizNo || '').replace(/-/g, '').padEnd(10, ' ')
   const bizNoCellW = (halfW - 12 - labelW1) / 3
   cell(M + 12 + labelW1, y, bizNoCellW, rh, sBizNo.substring(0, 3), { align: 'center' })
   cell(M + 12 + labelW1 + bizNoCellW, y, bizNoCellW, rh, sBizNo.substring(3, 5), { align: 'center' })
@@ -463,7 +464,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   // 공급받는자 헤더
   cell(M + halfW, y, 12, rh * 5, '공\n급\n받\n는\n자', { align: 'center', fill: true, fillColor: [220, 230, 255], fontSize: 6 })
   cell(M + halfW + 12, y, labelW1, rh, '등록번호', { align: 'center', fill: true, fontSize: 6.5 })
-  const bBizNo = data.buyer.bizNo.replace(/-/g, '')
+  const bBizNo = (data.buyer.bizNo || '').replace(/-/g, '').padEnd(10, ' ')
   cell(M + halfW + 12 + labelW1, y, bizNoCellW, rh, bBizNo.substring(0, 3), { align: 'center' })
   cell(M + halfW + 12 + labelW1 + bizNoCellW, y, bizNoCellW, rh, bBizNo.substring(3, 5), { align: 'center' })
   cell(M + halfW + 12 + labelW1 + bizNoCellW * 2, y, bizNoCellW, rh, bBizNo.substring(5, 10), { align: 'center' })
@@ -610,7 +611,7 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   doc.text('이 금액을  ☐ 영수  ☐ 청구  함', pageWidth / 2, y, { align: 'center' })
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`세금계산서_${data.invoiceNo}.pdf`)
+  doc.save(sanitizeFileName(`세금계산서_${data.invoiceNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -782,7 +783,7 @@ export async function generateTransactionStatementPDF(data: TransactionStatement
     }
   }
 
-  doc.save(`거래명세서_${data.statementNo}.pdf`)
+  doc.save(sanitizeFileName(`거래명세서_${data.statementNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -925,7 +926,7 @@ export async function generatePurchaseOrderPDF(data: PurchaseOrderPDFData) {
   doc.setTextColor(0, 0, 0)
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`발주서_${data.orderNo}.pdf`)
+  doc.save(sanitizeFileName(`발주서_${data.orderNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -1044,7 +1045,7 @@ export async function generateVoucherPDF(data: VoucherPDFData) {
   }
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`${typeLabel}_${data.voucherNo}.pdf`)
+  doc.save(sanitizeFileName(`${typeLabel}_${data.voucherNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -1176,7 +1177,7 @@ export async function generateSalesOrderPDF(data: SalesOrderPDFData) {
   }
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`수주확인서_${data.orderNo}.pdf`)
+  doc.save(sanitizeFileName(`수주확인서_${data.orderNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -1349,7 +1350,7 @@ export async function generateDeliveryStatementPDF(data: DeliveryStatementPDFDat
   doc.text(`일자:  ${data.deliveryDate}`, pageWidth - PAGE_MARGIN - 60, y + 6)
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`납품명세서_${data.deliveryNo}.pdf`)
+  doc.save(sanitizeFileName(`납품명세서_${data.deliveryNo}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -1505,7 +1506,7 @@ export async function generatePayrollSlipPDF(data: PayrollSlipPDFData) {
   }
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`급여명세서_${data.payPeriod}_${data.employee.name}.pdf`)
+  doc.save(sanitizeFileName(`급여명세서_${data.payPeriod}_${data.employee.name}`) + '.pdf')
 }
 
 // ---------------------------------------------------------------------------
@@ -1660,5 +1661,5 @@ export async function generateDeliveryNotePDF(data: DeliveryNotePDFData) {
   }
 
   addPageNumbers(doc, fontName, { prefix: `출력일: ${fmtPrintDate()}` })
-  doc.save(`납품서_${data.deliveryNo}.pdf`)
+  doc.save(sanitizeFileName(`납품서_${data.deliveryNo}`) + '.pdf')
 }
