@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     for (const o of orders) {
       const key = o.partnerId
       const existing = supplierMap.get(key) || {
-        supplierName: o.partner.partnerName,
+        supplierName: o.partner?.partnerName || '-',
         orderCount: 0,
         totalAmount: 0,
         completedCount: 0,

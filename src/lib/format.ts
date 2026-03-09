@@ -5,6 +5,9 @@ export function formatCurrency(amount: number | string | null | undefined): stri
   if (amount == null) return '0원'
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (!isFinite(num)) return '0원'
+  if (num < 0) {
+    return `△${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Math.abs(num))}원`
+  }
   return (
     new Intl.NumberFormat('ko-KR', {
       maximumFractionDigits: 0,

@@ -10,6 +10,13 @@ import {
 
 const VALID_STATUSES = ['PREPARING', 'SHIPPED', 'DELIVERED']
 
+/** 허용되는 상태 전이 (현재 → 다음) */
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  PREPARING: ['SHIPPED', 'DELIVERED'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: [],
+}
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await requirePermissionCheck('sales', 'read')
@@ -46,6 +53,17 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     if (body.status && !VALID_STATUSES.includes(body.status)) {
       return errorResponse(`유효하지 않은 상태값입니다: ${body.status}`, 'VALIDATION_ERROR', 400)
     }
+    // 상태 전이 검증
+    if (body.status && body.status !== delivery.status) {
+      const allowed = VALID_TRANSITIONS[delivery.status] || []
+      if (!allowed.includes(body.status)) {
+        return errorResponse(
+          `${delivery.status}에서 ${body.status}(으)로 변경할 수 없습니다.`,
+          'INVALID_TRANSITION',
+          400
+        )
+      }
+    }
     const updated = await prisma.delivery.update({
       where: { id },
       data: {
@@ -71,6 +89,17 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     // 상태값 유효성 검증
     if (body.status && !VALID_STATUSES.includes(body.status)) {
       return errorResponse(`유효하지 않은 상태값입니다: ${body.status}`, 'VALIDATION_ERROR', 400)
+    }
+    // 상태 전이 검증
+    if (body.status && body.status !== delivery.status) {
+      const allowed = VALID_TRANSITIONS[delivery.status] || []
+      if (!allowed.includes(body.status)) {
+        return errorResponse(
+          `${delivery.status}에서 ${body.status}(으)로 변경할 수 없습니다.`,
+          'INVALID_TRANSITION',
+          400
+        )
+      }
     }
     const updateData: Record<string, unknown> = {}
     if (body.status) updateData.status = body.status
