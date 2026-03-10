@@ -143,8 +143,10 @@ describe('Rate Limiting', () => {
 
 // ─── 페이지네이션 경계값 ─────────────────────────────
 function getPaginationParams(params: Record<string, string | null>) {
-  const page = Math.max(1, parseInt(params.page || '1', 10) || 1)
-  const pageSize = Math.min(200, Math.max(1, parseInt(params.pageSize || '20', 10) || 20))
+  const rawPage = parseInt(params.page || '1', 10)
+  const rawSize = parseInt(params.pageSize || '20', 10)
+  const page = Math.max(1, Number.isFinite(rawPage) ? rawPage : 1)
+  const pageSize = Math.min(200, Math.max(1, Number.isFinite(rawSize) ? rawSize : 20))
   const skip = (page - 1) * pageSize
   return { page, pageSize, skip }
 }
