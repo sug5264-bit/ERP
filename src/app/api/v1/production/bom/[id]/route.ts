@@ -13,7 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(_request: NextRequest, ctx: RouteContext) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'read')
+    const authResult = await requirePermissionCheck('production', 'read')
     if (isErrorResponse(authResult)) return authResult
 
     const { id } = await ctx.params
@@ -58,7 +58,7 @@ const updateBomSchema = z.object({
 
 export async function PUT(request: NextRequest, ctx: RouteContext) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'update')
+    const authResult = await requirePermissionCheck('production', 'update')
     if (isErrorResponse(authResult)) return authResult
 
     const { id } = await ctx.params

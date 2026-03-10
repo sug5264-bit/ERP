@@ -49,12 +49,13 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const partner = await prisma.partner.findUnique({ where: { id } })
     if (!partner) return errorResponse('거래처를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    const [orders, quotations] = await Promise.all([
+    const [salesOrders, purchaseOrders, quotations] = await Promise.all([
       prisma.salesOrder.count({ where: { partnerId: id } }),
+      prisma.purchaseOrder.count({ where: { partnerId: id } }),
       prisma.quotation.count({ where: { partnerId: id } }),
     ])
-    if (orders > 0 || quotations > 0) {
-      return errorResponse('연결된 발주 또는 견적이 있어 삭제할 수 없습니다.', 'HAS_DEPENDENCIES', 409)
+    if (salesOrders > 0 || purchaseOrders > 0 || quotations > 0) {
+      return errorResponse('연결된 발주, 구매발주 또는 견적이 있어 삭제할 수 없습니다.', 'HAS_DEPENDENCIES', 409)
     }
 
     await prisma.partner.delete({ where: { id } })

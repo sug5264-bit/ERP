@@ -12,6 +12,28 @@ const store = new Map<string, CacheEntry<unknown>>()
 
 // 기본 TTL: 5분
 const DEFAULT_TTL_MS = 5 * 60 * 1000
+// 최대 캐시 엔트리 수 (메모리 누수 방지)
+const MAX_CACHE_SIZE = 500
+
+/**
+ * 만료된 엔트리 정리 + 최대 크기 초과 시 가장 오래된 엔트리 제거
+ */
+function evictIfNeeded(): void {
+  const now = Date.now()
+  // 만료된 엔트리 먼저 정리
+  for (const [key, entry] of store) {
+    if (entry.expiresAt <= now) store.delete(key)
+  }
+  // 그래도 초과하면 가장 오래된 엔트리부터 제거 (Map은 삽입 순서 유지)
+  if (store.size > MAX_CACHE_SIZE) {
+    const excess = store.size - MAX_CACHE_SIZE
+    const keys = store.keys()
+    for (let i = 0; i < excess; i++) {
+      const { value } = keys.next()
+      if (value) store.delete(value)
+    }
+  }
+}
 
 /**
  * 캐시에서 가져오거나 없으면 fetcher 실행 후 저장
@@ -25,6 +47,7 @@ export async function cached<T>(key: string, fetcher: () => Promise<T>, ttlMs = 
   }
 
   const data = await fetcher()
+  evictIfNeeded()
   store.set(key, { data, expiresAt: now + ttlMs })
   return data
 }
@@ -48,4 +71,11 @@ export function invalidateCache(keyOrPrefix: string): void {
  */
 export function clearCache(): void {
   store.clear()
+}
+
+/**
+ * 현재 캐시 크기 반환 (모니터링용)
+ */
+export function getCacheSize(): number {
+  return store.size
 }

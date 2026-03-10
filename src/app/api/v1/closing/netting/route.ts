@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const authResult = await requirePermissionCheck('accounting', 'read')
     if (isErrorResponse(authResult)) return authResult
 
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = req.nextUrl
     const now = new Date()
     let year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
     let month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1

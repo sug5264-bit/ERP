@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const data = inspections.map((i) => ({
       id: i.id,
       inspectionNo: i.inspectionNo,
-      deliveryNo: i.delivery.deliveryNo,
+      deliveryNo: i.delivery?.deliveryNo || '-',
       inspectionDate: i.inspectionDate,
       inspectorName: i.inspectorName,
       overallGrade: i.overallGrade,

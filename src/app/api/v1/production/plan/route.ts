@@ -13,7 +13,7 @@ import { generateDocumentNumber } from '@/lib/doc-number'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'read')
+    const authResult = await requirePermissionCheck('production', 'read')
     if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
@@ -81,7 +81,7 @@ const createProductionPlanSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'create')
+    const authResult = await requirePermissionCheck('production', 'create')
     if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()
