@@ -195,8 +195,10 @@ export default function UsersPage() {
       roleIds: formRoleIds,
     }
     if (formPassword) updateData.password = formPassword
-    if (formDepartmentId) updateData.departmentId = formDepartmentId
-    if (formPositionId) updateData.positionId = formPositionId
+    if (selectedUser.employee) {
+      updateData.departmentId = formDepartmentId || null
+      updateData.positionId = formPositionId || null
+    }
     updateMutation.mutate({ id: selectedUser.id, data: updateData })
   }
 

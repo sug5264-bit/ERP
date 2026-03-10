@@ -66,6 +66,24 @@ export async function POST(request: NextRequest) {
       9: 3000000,
     }
 
+    // 급여기간에서 년/월 추출하여 근태 데이터 조회 기간 설정
+    const periodMatch = data.payPeriod.match(/(\d{4})-(\d{2})/)
+    const periodYear = periodMatch ? parseInt(periodMatch[1]) : new Date().getFullYear()
+    const periodMonth = periodMatch ? parseInt(periodMatch[2]) : new Date().getMonth() + 1
+    const attendanceStart = new Date(periodYear, periodMonth - 1, 1)
+    const attendanceEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59, 999)
+
+    // 전 직원의 해당 월 초과근무 시간 집계
+    const attendanceAgg = await prisma.attendance.groupBy({
+      by: ['employeeId'],
+      where: {
+        workDate: { gte: attendanceStart, lte: attendanceEnd },
+        overtimeHours: { gt: 0 },
+      },
+      _sum: { overtimeHours: true },
+    })
+    const overtimeMap = new Map(attendanceAgg.map((a) => [a.employeeId, Number(a._sum.overtimeHours || 0)]))
+
     const header = await prisma.$transaction(async (tx) => {
       const h = await tx.payrollHeader.create({
         data: { payPeriod: data.payPeriod, payDate: new Date(data.payDate) },
@@ -75,7 +93,11 @@ export async function POST(request: NextRequest) {
         const base = salaryByLevel[emp.position?.level || 9] || 3000000
         const mealAllowance = 200000
         const transportAllowance = 200000
-        const totalEarnings = base + mealAllowance + transportAllowance
+        // 초과근무수당 계산: 시급(기본급/209시간) * 1.5 * 초과근무시간
+        const overtimeHours = overtimeMap.get(emp.id) || 0
+        const hourlyRate = Math.round(base / 209)
+        const overtimePay = Math.round(hourlyRate * 1.5 * overtimeHours)
+        const totalEarnings = base + mealAllowance + transportAllowance + overtimePay
         const nationalPension = Math.round(base * 0.045)
         const healthInsurance = Math.round(base * 0.03545)
         const longTermCare = Math.round(healthInsurance * 0.1281)
@@ -89,6 +111,7 @@ export async function POST(request: NextRequest) {
           payrollHeaderId: h.id,
           employeeId: emp.id,
           baseSalary: base,
+          overtimePay,
           mealAllowance,
           transportAllowance,
           nationalPension,

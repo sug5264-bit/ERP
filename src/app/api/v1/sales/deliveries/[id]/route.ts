@@ -167,19 +167,41 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         )
       )
 
-      // 2. 재고 잔량 복원 (출고 시 재고가 많은 창고에서 차감했으므로 동일 기준으로 복원)
-      for (const d of delivery.details) {
-        const balances = await tx.stockBalance.findMany({
-          where: { itemId: d.itemId },
-          select: { id: true },
-          orderBy: { quantity: 'desc' },
-          take: 1,
+      // 2. 재고 잔량 복원: 출고 재고이동의 원래 창고 기준으로 복원
+      const relatedMovements = await tx.stockMovement.findMany({
+        where: { relatedDocType: 'DELIVERY', relatedDocId: id },
+        select: { id: true, sourceWarehouseId: true },
+      })
+      if (relatedMovements.length > 0) {
+        const smIds = relatedMovements.map((sm) => sm.id)
+        const smDetails = await tx.stockMovementDetail.findMany({
+          where: { stockMovementId: { in: smIds } },
+          select: { itemId: true, quantity: true, stockMovementId: true },
         })
-        if (balances.length > 0) {
-          await tx.stockBalance.update({
-            where: { id: balances[0].id },
-            data: { quantity: { increment: Number(d.quantity) } },
+        const smWarehouseMap = new Map(relatedMovements.map((sm) => [sm.id, sm.sourceWarehouseId]))
+        for (const detail of smDetails) {
+          const warehouseId = smWarehouseMap.get(detail.stockMovementId)
+          if (warehouseId) {
+            await tx.stockBalance.updateMany({
+              where: { itemId: detail.itemId, warehouseId },
+              data: { quantity: { increment: Number(detail.quantity) } },
+            })
+          }
+        }
+      } else {
+        // fallback: 재고이동 기록이 없는 경우, 기존 재고가 있는 창고에 복원
+        for (const d of delivery.details) {
+          const balance = await tx.stockBalance.findFirst({
+            where: { itemId: d.itemId },
+            select: { id: true },
+            orderBy: { lastMovementDate: 'desc' },
           })
+          if (balance) {
+            await tx.stockBalance.update({
+              where: { id: balance.id },
+              data: { quantity: { increment: Number(d.quantity) } },
+            })
+          }
         }
       }
 

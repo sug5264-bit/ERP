@@ -108,6 +108,24 @@ export async function POST(req: NextRequest) {
         resolvedDetails.push({ ...d, itemId })
       }
 
+      // 반품 수량이 납품된 수량을 초과하는지 검증
+      if (resolvedDetails.length > 0) {
+        const orderDetails = await tx.salesOrderDetail.findMany({
+          where: { salesOrderId: data.salesOrderId },
+          select: { itemId: true, deliveredQty: true },
+        })
+        const deliveredMap = new Map(orderDetails.map((d) => [d.itemId, Number(d.deliveredQty)]))
+        for (const d of resolvedDetails) {
+          const delivered = deliveredMap.get(d.itemId) || 0
+          if (d.quantity > delivered) {
+            const item = await tx.item.findUnique({ where: { id: d.itemId }, select: { itemName: true } })
+            throw new Error(
+              `품목 "${item?.itemName || d.itemId}"의 반품 수량(${d.quantity})이 납품된 수량(${delivered})을 초과합니다.`
+            )
+          }
+        }
+      }
+
       const computedTotal =
         resolvedDetails.length > 0
           ? resolvedDetails.reduce((sum, d) => sum + Math.round(d.quantity * d.unitPrice), 0)
