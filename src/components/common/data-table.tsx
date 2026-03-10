@@ -143,10 +143,11 @@ export function DataTable<TData, TValue>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectivePageSize])
 
-  // 데이터 변경 시 행 선택 상태 초기화
+  // 데이터 변경 시 행 선택 상태 초기화 (데이터 길이 기반으로 불필요한 리셋 방지)
+  const dataLength = data.length
   useEffect(() => {
     setRowSelection({})
-  }, [data])
+  }, [dataLength])
 
   // 선택 변경 콜백 (table은 매 렌더링마다 새 참조이므로 deps에서 제외)
   useEffect(() => {

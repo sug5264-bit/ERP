@@ -157,7 +157,10 @@ interface Detail {
   description: string
 }
 
+let rowKeyCounter = 0
+
 interface OrderRow {
+  _key: number
   orderDate: string
   barcode: string
   orderNumber: string
@@ -181,6 +184,7 @@ interface OrderRow {
 }
 
 const emptyOrderRow = (company?: { companyName?: string; phone?: string; address?: string }): OrderRow => ({
+  _key: ++rowKeyCounter,
   orderDate: getLocalDateString(),
   barcode: '',
   orderNumber: '',
@@ -1365,7 +1369,7 @@ export function OrdersPanel() {
 
           <div className="space-y-3">
             {orderRows.map((row, idx) => (
-              <div key={idx} className="space-y-3 rounded-lg border p-3">
+              <div key={row._key} className="space-y-3 rounded-lg border p-3">
                 {/* 카드 헤더 */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold">#{idx + 1}</span>
@@ -1847,8 +1851,8 @@ export function OrdersPanel() {
                     </tr>
                   </thead>
                   <tbody>
-                    {trackingRows.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="border-b">
+                    {trackingRows.slice(0, 5).map((row) => (
+                      <tr key={row.deliveryNo} className="border-b">
                         <td className="p-2 font-mono text-xs">{row.deliveryNo}</td>
                         <td className="p-2">{row.carrier}</td>
                         <td className="p-2 font-mono text-xs">{row.trackingNo}</td>
@@ -1898,7 +1902,6 @@ export function OrdersPanel() {
 
   return (
     <div className="space-y-6">
-      
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="ONLINE">온라인</TabsTrigger>
