@@ -51,9 +51,20 @@ function rateLimitCheck(
   return { ok: true, remaining: max - entry.count, resetAt: entry.resetAt }
 }
 
+const IP_PATTERN = /^[\d.a-fA-F:]+$/
+
 function getIp(req: { headers: Headers }): string {
   // x-real-ip(리버스 프록시 설정)를 우선 신뢰, x-forwarded-for는 마지막 프록시가 추가한 첫 번째 IP 사용
-  return req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown'
+  const realIp = req.headers.get('x-real-ip')?.trim()
+  if (realIp && IP_PATTERN.test(realIp)) return realIp
+
+  const forwarded = req.headers.get('x-forwarded-for')
+  if (forwarded) {
+    const firstIp = forwarded.split(',')[0]?.trim()
+    if (firstIp && IP_PATTERN.test(firstIp)) return firstIp
+  }
+
+  return 'unknown'
 }
 
 // ─── Request ID 생성 (Edge Runtime 호환) ───

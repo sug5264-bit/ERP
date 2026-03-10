@@ -105,6 +105,13 @@ describe('handleApiError', () => {
     }
   })
 
+  it('SyntaxError (잘못된 JSON) → INVALID_JSON (400)', async () => {
+    const resp = handleApiError(new SyntaxError('Unexpected token < in JSON at position 0'))
+    const body = await resp.json()
+    expect(resp.status).toBe(400)
+    expect(body.error.code).toBe('INVALID_JSON')
+  })
+
   it('Prisma P2002 중복 에러', async () => {
     const prismaError = { code: 'P2002', meta: { field_name: 'code' } }
     const resp = handleApiError(prismaError)
