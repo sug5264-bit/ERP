@@ -335,9 +335,9 @@ async function ensureStockBalanceInbound(
   warehouseId?: string | null
 ): Promise<void> {
   if (warehouseId) {
-    // 지정 창고에 재고 upsert
+    // 지정 창고에 재고 upsert (zoneId=null 기준으로 조회)
     const existing = await tx.stockBalance.findFirst({
-      where: { itemId, warehouseId },
+      where: { itemId, warehouseId, zoneId: null },
     })
     if (existing) {
       await tx.stockBalance.update({

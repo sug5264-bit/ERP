@@ -167,10 +167,16 @@ export async function POST(request: NextRequest) {
       // BOM 원자재 출고 재고이동 자동 생성
       if (plan.bomHeader.details.length > 0) {
         const yieldRate = Number(plan.bomHeader.yieldRate) / 100
-        const materialDetails = plan.bomHeader.details.map((bomDetail) => ({
-          itemId: bomDetail.itemId,
-          quantity: Math.ceil((Number(bomDetail.quantity) * data.producedQty) / (yieldRate || 1)),
-        }))
+        const materialDetails = plan.bomHeader.details.map((bomDetail) => {
+          const baseQty = Math.ceil((Number(bomDetail.quantity) * data.producedQty) / (yieldRate || 1))
+          // 로스율(%) 반영: 소요량 * (1 + lossRate/100)
+          const lossRate = Number(bomDetail.lossRate || 0)
+          const adjustedQty = lossRate > 0 ? Math.ceil(baseQty * (1 + lossRate / 100)) : baseQty
+          return {
+            itemId: bomDetail.itemId,
+            quantity: adjustedQty,
+          }
+        })
 
         // 원자재 재고 확인 (부족 시 경고 반환, 차단하지 않음)
         for (const md of materialDetails) {

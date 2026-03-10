@@ -50,14 +50,16 @@ export function NotificationBell() {
     refetchIntervalInBackground: false,
   })
 
+  const notifQueryKey = ['notifications', isMobile]
+
   const actionMutation = useMutation({
     mutationFn: (body: { action: string; id?: string }) => api.put('/notifications', body),
     onMutate: async (body) => {
-      await queryClient.cancelQueries({ queryKey: ['notifications'] })
-      const prev = queryClient.getQueryData(['notifications'])
+      await queryClient.cancelQueries({ queryKey: notifQueryKey })
+      const prev = queryClient.getQueryData(notifQueryKey)
 
       // Optimistic update
-      queryClient.setQueryData(['notifications'], (old: NotificationsResponse | undefined) => {
+      queryClient.setQueryData(notifQueryKey, (old: NotificationsResponse | undefined) => {
         if (!old?.data) return old
         const notifs = old.data.notifications || []
         const unread = old.data.unreadCount || 0
@@ -98,13 +100,13 @@ export function NotificationBell() {
     },
     onError: (_err, _body, context) => {
       if (context?.prev) {
-        queryClient.setQueryData(['notifications'], context.prev)
+        queryClient.setQueryData(notifQueryKey, context.prev)
       }
     },
     onSettled: (_data, error) => {
       // 실패 시에만 서버 데이터 재요청 (성공 시 optimistic update가 유효)
       if (error) {
-        queryClient.invalidateQueries({ queryKey: ['notifications'] })
+        queryClient.invalidateQueries({ queryKey: notifQueryKey })
       }
     },
   })

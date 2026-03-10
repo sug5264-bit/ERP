@@ -180,24 +180,54 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
 
     await prisma.$transaction(async (tx) => {
-      const deliveries = await tx.delivery.findMany({ where: { salesOrderId: id }, select: { id: true } })
+      const deliveries = await tx.delivery.findMany({
+        where: { salesOrderId: id },
+        select: { id: true },
+      })
       if (deliveries.length > 0) {
         const deliveryIds = deliveries.map((d) => d.id)
+
+        // 재고 잔량 복원: 납품 출고에 연결된 재고이동 상세를 기반으로 복원
+        const stockMovements = await tx.stockMovement.findMany({
+          where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
+          select: { id: true, sourceWarehouseId: true, targetWarehouseId: true },
+        })
+        if (stockMovements.length > 0) {
+          const smIds = stockMovements.map((sm) => sm.id)
+          const smDetails = await tx.stockMovementDetail.findMany({
+            where: { stockMovementId: { in: smIds } },
+            select: { itemId: true, quantity: true, stockMovementId: true },
+          })
+          // 재고이동별 창고 맵
+          const smWarehouseMap = new Map(
+            stockMovements.map((sm) => [sm.id, sm.sourceWarehouseId || sm.targetWarehouseId])
+          )
+          // 품목+창고별 복원 수량 집계
+          const restoreMap = new Map<string, number>()
+          for (const detail of smDetails) {
+            const warehouseId = smWarehouseMap.get(detail.stockMovementId)
+            if (!warehouseId) continue
+            const key = `${detail.itemId}:${warehouseId}`
+            restoreMap.set(key, (restoreMap.get(key) || 0) + Number(detail.quantity))
+          }
+          // 재고 복원
+          for (const [key, qty] of restoreMap) {
+            const [itemId, warehouseId] = key.split(':')
+            await tx.stockBalance.updateMany({
+              where: { itemId, warehouseId },
+              data: { quantity: { increment: qty } },
+            })
+          }
+          // 재고이동 데이터 삭제
+          await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: smIds } } })
+          await tx.stockMovement.deleteMany({ where: { id: { in: smIds } } })
+        }
+
         // 품질검사 관련 데이터 먼저 삭제 (FK 제약조건)
         await tx.qualityInspectionItem.deleteMany({
           where: { qualityInspection: { deliveryId: { in: deliveryIds } } },
         })
         await tx.qualityInspection.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
-        // 재고이동 관련 데이터 삭제 (납품에 연결된 StockMovement)
-        const stockMovements = await tx.stockMovement.findMany({
-          where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
-          select: { id: true },
-        })
-        if (stockMovements.length > 0) {
-          const smIds = stockMovements.map((sm) => sm.id)
-          await tx.stockMovementDetail.deleteMany({ where: { stockMovementId: { in: smIds } } })
-          await tx.stockMovement.deleteMany({ where: { id: { in: smIds } } })
-        }
         await tx.deliveryDetail.deleteMany({ where: { deliveryId: { in: deliveryIds } } })
         await tx.delivery.deleteMany({ where: { salesOrderId: id } })
       }

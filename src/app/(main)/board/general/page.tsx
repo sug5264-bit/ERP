@@ -120,12 +120,27 @@ export default function GeneralBoardPage() {
       return
     }
 
+    // 첨부파일 실제 업로드
+    const uploadedAttachments: { id: string; fileName: string }[] = []
+    for (const file of attachments) {
+      try {
+        const uploadForm = new FormData()
+        uploadForm.append('file', file)
+        const res = (await api.upload('/attachments', uploadForm)) as { data?: { id: string; originalName: string } }
+        if (res?.data) {
+          uploadedAttachments.push({ id: res.data.id, fileName: res.data.originalName })
+        }
+      } catch {
+        toast.error(`파일 "${file.name}" 업로드에 실패했습니다.`)
+      }
+    }
+
     const postData: Record<string, unknown> = {
       boardId: generalBoard.id,
       title: form.get('title'),
       content: form.get('content'),
-      attachments: attachments.map((f) => f.name),
-      fileName: attachments.length > 0 ? attachments[0].name : undefined,
+      attachments: uploadedAttachments.map((a) => a.id),
+      fileName: uploadedAttachments.length > 0 ? uploadedAttachments[0].fileName : undefined,
     }
     createMutation.mutate(postData)
   }

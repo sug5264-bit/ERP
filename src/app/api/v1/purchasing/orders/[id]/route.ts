@@ -62,11 +62,14 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 허용된 상태 전이 매트릭스 (현재상태 → 가능한 다음상태)
+    // 입고 모듈에서 사용하는 IN_PROGRESS, COMPLETED 상태 포함
     const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-      ORDERED: ['CONFIRMED', 'CANCELLED'],
-      CONFIRMED: ['SHIPPED', 'CANCELLED'],
-      SHIPPED: ['RECEIVED'],
-      RECEIVED: [], // 최종 상태
+      ORDERED: ['CONFIRMED', 'IN_PROGRESS', 'CANCELLED'],
+      CONFIRMED: ['SHIPPED', 'IN_PROGRESS', 'CANCELLED'],
+      SHIPPED: ['RECEIVED', 'IN_PROGRESS', 'COMPLETED'],
+      IN_PROGRESS: ['COMPLETED', 'CANCELLED'],
+      RECEIVED: ['COMPLETED'], // 최종 상태
+      COMPLETED: [], // 최종 상태
       CANCELLED: [], // 최종 상태
     }
     const updateData: Record<string, unknown> = {}

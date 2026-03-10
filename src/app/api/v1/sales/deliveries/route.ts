@@ -42,7 +42,10 @@ export async function GET(request: NextRequest) {
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) dateRange.lte = d
+        if (!isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999)
+          dateRange.lte = d
+        }
       }
       where.deliveryDate = dateRange
     }

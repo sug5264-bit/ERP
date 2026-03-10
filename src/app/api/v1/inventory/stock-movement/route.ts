@@ -37,7 +37,10 @@ export async function GET(request: NextRequest) {
       }
       if (endDate) {
         const d = new Date(endDate)
-        if (!isNaN(d.getTime())) dateRange.lte = d
+        if (!isNaN(d.getTime())) {
+          d.setHours(23, 59, 59, 999)
+          dateRange.lte = d
+        }
       }
       where.movementDate = dateRange
     }
@@ -156,20 +159,25 @@ export async function POST(request: NextRequest) {
         // 입고 처리
         if (data.movementType === 'INBOUND' || data.movementType === 'TRANSFER') {
           if (data.targetWarehouseId) {
-            const existing = await tx.stockBalance.findFirst({
-              where: { itemId: detail.itemId, warehouseId: data.targetWarehouseId },
-            })
-            if (existing) {
-              // 가중평균단가 계산
-              const oldQty = Number(existing.quantity)
-              const oldCost = Number(existing.averageCost)
+            // SELECT FOR UPDATE로 동시성 보호 후 가중평균단가 계산
+            const existing = await tx.$queryRaw<Array<{ id: string; quantity: number; averageCost: number }>>`
+              SELECT id, quantity::float AS "quantity", "averageCost"::float AS "averageCost"
+              FROM stock_balances
+              WHERE "itemId" = ${detail.itemId} AND "warehouseId" = ${data.targetWarehouseId} AND "zoneId" IS NULL
+              LIMIT 1
+              FOR UPDATE
+            `.catch(() => null)
+            const row = existing && existing.length > 0 ? existing[0] : null
+            if (row) {
+              const oldQty = row.quantity
+              const oldCost = row.averageCost
               const newQty = detail.quantity
               const newPrice = detail.unitPrice || 0
               const totalQty = oldQty + newQty
               const newAvgCost =
                 totalQty > 0 ? Math.round(((oldQty * oldCost + newQty * newPrice) / totalQty) * 100) / 100 : 0
               await tx.stockBalance.update({
-                where: { id: existing.id },
+                where: { id: row.id },
                 data: {
                   quantity: { increment: detail.quantity },
                   averageCost: newAvgCost,

@@ -19,14 +19,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 거래처별 매출 집계
+    // 거래처별 매출 집계 (납품 진행 이상의 주문만 매출로 인식)
     const orders = await prisma.salesOrder.findMany({
       where: {
         ...dateFilter,
-        status: { not: 'CANCELLED' },
+        status: { in: ['IN_PROGRESS', 'COMPLETED'] },
       },
       include: {
         partner: { select: { id: true, partnerName: true } },
+        details: { select: { deliveredQty: true, unitPrice: true } },
       },
     })
 
@@ -44,9 +45,11 @@ export async function GET(request: NextRequest) {
         collectedAmount: 0,
       }
       existing.salesCount++
-      existing.salesAmount += Number(o.totalAmount)
+      // 실제 납품된 금액만 매출로 계산
+      const deliveredAmount = o.details.reduce((sum, d) => sum + Number(d.deliveredQty) * Number(d.unitPrice), 0)
+      existing.salesAmount += Math.round(deliveredAmount)
       if (o.status === 'COMPLETED') {
-        existing.collectedAmount += Number(o.totalAmount)
+        existing.collectedAmount += Math.round(deliveredAmount)
       }
       partnerMap.set(key, existing)
     }

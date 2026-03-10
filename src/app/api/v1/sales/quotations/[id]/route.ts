@@ -67,8 +67,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         const details = quotation.details.map((d, idx) => {
           const supplyAmount = Number(d.supplyAmount)
-          const taxType = d.item?.taxType || 'TAXABLE'
-          const taxAmount = taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+          // 견적서의 기존 세금 계산 결과를 그대로 승계
+          const taxAmount = Number(d.taxAmount)
           return {
             lineNo: idx + 1,
             itemId: d.itemId,
