@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     const authResult = await requirePermissionCheck('accounting', 'read')
     if (isErrorResponse(authResult)) return authResult
 
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = req.nextUrl
     const now = new Date()
 
     let startDate: Date

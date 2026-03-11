@@ -73,11 +73,16 @@ export const createPayrollSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, '올바른 날짜 형식이 아닙니다'),
 })
 
-export const createLeaveSchema = z.object({
-  employeeId: z.string().min(1),
-  leaveType: z.enum(['ANNUAL', 'SICK', 'FAMILY', 'MATERNITY', 'PARENTAL', 'OFFICIAL']),
-  startDate: z.string().min(1, '시작일을 입력하세요'),
-  endDate: z.string().min(1, '종료일을 입력하세요'),
-  days: z.number().min(0.5, '최소 0.5일 이상이어야 합니다').max(365, '최대 365일까지 입력할 수 있습니다'),
-  reason: z.string().optional(),
-})
+export const createLeaveSchema = z
+  .object({
+    employeeId: z.string().min(1),
+    leaveType: z.enum(['ANNUAL', 'SICK', 'FAMILY', 'MATERNITY', 'PARENTAL', 'OFFICIAL']),
+    startDate: z.string().min(1, '시작일을 입력하세요'),
+    endDate: z.string().min(1, '종료일을 입력하세요'),
+    days: z.number().min(0.5, '최소 0.5일 이상이어야 합니다').max(365, '최대 365일까지 입력할 수 있습니다'),
+    reason: z.string().max(1000).optional(),
+  })
+  .refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
+    message: '종료일은 시작일 이후여야 합니다',
+    path: ['endDate'],
+  })

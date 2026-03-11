@@ -128,6 +128,11 @@ export function handleApiError(error: unknown) {
     return errorResponse('입력값이 올바르지 않습니다.', 'VALIDATION_ERROR', 400, safeIssues)
   }
 
+  // 잘못된 JSON 요청 본문 (SyntaxError from req.json())
+  if (error instanceof SyntaxError) {
+    return errorResponse('요청 본문이 올바른 JSON 형식이 아닙니다.', 'INVALID_JSON', 400)
+  }
+
   // Prisma 에러 처리 (DB 내부 정보 노출 방지)
   if (isPrismaError(error)) {
     const prismaMessage = getPrismaErrorMessage(error)

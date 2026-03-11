@@ -95,7 +95,7 @@ export async function GET(_req: NextRequest) {
         leaveData,
       },
       undefined,
-      { cache: 's-maxage=300, stale-while-revalidate=600' }
+      { cache: 'private, max-age=300, stale-while-revalidate=600' }
     )
   } catch (error) {
     return handleApiError(error)

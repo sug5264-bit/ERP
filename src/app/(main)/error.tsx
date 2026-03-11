@@ -32,11 +32,16 @@ export default function MainError({ error, reset }: { error: Error & { digest?: 
     .filter(Boolean)
     .join('\n')
 
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(errorInfo)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     } catch {
       // clipboard API 미지원 시 무시
     }

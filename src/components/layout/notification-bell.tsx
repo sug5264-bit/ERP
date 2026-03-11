@@ -43,14 +43,14 @@ export function NotificationBell() {
   const queryClient = useQueryClient()
   const isMobile = useIsMobile()
 
+  const notifQueryKey = ['notifications'] as const
+
   const { data } = useQuery({
-    queryKey: ['notifications', isMobile],
+    queryKey: notifQueryKey,
     queryFn: () => api.get(`/notifications?pageSize=${isMobile ? 15 : 30}`) as Promise<NotificationsResponse>,
     refetchInterval: isMobile ? 60000 : 30000,
     refetchIntervalInBackground: false,
   })
-
-  const notifQueryKey = ['notifications', isMobile]
 
   const actionMutation = useMutation({
     mutationFn: (body: { action: string; id?: string }) => api.put('/notifications', body),

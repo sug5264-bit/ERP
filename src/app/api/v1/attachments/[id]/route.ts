@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, requireAuth, isErrorResponse, successResponse } from '@/lib/api-helpers'
+import { logger } from '@/lib/logger'
 import { readFile, unlink } from 'fs/promises'
 import { resolve } from 'path'
 
@@ -32,7 +33,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return new Response(fileBuffer, {
       headers: {
         'Content-Type': attachment.mimeType,
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
+        'Content-Disposition': `attachment; filename="${attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
         'Content-Length': String(attachment.fileSize),
       },
     })
@@ -61,8 +62,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     const filePath = safePath(attachment.filePath)
     try {
       await unlink(filePath)
-    } catch {
-      // File may already be deleted
+    } catch (err) {
+      // ENOENT는 이미 삭제된 경우로 무시, 나머지는 로깅
+      if (err instanceof Error && !err.message.includes('ENOENT')) {
+        logger.error('Failed to delete attachment file', { filePath, error: err.message })
+      }
     }
 
     await prisma.attachment.delete({ where: { id } })

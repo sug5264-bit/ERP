@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'read')
+    const authResult = await requirePermissionCheck('production', 'read')
     if (isErrorResponse(authResult)) return authResult
 
     const sp = request.nextUrl.searchParams
@@ -21,12 +21,13 @@ export async function GET(request: NextRequest) {
 
     // partnerId로 제조사명 조회
     const partnerIds = [...new Set(contracts.map((c) => c.partnerId).filter(Boolean))]
-    const partners = partnerIds.length > 0
-      ? await prisma.partner.findMany({
-          where: { id: { in: partnerIds } },
-          select: { id: true, partnerName: true },
-        })
-      : []
+    const partners =
+      partnerIds.length > 0
+        ? await prisma.partner.findMany({
+            where: { id: { in: partnerIds } },
+            select: { id: true, partnerName: true },
+          })
+        : []
     const partnerMap = new Map(partners.map((p) => [p.id, p.partnerName]))
 
     const data = contracts.map((c) => ({
@@ -71,7 +72,7 @@ const createOemSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('inventory', 'create')
+    const authResult = await requirePermissionCheck('production', 'create')
     if (isErrorResponse(authResult)) return authResult
 
     const body = await request.json()

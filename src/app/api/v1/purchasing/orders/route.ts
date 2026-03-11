@@ -51,11 +51,11 @@ export async function GET(request: NextRequest) {
       id: o.id,
       orderNo: o.orderNo,
       orderDate: o.orderDate,
-      supplierName: o.partner.partnerName,
+      supplierName: o.partner?.partnerName || '-',
       supplyAmount: Number(o.totalSupply),
       totalAmount: Number(o.totalAmount),
       status: o.status,
-      managerName: o.employee.nameKo,
+      managerName: o.employee?.nameKo || '-',
     }))
 
     return successResponse(data, buildMeta(page, pageSize, totalCount))
@@ -84,13 +84,16 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       // 거래처 자동 생성/확인
-      const partnerId = await ensurePartnerExists({
-        partnerId: data.partnerId,
-        partnerName: data.partnerName,
-        partnerCode: data.partnerCode,
-        bizNo: data.bizNo,
-        partnerType: 'PURCHASE',
-      }, tx)
+      const partnerId = await ensurePartnerExists(
+        {
+          partnerId: data.partnerId,
+          partnerName: data.partnerName,
+          partnerCode: data.partnerCode,
+          bizNo: data.bizNo,
+          partnerType: 'PURCHASE',
+        },
+        tx
+      )
       if (!partnerId) {
         throw new Error('거래처 ID 또는 거래처명을 입력하세요.')
       }
@@ -101,15 +104,18 @@ export async function POST(request: NextRequest) {
       // 품목 자동 생성/확인
       const resolvedDetails = []
       for (const d of data.details) {
-        const itemId = await ensureItemExists({
-          itemId: d.itemId,
-          itemCode: d.itemCode,
-          itemName: d.itemName,
-          specification: d.specification,
-          unit: d.unit,
-          standardPrice: d.unitPrice,
-          barcode: d.barcode,
-        }, tx)
+        const itemId = await ensureItemExists(
+          {
+            itemId: d.itemId,
+            itemCode: d.itemCode,
+            itemName: d.itemName,
+            specification: d.specification,
+            unit: d.unit,
+            standardPrice: d.unitPrice,
+            barcode: d.barcode,
+          },
+          tx
+        )
         if (!d.itemId && d.itemName) {
           autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
         }
