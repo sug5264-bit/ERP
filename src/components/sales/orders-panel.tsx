@@ -2,9 +2,7 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
-import { DataTable } from '@/components/common/data-table'
 // PageHeader moved to parent
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,7 +26,6 @@ import { toast } from 'sonner'
 import {
   Plus,
   Trash2,
-  MoreHorizontal,
   CheckCircle,
   XCircle,
   FileDown,
@@ -42,8 +39,10 @@ import {
   Paperclip,
   CalendarDays,
   Table2,
+  ChevronDown,
+  ChevronUp,
+  Printer,
 } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { RecordSubTabs } from '@/components/common/record-sub-tabs'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
@@ -219,6 +218,7 @@ export function OrdersPanel() {
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<{ date: string; events: CalendarEvent[] } | null>(
     null
   )
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [trackingOpen, setTrackingOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('')
@@ -540,177 +540,6 @@ export function OrdersPanel() {
     setSearchKeyword('')
     setShowAdvancedFilter(false)
   }
-
-  const actionsColumn: ColumnDef<SalesOrder> = {
-    id: 'actions',
-    header: '',
-    cell: ({ row }) => {
-      const status = row.original.status
-      const canComplete = status === 'ORDERED' || status === 'IN_PROGRESS'
-      const canCancel = status !== 'CANCELLED' && status !== 'COMPLETED'
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="더보기 메뉴">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleTaxInvoicePDF(row.original)}>
-              <FileDown className="mr-2 h-4 w-4" />
-              세금계산서 PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleTransactionStatementPDF(row.original)}>
-              <FileText className="mr-2 h-4 w-4" />
-              거래명세서 PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSalesOrderPDF(row.original)}>
-              <FileDown className="mr-2 h-4 w-4" />
-              수주확인서 PDF
-            </DropdownMenuItem>
-            {canComplete && (
-              <DropdownMenuItem onClick={() => handleEdit(row.original)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                수정
-              </DropdownMenuItem>
-            )}
-            {canComplete && (
-              <DropdownMenuItem onClick={() => setCompleteTarget(row.original)}>
-                <CheckCircle className="mr-2 h-4 w-4" />
-                완료 처리
-              </DropdownMenuItem>
-            )}
-            {canCancel && (
-              <DropdownMenuItem
-                onClick={() => setCancelTarget({ id: row.original.id, orderNo: row.original.orderNo })}
-                disabled={cancelMutation.isPending}
-              >
-                <XCircle className="mr-2 h-4 w-4" />
-                취소 처리
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem
-              className="text-destructive"
-              onClick={() => handleDelete(row.original.id, row.original.orderNo)}
-              disabled={deleteMutation.isPending}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              삭제
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
-  }
-
-  const onlineColumns: ColumnDef<SalesOrder>[] = [
-    { id: 'orderDate', header: '주문일', cell: ({ row }) => formatDate(row.original.orderDate) },
-    {
-      id: 'barcode',
-      header: '상품바코드',
-      cell: ({ row }) => {
-        const detail = row.original.details?.[0]
-        return <span className="font-mono text-xs">{detail?.item?.barcode || '-'}</span>
-      },
-    },
-    {
-      accessorKey: 'orderNo',
-      header: '주문번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
-    },
-    { id: 'siteName', header: '사이트명', cell: ({ row }) => row.original.siteName || '-' },
-    {
-      id: 'productName',
-      header: '상품명',
-      cell: ({ row }) => {
-        const detail = row.original.details?.[0]
-        return detail?.item?.itemName || '-'
-      },
-    },
-    {
-      id: 'quantity',
-      header: '수량',
-      cell: ({ row }) => {
-        const detail = row.original.details?.[0]
-        return detail ? Number(detail.quantity) : '-'
-      },
-    },
-    { id: 'orderer', header: '주문자', cell: ({ row }) => row.original.ordererName || '-' },
-    { id: 'recipient', header: '수취인', cell: ({ row }) => row.original.recipientName || '-' },
-    { id: 'ordererContact', header: '주문자 연락처', cell: ({ row }) => row.original.ordererContact || '-' },
-    { id: 'recipientContact', header: '수취인 연락처', cell: ({ row }) => row.original.recipientContact || '-' },
-    { id: 'zipCode', header: '우편번호', cell: ({ row }) => row.original.recipientZipCode || '-' },
-    {
-      id: 'address',
-      header: '주소',
-      cell: ({ row }) => (
-        <span className="block max-w-[200px] truncate" title={row.original.recipientAddress || ''}>
-          {row.original.recipientAddress || '-'}
-        </span>
-      ),
-    },
-    { id: 'requirements', header: '요구사항', cell: ({ row }) => row.original.requirements || '-' },
-    {
-      id: 'trackingNo',
-      header: '운송장번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span>,
-    },
-    { id: 'senderName', header: '보내는사람(업체명)', cell: ({ row }) => row.original.senderName || '-' },
-    { id: 'senderPhone', header: '전화번호', cell: ({ row }) => row.original.senderPhone || '-' },
-    {
-      id: 'senderAddress',
-      header: '주소',
-      cell: ({ row }) => (
-        <span className="block max-w-[200px] truncate" title={row.original.senderAddress || ''}>
-          {row.original.senderAddress || '-'}
-        </span>
-      ),
-    },
-    {
-      id: 'shippingCost',
-      header: '운임',
-      cell: ({ row }) => (row.original.shippingCost ? formatCurrency(row.original.shippingCost) : '-'),
-    },
-    { id: 'specialNote', header: '특기사항', cell: ({ row }) => row.original.specialNote || '-' },
-    {
-      id: 'status',
-      header: '상태',
-      cell: ({ row }) => {
-        const s = STATUS_MAP[row.original.status]
-        return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
-      },
-    },
-    actionsColumn,
-  ]
-
-  const offlineColumns: ColumnDef<SalesOrder>[] = [
-    {
-      accessorKey: 'orderNo',
-      header: '발주번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
-    },
-    { id: 'orderDate', header: '발주일', cell: ({ row }) => formatDate(row.original.orderDate) },
-    { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
-    {
-      id: 'deliveryDate',
-      header: '납기일',
-      cell: ({ row }) => (row.original.deliveryDate ? formatDate(row.original.deliveryDate) : '-'),
-    },
-    {
-      id: 'totalAmount',
-      header: '합계금액',
-      cell: ({ row }) => <span className="font-medium">{formatCurrency(row.original.totalAmount)}</span>,
-    },
-    {
-      id: 'status',
-      header: '상태',
-      cell: ({ row }) => {
-        const s = STATUS_MAP[row.original.status]
-        return s ? <Badge variant={s.variant}>{s.label}</Badge> : row.original.status
-      },
-    },
-    actionsColumn,
-  ]
 
   // 날짜 프리셋 계산
   const getPresetDates = (preset: string) => {
@@ -2127,100 +1956,465 @@ export function OrdersPanel() {
               />
               {trackingDialog}
             </div>
-            <DataTable
-              columns={onlineColumns}
-              data={onlineOrders}
-              searchColumn="orderNo"
-              searchPlaceholder="주문번호로 검색..."
-              isLoading={onlineLoading}
-              isError={onlineError}
-              onRetry={() => onlineRefetch()}
-              pageSize={50}
-              selectable
-              onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
-              onBulkDelete={(rows) => {
-                setBulkDeleteIds(rows.map((r) => r.id))
-              }}
-              bulkActions={[
-                {
-                  label: '일괄 다운로드',
-                  icon: <Download className="mr-1.5 h-4 w-4" />,
-                  action: (rows) => {
-                    exportToExcel({
-                      fileName: '선택_발주목록',
-                      title: '발주관리 선택 목록',
-                      columns: activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns,
-                      data: rows as unknown as Record<string, unknown>[],
-                    })
-                    toast.success('선택한 항목이 다운로드되었습니다.')
-                  },
-                },
-                {
-                  label: '일괄 취소',
-                  icon: <XCircle className="mr-1.5 h-4 w-4" />,
-                  variant: 'destructive',
-                  action: (rows) => setBatchCancelConfirm(rows.map((r) => r.id)),
-                },
-                {
-                  label: '일괄 완료',
-                  icon: <CheckCircle className="mr-1.5 h-4 w-4" />,
-                  action: (rows) => {
-                    setBatchCompleteIds(rows.map((r) => r.id))
-                    setBatchCompleteOpen(true)
-                  },
-                },
-              ]}
-            />
+            {/* BBS Board Style */}
+            <div className="overflow-hidden rounded-lg border">
+              <div className="bg-muted/50 hidden grid-cols-[50px_1fr_100px_100px_80px_140px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
+                <span>번호</span>
+                <span>제목</span>
+                <span>사이트</span>
+                <span className="text-right">금액</span>
+                <span className="text-center">상태</span>
+                <span className="text-right">주문일</span>
+              </div>
+              {onlineLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
+              {onlineError && (
+                <div className="py-12 text-center">
+                  <p className="text-destructive mb-2 text-sm">데이터를 불러오지 못했습니다.</p>
+                  <Button variant="outline" size="sm" onClick={() => onlineRefetch()}>
+                    다시 시도
+                  </Button>
+                </div>
+              )}
+              {!onlineLoading && !onlineError && onlineOrders.length === 0 && (
+                <div className="text-muted-foreground py-12 text-center text-sm">등록된 발주가 없습니다.</div>
+              )}
+              {onlineOrders.map((order, idx) => {
+                const isExpanded = expandedId === order.id
+                const postNo = onlineOrders.length - idx
+                const detail = order.details?.[0]
+                const title = `${order.orderNo} ${detail?.item?.itemName || ''}`
+                const s = STATUS_MAP[order.status]
+                const canComplete = order.status === 'ORDERED' || order.status === 'IN_PROGRESS'
+                const canCancel = order.status !== 'CANCELLED' && order.status !== 'COMPLETED'
+                return (
+                  <div key={order.id} className="border-b last:border-b-0">
+                    <button
+                      type="button"
+                      className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[50px_1fr_100px_100px_80px_140px]"
+                      onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                    >
+                      <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{title}</span>
+                          {detail && Number(detail.quantity) > 0 && (
+                            <span className="text-muted-foreground shrink-0 text-xs">
+                              ({Number(detail.quantity)}개)
+                            </span>
+                          )}
+                          {isExpanded ? (
+                            <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                      <span className="hidden text-xs sm:block">{order.siteName || '-'}</span>
+                      <span className="hidden text-right text-sm font-bold sm:block">
+                        {formatCurrency(order.totalAmount)}
+                      </span>
+                      <span className="hidden text-center sm:block">
+                        {s ? (
+                          <Badge variant={s.variant} className="text-[10px]">
+                            {s.label}
+                          </Badge>
+                        ) : (
+                          order.status
+                        )}
+                      </span>
+                      <span className="text-muted-foreground hidden text-right text-xs sm:block">
+                        {formatDate(order.orderDate)}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t bg-white px-4 py-4 sm:pl-[66px] dark:bg-transparent">
+                        {/* Order info grid */}
+                        <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+                          <div>
+                            <span className="text-muted-foreground text-xs">주문자</span>
+                            <p className="text-sm">{order.ordererName || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">수취인</span>
+                            <p className="text-sm">{order.recipientName || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">수취인 연락처</span>
+                            <p className="text-sm">{order.recipientContact || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">운송장번호</span>
+                            <p className="font-mono text-sm">{order.trackingNo || '-'}</p>
+                          </div>
+                        </div>
+                        {order.recipientAddress && (
+                          <div className="mb-3">
+                            <span className="text-muted-foreground text-xs">주소</span>
+                            <p className="text-sm">
+                              {order.recipientZipCode && `(${order.recipientZipCode}) `}
+                              {order.recipientAddress}
+                            </p>
+                          </div>
+                        )}
+                        {order.requirements && (
+                          <div className="mb-3">
+                            <span className="text-muted-foreground text-xs">요구사항</span>
+                            <p className="text-sm">{order.requirements}</p>
+                          </div>
+                        )}
+                        {/* Items */}
+                        {order.details && order.details.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-muted-foreground mb-1 text-xs font-medium">품목 내역</p>
+                            <div className="overflow-x-auto rounded-md border">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="bg-muted/50 border-b">
+                                    <th className="px-2 py-1.5 text-left font-medium">품목명</th>
+                                    <th className="px-2 py-1.5 text-left font-medium">바코드</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">금액</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {order.details.map((d, dIdx) => (
+                                    <tr key={dIdx} className="border-b last:border-b-0">
+                                      <td className="px-2 py-1.5">{d.item?.itemName || '-'}</td>
+                                      <td className="px-2 py-1.5 font-mono">{d.item?.barcode || '-'}</td>
+                                      <td className="px-2 py-1.5 text-right">{Number(d.quantity)}</td>
+                                      <td className="px-2 py-1.5 text-right">{formatCurrency(Number(d.unitPrice))}</td>
+                                      <td className="px-2 py-1.5 text-right font-medium">
+                                        {formatCurrency(Number(d.supplyAmount || d.quantity * d.unitPrice))}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        {/* Attachments */}
+                        <div className="mb-3 flex items-start gap-2">
+                          <span className="text-muted-foreground shrink-0 pt-0.5 text-xs font-medium">첨부</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleSalesOrderPDF(order)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>수주확인서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleTaxInvoicePDF(order)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>세금계산서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleTransactionStatementPDF(order)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>거래명세서.pdf</span>
+                            </button>
+                          </div>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                          {canComplete && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => handleEdit(order)}
+                            >
+                              <Pencil className="h-3 w-3" /> 수정
+                            </Button>
+                          )}
+                          {canComplete && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => setCompleteTarget(order)}
+                            >
+                              <CheckCircle className="h-3 w-3" /> 완료 처리
+                            </Button>
+                          )}
+                          {canCancel && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => setCancelTarget({ id: order.id, orderNo: order.orderNo })}
+                            >
+                              <XCircle className="h-3 w-3" /> 취소
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive h-7 gap-1 text-xs"
+                            onClick={() => handleDelete(order.id, order.orderNo)}
+                          >
+                            <Trash2 className="h-3 w-3" /> 삭제
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => {
+                              exportToExcel({
+                                fileName: `발주_${order.orderNo}`,
+                                title: `발주 ${order.orderNo}`,
+                                columns: onlineExportColumns,
+                                data: [order] as unknown as Record<string, unknown>[],
+                              })
+                            }}
+                          >
+                            <Printer className="h-3 w-3" /> 인쇄
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="OFFLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
-            <DataTable
-              columns={offlineColumns}
-              data={offlineOrders}
-              searchColumn="orderNo"
-              searchPlaceholder="발주번호로 검색..."
-              isLoading={offlineLoading}
-              isError={offlineError}
-              onRetry={() => offlineRefetch()}
-              pageSize={50}
-              selectable
-              onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
-              onBulkDelete={(rows) => {
-                setBulkDeleteIds(rows.map((r) => r.id))
-              }}
-              bulkActions={[
-                {
-                  label: '일괄 다운로드',
-                  icon: <Download className="mr-1.5 h-4 w-4" />,
-                  action: (rows) => {
-                    exportToExcel({
-                      fileName: '선택_발주목록',
-                      title: '발주관리 선택 목록',
-                      columns: activeTab === 'ONLINE' ? onlineExportColumns : offlineExportColumns,
-                      data: rows as unknown as Record<string, unknown>[],
-                    })
-                    toast.success('선택한 항목이 다운로드되었습니다.')
-                  },
-                },
-                {
-                  label: '일괄 취소',
-                  icon: <XCircle className="mr-1.5 h-4 w-4" />,
-                  variant: 'destructive',
-                  action: (rows) => setBatchCancelConfirm(rows.map((r) => r.id)),
-                },
-                {
-                  label: '일괄 완료',
-                  icon: <CheckCircle className="mr-1.5 h-4 w-4" />,
-                  action: (rows) => {
-                    setBatchCompleteIds(rows.map((r) => r.id))
-                    setBatchCompleteOpen(true)
-                  },
-                },
-              ]}
-            />
+            {/* BBS Board Style */}
+            <div className="overflow-hidden rounded-lg border">
+              <div className="bg-muted/50 hidden grid-cols-[50px_1fr_120px_120px_80px_120px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
+                <span>번호</span>
+                <span>제목</span>
+                <span>거래처</span>
+                <span className="text-right">합계금액</span>
+                <span className="text-center">상태</span>
+                <span className="text-right">발주일</span>
+              </div>
+              {offlineLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
+              {offlineError && (
+                <div className="py-12 text-center">
+                  <p className="text-destructive mb-2 text-sm">데이터를 불러오지 못했습니다.</p>
+                  <Button variant="outline" size="sm" onClick={() => offlineRefetch()}>
+                    다시 시도
+                  </Button>
+                </div>
+              )}
+              {!offlineLoading && !offlineError && offlineOrders.length === 0 && (
+                <div className="text-muted-foreground py-12 text-center text-sm">등록된 발주가 없습니다.</div>
+              )}
+              {offlineOrders.map((order, idx) => {
+                const isExpanded = expandedId === order.id
+                const postNo = offlineOrders.length - idx
+                const title = `${order.orderNo} ${order.description || ''}`
+                const s = STATUS_MAP[order.status]
+                const canComplete = order.status === 'ORDERED' || order.status === 'IN_PROGRESS'
+                const canCancel = order.status !== 'CANCELLED' && order.status !== 'COMPLETED'
+                return (
+                  <div key={order.id} className="border-b last:border-b-0">
+                    <button
+                      type="button"
+                      className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[50px_1fr_120px_120px_80px_120px]"
+                      onClick={() => setExpandedId(isExpanded ? null : order.id)}
+                    >
+                      <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{title}</span>
+                          {isExpanded ? (
+                            <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                      <span className="hidden text-xs sm:block">{order.partner?.partnerName || '-'}</span>
+                      <span className="hidden text-right text-sm font-bold sm:block">
+                        {formatCurrency(order.totalAmount)}
+                      </span>
+                      <span className="hidden text-center sm:block">
+                        {s ? (
+                          <Badge variant={s.variant} className="text-[10px]">
+                            {s.label}
+                          </Badge>
+                        ) : (
+                          order.status
+                        )}
+                      </span>
+                      <span className="text-muted-foreground hidden text-right text-xs sm:block">
+                        {formatDate(order.orderDate)}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t bg-white px-4 py-4 sm:pl-[66px] dark:bg-transparent">
+                        {/* Order info */}
+                        <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+                          <div>
+                            <span className="text-muted-foreground text-xs">거래처</span>
+                            <p className="text-sm font-medium">{order.partner?.partnerName || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">발주일</span>
+                            <p className="text-sm">{formatDate(order.orderDate)}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">납기일</span>
+                            <p className="text-sm">{order.deliveryDate ? formatDate(order.deliveryDate) : '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">합계금액</span>
+                            <p className="text-sm font-bold">{formatCurrency(order.totalAmount)}</p>
+                          </div>
+                        </div>
+                        {order.dispatchInfo && (
+                          <div className="mb-3">
+                            <span className="text-muted-foreground text-xs">배차정보</span>
+                            <p className="text-sm">{order.dispatchInfo}</p>
+                          </div>
+                        )}
+                        {/* Items */}
+                        {order.details && order.details.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-muted-foreground mb-1 text-xs font-medium">품목 내역</p>
+                            <div className="overflow-x-auto rounded-md border">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="bg-muted/50 border-b">
+                                    <th className="px-2 py-1.5 text-left font-medium">품목명</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">공급가액</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">세액</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">합계</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {order.details.map((d, dIdx) => {
+                                    const supply = Number(d.supplyAmount || d.quantity * d.unitPrice)
+                                    const tax = Number(d.taxAmount || 0)
+                                    return (
+                                      <tr key={dIdx} className="border-b last:border-b-0">
+                                        <td className="px-2 py-1.5">{d.item?.itemName || '-'}</td>
+                                        <td className="px-2 py-1.5 text-right">{Number(d.quantity)}</td>
+                                        <td className="px-2 py-1.5 text-right">
+                                          {formatCurrency(Number(d.unitPrice))}
+                                        </td>
+                                        <td className="px-2 py-1.5 text-right">{formatCurrency(supply)}</td>
+                                        <td className="px-2 py-1.5 text-right">{formatCurrency(tax)}</td>
+                                        <td className="px-2 py-1.5 text-right font-medium">
+                                          {formatCurrency(supply + tax)}
+                                        </td>
+                                      </tr>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        {/* Attachments */}
+                        <div className="mb-3 flex items-start gap-2">
+                          <span className="text-muted-foreground shrink-0 pt-0.5 text-xs font-medium">첨부</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleSalesOrderPDF(order)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>수주확인서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleTaxInvoicePDF(order)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>세금계산서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleTransactionStatementPDF(order)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>거래명세서.pdf</span>
+                            </button>
+                          </div>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                          {canComplete && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => handleEdit(order)}
+                            >
+                              <Pencil className="h-3 w-3" /> 수정
+                            </Button>
+                          )}
+                          {canComplete && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => setCompleteTarget(order)}
+                            >
+                              <CheckCircle className="h-3 w-3" /> 완료 처리
+                            </Button>
+                          )}
+                          {canCancel && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => setCancelTarget({ id: order.id, orderNo: order.orderNo })}
+                            >
+                              <XCircle className="h-3 w-3" /> 취소
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive h-7 gap-1 text-xs"
+                            onClick={() => handleDelete(order.id, order.orderNo)}
+                          >
+                            <Trash2 className="h-3 w-3" /> 삭제
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => {
+                              exportToExcel({
+                                fileName: `발주_${order.orderNo}`,
+                                title: `발주 ${order.orderNo}`,
+                                columns: offlineExportColumns,
+                                data: [order] as unknown as Record<string, unknown>[],
+                              })
+                            }}
+                          >
+                            <Printer className="h-3 w-3" /> 인쇄
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
