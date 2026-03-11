@@ -453,6 +453,29 @@ async function main() {
     changeCount++
   }
 
+  // ── online_sales_revenues: salesType 컬럼 ──
+  if (await tableExists('online_sales_revenues')) {
+    if (await addColumnIfMissing('online_sales_revenues', 'salesType', `TEXT NOT NULL DEFAULT 'ONLINE'`)) changeCount++
+  }
+
+  // ── sales_revenue_details 테이블 ──
+  if (!(await tableExists('sales_revenue_details'))) {
+    console.log('  + Creating table: sales_revenue_details')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "sales_revenue_details" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "revenueId" TEXT NOT NULL REFERENCES "online_sales_revenues"("id") ON DELETE CASCADE,
+        "itemId" TEXT NOT NULL REFERENCES "items"("id"),
+        "quantity" INTEGER NOT NULL,
+        "unitPrice" DECIMAL(15,2) NOT NULL,
+        "amount" DECIMAL(15,2) NOT NULL
+      )
+    `)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "sales_revenue_details_revenueId_idx" ON "sales_revenue_details"("revenueId")`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "sales_revenue_details_itemId_idx" ON "sales_revenue_details"("itemId")`)
+    changeCount++
+  }
+
   if (changeCount === 0) {
     console.log('[db-sync] Schema is up to date. No changes needed.')
   } else {
