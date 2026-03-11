@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
       }
     } else {
       // year/month 기반 월별 조회 (기본)
-      let year = parseInt(searchParams.get('year') || String(now.getFullYear())) || now.getFullYear()
-      let month = parseInt(searchParams.get('month') || String(now.getMonth() + 1)) || now.getMonth() + 1
+      let year = parseInt(searchParams.get('year') || String(now.getFullYear()), 10) || now.getFullYear()
+      let month = parseInt(searchParams.get('month') || String(now.getMonth() + 1), 10) || now.getMonth() + 1
       if (year < 2000 || year > 2100) year = now.getFullYear()
       if (month < 1 || month > 12) month = now.getMonth() + 1
       startDate = new Date(year, month - 1, 1)

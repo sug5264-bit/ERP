@@ -22,13 +22,16 @@ export async function GET(req: NextRequest) {
 
     const query = sanitizeSearchQuery(rawQuery)
     const modulesParam = searchParams.get('modules')
-    const rawLimit = parseInt(searchParams.get('limit') || '5')
+    const rawLimit = parseInt(searchParams.get('limit') || '5', 10)
     const limit = Math.min(50, Number.isFinite(rawLimit) ? rawLimit : 5)
     const enabledModules = modulesParam
       ? modulesParam.split(',')
       : ['employee', 'partner', 'item', 'voucher', 'project']
 
-    const results: Record<string, { id: string; type: string; title: string; subtitle: string; badge: string; url: string }[]> = {}
+    const results: Record<
+      string,
+      { id: string; type: string; title: string; subtitle: string; badge: string; url: string }[]
+    > = {}
 
     const searches = []
 

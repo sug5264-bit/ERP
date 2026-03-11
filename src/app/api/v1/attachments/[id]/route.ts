@@ -10,7 +10,7 @@ const UPLOAD_DIR = resolve(process.cwd(), 'uploads', 'attachments')
 /** 경로 순회 방지: 최종 경로가 UPLOAD_DIR 안에 있는지 검증 */
 function safePath(fileName: string): string {
   const full = resolve(UPLOAD_DIR, fileName)
-  if (!full.startsWith(UPLOAD_DIR)) {
+  if (!full.startsWith(UPLOAD_DIR + '/')) {
     throw new Error('잘못된 파일 경로입니다.')
   }
   return full
