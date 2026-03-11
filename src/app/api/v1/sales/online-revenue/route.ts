@@ -15,6 +15,7 @@ const createOnlineRevenueSchema = z.object({
     .string()
     .min(1)
     .regex(/^\d{4}-\d{2}-\d{2}$/),
+  salesType: z.enum(['ONLINE', 'OFFLINE']).optional().default('ONLINE'),
   channel: z.string().min(1).max(50),
   description: z.string().max(1000).optional().nullable(),
   totalSales: z.number().min(0).max(999_999_999_999),
@@ -36,6 +37,8 @@ export async function GET(request: NextRequest) {
     const { page, pageSize, skip } = getPaginationParams(sp)
 
     const where: Record<string, unknown> = {}
+    const salesType = sp.get('salesType')
+    if (salesType && salesType !== 'all') where.salesType = salesType
     const channel = sp.get('channel')
     if (channel && channel !== 'all') where.channel = channel
     const startDate = sp.get('startDate')
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
           prisma.onlineSalesRevenue.create({
             data: {
               revenueDate: new Date(entry.revenueDate),
+              salesType: entry.salesType || 'ONLINE',
               channel: entry.channel,
               description: entry.description || null,
               totalSales: entry.totalSales,
@@ -103,6 +107,7 @@ export async function POST(request: NextRequest) {
     const result = await prisma.onlineSalesRevenue.create({
       data: {
         revenueDate: new Date(data.revenueDate),
+        salesType: data.salesType || 'ONLINE',
         channel: data.channel,
         description: data.description || null,
         totalSales: data.totalSales,

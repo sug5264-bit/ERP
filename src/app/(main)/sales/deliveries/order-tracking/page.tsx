@@ -11,21 +11,41 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, formatCurrency } from '@/lib/format'
-import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
+import { exportToExcel, exportToPDF, downloadImportTemplate, type ExportColumn } from '@/lib/export'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
 import { toast } from 'sonner'
-import { CheckCircle, Clock, Package, Upload, Paperclip, X, Eye } from 'lucide-react'
+import {
+  CheckCircle,
+  Clock,
+  Package,
+  Upload,
+  Paperclip,
+  X,
+  Eye,
+  FileDown,
+  RefreshCw,
+  Filter,
+  Table2,
+  CalendarDays,
+} from 'lucide-react'
 
 const STATUS_MAP: Record<string, string> = {
   PREPARING: '준비중',
   SHIPPED: '출하',
   DELIVERED: '납품완료',
 }
+
+const STATUS_FILTER_OPTIONS = [
+  { value: 'all', label: '전체 상태' },
+  { value: 'PREPARING', label: '준비중' },
+  { value: 'SHIPPED', label: '출하' },
+  { value: 'DELIVERED', label: '납품완료' },
+]
 
 interface DeliveryDetailRow {
   item?: { id: string; itemName: string; barcode?: string; specification?: string; unit?: string; itemCode?: string }
@@ -50,7 +70,21 @@ interface DeliveryRow {
   platformFee?: number
   revenueNote?: string
   partner?: { partnerName: string; bizNo?: string }
-  salesOrder?: { orderNo: string; orderDate?: string; status?: string; salesChannel?: string }
+  salesOrder?: {
+    orderNo: string
+    orderDate?: string
+    status?: string
+    salesChannel?: string
+    siteName?: string
+    ordererName?: string
+    ordererContact?: string
+    recipientName?: string
+    recipientContact?: string
+    recipientZipCode?: string
+    recipientAddress?: string
+    requirements?: string
+    trackingNo?: string
+  }
   details?: DeliveryDetailRow[]
 }
 
@@ -66,16 +100,91 @@ interface ApiListResponse<T> {
   data: T[]
 }
 
+// Flatten delivery rows to one row per item for the detail table
+interface FlatRow {
+  _deliveryId: string
+  _delivery: DeliveryRow
+  orderDate: string
+  barcode: string
+  orderNo: string
+  siteName: string
+  itemName: string
+  quantity: number
+  ordererName: string
+  recipientName: string
+  ordererContact: string
+  recipientContact: string
+  zipCode: string
+  address: string
+  requirements: string
+  status: string
+  trackingNo: string
+}
+
+function flattenDeliveries(deliveries: DeliveryRow[]): FlatRow[] {
+  const rows: FlatRow[] = []
+  for (const d of deliveries) {
+    const so = d.salesOrder
+    if (d.details && d.details.length > 0) {
+      for (const det of d.details) {
+        rows.push({
+          _deliveryId: d.id,
+          _delivery: d,
+          orderDate: so?.orderDate || d.deliveryDate,
+          barcode: det.item?.barcode || '',
+          orderNo: so?.orderNo || d.deliveryNo,
+          siteName: so?.siteName || '-',
+          itemName: det.item?.itemName || '-',
+          quantity: det.quantity,
+          ordererName: so?.ordererName || '-',
+          recipientName: so?.recipientName || '-',
+          ordererContact: so?.ordererContact || '-',
+          recipientContact: so?.recipientContact || '-',
+          zipCode: so?.recipientZipCode || '-',
+          address: so?.recipientAddress || '-',
+          requirements: so?.requirements || '-',
+          status: d.status,
+          trackingNo: d.trackingNo || so?.trackingNo || '-',
+        })
+      }
+    } else {
+      rows.push({
+        _deliveryId: d.id,
+        _delivery: d,
+        orderDate: so?.orderDate || d.deliveryDate,
+        barcode: '',
+        orderNo: so?.orderNo || d.deliveryNo,
+        siteName: so?.siteName || '-',
+        itemName: '-',
+        quantity: 0,
+        ordererName: so?.ordererName || '-',
+        recipientName: so?.recipientName || '-',
+        ordererContact: so?.ordererContact || '-',
+        recipientContact: so?.recipientContact || '-',
+        zipCode: so?.recipientZipCode || '-',
+        address: so?.recipientAddress || '-',
+        requirements: so?.requirements || '-',
+        status: d.status,
+        trackingNo: d.trackingNo || so?.trackingNo || '-',
+      })
+    }
+  }
+  return rows
+}
+
 export default function OrderTrackingPage() {
-  const [activeTab, setActiveTab] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false)
   const [revenueTarget, setRevenueTarget] = useState<DeliveryRow | null>(null)
   const [attachDialogOpen, setAttachDialogOpen] = useState(false)
   const [attachTarget, setAttachTarget] = useState<DeliveryRow | null>(null)
   const [attachments, setAttachments] = useState<AttachmentRow[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const trackingFileRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   // Build query params
@@ -83,24 +192,32 @@ export default function OrderTrackingPage() {
     const params = new URLSearchParams({ pageSize: '200' })
     if (startDate) params.set('startDate', startDate)
     if (endDate) params.set('endDate', endDate)
-    if (activeTab === 'pending') {
-      params.set('orderConfirmed', 'true')
-      params.set('shipmentCompleted', 'false')
-    } else if (activeTab === 'completed') {
-      params.set('shipmentCompleted', 'true')
-    } else if (activeTab === 'unconfirmed') {
-      params.set('orderConfirmed', 'false')
-    }
+    if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
     return params.toString()
-  }, [startDate, endDate, activeTab])
+  }, [startDate, endDate, statusFilter])
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['delivery-tracking', queryParams],
-    queryFn: () =>
-      api.get(`/sales/deliveries?${queryParams}`) as Promise<ApiListResponse<DeliveryRow>>,
+    queryFn: () => api.get(`/sales/deliveries?${queryParams}`) as Promise<ApiListResponse<DeliveryRow>>,
   })
 
   const deliveries = useMemo(() => data?.data || [], [data?.data])
+  const flatRows = useMemo(() => flattenDeliveries(deliveries), [deliveries])
+
+  // Filter by search term
+  const filteredRows = useMemo(() => {
+    if (!searchTerm) return flatRows
+    const term = searchTerm.toLowerCase()
+    return flatRows.filter(
+      (r) =>
+        r.orderNo.toLowerCase().includes(term) ||
+        r.itemName.toLowerCase().includes(term) ||
+        r.ordererName.toLowerCase().includes(term) ||
+        r.recipientName.toLowerCase().includes(term) ||
+        r.barcode.toLowerCase().includes(term) ||
+        r.siteName.toLowerCase().includes(term)
+    )
+  }, [flatRows, searchTerm])
 
   // Toggle mutations
   const toggleOrderConfirmed = useMutation({
@@ -108,7 +225,6 @@ export default function OrderTrackingPage() {
       api.patch(`/sales/deliveries/${id}`, { orderConfirmed: value }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-tracking'] })
-      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       toast.success('수주 상태가 업데이트되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -122,7 +238,6 @@ export default function OrderTrackingPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-tracking'] })
-      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       toast.success('출하 상태가 업데이트되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -158,11 +273,26 @@ export default function OrderTrackingPage() {
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
+  const handleTrackingUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      await api.upload('/sales/deliveries/tracking-upload', formData)
+      toast.success('운송장이 업로드되었습니다.')
+      refetch()
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : '운송장 업로드 실패')
+    }
+    if (trackingFileRef.current) trackingFileRef.current.value = ''
+  }
+
   const loadAttachments = async (deliveryId: string) => {
     try {
-      const res = (await api.get(
-        `/attachments?relatedTable=Delivery&relatedId=${deliveryId}`
-      )) as { data?: AttachmentRow[] }
+      const res = (await api.get(`/attachments?relatedTable=Delivery&relatedId=${deliveryId}`)) as {
+        data?: AttachmentRow[]
+      }
       setAttachments(Array.isArray(res) ? res : res.data || [])
     } catch {
       setAttachments([])
@@ -197,100 +327,101 @@ export default function OrderTrackingPage() {
     const confirmed = deliveries.filter((d: DeliveryRow) => d.orderConfirmed).length
     const shipped = deliveries.filter((d: DeliveryRow) => d.shipmentCompleted).length
     const pending = confirmed - shipped
-    const totalAmount = deliveries.reduce(
-      (s: number, d: DeliveryRow) =>
-        s + (d.details?.reduce((ds: number, det: DeliveryDetailRow) => ds + Number(det.amount), 0) || 0),
-      0
-    )
-    const totalRevenue = deliveries.reduce(
-      (s: number, d: DeliveryRow) => s + Number(d.actualRevenue || 0),
-      0
-    )
-    return { total, confirmed, shipped, pending, totalAmount, totalRevenue }
+    return { total, confirmed, shipped, pending }
   }, [deliveries])
 
-  const columns: ColumnDef<DeliveryRow>[] = [
+  const columns: ColumnDef<FlatRow>[] = [
     {
-      id: 'orderConfirmed',
-      header: '수주확인',
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.original.orderConfirmed}
-            onCheckedChange={(checked) =>
-              toggleOrderConfirmed.mutate({ id: row.original.id, value: !!checked })
-            }
-          />
-        </div>
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+          aria-label="전체 선택"
+        />
       ),
-    },
-    {
-      id: 'shipmentCompleted',
-      header: '출하완료',
       cell: ({ row }) => (
-        <div className="flex items-center justify-center">
-          <Checkbox
-            checked={row.original.shipmentCompleted}
-            onCheckedChange={(checked) =>
-              toggleShipmentCompleted.mutate({ id: row.original.id, value: !!checked })
-            }
-            disabled={!row.original.orderConfirmed}
-          />
-        </div>
+        <Checkbox checked={row.getIsSelected()} onCheckedChange={(v) => row.toggleSelected(!!v)} aria-label="행 선택" />
       ),
+      enableSorting: false,
     },
     {
-      accessorKey: 'deliveryNo',
-      header: '납품번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.deliveryNo}</span>,
+      id: 'orderDate',
+      header: '주문일',
+      cell: ({ row }) => <span className="text-xs whitespace-nowrap">{formatDate(row.original.orderDate)}</span>,
     },
     {
-      id: 'orderNo',
-      header: '수주번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.salesOrder?.orderNo || '-'}</span>,
+      id: 'barcode',
+      header: '상품바코드',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.barcode || '-'}</span>,
     },
     {
-      id: 'deliveryDate',
-      header: '납품일',
-      cell: ({ row }) => formatDate(row.original.deliveryDate),
+      accessorKey: 'orderNo',
+      header: '주문번호',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.orderNo}</span>,
+      enableSorting: true,
     },
     {
-      id: 'partner',
-      header: '거래처',
-      cell: ({ row }) => row.original.partner?.partnerName || '-',
+      id: 'siteName',
+      header: '사이트명',
+      cell: ({ row }) => <span className="text-xs">{row.original.siteName}</span>,
     },
     {
-      id: 'channel',
-      header: '채널',
-      cell: ({ row }) => {
-        const ch = row.original.salesOrder?.salesChannel
-        return ch === 'ONLINE' ? (
-          <Badge variant="secondary" className="text-xs">온라인</Badge>
-        ) : (
-          <Badge variant="outline" className="text-xs">오프라인</Badge>
-        )
-      },
-    },
-    {
-      id: 'amount',
-      header: '출하금액',
+      id: 'itemName',
+      header: '상품명',
       cell: ({ row }) => (
-        <span className="font-medium">
-          {formatCurrency(
-            row.original.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0
-          )}
+        <span className="max-w-[200px] truncate text-xs" title={row.original.itemName}>
+          {row.original.itemName}
         </span>
       ),
     },
     {
-      id: 'actualRevenue',
-      header: '실매출',
-      cell: ({ row }) =>
-        row.original.actualRevenue ? (
-          <span className="text-status-success font-medium">{formatCurrency(Number(row.original.actualRevenue))}</span>
-        ) : (
-          <span className="text-muted-foreground text-xs">-</span>
-        ),
+      id: 'quantity',
+      header: '수량',
+      cell: ({ row }) => <span className="text-xs">{row.original.quantity}</span>,
+    },
+    {
+      id: 'ordererName',
+      header: '주문자',
+      cell: ({ row }) => <span className="text-xs">{row.original.ordererName}</span>,
+    },
+    {
+      id: 'recipientName',
+      header: '수취인',
+      cell: ({ row }) => <span className="text-xs">{row.original.recipientName}</span>,
+    },
+    {
+      id: 'ordererContact',
+      header: '주문자 연락처',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.ordererContact}</span>,
+    },
+    {
+      id: 'recipientContact',
+      header: '수취인 연락처',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.recipientContact}</span>,
+    },
+    {
+      id: 'zipCode',
+      header: '우편번호',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.zipCode}</span>,
+    },
+    {
+      id: 'address',
+      header: '주소',
+      cell: ({ row }) => (
+        <span className="max-w-[200px] truncate text-xs" title={row.original.address}>
+          {row.original.address}
+        </span>
+      ),
+    },
+    {
+      id: 'requirements',
+      header: '요구사항',
+      cell: ({ row }) => (
+        <span className="max-w-[150px] truncate text-xs" title={row.original.requirements}>
+          {row.original.requirements}
+        </span>
+      ),
     },
     {
       id: 'status',
@@ -298,90 +429,92 @@ export default function OrderTrackingPage() {
       cell: ({ row }) => <StatusBadge status={row.original.status} labels={STATUS_MAP} />,
     },
     {
-      id: 'trackingStatus',
-      header: '진행',
-      cell: ({ row }) => {
-        const d = row.original
-        if (d.shipmentCompleted)
-          return (
-            <Badge variant="default" className="gap-1 text-xs">
-              <CheckCircle className="h-3 w-3" /> 출하완료
-            </Badge>
-          )
-        if (d.orderConfirmed)
-          return (
-            <Badge variant="secondary" className="gap-1 text-xs">
-              <Clock className="h-3 w-3" /> 출하예정
-            </Badge>
-          )
-        return (
-          <Badge variant="outline" className="gap-1 text-xs">
-            <Package className="h-3 w-3" /> 수주대기
-          </Badge>
-        )
-      },
+      id: 'trackingNo',
+      header: '운송장',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo}</span>,
     },
     {
-      id: 'revenue',
-      header: '매출입력',
+      id: 'actions',
+      header: '',
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => {
-            setRevenueTarget(row.original)
-            setRevenueDialogOpen(true)
-          }}
-        >
-          매출
-        </Button>
-      ),
-    },
-    {
-      id: 'attachments',
-      header: '첨부',
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => openAttachments(row.original)}
-          title="첨부파일 관리"
-        >
-          <Paperclip className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => openAttachments(row.original._delivery)}
+            title="첨부파일"
+          >
+            <Paperclip className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setRevenueTarget(row.original._delivery)
+              setRevenueDialogOpen(true)
+            }}
+          >
+            매출
+          </Button>
+        </div>
       ),
     },
   ]
 
   const exportColumns: ExportColumn[] = [
-    { header: '수주확인', accessor: (r) => (r.orderConfirmed ? 'O' : '') },
-    { header: '출하완료', accessor: (r) => (r.shipmentCompleted ? 'O' : '') },
-    { header: '납품번호', accessor: 'deliveryNo' },
-    { header: '수주번호', accessor: (r) => r.salesOrder?.orderNo || '' },
-    { header: '납품일', accessor: (r) => formatDate(r.deliveryDate) },
-    { header: '거래처', accessor: (r) => r.partner?.partnerName || '' },
-    { header: '채널', accessor: (r) => r.salesOrder?.salesChannel || '' },
-    {
-      header: '출하금액',
-      accessor: (r) =>
-        formatCurrency(r.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0),
-    },
-    { header: '실매출', accessor: (r) => (r.actualRevenue ? formatCurrency(r.actualRevenue) : '') },
+    { header: '주문일', accessor: (r) => formatDate(r.orderDate) },
+    { header: '상품바코드', accessor: (r) => r.barcode || '' },
+    { header: '주문번호', accessor: (r) => r.orderNo },
+    { header: '사이트명', accessor: (r) => r.siteName },
+    { header: '상품명', accessor: (r) => r.itemName },
+    { header: '수량', accessor: (r) => String(r.quantity) },
+    { header: '주문자', accessor: (r) => r.ordererName },
+    { header: '수취인', accessor: (r) => r.recipientName },
+    { header: '주문자 연락처', accessor: (r) => r.ordererContact },
+    { header: '수취인 연락처', accessor: (r) => r.recipientContact },
+    { header: '우편번호', accessor: (r) => r.zipCode },
+    { header: '주소', accessor: (r) => r.address },
+    { header: '요구사항', accessor: (r) => r.requirements },
     { header: '상태', accessor: (r) => STATUS_MAP[r.status] || r.status },
+    { header: '운송장', accessor: (r) => r.trackingNo },
   ]
 
   const handleExport = (type: 'excel' | 'pdf') => {
     const cfg = {
-      fileName: '수주출하추적',
-      title: '수주/출하 추적 현황',
+      fileName: '수주출하관리',
+      title: '수주/출하 관리',
       columns: exportColumns,
-      data: deliveries,
+      data: filteredRows,
     }
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
+  }
+
+  const handleTemplateDownload = () => {
+    downloadImportTemplate({
+      fileName: '수주_업로드_템플릿',
+      sheetName: '수주',
+      columns: [
+        { header: '주문일', key: 'orderDate', example: '2026-03-11', width: 14, required: true },
+        { header: '상품바코드', key: 'barcode', example: '8801234567890', width: 16 },
+        { header: '주문번호', key: 'orderNo', example: 'SO-20260311-001', width: 18, required: true },
+        { header: '사이트명', key: 'siteName', example: '네이버 스토어', width: 14 },
+        { header: '상품명', key: 'itemName', example: '상품A', width: 18, required: true },
+        { header: '수량', key: 'quantity', example: '1', width: 8, required: true },
+        { header: '단가', key: 'unitPrice', example: '50000', width: 12, required: true },
+        { header: '주문자', key: 'ordererName', example: '홍길동', width: 12 },
+        { header: '주문자 연락처', key: 'ordererContact', example: '010-1234-5678', width: 16 },
+        { header: '수취인', key: 'recipientName', example: '김철수', width: 12 },
+        { header: '수취인 연락처', key: 'recipientContact', example: '010-9876-5432', width: 16 },
+        { header: '우편번호', key: 'recipientZipCode', example: '06236', width: 10 },
+        { header: '주소', key: 'recipientAddress', example: '서울시 강남구 테헤란로 1', width: 30 },
+        { header: '요구사항', key: 'requirements', example: '부재시 문앞', width: 20 },
+        { header: '운송장번호', key: 'trackingNo', example: '', width: 16 },
+      ],
+    })
   }
 
   const handleRevenueSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -397,87 +530,148 @@ export default function OrderTrackingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="수주/출하 추적"
-        description="수주 확인 및 출하 완료 상태를 관리합니다. 체크박스로 진행 상태를 업데이트하세요."
-      />
+    <div className="space-y-4">
+      <PageHeader title="수주/출하 추적" description="수주 확인 및 출하 상태를 관리합니다." />
 
-      <DateRangeFilter
-        startDate={startDate}
-        endDate={endDate}
-        onDateChange={(s, e) => {
-          setStartDate(s)
-          setEndDate(e)
-        }}
-      />
+      {/* Top filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="전체 상태" />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-4">
-        <div className="rounded-lg border p-3 text-center">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">전체</p>
-          <p className="text-sm font-bold sm:text-lg">{summary.total}건</p>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+        />
+
+        <div className="relative flex-1 sm:max-w-sm">
+          <Input
+            placeholder="주문번호 / 거래처 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pr-8"
+          />
         </div>
-        <div className="bg-status-info-muted rounded-lg border p-3 text-center">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">수주확인</p>
-          <p className="text-status-info text-sm font-bold sm:text-lg">{summary.confirmed}건</p>
-        </div>
-        <div className="bg-status-warning-muted rounded-lg border p-3 text-center">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">출하대기</p>
-          <p className="text-status-warning text-sm font-bold sm:text-lg">{summary.pending}건</p>
-        </div>
-        <div className="bg-status-success-muted rounded-lg border p-3 text-center">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">출하완료</p>
-          <p className="text-status-success text-sm font-bold sm:text-lg">{summary.shipped}건</p>
-        </div>
-        <div className="rounded-lg border p-3 text-center">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">총 출하금액</p>
-          <p className="text-sm font-bold sm:text-lg">{formatCurrency(summary.totalAmount)}</p>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9"
+          title="필터 초기화"
+          onClick={() => {
+            setStatusFilter('all')
+            setStartDate('')
+            setEndDate('')
+            setSearchTerm('')
+          }}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
+
+        <Button variant="ghost" size="icon" className="h-9 w-9" title="새로고침" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
+
+        <div className="ml-auto flex rounded-lg border">
+          <Button
+            variant={viewMode === 'table' ? 'default' : 'ghost'}
+            size="sm"
+            className="gap-1 rounded-r-none"
+            onClick={() => setViewMode('table')}
+          >
+            <Table2 className="h-4 w-4" /> 테이블
+          </Button>
+          <Button
+            variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+            size="sm"
+            className="gap-1 rounded-l-none"
+            onClick={() => setViewMode('calendar')}
+          >
+            <CalendarDays className="h-4 w-4" /> 캘린더
+          </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="all">전체</TabsTrigger>
-          <TabsTrigger value="unconfirmed">수주대기</TabsTrigger>
-          <TabsTrigger value="pending">출하예정</TabsTrigger>
-          <TabsTrigger value="completed">출하완료</TabsTrigger>
-        </TabsList>
+      {/* Action buttons */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
+          <FileDown className="mr-1 h-3.5 w-3.5" /> 수주 템플릿
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => trackingFileRef.current?.click()}>
+          <Upload className="mr-1 h-3.5 w-3.5" /> 운송장 업로드
+        </Button>
+        <input
+          ref={trackingFileRef}
+          type="file"
+          className="hidden"
+          accept=".xlsx,.xls,.csv"
+          onChange={handleTrackingUpload}
+        />
+      </div>
 
-        <TabsContent value={activeTab} className="pt-4">
-          <DataTable
-            columns={columns}
-            data={deliveries}
-            searchColumn="deliveryNo"
-            searchPlaceholder="납품번호로 검색..."
-            isLoading={isLoading}
-            isError={isError}
-            onRetry={() => refetch()}
-            pageSize={50}
-            onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
-          />
-        </TabsContent>
-      </Tabs>
+      {/* Summary badges */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className="gap-1">
+          <Package className="h-3 w-3" /> 전체 {summary.total}건
+        </Badge>
+        <Badge variant="secondary" className="gap-1">
+          <Clock className="h-3 w-3" /> 수주확인 {summary.confirmed}건
+        </Badge>
+        <Badge variant="secondary" className="gap-1 text-orange-600">
+          출하대기 {summary.pending}건
+        </Badge>
+        <Badge variant="default" className="gap-1">
+          <CheckCircle className="h-3 w-3" /> 출하완료 {summary.shipped}건
+        </Badge>
+      </div>
+
+      {/* Data table */}
+      {viewMode === 'table' ? (
+        <DataTable
+          columns={columns}
+          data={filteredRows}
+          searchColumn="orderNo"
+          searchPlaceholder="주문번호로 검색..."
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          pageSize={50}
+          onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
+        />
+      ) : (
+        <div className="bg-muted/30 rounded-lg border p-8 text-center">
+          <CalendarDays className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+          <p className="text-muted-foreground text-sm">캘린더 뷰는 준비 중입니다.</p>
+        </div>
+      )}
 
       {/* Revenue input dialog */}
       <Dialog open={revenueDialogOpen} onOpenChange={setRevenueDialogOpen}>
         <DialogContent className="max-w-sm sm:max-w-md">
           <DialogHeader>
             <DialogTitle>매출 정보 입력 - {revenueTarget?.deliveryNo}</DialogTitle>
+            <DialogDescription>실제 매출액과 수수료를 기입합니다.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleRevenueSubmit} className="space-y-4">
-            <p className="text-muted-foreground text-xs">
-              온라인 판매가 변동으로 인한 실제 매출액을 별도로 기입할 수 있습니다.
-            </p>
             <div className="space-y-3">
               <div className="space-y-1">
                 <Label className="text-xs">출하금액 (참고)</Label>
                 <p className="text-sm font-medium">
                   {formatCurrency(
-                    revenueTarget?.details?.reduce(
-                      (s: number, d: DeliveryDetailRow) => s + Number(d.amount),
-                      0
-                    ) || 0
+                    revenueTarget?.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0
                   )}
                 </p>
               </div>
@@ -526,10 +720,8 @@ export default function OrderTrackingPage() {
         <DialogContent className="max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>첨부파일 - {attachTarget?.deliveryNo}</DialogTitle>
+            <DialogDescription>거래명세서, 인수증 등 출고 관련 서류를 관리합니다.</DialogDescription>
           </DialogHeader>
-          <p className="text-muted-foreground text-xs">
-            거래명세서, 인수증 등 출고 관련 서류를 업로드할 수 있습니다. (Excel, PDF, 이미지 등)
-          </p>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Button
@@ -552,10 +744,7 @@ export default function OrderTrackingPage() {
             {attachments.length > 0 ? (
               <div className="space-y-1">
                 {attachments.map((att) => (
-                  <div
-                    key={att.id}
-                    className="flex items-center justify-between rounded-md border px-3 py-2"
-                  >
+                  <div key={att.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                     <div className="flex items-center gap-2 overflow-hidden">
                       <Paperclip className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
                       <div className="min-w-0">

@@ -9,16 +9,27 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatCurrency, formatDate, getLocalDateString } from '@/lib/format'
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/export'
 import { toast } from 'sonner'
-import { Plus, FileSpreadsheet, FileText, Download, Calendar, TrendingUp, Search } from 'lucide-react'
+import {
+  Plus,
+  FileSpreadsheet,
+  FileText,
+  Search,
+  Pencil,
+  Trash2,
+  MessageSquare,
+  Printer,
+  ChevronDown,
+  ChevronUp,
+  Paperclip,
+} from 'lucide-react'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 
-const CHANNEL_MAP: Record<string, string> = {
+const ONLINE_CHANNEL_MAP: Record<string, string> = {
   NAVER: '네이버 스토어',
   COUPANG: '쿠팡',
   GMARKET: 'G마켓',
@@ -30,9 +41,25 @@ const CHANNEL_MAP: Record<string, string> = {
   OTHER: '기타',
 }
 
+const OFFLINE_CHANNEL_MAP: Record<string, string> = {
+  DIRECT: '직접판매',
+  WHOLESALE: '도매',
+  RETAIL: '소매',
+  EXHIBITION: '전시/박람회',
+  OTHER_OFFLINE: '기타',
+}
+
+const ALL_CHANNEL_MAP: Record<string, string> = { ...ONLINE_CHANNEL_MAP, ...OFFLINE_CHANNEL_MAP }
+
+const SALES_TYPE_MAP: Record<string, string> = {
+  ONLINE: '온라인',
+  OFFLINE: '오프라인',
+}
+
 interface RevenueRow {
   id: string
   revenueDate: string
+  salesType?: string
   channel: string
   description?: string
   totalSales: number
@@ -46,21 +73,27 @@ interface RevenueRow {
 export default function OnlineSalesPage() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<RevenueRow | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<RevenueRow | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [channelFilter, setChannelFilter] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [formSalesType, setFormSalesType] = useState<string>('ONLINE')
 
   const queryParamsStr = useMemo(() => {
     const qp = new URLSearchParams({ pageSize: '100' })
     if (channelFilter && channelFilter !== 'all') qp.set('channel', channelFilter)
+    if (typeFilter && typeFilter !== 'all') qp.set('salesType', typeFilter)
     if (startDate) qp.set('startDate', startDate)
     if (endDate) qp.set('endDate', endDate)
     return qp.toString()
-  }, [channelFilter, startDate, endDate])
+  }, [channelFilter, typeFilter, startDate, endDate])
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['online-revenue', channelFilter, startDate, endDate],
+    queryKey: ['online-revenue', channelFilter, typeFilter, startDate, endDate],
     queryFn: () => api.get(`/sales/online-revenue?${queryParamsStr}`) as Promise<{ data: RevenueRow[] }>,
   })
 
@@ -71,7 +104,7 @@ export default function OnlineSalesPage() {
     const term = searchTerm.toLowerCase()
     return revenues.filter(
       (r) =>
-        (CHANNEL_MAP[r.channel] || r.channel).toLowerCase().includes(term) ||
+        (ALL_CHANNEL_MAP[r.channel] || r.channel).toLowerCase().includes(term) ||
         r.description?.toLowerCase().includes(term) ||
         r.memo?.toLowerCase().includes(term)
     )
@@ -81,7 +114,6 @@ export default function OnlineSalesPage() {
   const totalSales = filteredRevenues.reduce((s, r) => s + Number(r.totalSales || 0), 0)
   const totalFees = filteredRevenues.reduce((s, r) => s + Number(r.totalFee || 0), 0)
   const totalNet = filteredRevenues.reduce((s, r) => s + Number(r.netRevenue || 0), 0)
-  const totalOrders = filteredRevenues.reduce((s, r) => s + Number(r.orderCount || 0), 0)
 
   const createMutation = useMutation({
     mutationFn: (body: Record<string, unknown>) => api.post('/sales/online-revenue', body),
@@ -93,25 +125,74 @@ export default function OnlineSalesPage() {
     onError: (err: Error) => toast.error(err.message),
   })
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...body }: Record<string, unknown>) => api.put(`/sales/online-revenue/${id}`, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['online-revenue'] })
+      setEditTarget(null)
+      toast.success('매출이 수정되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/sales/online-revenue/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['online-revenue'] })
+      setDeleteTarget(null)
+      toast.success('매출이 삭제되었습니다.')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
-    const totalSalesVal = parseInt(form.get('totalSales') as string, 10) || 0
-    const totalFeeVal = parseInt(form.get('totalFee') as string, 10) || 0
     createMutation.mutate({
       revenueDate: form.get('revenueDate'),
+      salesType: form.get('salesType'),
       channel: form.get('channel'),
       description: form.get('description') || undefined,
-      totalSales: totalSalesVal,
-      totalFee: totalFeeVal,
+      totalSales: parseInt(form.get('totalSales') as string, 10) || 0,
+      totalFee: parseInt(form.get('totalFee') as string, 10) || 0,
       orderCount: parseInt(form.get('orderCount') as string, 10) || 0,
       memo: form.get('memo') || undefined,
     })
   }
 
+  const handleEdit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editTarget) return
+    const form = new FormData(e.currentTarget)
+    updateMutation.mutate({
+      id: editTarget.id,
+      revenueDate: form.get('revenueDate'),
+      salesType: form.get('salesType'),
+      channel: form.get('channel'),
+      description: form.get('description') || undefined,
+      totalSales: parseInt(form.get('totalSales') as string, 10) || 0,
+      totalFee: parseInt(form.get('totalFee') as string, 10) || 0,
+      orderCount: parseInt(form.get('orderCount') as string, 10) || 0,
+      memo: form.get('memo') || undefined,
+    })
+  }
+
+  const openEdit = (row: RevenueRow) => {
+    setEditTarget(row)
+    setFormSalesType(row.salesType || 'ONLINE')
+  }
+
+  const openCreate = () => {
+    setFormSalesType('ONLINE')
+    setOpen(true)
+  }
+
+  const currentChannelMap = formSalesType === 'OFFLINE' ? OFFLINE_CHANNEL_MAP : ONLINE_CHANNEL_MAP
+
   const exportColumns: ExportColumn[] = [
+    { header: '구분', accessor: (r) => SALES_TYPE_MAP[r.salesType] || '온라인' },
     { header: '매출일', accessor: (r) => formatDate(r.revenueDate) },
-    { header: '판매채널', accessor: (r) => CHANNEL_MAP[r.channel] || r.channel },
+    { header: '판매채널', accessor: (r) => ALL_CHANNEL_MAP[r.channel] || r.channel },
     { header: '설명', accessor: (r) => r.description || '' },
     { header: '주문건수', accessor: (r) => `${r.orderCount}건` },
     { header: '총매출', accessor: (r) => formatCurrency(Number(r.totalSales)) },
@@ -132,66 +213,177 @@ export default function OnlineSalesPage() {
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
   }
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="매출" description="채널별 매출을 등록하고 관리합니다." />
+  const formatDateTime = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+      const wd = weekdays[d.getDay()]
+      const h = String(d.getHours()).padStart(2, '0')
+      const min = String(d.getMinutes()).padStart(2, '0')
+      return `${y}/${m}/${day} (${wd}) ${h}:${min}`
+    } catch {
+      return formatDate(dateStr)
+    }
+  }
 
-      <DateRangeFilter
-        startDate={startDate}
-        endDate={endDate}
-        onDateChange={(s, e) => {
-          setStartDate(s)
-          setEndDate(e)
-        }}
-      />
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-4">
-        <div className="bg-muted/30 rounded-lg border p-3 text-center sm:p-4">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">등록 건수</p>
-          <p className="text-sm font-bold sm:text-lg">
-            {filteredRevenues.length}
-            <span className="text-muted-foreground ml-0.5 text-xs font-normal">건</span>
-          </p>
-        </div>
-        <div className="bg-status-info-muted rounded-lg border p-3 text-center sm:p-4">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">총 매출</p>
-          <p className="text-status-info text-sm font-bold sm:text-lg">{formatCurrency(totalSales)}</p>
-        </div>
-        <div className="bg-status-danger-muted rounded-lg border p-3 text-center sm:p-4">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">수수료</p>
-          <p className="text-status-danger text-sm font-bold sm:text-lg">{formatCurrency(totalFees)}</p>
-        </div>
-        <div className="bg-status-success-muted rounded-lg border p-3 text-center sm:p-4">
-          <p className="text-muted-foreground text-[10px] sm:text-xs">순매출</p>
-          <p className="text-status-success text-sm font-bold sm:text-lg">{formatCurrency(totalNet)}</p>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 sm:max-w-xs">
-          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+  const RevenueForm = ({
+    onSubmit,
+    defaultValues,
+    isPending,
+    submitLabel,
+  }: {
+    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+    defaultValues?: RevenueRow | null
+    isPending: boolean
+    submitLabel: string
+  }) => (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label>
+            매출일 <span className="text-destructive">*</span>
+          </Label>
           <Input
-            className="pl-9"
-            placeholder="채널, 설명, 메모로 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            name="revenueDate"
+            type="date"
+            required
+            defaultValue={defaultValues?.revenueDate?.slice(0, 10) || getLocalDateString()}
           />
         </div>
+        <div className="space-y-2">
+          <Label>
+            구분 <span className="text-destructive">*</span>
+          </Label>
+          <Select name="salesType" required value={formSalesType} onValueChange={(v) => setFormSalesType(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="구분 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ONLINE">온라인</SelectItem>
+              <SelectItem value="OFFLINE">오프라인</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>
+            판매채널 <span className="text-destructive">*</span>
+          </Label>
+          <Select name="channel" required defaultValue={defaultValues?.channel}>
+            <SelectTrigger>
+              <SelectValue placeholder="채널 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(currentChannelMap).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>설명</Label>
+        <Input
+          name="description"
+          placeholder="예: 3월 1주차 쿠팡 매출"
+          defaultValue={defaultValues?.description || ''}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label>
+            총매출 <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            name="totalSales"
+            type="number"
+            required
+            placeholder="0"
+            min={0}
+            defaultValue={defaultValues ? Number(defaultValues.totalSales) : ''}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>수수료</Label>
+          <Input
+            name="totalFee"
+            type="number"
+            placeholder="0"
+            min={0}
+            defaultValue={defaultValues ? Number(defaultValues.totalFee) : ''}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>주문건수</Label>
+          <Input
+            name="orderCount"
+            type="number"
+            placeholder="0"
+            min={0}
+            defaultValue={defaultValues?.orderCount || ''}
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>메모</Label>
+        <Textarea name="memo" placeholder="메모 (선택)" rows={3} defaultValue={defaultValues?.memo || ''} />
+      </div>
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? '처리 중...' : submitLabel}
+      </Button>
+    </form>
+  )
+
+  return (
+    <div className="space-y-4">
+      <PageHeader title="매출" description="온라인/오프라인 채널별 매출을 등록하고 관리합니다." />
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-32">
+            <SelectValue placeholder="전체 구분" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 구분</SelectItem>
+            <SelectItem value="ONLINE">온라인</SelectItem>
+            <SelectItem value="OFFLINE">오프라인</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={channelFilter} onValueChange={setChannelFilter}>
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="전체 채널" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">전체 채널</SelectItem>
-            {Object.entries(CHANNEL_MAP).map(([k, v]) => (
+            {Object.entries(ALL_CHANNEL_MAP).map(([k, v]) => (
               <SelectItem key={k} value={k}>
                 {v}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+        />
+        <div className="relative flex-1 sm:max-w-xs">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            className="pl-9"
+            placeholder="채널, 설명, 메모 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => handleExport('excel')}>
             <FileSpreadsheet className="mr-1 h-3.5 w-3.5" /> Excel
@@ -199,14 +391,39 @@ export default function OnlineSalesPage() {
           <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
             <FileText className="mr-1 h-3.5 w-3.5" /> PDF
           </Button>
-          <Button onClick={() => setOpen(true)}>
+          <Button onClick={openCreate}>
             <Plus className="mr-1 h-4 w-4" /> 매출 등록
           </Button>
         </div>
       </div>
 
-      {/* Post list */}
-      <div className="space-y-3">
+      {/* Summary bar */}
+      <div className="bg-muted/40 flex flex-wrap items-center gap-4 rounded-lg border px-4 py-2 text-xs sm:gap-6 sm:text-sm">
+        <span>
+          전체 <strong>{filteredRevenues.length}</strong>건
+        </span>
+        <span>
+          총매출 <strong className="text-status-info">{formatCurrency(totalSales)}</strong>
+        </span>
+        <span>
+          수수료 <strong className="text-status-danger">{formatCurrency(totalFees)}</strong>
+        </span>
+        <span>
+          순매출 <strong className="text-status-success">{formatCurrency(totalNet)}</strong>
+        </span>
+      </div>
+
+      {/* Board-style post list */}
+      <div className="overflow-hidden rounded-lg border">
+        {/* Board header */}
+        <div className="bg-muted/50 hidden grid-cols-[60px_1fr_120px_120px_160px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
+          <span>번호</span>
+          <span>제목</span>
+          <span>채널</span>
+          <span className="text-right">순매출</span>
+          <span className="text-right">등록일시</span>
+        </div>
+
         {isLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
         {isError && (
           <div className="py-12 text-center">
@@ -221,82 +438,160 @@ export default function OnlineSalesPage() {
             {searchTerm ? '검색 결과가 없습니다.' : '등록된 매출이 없습니다.'}
           </div>
         )}
-        {filteredRevenues.map((row) => (
-          <Card key={row.id} className="transition-shadow hover:shadow-md">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                {/* Left: title / description */}
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{CHANNEL_MAP[row.channel] || row.channel}</Badge>
-                    <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                      <Calendar className="h-3 w-3" />
-                      {formatDate(row.revenueDate)}
-                    </span>
-                    {row.orderCount > 0 && <span className="text-muted-foreground text-xs">{row.orderCount}건</span>}
-                  </div>
-                  {row.description && <p className="text-sm">{row.description}</p>}
-                  {row.memo && <p className="text-muted-foreground line-clamp-2 text-xs">{row.memo}</p>}
-                </div>
 
-                {/* Right: amounts */}
-                <div className="flex shrink-0 items-center gap-4 sm:gap-6">
-                  <div className="text-right">
-                    <p className="text-muted-foreground text-[10px] sm:text-xs">매출</p>
-                    <p className="text-sm font-medium sm:text-base">{formatCurrency(Number(row.totalSales))}</p>
+        {filteredRevenues.map((row, idx) => {
+          const isExpanded = expandedId === row.id
+          const postNo = filteredRevenues.length - idx
+          const title =
+            row.description || `${ALL_CHANNEL_MAP[row.channel] || row.channel} 매출 (${formatDate(row.revenueDate)})`
+          const channelLabel = ALL_CHANNEL_MAP[row.channel] || row.channel
+          const typeLabel = SALES_TYPE_MAP[row.salesType || 'ONLINE'] || '온라인'
+
+          return (
+            <div key={row.id} className="border-b last:border-b-0">
+              {/* Row header (click to expand) */}
+              <button
+                type="button"
+                className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[60px_1fr_120px_120px_160px]"
+                onClick={() => setExpandedId(isExpanded ? null : row.id)}
+              >
+                <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={row.salesType === 'OFFLINE' ? 'secondary' : 'default'}
+                      className="shrink-0 text-[10px]"
+                    >
+                      {typeLabel}
+                    </Badge>
+                    <span className="truncate text-sm font-medium">{title}</span>
+                    {row.orderCount > 0 && (
+                      <span className="text-muted-foreground shrink-0 text-xs">({row.orderCount}건)</span>
+                    )}
+                    {isExpanded ? (
+                      <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                    ) : (
+                      <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                    )}
                   </div>
-                  {Number(row.totalFee) > 0 && (
-                    <div className="text-right">
-                      <p className="text-muted-foreground text-[10px] sm:text-xs">수수료</p>
-                      <p className="text-status-danger text-sm sm:text-base">-{formatCurrency(Number(row.totalFee))}</p>
+                </div>
+                <span className="hidden text-xs sm:block">
+                  <Badge variant="outline" className="text-[10px]">
+                    {channelLabel}
+                  </Badge>
+                </span>
+                <span className="text-status-success hidden text-right text-sm font-bold sm:block">
+                  {formatCurrency(Number(row.netRevenue))}
+                </span>
+                <span className="text-muted-foreground hidden text-right text-xs sm:block">
+                  {formatDateTime(row.createdAt)}
+                </span>
+              </button>
+
+              {/* Expanded content (post body) */}
+              {isExpanded && (
+                <div className="border-t bg-white px-4 py-4 sm:pl-[76px] dark:bg-transparent">
+                  {/* Attachments */}
+                  <div className="mb-3 flex items-start gap-2">
+                    <span className="text-muted-foreground shrink-0 pt-0.5 text-xs font-medium">첨부</span>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="text-primary flex items-center gap-1 text-xs hover:underline"
+                        onClick={() => {
+                          exportToExcel({
+                            fileName: `매출_${row.channel}_${row.revenueDate}`,
+                            title: `${channelLabel} 매출`,
+                            columns: exportColumns,
+                            data: [row],
+                          })
+                        }}
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        <span className="text-primary">
+                          매출_{row.channel}_{row.revenueDate}.xlsx
+                        </span>
+                        <span className="text-muted-foreground">({(Number(row.totalSales) / 1000).toFixed(1)}KB)</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="text-primary flex items-center gap-1 text-xs hover:underline"
+                        onClick={() => {
+                          exportToPDF({
+                            fileName: `매출_${row.channel}_${row.revenueDate}`,
+                            title: `${channelLabel} 매출`,
+                            columns: exportColumns,
+                            data: [row],
+                          })
+                        }}
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        <span className="text-primary">
+                          매출_{row.channel}_{row.revenueDate}.pdf
+                        </span>
+                      </button>
                     </div>
-                  )}
-                  <div className="text-right">
-                    <p className="text-muted-foreground text-[10px] sm:text-xs">순매출</p>
-                    <p className="text-status-success text-sm font-bold sm:text-base">
-                      {formatCurrency(Number(row.netRevenue))}
-                    </p>
+                  </div>
+
+                  {/* Body content */}
+                  <div className="mb-4 space-y-2 text-sm leading-relaxed whitespace-pre-wrap">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+                      <div>
+                        <span className="text-muted-foreground text-xs">매출일</span>
+                        <p className="text-sm font-medium">{formatDate(row.revenueDate)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">총매출</span>
+                        <p className="text-sm font-medium">{formatCurrency(Number(row.totalSales))}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">수수료</span>
+                        <p className="text-status-danger text-sm">-{formatCurrency(Number(row.totalFee))}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">순매출</span>
+                        <p className="text-status-success text-sm font-bold">
+                          {formatCurrency(Number(row.netRevenue))}
+                        </p>
+                      </div>
+                    </div>
+                    {row.memo && <div className="bg-muted/30 mt-3 rounded-md p-3 text-sm">{row.memo}</div>}
+                  </div>
+
+                  {/* Action buttons (like 댓글, 수정, 삭제) */}
+                  <div className="flex items-center gap-2 border-t pt-3">
+                    <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => openEdit(row)}>
+                      <Pencil className="h-3 w-3" /> 수정
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive h-7 gap-1 text-xs"
+                      onClick={() => setDeleteTarget(row)}
+                    >
+                      <Trash2 className="h-3 w-3" /> 삭제
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1 text-xs"
+                      onClick={() => {
+                        exportToExcel({
+                          fileName: `매출_${row.channel}_${row.revenueDate}`,
+                          title: `${channelLabel} 매출`,
+                          columns: exportColumns,
+                          data: [row],
+                        })
+                      }}
+                    >
+                      <Printer className="h-3 w-3" /> 인쇄
+                    </Button>
                   </div>
                 </div>
-              </div>
-
-              {/* Attachments preview row (xlsx/pdf style) */}
-              <div className="mt-3 flex items-center gap-2 border-t pt-3">
-                <Download className="text-muted-foreground h-3.5 w-3.5" />
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
-                  onClick={() => {
-                    exportToExcel({
-                      fileName: `매출_${row.channel}_${row.revenueDate}`,
-                      title: `${CHANNEL_MAP[row.channel] || row.channel} 매출`,
-                      columns: exportColumns,
-                      data: [row],
-                    })
-                  }}
-                >
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-green-600" />
-                  매출_{row.channel}_{row.revenueDate}.xlsx
-                </button>
-                <button
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-xs transition-colors"
-                  onClick={() => {
-                    exportToPDF({
-                      fileName: `매출_${row.channel}_${row.revenueDate}`,
-                      title: `${CHANNEL_MAP[row.channel] || row.channel} 매출`,
-                      columns: exportColumns,
-                      data: [row],
-                    })
-                  }}
-                >
-                  <FileText className="h-3.5 w-3.5 text-red-500" />
-                  매출_{row.channel}_{row.revenueDate}.pdf
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Create dialog */}
@@ -304,64 +599,70 @@ export default function OnlineSalesPage() {
         <DialogContent className="max-w-sm sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>매출 등록</DialogTitle>
-            <p className="text-muted-foreground text-xs">
+            <DialogDescription>
               <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
-            </p>
+            </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>
-                  매출일 <span className="text-destructive">*</span>
-                </Label>
-                <Input name="revenueDate" type="date" required defaultValue={getLocalDateString()} />
+          <RevenueForm onSubmit={handleCreate} isPending={createMutation.isPending} submitLabel="매출 등록" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(v) => !v && setEditTarget(null)}>
+        <DialogContent className="max-w-sm sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>매출 수정</DialogTitle>
+            <DialogDescription>매출 정보를 수정합니다.</DialogDescription>
+          </DialogHeader>
+          {editTarget && (
+            <RevenueForm
+              key={editTarget.id}
+              onSubmit={handleEdit}
+              defaultValues={editTarget}
+              isPending={updateMutation.isPending}
+              submitLabel="수정 저장"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>매출 삭제</DialogTitle>
+            <DialogDescription>정말 이 매출 항목을 삭제하시겠습니까?</DialogDescription>
+          </DialogHeader>
+          {deleteTarget && (
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-md p-3 text-sm">
+                <p>
+                  <span className="text-muted-foreground">채널:</span>{' '}
+                  {ALL_CHANNEL_MAP[deleteTarget.channel] || deleteTarget.channel}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">매출일:</span> {formatDate(deleteTarget.revenueDate)}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">총매출:</span>{' '}
+                  {formatCurrency(Number(deleteTarget.totalSales))}
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label>
-                  판매채널 <span className="text-destructive">*</span>
-                </Label>
-                <Select name="channel" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="채널 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(CHANNEL_MAP).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>
-                        {v}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setDeleteTarget(null)}>
+                  취소
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? '삭제 중...' : '삭제'}
+                </Button>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>설명</Label>
-              <Input name="description" placeholder="예: 3월 1주차 쿠팡 매출" />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>
-                  총매출 <span className="text-destructive">*</span>
-                </Label>
-                <Input name="totalSales" type="number" required placeholder="0" min={0} />
-              </div>
-              <div className="space-y-2">
-                <Label>수수료</Label>
-                <Input name="totalFee" type="number" placeholder="0" min={0} />
-              </div>
-              <div className="space-y-2">
-                <Label>주문건수</Label>
-                <Input name="orderCount" type="number" placeholder="0" min={0} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>메모</Label>
-              <Textarea name="memo" placeholder="메모 (선택)" rows={2} />
-            </div>
-            <Button type="submit" className="w-full" disabled={createMutation.isPending}>
-              {createMutation.isPending ? '등록 중...' : '매출 등록'}
-            </Button>
-          </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -53,7 +53,24 @@ export async function GET(request: NextRequest) {
       prisma.delivery.findMany({
         where,
         include: {
-          salesOrder: { select: { id: true, orderNo: true, orderDate: true, status: true, salesChannel: true } },
+          salesOrder: {
+            select: {
+              id: true,
+              orderNo: true,
+              orderDate: true,
+              status: true,
+              salesChannel: true,
+              siteName: true,
+              ordererName: true,
+              ordererContact: true,
+              recipientName: true,
+              recipientContact: true,
+              recipientZipCode: true,
+              recipientAddress: true,
+              requirements: true,
+              trackingNo: true,
+            },
+          },
           partner: {
             select: {
               id: true,

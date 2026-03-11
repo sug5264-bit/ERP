@@ -1119,11 +1119,12 @@ model DeliveryDetail {
   @@map("delivery_details")
 }
 
-// 온라인 매출 일괄 기입 (판매가 수시 변동 대응)
+// 매출 기입 (온라인/오프라인 구분)
 model OnlineSalesRevenue {
   id            String   @id @default(cuid())
   revenueDate   DateTime @db.Date
-  channel       String                      // NAVER, COUPANG, GMARKET, 11ST 등
+  salesType     String   @default("ONLINE") // ONLINE | OFFLINE
+  channel       String                      // NAVER, COUPANG, GMARKET, 11ST 등 (오프라인: DIRECT, WHOLESALE 등)
   description   String?
   totalSales    Decimal  @db.Decimal(15, 2) // 총 매출액
   totalFee      Decimal  @default(0) @db.Decimal(15, 2) // 플랫폼 수수료
@@ -1136,6 +1137,7 @@ model OnlineSalesRevenue {
 
   @@index([revenueDate])
   @@index([channel])
+  @@index([salesType])
   @@index([revenueDate, channel])
   @@map("online_sales_revenues")
 }
