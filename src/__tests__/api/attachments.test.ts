@@ -94,7 +94,6 @@ describe('GET /api/v1/attachments', () => {
   it('유효하지 않은 테이블명 → 400', async () => {
     setAuthenticated()
     const resp = await ListAttachments(createReq('http://localhost/api/v1/attachments?relatedTable=InvalidTable'))
-    const body = await resp.json()
     expect(resp.status).toBe(400)
   })
 
@@ -166,7 +165,6 @@ describe('POST /api/v1/attachments', () => {
   it('유효하지 않은 테이블 → 400', async () => {
     setAuthenticated()
     const resp = await UploadAttachment(createUploadReq('test', 'test.pdf', 'BadTable', 'id-1'))
-    const body = await resp.json()
     expect(resp.status).toBe(400)
   })
 

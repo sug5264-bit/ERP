@@ -113,7 +113,6 @@ describe('POST /api/v1/admin/company/[id]/upload', () => {
     setAdmin()
     mockPrisma.company.findUnique.mockResolvedValue(null)
     const resp = await UploadCompanyFile(createUploadReq('logo.png', 'logoPath'), { params: companyParams })
-    const body = await resp.json()
     expect(resp.status).toBe(404)
   })
 
@@ -137,7 +136,6 @@ describe('POST /api/v1/admin/company/[id]/upload', () => {
     setAdmin()
     mockPrisma.company.findUnique.mockResolvedValue({ id: 'company-1' })
     const resp = await UploadCompanyFile(createUploadReq('hack.pdf', 'invalidField'), { params: companyParams })
-    const body = await resp.json()
     expect(resp.status).toBe(400)
   })
 
