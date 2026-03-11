@@ -60,7 +60,7 @@ const navItems: NavItem[] = [
         children: [
           { title: '수주/출하 통합', href: '/sales/orders' },
           { title: '수주/출하 추적', href: '/sales/deliveries/order-tracking' },
-          { title: '온라인 매출', href: '/sales/deliveries/online-sales' },
+          { title: '매출', href: '/sales/deliveries/online-sales' },
         ],
       },
       { title: '매출현황', href: '/sales/summary', permission: 'sales.summary' },

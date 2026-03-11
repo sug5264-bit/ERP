@@ -26,7 +26,12 @@ export default function SalesPage() {
 
   const cards = [
     { title: '견적서', value: `${quotations?.meta?.totalCount || 0}건`, icon: FileText, href: '/sales/quotations' },
-    { title: '수주/출하', value: `${orders?.meta?.totalCount || 0}건`, icon: ShoppingCart, href: '/sales/deliveries/order-tracking' },
+    {
+      title: '수주/출하',
+      value: `${orders?.meta?.totalCount || 0}건`,
+      icon: ShoppingCart,
+      href: '/sales/deliveries/order-tracking',
+    },
     { title: '출하관리', value: `${deliveries?.meta?.totalCount || 0}건`, icon: Truck, href: '/sales/orders' },
     { title: '매출 거래처', value: `${partners?.meta?.totalCount || 0}개`, icon: Users, href: '/sales/partners' },
   ]
@@ -34,7 +39,7 @@ export default function SalesPage() {
   const menus = [
     { title: '견적관리', desc: '고객 견적서 작성 및 관리', href: '/sales/quotations' },
     { title: '수주/출하 추적', desc: '수주 확인 및 출하 완료 관리', href: '/sales/deliveries/order-tracking' },
-    { title: '온라인 매출', desc: '온라인 채널별 매출 및 일괄 기입', href: '/sales/deliveries/online-sales' },
+    { title: '매출', desc: '채널별 매출 등록 및 관리', href: '/sales/deliveries/online-sales' },
     { title: '반품관리', desc: '매출 반품 등록 및 관리', href: '/sales/returns' },
     { title: '거래처관리', desc: '고객 및 공급업체 관리', href: '/sales/partners' },
   ]
