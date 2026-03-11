@@ -45,23 +45,25 @@ export async function GET(request: NextRequest) {
       supplierMap.set(key, existing)
     }
 
+    const totalAmount = orders.reduce((s, o) => s + Number(o.totalAmount), 0)
+
     const items = Array.from(supplierMap.entries()).map(([id, v]) => ({
       id,
       supplierName: v.supplierName,
-      orderCount: v.orderCount,
-      totalAmount: v.totalAmount,
-      completedCount: v.completedCount,
-      pendingCount: v.orderCount - v.completedCount,
+      purchaseCount: v.orderCount,
+      purchaseAmount: v.totalAmount,
+      ratio: totalAmount > 0 ? (v.totalAmount / totalAmount) * 100 : 0,
     }))
 
-    const summary = {
-      totalOrders: orders.length,
-      totalAmount: orders.reduce((s, o) => s + Number(o.totalAmount), 0),
-      completedCount: orders.filter((o) => o.status === 'COMPLETED').length,
-      inProgressCount: orders.filter((o) => o.status === 'IN_PROGRESS' || o.status === 'ORDERED').length,
-    }
+    // Sort by amount descending
+    items.sort((a, b) => b.purchaseAmount - a.purchaseAmount)
 
-    return successResponse({ items, summary })
+    return successResponse({
+      totalAmount,
+      totalCount: orders.length,
+      supplierCount: supplierMap.size,
+      items,
+    })
   } catch (error) {
     return handleApiError(error)
   }
