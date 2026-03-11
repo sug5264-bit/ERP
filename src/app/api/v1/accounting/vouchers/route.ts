@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       for (const acc of accounts) accountCodeMap.set(acc.code, acc.id)
       const missing = accountCodes.filter((c) => !accountCodeMap.has(c))
       if (missing.length > 0) {
-        return errorResponse(`계정과목 코드를 찾을 수 없습니다: ${missing.join(', ')}`, 'ACCOUNT_NOT_FOUND')
+        return errorResponse(`계정과목 코드를 찾을 수 없습니다: ${missing.join(', ')}`, 'ACCOUNT_NOT_FOUND', 400)
       }
     }
     const resolvedDetails = data.details.map((d) => {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     const totalDebitCents = resolvedDetails.reduce((sum, d) => sum + Math.round(d.debitAmount * 100), 0)
     const totalCreditCents = resolvedDetails.reduce((sum, d) => sum + Math.round(d.creditAmount * 100), 0)
     if (totalDebitCents !== totalCreditCents) {
-      return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR')
+      return errorResponse('차변과 대변의 합계가 일치하지 않습니다.', 'BALANCE_ERROR', 400)
     }
     const totalDebit = totalDebitCents / 100
     const totalCredit = totalCreditCents / 100
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       },
     })
     if (!fiscalYear) {
-      return errorResponse('해당 일자의 활성 회계연도가 없습니다.', 'NO_FISCAL_YEAR')
+      return errorResponse('해당 일자의 활성 회계연도가 없습니다.', 'NO_FISCAL_YEAR', 400)
     }
 
     // 작성자 Employee 조회
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     })
     const employeeId = user?.employeeId
     if (!employeeId) {
-      return errorResponse('사원 정보가 연결되어 있지 않습니다.', 'NO_EMPLOYEE')
+      return errorResponse('사원 정보가 연결되어 있지 않습니다.', 'NO_EMPLOYEE', 400)
     }
 
     // 전표번호 생성 + 전표 저장을 트랜잭션으로 원자적 처리

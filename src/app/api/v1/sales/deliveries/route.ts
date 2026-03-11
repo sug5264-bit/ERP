@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
           deliveryNo,
           deliveryDate: new Date(data.deliveryDate),
           salesOrderId: data.salesOrderId,
-          partnerId: salesOrder.partnerId!,
+          partnerId: salesOrder.partnerId,
           deliveryAddress: data.deliveryAddress || null,
           trackingNo: data.trackingNo || null,
           carrier: data.carrier || null,

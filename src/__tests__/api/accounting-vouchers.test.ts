@@ -287,6 +287,7 @@ describe('POST /api/v1/accounting/vouchers', () => {
     )
     const body = await resp.json()
 
+    expect(resp.status).toBe(400)
     expect(body.error.code).toBe('ACCOUNT_NOT_FOUND')
   })
 
@@ -309,6 +310,7 @@ describe('POST /api/v1/accounting/vouchers', () => {
     )
     const body = await resp.json()
 
+    expect(resp.status).toBe(400)
     expect(body.error.code).toBe('BALANCE_ERROR')
   })
 
@@ -324,6 +326,7 @@ describe('POST /api/v1/accounting/vouchers', () => {
     )
     const body = await resp.json()
 
+    expect(resp.status).toBe(400)
     expect(body.error.code).toBe('NO_FISCAL_YEAR')
   })
 
@@ -340,6 +343,7 @@ describe('POST /api/v1/accounting/vouchers', () => {
     )
     const body = await resp.json()
 
+    expect(resp.status).toBe(400)
     expect(body.error.code).toBe('NO_EMPLOYEE')
   })
 
