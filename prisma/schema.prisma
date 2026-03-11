@@ -758,6 +758,7 @@ model Item {
   bomHeaders             BomHeader[]
   bomDetails             BomDetail[]
   salesPrices            SalesPrice[]
+  salesRevenueDetails    SalesRevenueDetail[]
 
   @@index([itemName])
   @@index([isActive, itemType])
@@ -1135,11 +1136,30 @@ model OnlineSalesRevenue {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  details       SalesRevenueDetail[]
+
   @@index([revenueDate])
   @@index([channel])
   @@index([salesType])
   @@index([revenueDate, channel])
   @@map("online_sales_revenues")
+}
+
+// 매출 품목 상세 (재고 차감 연동)
+model SalesRevenueDetail {
+  id          String  @id @default(cuid())
+  revenueId   String
+  itemId      String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(15, 2)
+  amount      Decimal @db.Decimal(15, 2)
+
+  revenue     OnlineSalesRevenue @relation(fields: [revenueId], references: [id], onDelete: Cascade)
+  item        Item               @relation(fields: [itemId], references: [id])
+
+  @@index([revenueId])
+  @@index([itemId])
+  @@map("sales_revenue_details")
 }
 
 enum ReturnReason {

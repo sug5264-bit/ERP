@@ -2,9 +2,7 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
-import { DataTable } from '@/components/common/data-table'
 // PageHeader moved to parent
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,9 +15,30 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatDate, formatCurrency, getLocalDateString } from '@/lib/format'
 import { COMPANY_NAME } from '@/lib/constants'
 import { exportToExcel, exportToPDF, downloadImportTemplate, readExcelFile, type ExportColumn } from '@/lib/export'
-import { generateTransactionStatementPDF, generateDeliveryStatementPDF, type TransactionStatementPDFData, type DeliveryStatementPDFData } from '@/lib/pdf-reports'
+import {
+  generateTransactionStatementPDF,
+  generateDeliveryStatementPDF,
+  type TransactionStatementPDFData,
+  type DeliveryStatementPDFData,
+} from '@/lib/pdf-reports'
 import { toast } from 'sonner'
-import { Plus, Trash2, Upload, FileDown, ClipboardCheck, Eye, CalendarDays, Table2, CheckCircle, Paperclip, X } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  Upload,
+  FileDown,
+  ClipboardCheck,
+  Eye,
+  CalendarDays,
+  Table2,
+  CheckCircle,
+  Paperclip,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  Printer,
+} from 'lucide-react'
 import { CalendarView, type CalendarEvent } from '@/components/common/calendar-view'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { StatusBadge } from '@/components/common/status-badge'
@@ -274,6 +293,7 @@ const emptyInspectionItem = (): InspectionItemInput => ({
 export function DeliveriesPanel() {
   const [activeTab, setActiveTab] = useState<string>('ONLINE')
   const [viewMode, setViewMode] = useState<'table' | 'calendar'>('table')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<{ date: string; events: CalendarEvent[] } | null>(
@@ -380,146 +400,6 @@ export function DeliveriesPanel() {
     toast.success('납품명세서 PDF가 다운로드되었습니다.')
   }
 
-  const columns: ColumnDef<DeliveryRow>[] = [
-    {
-      accessorKey: 'deliveryNo',
-      header: '납품번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.deliveryNo}</span>,
-    },
-    { id: 'deliveryDate', header: '납품일', cell: ({ row }) => formatDate(row.original.deliveryDate) },
-    {
-      id: 'orderNo',
-      header: '발주번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.salesOrder?.orderNo || '-'}</span>,
-    },
-    { id: 'partner', header: '거래처', cell: ({ row }) => row.original.partner?.partnerName || '-' },
-    { id: 'detailCount', header: '품목수', cell: ({ row }) => `${row.original.details?.length || 0}건` },
-    {
-      id: 'total',
-      header: '합계',
-      cell: ({ row }) => (
-        <span className="font-medium">
-          {formatCurrency(
-            row.original.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0
-          )}
-        </span>
-      ),
-    },
-    {
-      id: 'status',
-      header: '상태',
-      cell: ({ row }) => <StatusBadge status={row.original.status} labels={STATUS_MAP} />,
-    },
-    {
-      id: 'shipAction',
-      header: '',
-      cell: ({ row }) =>
-        row.original.status === 'PREPARING' ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => handleShipComplete(row.original.id)}
-            disabled={shipCompleteMutation.isPending}
-          >
-            <CheckCircle className="mr-1 h-3 w-3" />
-            출하완료
-          </Button>
-        ) : null,
-    },
-    {
-      id: 'qualityStatus',
-      header: '품질검사',
-      cell: ({ row }) => {
-        const inspection = row.original.qualityInspections?.[0]
-        if (!inspection) {
-          return (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => openQualityInspection(row.original)}
-            >
-              <ClipboardCheck className="mr-1 h-3 w-3" />
-              검사등록
-            </Button>
-          )
-        }
-        const qs = QUALITY_STATUS_MAP[inspection.judgement] || {
-          label: inspection.judgement,
-          variant: 'outline' as const,
-        }
-        const grade = GRADE_MAP[inspection.overallGrade]
-        return (
-          <div className="flex items-center gap-1">
-            <Badge variant={qs.variant} className="text-xs">
-              {qs.label}
-            </Badge>
-            {grade && <span className={`text-xs font-medium ${grade.color}`}>{grade.label}</span>}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => openQualityView(row.original)}
-              title="검사 상세"
-            >
-              <Eye className="h-3 w-3" />
-            </Button>
-          </div>
-        )
-      },
-    },
-    {
-      id: 'trackingNo',
-      header: '운송장번호',
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.trackingNo || '-'}</span>,
-    },
-    { id: 'carrier', header: '택배사', cell: ({ row }) => row.original.carrier || '-' },
-    {
-      id: 'attachments',
-      header: '첨부',
-      cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => openAttachDialog(row.original)}
-          title="첨부파일 (거래명세서, 인수증 등)"
-        >
-          <Paperclip className="h-3.5 w-3.5" />
-        </Button>
-      ),
-    },
-    {
-      id: 'pdf',
-      header: '문서',
-      cell: ({ row }) => (
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-1.5 text-[10px]"
-            onClick={() => handleStatementPDF(row.original)}
-            title="거래명세서 PDF"
-          >
-            <FileDown className="mr-0.5 h-3 w-3" />
-            명세서
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-1.5 text-[10px]"
-            onClick={() => handleDeliveryStatementPDF(row.original)}
-            title="납품명세서 PDF"
-          >
-            <FileDown className="mr-0.5 h-3 w-3" />
-            납품서
-          </Button>
-        </div>
-      ),
-    },
-  ]
-
   const exportColumns: ExportColumn[] = [
     { header: '납품번호', accessor: 'deliveryNo' },
     { header: '납품일', accessor: (r) => (r.deliveryDate ? formatDate(r.deliveryDate) : '') },
@@ -557,11 +437,15 @@ export function DeliveriesPanel() {
   // 첨부파일 state
   const [attachDialogOpen, setAttachDialogOpen] = useState(false)
   const [attachTarget, setAttachTarget] = useState<DeliveryRow | null>(null)
-  const [attachments, setAttachments] = useState<{ id: string; fileName: string; fileSize: number; createdAt: string }[]>([])
+  const [attachments, setAttachments] = useState<
+    { id: string; fileName: string; fileSize: number; createdAt: string }[]
+  >([])
 
   const loadAttachments = async (deliveryId: string) => {
     try {
-      const res = (await api.get(`/attachments?relatedTable=Delivery&relatedId=${deliveryId}`)) as { data?: { id: string; fileName: string; fileSize: number; createdAt: string }[] }
+      const res = (await api.get(`/attachments?relatedTable=Delivery&relatedId=${deliveryId}`)) as {
+        data?: { id: string; fileName: string; fileSize: number; createdAt: string }[]
+      }
       setAttachments(Array.isArray(res) ? res : res.data || [])
     } catch {
       setAttachments([])
@@ -1689,7 +1573,6 @@ export function DeliveriesPanel() {
 
   return (
     <div className="space-y-6">
-      
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <TabsList>
@@ -1788,34 +1671,453 @@ export function DeliveriesPanel() {
                 onChange={handleDeliveryImport}
               />
             </div>
-            <DataTable
-              columns={columns}
-              data={onlineDeliveries}
-              searchColumn="deliveryNo"
-              searchPlaceholder="납품번호로 검색..."
-              isLoading={onlineLoading}
-              isError={onlineError}
-              onRetry={() => onlineRefetch()}
-              pageSize={50}
-              onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
-            />
+            {/* BBS Board Style */}
+            <div className="overflow-hidden rounded-lg border">
+              <div className="bg-muted/50 hidden grid-cols-[50px_1fr_120px_100px_80px_120px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
+                <span>번호</span>
+                <span>제목</span>
+                <span>거래처</span>
+                <span className="text-right">합계</span>
+                <span className="text-center">상태</span>
+                <span className="text-right">납품일</span>
+              </div>
+              {onlineLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
+              {onlineError && (
+                <div className="py-12 text-center">
+                  <p className="text-destructive mb-2 text-sm">데이터를 불러오지 못했습니다.</p>
+                  <Button variant="outline" size="sm" onClick={() => onlineRefetch()}>
+                    다시 시도
+                  </Button>
+                </div>
+              )}
+              {!onlineLoading && !onlineError && onlineDeliveries.length === 0 && (
+                <div className="text-muted-foreground py-12 text-center text-sm">등록된 납품이 없습니다.</div>
+              )}
+              {onlineDeliveries.map((delivery, idx) => {
+                const isExpanded = expandedId === delivery.id
+                const postNo = onlineDeliveries.length - idx
+                const totalAmount =
+                  delivery.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0
+                const title = `${delivery.deliveryNo} ${delivery.salesOrder?.orderNo ? `(${delivery.salesOrder.orderNo})` : ''}`
+                const inspection = delivery.qualityInspections?.[0]
+                const qs = inspection
+                  ? QUALITY_STATUS_MAP[inspection.judgement] || {
+                      label: inspection.judgement,
+                      variant: 'outline' as const,
+                    }
+                  : null
+                const grade = inspection ? GRADE_MAP[inspection.overallGrade] : null
+                return (
+                  <div key={delivery.id} className="border-b last:border-b-0">
+                    <button
+                      type="button"
+                      className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[50px_1fr_120px_100px_80px_120px]"
+                      onClick={() => setExpandedId(isExpanded ? null : delivery.id)}
+                    >
+                      <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{title}</span>
+                          <span className="text-muted-foreground shrink-0 text-xs">
+                            {delivery.details?.length || 0}건
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                      <span className="hidden text-xs sm:block">{delivery.partner?.partnerName || '-'}</span>
+                      <span className="hidden text-right text-sm font-bold sm:block">
+                        {formatCurrency(totalAmount)}
+                      </span>
+                      <span className="hidden text-center sm:block">
+                        <StatusBadge status={delivery.status} labels={STATUS_MAP} />
+                      </span>
+                      <span className="text-muted-foreground hidden text-right text-xs sm:block">
+                        {formatDate(delivery.deliveryDate)}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t bg-white px-4 py-4 sm:pl-[66px] dark:bg-transparent">
+                        {/* Delivery info */}
+                        <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+                          <div>
+                            <span className="text-muted-foreground text-xs">납품번호</span>
+                            <p className="font-mono text-sm">{delivery.deliveryNo}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">발주번호</span>
+                            <p className="font-mono text-sm">{delivery.salesOrder?.orderNo || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">운송장</span>
+                            <p className="font-mono text-sm">{delivery.trackingNo || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">택배사</span>
+                            <p className="text-sm">{delivery.carrier || '-'}</p>
+                          </div>
+                        </div>
+                        {delivery.deliveryAddress && (
+                          <div className="mb-3">
+                            <span className="text-muted-foreground text-xs">납품주소</span>
+                            <p className="text-sm">{delivery.deliveryAddress}</p>
+                          </div>
+                        )}
+                        {/* Quality inspection */}
+                        {inspection && (
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">품질검사:</span>
+                            <Badge variant={qs!.variant} className="text-xs">
+                              {qs!.label}
+                            </Badge>
+                            {grade && <span className={`text-xs font-medium ${grade.color}`}>{grade.label}</span>}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => openQualityView(delivery)}
+                              title="검사 상세"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        {/* Items */}
+                        {delivery.details && delivery.details.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-muted-foreground mb-1 text-xs font-medium">품목 내역</p>
+                            <div className="overflow-x-auto rounded-md border">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="bg-muted/50 border-b">
+                                    <th className="px-2 py-1.5 text-left font-medium">품목명</th>
+                                    <th className="px-2 py-1.5 text-left font-medium">바코드</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">금액</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {delivery.details.map((d: DeliveryDetailRow, dIdx: number) => (
+                                    <tr key={dIdx} className="border-b last:border-b-0">
+                                      <td className="px-2 py-1.5">{d.item?.itemName || '-'}</td>
+                                      <td className="px-2 py-1.5 font-mono">{d.item?.barcode || '-'}</td>
+                                      <td className="px-2 py-1.5 text-right">
+                                        {Number(d.quantity)} {d.item?.unit || 'EA'}
+                                      </td>
+                                      <td className="px-2 py-1.5 text-right">{formatCurrency(Number(d.unitPrice))}</td>
+                                      <td className="px-2 py-1.5 text-right font-medium">
+                                        {formatCurrency(Number(d.amount))}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        {/* Attachments */}
+                        <div className="mb-3 flex items-start gap-2">
+                          <span className="text-muted-foreground shrink-0 pt-0.5 text-xs font-medium">첨부</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleStatementPDF(delivery)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>거래명세서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleDeliveryStatementPDF(delivery)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>납품명세서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => openAttachDialog(delivery)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>첨부파일 관리</span>
+                            </button>
+                          </div>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                          {delivery.status === 'PREPARING' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => handleShipComplete(delivery.id)}
+                              disabled={shipCompleteMutation.isPending}
+                            >
+                              <CheckCircle className="h-3 w-3" /> 출하완료
+                            </Button>
+                          )}
+                          {!inspection && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => openQualityInspection(delivery)}
+                            >
+                              <ClipboardCheck className="h-3 w-3" /> 검사등록
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => {
+                              exportToExcel({
+                                fileName: `납품_${delivery.deliveryNo}`,
+                                title: `납품 ${delivery.deliveryNo}`,
+                                columns: exportColumns,
+                                data: [delivery],
+                              })
+                            }}
+                          >
+                            <Printer className="h-3 w-3" /> 인쇄
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="OFFLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
-            <DataTable
-              columns={columns}
-              data={offlineDeliveries}
-              searchColumn="deliveryNo"
-              searchPlaceholder="납품번호로 검색..."
-              isLoading={offlineLoading}
-              isError={offlineError}
-              onRetry={() => offlineRefetch()}
-              pageSize={50}
-              onExport={{ excel: () => handleExport('excel'), pdf: () => handleExport('pdf') }}
-            />
+            {/* BBS Board Style */}
+            <div className="overflow-hidden rounded-lg border">
+              <div className="bg-muted/50 hidden grid-cols-[50px_1fr_120px_100px_80px_120px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
+                <span>번호</span>
+                <span>제목</span>
+                <span>거래처</span>
+                <span className="text-right">합계</span>
+                <span className="text-center">상태</span>
+                <span className="text-right">납품일</span>
+              </div>
+              {offlineLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
+              {offlineError && (
+                <div className="py-12 text-center">
+                  <p className="text-destructive mb-2 text-sm">데이터를 불러오지 못했습니다.</p>
+                  <Button variant="outline" size="sm" onClick={() => offlineRefetch()}>
+                    다시 시도
+                  </Button>
+                </div>
+              )}
+              {!offlineLoading && !offlineError && offlineDeliveries.length === 0 && (
+                <div className="text-muted-foreground py-12 text-center text-sm">등록된 납품이 없습니다.</div>
+              )}
+              {offlineDeliveries.map((delivery, idx) => {
+                const isExpanded = expandedId === delivery.id
+                const postNo = offlineDeliveries.length - idx
+                const totalAmount =
+                  delivery.details?.reduce((s: number, d: DeliveryDetailRow) => s + Number(d.amount), 0) || 0
+                const title = `${delivery.deliveryNo} ${delivery.salesOrder?.orderNo ? `(${delivery.salesOrder.orderNo})` : ''}`
+                const inspection = delivery.qualityInspections?.[0]
+                const qs = inspection
+                  ? QUALITY_STATUS_MAP[inspection.judgement] || {
+                      label: inspection.judgement,
+                      variant: 'outline' as const,
+                    }
+                  : null
+                const grade = inspection ? GRADE_MAP[inspection.overallGrade] : null
+                return (
+                  <div key={delivery.id} className="border-b last:border-b-0">
+                    <button
+                      type="button"
+                      className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[50px_1fr_120px_100px_80px_120px]"
+                      onClick={() => setExpandedId(isExpanded ? null : delivery.id)}
+                    >
+                      <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-medium">{title}</span>
+                          <span className="text-muted-foreground shrink-0 text-xs">
+                            {delivery.details?.length || 0}건
+                          </span>
+                          {isExpanded ? (
+                            <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          ) : (
+                            <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                      <span className="hidden text-xs sm:block">{delivery.partner?.partnerName || '-'}</span>
+                      <span className="hidden text-right text-sm font-bold sm:block">
+                        {formatCurrency(totalAmount)}
+                      </span>
+                      <span className="hidden text-center sm:block">
+                        <StatusBadge status={delivery.status} labels={STATUS_MAP} />
+                      </span>
+                      <span className="text-muted-foreground hidden text-right text-xs sm:block">
+                        {formatDate(delivery.deliveryDate)}
+                      </span>
+                    </button>
+                    {isExpanded && (
+                      <div className="border-t bg-white px-4 py-4 sm:pl-[66px] dark:bg-transparent">
+                        <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-4">
+                          <div>
+                            <span className="text-muted-foreground text-xs">납품번호</span>
+                            <p className="font-mono text-sm">{delivery.deliveryNo}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">발주번호</span>
+                            <p className="font-mono text-sm">{delivery.salesOrder?.orderNo || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">운송장</span>
+                            <p className="font-mono text-sm">{delivery.trackingNo || '-'}</p>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground text-xs">택배사</span>
+                            <p className="text-sm">{delivery.carrier || '-'}</p>
+                          </div>
+                        </div>
+                        {delivery.deliveryAddress && (
+                          <div className="mb-3">
+                            <span className="text-muted-foreground text-xs">납품주소</span>
+                            <p className="text-sm">{delivery.deliveryAddress}</p>
+                          </div>
+                        )}
+                        {inspection && (
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">품질검사:</span>
+                            <Badge variant={qs!.variant} className="text-xs">
+                              {qs!.label}
+                            </Badge>
+                            {grade && <span className={`text-xs font-medium ${grade.color}`}>{grade.label}</span>}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => openQualityView(delivery)}
+                              title="검사 상세"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        {delivery.details && delivery.details.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-muted-foreground mb-1 text-xs font-medium">품목 내역</p>
+                            <div className="overflow-x-auto rounded-md border">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="bg-muted/50 border-b">
+                                    <th className="px-2 py-1.5 text-left font-medium">품목명</th>
+                                    <th className="px-2 py-1.5 text-left font-medium">바코드</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                                    <th className="px-2 py-1.5 text-right font-medium">금액</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {delivery.details.map((d: DeliveryDetailRow, dIdx: number) => (
+                                    <tr key={dIdx} className="border-b last:border-b-0">
+                                      <td className="px-2 py-1.5">{d.item?.itemName || '-'}</td>
+                                      <td className="px-2 py-1.5 font-mono">{d.item?.barcode || '-'}</td>
+                                      <td className="px-2 py-1.5 text-right">
+                                        {Number(d.quantity)} {d.item?.unit || 'EA'}
+                                      </td>
+                                      <td className="px-2 py-1.5 text-right">{formatCurrency(Number(d.unitPrice))}</td>
+                                      <td className="px-2 py-1.5 text-right font-medium">
+                                        {formatCurrency(Number(d.amount))}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        <div className="mb-3 flex items-start gap-2">
+                          <span className="text-muted-foreground shrink-0 pt-0.5 text-xs font-medium">첨부</span>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleStatementPDF(delivery)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>거래명세서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => handleDeliveryStatementPDF(delivery)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>납품명세서.pdf</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="text-primary flex items-center gap-1 text-xs hover:underline"
+                              onClick={() => openAttachDialog(delivery)}
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              <span>첨부파일 관리</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                          {delivery.status === 'PREPARING' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => handleShipComplete(delivery.id)}
+                              disabled={shipCompleteMutation.isPending}
+                            >
+                              <CheckCircle className="h-3 w-3" /> 출하완료
+                            </Button>
+                          )}
+                          {!inspection && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 gap-1 text-xs"
+                              onClick={() => openQualityInspection(delivery)}
+                            >
+                              <ClipboardCheck className="h-3 w-3" /> 검사등록
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => {
+                              exportToExcel({
+                                fileName: `납품_${delivery.deliveryNo}`,
+                                title: `납품 ${delivery.deliveryNo}`,
+                                columns: exportColumns,
+                                data: [delivery],
+                              })
+                            }}
+                          >
+                            <Printer className="h-3 w-3" /> 인쇄
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
@@ -1878,7 +2180,8 @@ export function DeliveriesPanel() {
                           {att.fileSize < 1024 * 1024
                             ? `${(att.fileSize / 1024).toFixed(1)}KB`
                             : `${(att.fileSize / (1024 * 1024)).toFixed(1)}MB`}
-                          {' · '}{formatDate(att.createdAt)}
+                          {' · '}
+                          {formatDate(att.createdAt)}
                         </p>
                       </div>
                     </div>

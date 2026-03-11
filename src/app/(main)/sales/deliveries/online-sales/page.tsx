@@ -56,6 +56,14 @@ const SALES_TYPE_MAP: Record<string, string> = {
   OFFLINE: '오프라인',
 }
 
+interface RevenueDetailItem {
+  item?: { id: string; itemCode: string; itemName: string; barcode?: string; unit?: string }
+  itemId: string
+  quantity: number
+  unitPrice: number
+  amount: number
+}
+
 interface RevenueRow {
   id: string
   revenueDate: string
@@ -68,6 +76,22 @@ interface RevenueRow {
   orderCount: number
   memo?: string
   createdAt: string
+  details?: RevenueDetailItem[]
+}
+
+interface ItemOption {
+  id: string
+  itemCode: string
+  itemName: string
+  barcode?: string
+  unit?: string
+  standardPrice?: number
+}
+
+interface FormItemRow {
+  itemId: string
+  quantity: number
+  unitPrice: number
 }
 
 export default function OnlineSalesPage() {
@@ -82,6 +106,15 @@ export default function OnlineSalesPage() {
   const [endDate, setEndDate] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [formSalesType, setFormSalesType] = useState<string>('ONLINE')
+  const [formItems, setFormItems] = useState<FormItemRow[]>([])
+
+  // Fetch available items for the item selector
+  const { data: itemsData } = useQuery({
+    queryKey: ['items-for-revenue'],
+    queryFn: () => api.get('/items?pageSize=500&isActive=true') as Promise<{ data: ItemOption[] }>,
+    staleTime: 5 * 60 * 1000,
+  })
+  const itemOptions = useMemo(() => (itemsData?.data || []) as ItemOption[], [itemsData?.data])
 
   const queryParamsStr = useMemo(() => {
     const qp = new URLSearchParams({ pageSize: '100' })
@@ -120,6 +153,7 @@ export default function OnlineSalesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['online-revenue'] })
       setOpen(false)
+      setFormItems([])
       toast.success('매출이 등록되었습니다.')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -148,6 +182,7 @@ export default function OnlineSalesPage() {
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
+    const validItems = formItems.filter((i) => i.itemId && i.quantity > 0)
     createMutation.mutate({
       revenueDate: form.get('revenueDate'),
       salesType: form.get('salesType'),
@@ -157,6 +192,7 @@ export default function OnlineSalesPage() {
       totalFee: parseInt(form.get('totalFee') as string, 10) || 0,
       orderCount: parseInt(form.get('orderCount') as string, 10) || 0,
       memo: form.get('memo') || undefined,
+      ...(validItems.length > 0 && { items: validItems }),
     })
   }
 
@@ -184,7 +220,22 @@ export default function OnlineSalesPage() {
 
   const openCreate = () => {
     setFormSalesType('ONLINE')
+    setFormItems([])
     setOpen(true)
+  }
+
+  const addFormItem = () => {
+    setFormItems([...formItems, { itemId: '', quantity: 1, unitPrice: 0 }])
+  }
+
+  const updateFormItem = (idx: number, field: keyof FormItemRow, value: string | number) => {
+    const updated = [...formItems]
+    ;(updated[idx] as unknown as Record<string, string | number>)[field] = value
+    setFormItems(updated)
+  }
+
+  const removeFormItem = (idx: number) => {
+    setFormItems(formItems.filter((_, i) => i !== idx))
   }
 
   const currentChannelMap = formSalesType === 'OFFLINE' ? OFFLINE_CHANNEL_MAP : ONLINE_CHANNEL_MAP
@@ -328,6 +379,93 @@ export default function OnlineSalesPage() {
           />
         </div>
       </div>
+      {/* Items section (for stock deduction) */}
+      {!defaultValues && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">품목 내역 (재고 차감)</Label>
+            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={addFormItem}>
+              <Plus className="mr-1 h-3 w-3" /> 품목 추가
+            </Button>
+          </div>
+          {formItems.length > 0 && (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[500px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium">품목</th>
+                    <th className="px-2 py-2 text-right font-medium">수량</th>
+                    <th className="px-2 py-2 text-right font-medium">단가</th>
+                    <th className="px-2 py-2 text-right font-medium">금액</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formItems.map((fi, idx) => (
+                    <tr key={idx} className="border-b last:border-b-0">
+                      <td className="px-1 py-1.5">
+                        <select
+                          className="border-input bg-background h-7 w-full min-w-[180px] rounded-md border px-2 text-xs"
+                          value={fi.itemId}
+                          onChange={(e) => {
+                            updateFormItem(idx, 'itemId', e.target.value)
+                            const item = itemOptions.find((i) => i.id === e.target.value)
+                            if (item?.standardPrice) {
+                              updateFormItem(idx, 'unitPrice', Number(item.standardPrice))
+                            }
+                          }}
+                        >
+                          <option value="">품목 선택</option>
+                          {itemOptions.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.itemName} ({item.itemCode})
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          type="number"
+                          className="h-7 w-[70px] text-right text-xs"
+                          value={fi.quantity || ''}
+                          onChange={(e) => updateFormItem(idx, 'quantity', parseInt(e.target.value, 10) || 0)}
+                          min={1}
+                        />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          type="number"
+                          className="h-7 w-[100px] text-right text-xs"
+                          value={fi.unitPrice || ''}
+                          onChange={(e) => updateFormItem(idx, 'unitPrice', parseInt(e.target.value, 10) || 0)}
+                          min={0}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
+                        {formatCurrency(fi.quantity * fi.unitPrice)}
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeFormItem(idx)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {formItems.length === 0 && (
+            <p className="text-muted-foreground text-xs">품목을 추가하면 매출 등록 시 재고가 자동으로 차감됩니다.</p>
+          )}
+        </div>
+      )}
       <div className="space-y-2">
         <Label>메모</Label>
         <Textarea name="memo" placeholder="메모 (선택)" rows={3} defaultValue={defaultValues?.memo || ''} />
@@ -555,6 +693,39 @@ export default function OnlineSalesPage() {
                         </p>
                       </div>
                     </div>
+                    {row.details && row.details.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-muted-foreground mb-1 text-xs font-medium">품목 내역</p>
+                        <div className="overflow-x-auto rounded-md border">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-muted/50 border-b">
+                                <th className="px-2 py-1.5 text-left font-medium">품목명</th>
+                                <th className="px-2 py-1.5 text-left font-medium">품목코드</th>
+                                <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                                <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                                <th className="px-2 py-1.5 text-right font-medium">금액</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {row.details.map((d, dIdx) => (
+                                <tr key={dIdx} className="border-b last:border-b-0">
+                                  <td className="px-2 py-1.5">{d.item?.itemName || '-'}</td>
+                                  <td className="px-2 py-1.5 font-mono">{d.item?.itemCode || '-'}</td>
+                                  <td className="px-2 py-1.5 text-right">
+                                    {d.quantity} {d.item?.unit || 'EA'}
+                                  </td>
+                                  <td className="px-2 py-1.5 text-right">{formatCurrency(Number(d.unitPrice))}</td>
+                                  <td className="px-2 py-1.5 text-right font-medium">
+                                    {formatCurrency(Number(d.amount))}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                     {row.memo && <div className="bg-muted/30 mt-3 rounded-md p-3 text-sm">{row.memo}</div>}
                   </div>
 
@@ -596,7 +767,7 @@ export default function OnlineSalesPage() {
 
       {/* Create dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>매출 등록</DialogTitle>
             <DialogDescription>
