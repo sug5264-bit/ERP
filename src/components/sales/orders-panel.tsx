@@ -1956,16 +1956,8 @@ export function OrdersPanel() {
               />
               {trackingDialog}
             </div>
-            {/* BBS Board Style */}
-            <div className="overflow-hidden rounded-lg border">
-              <div className="bg-muted/50 hidden grid-cols-[50px_1fr_100px_100px_80px_140px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
-                <span>번호</span>
-                <span>제목</span>
-                <span>사이트</span>
-                <span className="text-right">금액</span>
-                <span className="text-center">상태</span>
-                <span className="text-right">주문일</span>
-              </div>
+            {/* BBS Post Style */}
+            <div className="space-y-2">
               {onlineLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
               {onlineError && (
                 <div className="py-12 text-center">
@@ -1976,7 +1968,9 @@ export function OrdersPanel() {
                 </div>
               )}
               {!onlineLoading && !onlineError && onlineOrders.length === 0 && (
-                <div className="text-muted-foreground py-12 text-center text-sm">등록된 발주가 없습니다.</div>
+                <div className="text-muted-foreground rounded-lg border py-12 text-center text-sm">
+                  등록된 발주가 없습니다.
+                </div>
               )}
               {onlineOrders.map((order, idx) => {
                 const isExpanded = expandedId === order.id
@@ -1987,44 +1981,41 @@ export function OrdersPanel() {
                 const canComplete = order.status === 'ORDERED' || order.status === 'IN_PROGRESS'
                 const canCancel = order.status !== 'CANCELLED' && order.status !== 'COMPLETED'
                 return (
-                  <div key={order.id} className="border-b last:border-b-0">
+                  <div key={order.id} className="overflow-hidden rounded-lg border transition-shadow hover:shadow-sm">
                     <button
                       type="button"
-                      className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[50px_1fr_100px_100px_80px_140px]"
+                      className="hover:bg-muted/30 w-full px-4 py-3 text-left transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : order.id)}
                     >
-                      <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">{title}</span>
-                          {detail && Number(detail.quantity) > 0 && (
-                            <span className="text-muted-foreground shrink-0 text-xs">
-                              ({Number(detail.quantity)}개)
-                            </span>
-                          )}
-                          {isExpanded ? (
-                            <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
-                          ) : (
-                            <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
-                          )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
+                            {s && (
+                              <Badge variant={s.variant} className="text-[10px]">
+                                {s.label}
+                              </Badge>
+                            )}
+                            {order.siteName && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {order.siteName}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="truncate text-sm font-semibold">{title}</p>
+                          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                            {detail && Number(detail.quantity) > 0 && <span>수량 {Number(detail.quantity)}개</span>}
+                            <span className="text-foreground font-semibold">{formatCurrency(order.totalAmount)}</span>
+                            <span>{formatDate(order.orderDate)}</span>
+                            {order.recipientName && <span>{order.recipientName}</span>}
+                          </div>
                         </div>
-                      </div>
-                      <span className="hidden text-xs sm:block">{order.siteName || '-'}</span>
-                      <span className="hidden text-right text-sm font-bold sm:block">
-                        {formatCurrency(order.totalAmount)}
-                      </span>
-                      <span className="hidden text-center sm:block">
-                        {s ? (
-                          <Badge variant={s.variant} className="text-[10px]">
-                            {s.label}
-                          </Badge>
+                        {isExpanded ? (
+                          <ChevronUp className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
                         ) : (
-                          order.status
+                          <ChevronDown className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
                         )}
-                      </span>
-                      <span className="text-muted-foreground hidden text-right text-xs sm:block">
-                        {formatDate(order.orderDate)}
-                      </span>
+                      </div>
                     </button>
                     {isExpanded && (
                       <div className="border-t bg-white px-4 py-4 sm:pl-[66px] dark:bg-transparent">
@@ -2192,16 +2183,8 @@ export function OrdersPanel() {
         <TabsContent value="OFFLINE" className={viewMode === 'calendar' ? 'hidden' : ''}>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">{offlineCreateDialog}</div>
-            {/* BBS Board Style */}
-            <div className="overflow-hidden rounded-lg border">
-              <div className="bg-muted/50 hidden grid-cols-[50px_1fr_120px_120px_80px_120px] items-center gap-2 border-b px-4 py-2 text-xs font-medium sm:grid">
-                <span>번호</span>
-                <span>제목</span>
-                <span>거래처</span>
-                <span className="text-right">합계금액</span>
-                <span className="text-center">상태</span>
-                <span className="text-right">발주일</span>
-              </div>
+            {/* BBS Post Style */}
+            <div className="space-y-2">
               {offlineLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
               {offlineError && (
                 <div className="py-12 text-center">
@@ -2212,7 +2195,9 @@ export function OrdersPanel() {
                 </div>
               )}
               {!offlineLoading && !offlineError && offlineOrders.length === 0 && (
-                <div className="text-muted-foreground py-12 text-center text-sm">등록된 발주가 없습니다.</div>
+                <div className="text-muted-foreground rounded-lg border py-12 text-center text-sm">
+                  등록된 발주가 없습니다.
+                </div>
               )}
               {offlineOrders.map((order, idx) => {
                 const isExpanded = expandedId === order.id
@@ -2222,39 +2207,40 @@ export function OrdersPanel() {
                 const canComplete = order.status === 'ORDERED' || order.status === 'IN_PROGRESS'
                 const canCancel = order.status !== 'CANCELLED' && order.status !== 'COMPLETED'
                 return (
-                  <div key={order.id} className="border-b last:border-b-0">
+                  <div key={order.id} className="overflow-hidden rounded-lg border transition-shadow hover:shadow-sm">
                     <button
                       type="button"
-                      className="hover:bg-muted/30 flex w-full items-center gap-2 px-4 py-3 text-left transition-colors sm:grid sm:grid-cols-[50px_1fr_120px_120px_80px_120px]"
+                      className="hover:bg-muted/30 w-full px-4 py-3 text-left transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : order.id)}
                     >
-                      <span className="text-muted-foreground hidden text-xs sm:block">{postNo}</span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">{title}</span>
-                          {isExpanded ? (
-                            <ChevronUp className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
-                          ) : (
-                            <ChevronDown className="text-muted-foreground ml-auto h-4 w-4 shrink-0" />
-                          )}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
+                            {s && (
+                              <Badge variant={s.variant} className="text-[10px]">
+                                {s.label}
+                              </Badge>
+                            )}
+                            {order.partner?.partnerName && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {order.partner.partnerName}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="truncate text-sm font-semibold">{title}</p>
+                          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                            <span className="text-foreground font-semibold">{formatCurrency(order.totalAmount)}</span>
+                            <span>{formatDate(order.orderDate)}</span>
+                            {order.deliveryDate && <span>납기 {formatDate(order.deliveryDate)}</span>}
+                          </div>
                         </div>
-                      </div>
-                      <span className="hidden text-xs sm:block">{order.partner?.partnerName || '-'}</span>
-                      <span className="hidden text-right text-sm font-bold sm:block">
-                        {formatCurrency(order.totalAmount)}
-                      </span>
-                      <span className="hidden text-center sm:block">
-                        {s ? (
-                          <Badge variant={s.variant} className="text-[10px]">
-                            {s.label}
-                          </Badge>
+                        {isExpanded ? (
+                          <ChevronUp className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
                         ) : (
-                          order.status
+                          <ChevronDown className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
                         )}
-                      </span>
-                      <span className="text-muted-foreground hidden text-right text-xs sm:block">
-                        {formatDate(order.orderDate)}
-                      </span>
+                      </div>
                     </button>
                     {isExpanded && (
                       <div className="border-t bg-white px-4 py-4 sm:pl-[66px] dark:bg-transparent">
