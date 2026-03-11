@@ -29,7 +29,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (isErrorResponse(authResult)) return authResult
 
     const { id } = await params
-    const record = await prisma.onlineSalesRevenue.findUnique({ where: { id } })
+    const record = await prisma.onlineSalesRevenue.findUnique({
+      where: { id },
+      include: {
+        details: {
+          include: {
+            item: { select: { id: true, itemCode: true, itemName: true, barcode: true, unit: true } },
+          },
+        },
+      },
+    })
     if (!record) return errorResponse('매출 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
     return successResponse(record)
