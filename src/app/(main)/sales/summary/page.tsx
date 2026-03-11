@@ -149,7 +149,7 @@ export default function SalesSummaryPage() {
             </Card>
             <Card className="bg-status-info-muted border-[var(--color-info)]/20">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">온라인 매출</CardTitle>
+                <CardTitle className="text-sm font-medium">매출</CardTitle>
                 <Globe className="text-status-info h-4 w-4" />
               </CardHeader>
               <CardContent>

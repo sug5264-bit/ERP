@@ -111,7 +111,7 @@ const pathLabels: Record<string, string> = {
   edit: '수정',
   projects: '프로젝트',
   mypage: '마이페이지',
-  'online-sales': '온라인매출',
+  'online-sales': '매출',
   'stock-balance': '재고잔고',
 }
 
