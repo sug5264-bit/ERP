@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = req.nextUrl
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
-    const rawSize = parseInt(searchParams.get('pageSize') || '20')
+    const rawSize = parseInt(searchParams.get('pageSize') || '20', 10)
     const pageSize = Math.min(50, Math.max(1, Number.isFinite(rawSize) ? rawSize : 20))
 
     const where: Record<string, unknown> = { userId: authResult.session.user.id }

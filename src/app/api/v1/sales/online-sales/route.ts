@@ -99,15 +99,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createOnlineSaleSchema.parse(body)
 
-    // 주문번호 자동 생성
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const lastOrder = await prisma.salesOrder.findFirst({
-      where: { orderNo: { startsWith: `ON-${today}` } },
-      orderBy: { orderNo: 'desc' },
-    })
-    const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4)) + 1 : 1
-    const orderNo = `ON-${today}-${String(seq).padStart(4, '0')}`
-
     let totalSupply = 0
     let totalTax = 0
     const details = data.items.map((item, i) => {
@@ -127,30 +118,49 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const order = await prisma.salesOrder.create({
-      data: {
-        orderNo,
-        orderDate: new Date(data.orderDate),
-        partnerId: data.partnerId,
-        totalSupply,
-        totalTax,
-        totalAmount: totalSupply + totalTax,
-        recipientName: data.recipientName,
-        recipientContact: data.recipientContact,
-        recipientZipCode: data.recipientZipCode,
-        recipientAddress: data.recipientAddress,
-        requirements: data.requirements,
-        employeeId: await (async () => {
-          const empId = (authResult as { session: { user: { employeeId: string | null } } }).session.user.employeeId
-          if (empId) return empId
-          const emp = await prisma.employee.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } })
-          return emp?.id ?? ''
-        })(),
-        details: { create: details },
-      },
-    })
+    // employeeId 사전 조회 (트랜잭션 밖에서)
+    const empId = (authResult as { session: { user: { employeeId: string | null } } }).session.user.employeeId
+    const employeeId =
+      empId || (await prisma.employee.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } }))?.id || ''
 
-    return successResponse(order)
+    // 트랜잭션 + 유니크 제약 위반 시 재시도 (동시 요청 race condition 방지)
+    let order
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        order = await prisma.$transaction(async (tx) => {
+          const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+          const lastOrder = await tx.salesOrder.findFirst({
+            where: { orderNo: { startsWith: `ON-${today}` } },
+            orderBy: { orderNo: 'desc' },
+          })
+          const seq = lastOrder ? parseInt(lastOrder.orderNo.slice(-4), 10) + 1 : 1
+          const orderNo = `ON-${today}-${String(seq).padStart(4, '0')}`
+
+          return tx.salesOrder.create({
+            data: {
+              orderNo,
+              orderDate: new Date(data.orderDate),
+              partnerId: data.partnerId,
+              totalSupply,
+              totalTax,
+              totalAmount: totalSupply + totalTax,
+              recipientName: data.recipientName,
+              recipientContact: data.recipientContact,
+              recipientZipCode: data.recipientZipCode,
+              recipientAddress: data.recipientAddress,
+              requirements: data.requirements,
+              employeeId,
+              details: { create: details },
+            },
+          })
+        })
+        break
+      } catch (e: unknown) {
+        if (attempt === 2 || !(e instanceof Error) || !e.message.includes('Unique constraint')) throw e
+      }
+    }
+
+    return successResponse(order!)
   } catch (error) {
     return handleApiError(error)
   }

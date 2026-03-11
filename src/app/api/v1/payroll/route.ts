@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
 
     // 급여기간에서 년/월 추출하여 근태 데이터 조회 기간 설정
     const periodMatch = data.payPeriod.match(/(\d{4})-(\d{2})/)
-    const periodYear = periodMatch ? parseInt(periodMatch[1]) : new Date().getFullYear()
-    const periodMonth = periodMatch ? parseInt(periodMatch[2]) : new Date().getMonth() + 1
+    const periodYear = periodMatch ? parseInt(periodMatch[1], 10) : new Date().getFullYear()
+    const periodMonth = periodMatch ? parseInt(periodMatch[2], 10) : new Date().getMonth() + 1
     const attendanceStart = new Date(periodYear, periodMonth - 1, 1)
     const attendanceEnd = new Date(periodYear, periodMonth, 0, 23, 59, 59, 999)
 
