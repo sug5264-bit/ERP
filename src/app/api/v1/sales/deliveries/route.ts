@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
     if (salesOrder.status === 'COMPLETED') return errorResponse('이미 완료된 발주입니다.', 'INVALID_STATUS', 400)
     if (!salesOrder.partnerId) return errorResponse('발주에 거래처가 지정되지 않았습니다.', 'MISSING_PARTNER', 400)
 
+    const partnerId = salesOrder.partnerId
     const employee = await prisma.employee.findFirst({ where: { user: { id: authResult.session.user.id } } })
     if (!employee) return errorResponse('사원 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
     const autoCreated: string[] = []
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
           deliveryNo,
           deliveryDate: new Date(data.deliveryDate),
           salesOrderId: data.salesOrderId,
-          partnerId: salesOrder.partnerId!,
+          partnerId,
           deliveryAddress: data.deliveryAddress || null,
           trackingNo: data.trackingNo || null,
           carrier: data.carrier || null,

@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       const order = await prisma.salesOrder.findUnique({ where: { id }, include: { details: true } })
       if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
       if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
-        return errorResponse('완료 또는 취소된 발주는 수정할 수 없습니다.', 'INVALID_STATUS')
+        return errorResponse('완료 또는 취소된 발주는 수정할 수 없습니다.', 'INVALID_STATUS', 400)
       }
 
       const updateData: Record<string, unknown> = {}
@@ -156,7 +156,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       })
       return successResponse(updated)
     }
-    return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
+    return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION', 400)
   } catch (error) {
     if (error instanceof Error && error.message.includes('납품된 수량')) {
       return errorResponse(error.message, 'QUANTITY_BELOW_DELIVERED', 400)

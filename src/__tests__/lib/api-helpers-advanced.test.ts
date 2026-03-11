@@ -219,12 +219,14 @@ describe('generateRequestId', () => {
 
 describe('getRequestId', () => {
   it('헤더에서 추출', () => {
-    const req = { headers: { get: (key: string) => (key === 'x-request-id' ? 'custom-id' : null) } } as any
+    const req = {
+      headers: { get: (key: string) => (key === 'x-request-id' ? 'custom-id' : null) },
+    } as unknown as Parameters<typeof getRequestId>[0]
     expect(getRequestId(req)).toBe('custom-id')
   })
 
   it('헤더 없으면 자동 생성', () => {
-    const req = { headers: { get: () => null } } as any
+    const req = { headers: { get: () => null } } as unknown as Parameters<typeof getRequestId>[0]
     const id = getRequestId(req)
     expect(typeof id).toBe('string')
     expect(id.length).toBeGreaterThan(0)
