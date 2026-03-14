@@ -49,6 +49,23 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return errorResponse('본인이 작성한 메모만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
     }
 
+    // Cascade: if this is a SalesOrder note, also delete mirrored DeliveryPost notes
+    if (note.relatedTable === 'SalesOrder') {
+      // The mirrored DeliveryPost note has relatedId = this note's id
+      const mirroredNotes = await prisma.note.findMany({
+        where: { relatedTable: 'DeliveryPost', relatedId: id },
+      })
+      for (const mirrored of mirroredNotes) {
+        // Delete replies to the mirrored note
+        await prisma.note.deleteMany({
+          where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
+        })
+      }
+      await prisma.note.deleteMany({
+        where: { relatedTable: 'DeliveryPost', relatedId: id },
+      })
+    }
+
     await prisma.note.delete({ where: { id } })
 
     return successResponse({ deleted: true })
