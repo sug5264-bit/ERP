@@ -16,10 +16,12 @@ interface RLEntry {
   resetAt: number
 }
 const rlStore = new Map<string, RLEntry>()
+const MAX_RL_ENTRIES = 5000 // 메모리 누수 방지
 let lastClean = Date.now()
 
 // Rate limit 임계값을 초과한 IP를 일시적으로 블록 (자동 차단)
 const blockedIps = new Map<string, number>()
+const MAX_BLOCKED_ENTRIES = 1000
 const BLOCK_DURATION_MS = 5 * 60 * 1000 // 5분
 
 function rateLimitCheck(
@@ -39,6 +41,16 @@ function rateLimitCheck(
     }
   }
 
+  // 최대 엔트리 초과 시 가장 오래된 항목 제거
+  if (rlStore.size >= MAX_RL_ENTRIES) {
+    const firstKey = rlStore.keys().next().value
+    if (firstKey) rlStore.delete(firstKey)
+  }
+  if (blockedIps.size >= MAX_BLOCKED_ENTRIES) {
+    const firstKey = blockedIps.keys().next().value
+    if (firstKey) blockedIps.delete(firstKey)
+  }
+
   const entry = rlStore.get(key)
   if (!entry || now > entry.resetAt) {
     rlStore.set(key, { count: 1, resetAt: now + windowMs })
@@ -51,17 +63,31 @@ function rateLimitCheck(
   return { ok: true, remaining: max - entry.count, resetAt: entry.resetAt }
 }
 
-const IP_PATTERN = /^[\d.a-fA-F:]+$/
+// IPv4: 1-3자리.1-3자리.1-3자리.1-3자리, IPv6: hex:hex 형식
+const IPV4_PATTERN = /^(\d{1,3}\.){3}\d{1,3}$/
+const IPV6_PATTERN = /^[0-9a-fA-F:]+$/
+
+function isValidIp(ip: string): boolean {
+  if (IPV4_PATTERN.test(ip)) {
+    // 각 옥텟이 0-255 범위인지 검증
+    return ip.split('.').every((octet) => {
+      const n = Number(octet)
+      return n >= 0 && n <= 255
+    })
+  }
+  // IPv6 또는 IPv4-mapped IPv6 (::ffff:x.x.x.x)
+  return IPV6_PATTERN.test(ip) && ip.length <= 45
+}
 
 function getIp(req: { headers: Headers }): string {
   // x-real-ip(리버스 프록시 설정)를 우선 신뢰, x-forwarded-for는 마지막 프록시가 추가한 첫 번째 IP 사용
   const realIp = req.headers.get('x-real-ip')?.trim()
-  if (realIp && IP_PATTERN.test(realIp)) return realIp
+  if (realIp && isValidIp(realIp)) return realIp
 
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) {
     const firstIp = forwarded.split(',')[0]?.trim()
-    if (firstIp && IP_PATTERN.test(firstIp)) return firstIp
+    if (firstIp && isValidIp(firstIp)) return firstIp
   }
 
   return 'unknown'

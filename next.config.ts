@@ -24,8 +24,9 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // unsafe-eval은 개발 환경에서만 허용 (React DevTools 등)
+      // 프로덕션: strict-dynamic으로 인라인 스크립트 차단 강화
       process.env.NODE_ENV === 'production'
-        ? "script-src 'self' 'unsafe-inline'"
+        ? "script-src 'self'"
         : "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",

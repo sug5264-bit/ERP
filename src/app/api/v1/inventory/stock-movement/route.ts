@@ -74,6 +74,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createStockMovementSchema.parse(body)
 
+    // 이동유형 검증
+    const VALID_MOVEMENT_TYPES = ['INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT']
+    if (!VALID_MOVEMENT_TYPES.includes(data.movementType)) {
+      return errorResponse(`유효하지 않은 이동유형입니다: ${data.movementType}`, 'INVALID_MOVEMENT_TYPE', 400)
+    }
+
     // 창고 필수 검증
     if (data.movementType === 'INBOUND' && !data.targetWarehouseId) {
       return errorResponse('입고에는 대상 창고가 필요합니다.', 'MISSING_WAREHOUSE')

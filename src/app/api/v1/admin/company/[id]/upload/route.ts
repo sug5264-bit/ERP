@@ -114,10 +114,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await writeFile(filePath, buffer)
 
-    const updated = await prisma.company.update({
-      where: { id },
-      data: { [uploadField]: uniqueName },
-    })
+    let updated
+    try {
+      updated = await prisma.company.update({
+        where: { id },
+        data: { [uploadField]: uniqueName },
+      })
+    } catch (dbError) {
+      // DB 업데이트 실패 시 고아 파일 정리
+      await unlink(filePath).catch(() => {})
+      throw dbError
+    }
 
     return successResponse(updated)
   } catch (error) {

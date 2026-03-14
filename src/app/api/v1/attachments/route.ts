@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
-import { writeFile, mkdir, access, constants } from 'fs/promises'
+import { writeFile, mkdir, access, constants, unlink } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { sanitizeFileName } from '@/lib/sanitize'
@@ -12,6 +12,27 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 // Next.js App Router: route segment config for large file uploads
 export const maxDuration = 60 // seconds
+
+// 파일 매직 바이트로 실제 MIME 타입 검증 (확장자 위조 방지)
+const MAGIC_BYTES: [string[], number[]][] = [
+  [['png'], [0x89, 0x50, 0x4e, 0x47]],
+  [['jpg', 'jpeg'], [0xff, 0xd8, 0xff]],
+  [['gif'], [0x47, 0x49, 0x46]],
+  [['pdf'], [0x25, 0x50, 0x44, 0x46]],
+  [['zip'], [0x50, 0x4b, 0x03, 0x04]],
+  [['rar'], [0x52, 0x61, 0x72, 0x21]],
+  [['7z'], [0x37, 0x7a, 0xbc, 0xaf]],
+]
+
+function validateMagicBytes(buffer: Buffer, ext: string): boolean {
+  const entry = MAGIC_BYTES.find(([exts]) => exts.includes(ext))
+  if (!entry) return true // 매직 바이트가 정의되지 않은 확장자는 통과
+  const [, bytes] = entry
+  for (let i = 0; i < bytes.length; i++) {
+    if (buffer[i] !== bytes[i]) return false
+  }
+  return true
+}
 
 const VALID_TABLES = [
   'SalesOrder',
@@ -145,6 +166,15 @@ export async function POST(request: NextRequest) {
       return errorResponse('파일 데이터를 읽을 수 없습니다.', 'FILE_READ_ERROR', 400)
     }
 
+    // 매직 바이트 검증: 확장자 위조 방지
+    if (!validateMagicBytes(buffer, ext)) {
+      return errorResponse(
+        '파일 내용이 확장자와 일치하지 않습니다. 올바른 파일을 업로드해주세요.',
+        'INVALID_FILE_CONTENT',
+        400
+      )
+    }
+
     try {
       await writeFile(filePath, buffer)
     } catch (writeErr) {
@@ -156,17 +186,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const attachment = await prisma.attachment.create({
-      data: {
-        fileName: sanitizeFileName(file.name),
-        filePath: uniqueName,
-        fileSize: file.size,
-        mimeType: file.type || 'application/octet-stream',
-        relatedTable,
-        relatedId,
-        uploadedBy: authResult.session.user.id,
-      },
-    })
+    let attachment
+    try {
+      attachment = await prisma.attachment.create({
+        data: {
+          fileName: sanitizeFileName(file.name),
+          filePath: uniqueName,
+          fileSize: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          relatedTable,
+          relatedId,
+          uploadedBy: authResult.session.user.id,
+        },
+      })
+    } catch (dbErr) {
+      // DB 저장 실패 시 고아 파일 정리
+      await unlink(filePath).catch(() => {})
+      throw dbErr
+    }
 
     return successResponse(attachment)
   } catch (error) {

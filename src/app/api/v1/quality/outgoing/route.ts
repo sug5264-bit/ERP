@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
     const data = inspections.map((i) => ({
       id: i.id,
       inspectionNo: i.inspectionNo,
-      deliveryNo: i.delivery.deliveryNo,
-      partnerName: i.delivery.partner?.partnerName || '-',
+      deliveryNo: i.delivery?.deliveryNo || '-',
+      partnerName: i.delivery?.partner?.partnerName || '-',
       inspectionDate: i.inspectionDate,
       inspectorName: i.inspectorName,
       overallGrade: i.overallGrade,

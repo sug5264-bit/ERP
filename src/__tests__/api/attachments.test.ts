@@ -126,6 +126,15 @@ describe('GET /api/v1/attachments', () => {
 describe('POST /api/v1/attachments', () => {
   beforeEach(() => vi.resetAllMocks())
 
+  // 확장자별 매직 바이트 (magic byte validation 테스트 통과용)
+  const MAGIC_BYTE_MAP: Record<string, Uint8Array> = {
+    pdf: new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]), // %PDF-1.4
+    png: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    jpg: new Uint8Array([0xff, 0xd8, 0xff, 0xe0]),
+    gif: new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]),
+    zip: new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
+  }
+
   function createUploadReq(
     fileContent: string,
     fileName: string,
@@ -133,7 +142,13 @@ describe('POST /api/v1/attachments', () => {
     relatedId: string,
     fileSize?: number
   ): NextRequest {
-    const file = new File([fileContent], fileName, { type: 'application/pdf' })
+    const ext = fileName.includes('.') ? (fileName.split('.').pop() || '').toLowerCase() : ''
+    const magicBytes = MAGIC_BYTE_MAP[ext]
+    // 매직 바이트가 있는 확장자면 올바른 헤더 포함
+    const content = magicBytes
+      ? new Blob([magicBytes, new TextEncoder().encode(fileContent)])
+      : new Blob([fileContent])
+    const file = new File([content], fileName, { type: 'application/octet-stream' })
     if (fileSize) {
       Object.defineProperty(file, 'size', { value: fileSize })
     }

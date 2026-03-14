@@ -328,8 +328,12 @@ export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
   }
 
   const handleMarkDelivered = async (noteId: string) => {
-    await updatePostStatus(noteId, 'DELIVERED')
-    toast.success('납품완료 처리되었습니다.')
+    try {
+      await updatePostStatus(noteId, 'DELIVERED')
+      toast.success('납품완료 처리되었습니다.')
+    } catch {
+      toast.error('납품완료 처리에 실패했습니다.')
+    }
   }
 
   const openReturnDialog = (noteId: string) => {

@@ -59,13 +59,15 @@ async function connectWithRetry(client: PrismaClient, maxRetries = 3): Promise<v
         message.includes('ETIMEDOUT')
 
       if (!isTransient || attempt === maxRetries) {
+        // 접속 정보 마스킹 (비밀번호/호스트 누출 방지)
+        const safeMessage = message.replace(/\/\/[^@]+@/g, '//***:***@').slice(0, 300)
         console.error(
           JSON.stringify({
             level: 'error',
             type: 'DB_CONNECTION_FAILED',
             attempt,
             maxRetries,
-            error: message.slice(0, 300),
+            error: safeMessage,
             timestamp: new Date().toISOString(),
           })
         )
@@ -147,10 +149,19 @@ function createPrismaClient() {
       const duration = e.duration
       queryStats.totalQueries++
 
-      // 이동 평균 계산
-      queryStats.avgDuration = queryStats.avgDuration + (duration - queryStats.avgDuration) / queryStats.totalQueries
-      if (duration > queryStats.maxDuration) {
+      // 통계 오버플로우 방지: 100만 쿼리마다 리셋
+      if (queryStats.totalQueries > 1_000_000) {
+        queryStats.totalQueries = 1
+        queryStats.slowQueries = 0
         queryStats.maxDuration = duration
+        queryStats.avgDuration = duration
+        queryStats.lastReset = Date.now()
+      } else {
+        // 이동 평균 계산
+        queryStats.avgDuration = queryStats.avgDuration + (duration - queryStats.avgDuration) / queryStats.totalQueries
+        if (duration > queryStats.maxDuration) {
+          queryStats.maxDuration = duration
+        }
       }
 
       if (duration > SLOW_QUERY_THRESHOLD) {

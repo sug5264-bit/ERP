@@ -289,6 +289,10 @@ export interface AutoStockMovementInput {
  * 재고이동을 자동으로 생성하고, 재고잔량도 함께 업데이트.
  */
 export async function createAutoStockMovement(input: AutoStockMovementInput, tx: TransactionClient): Promise<string> {
+  if (!input.details || input.details.length === 0) {
+    throw new Error('재고이동 상세 항목이 비어있습니다.')
+  }
+
   const prefix = 'SM'
   const movementNo = await generateDocumentNumber(prefix, input.movementDate, tx)
 
