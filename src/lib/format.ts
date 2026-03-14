@@ -4,7 +4,12 @@ import { ko } from 'date-fns/locale'
 export function formatCurrency(amount: number | string | null | undefined): string {
   if (amount == null) return '0원'
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
-  if (!isFinite(num)) return '0원'
+  if (!isFinite(num) || isNaN(num)) return '0원'
+  // 문자열 입력 시 숫자 외 문자가 포함된 경우 안전하게 처리
+  if (typeof amount === 'string' && amount.trim() !== '' && isNaN(Number(amount))) {
+    // parseFloat('123abc') = 123 이므로, Number() 로 엄격 검증하여 불일치 시 0원 반환
+    return '0원'
+  }
   if (num < 0) {
     return `△${new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 }).format(Math.abs(num))}원`
   }
