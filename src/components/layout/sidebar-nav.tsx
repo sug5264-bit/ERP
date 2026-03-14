@@ -298,7 +298,7 @@ const NavChildWithChildren = memo(function NavChildWithChildren({
       </div>
       <CollapsibleContent>
         <div className="border-sidebar-border ml-3 flex flex-col gap-0.5 border-l pl-3">
-          {child.children!.map((sub) => {
+          {child.children?.map((sub) => {
             const subActive = pathname === sub.href
             return (
               <Link
