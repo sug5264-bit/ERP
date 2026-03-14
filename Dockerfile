@@ -47,6 +47,14 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# 파일 업로드 디렉토리 생성 (nextjs 유저 쓰기 권한 필수)
+RUN mkdir -p /app/uploads/attachments /app/uploads/company && \
+    chown -R nextjs:nodejs /app/uploads
+
+# Prisma 클라이언트 (standalone에 누락될 수 있음)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+
 USER nextjs
 
 EXPOSE 3000

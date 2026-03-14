@@ -146,9 +146,9 @@ export default auth((request) => {
       }
     }
 
-    // API 쓰기(POST/PUT/DELETE): 1분에 30회
+    // API 쓰기(POST/PUT/DELETE): 1분에 60회 (파일 업로드 다건 지원)
     if (!pathname.startsWith('/api/auth') && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      const { ok, resetAt } = rateLimitCheck(`mut:${ip}`, 60_000, 30)
+      const { ok, resetAt } = rateLimitCheck(`mut:${ip}`, 60_000, 60)
       if (!ok) {
         return NextResponse.json(
           {
