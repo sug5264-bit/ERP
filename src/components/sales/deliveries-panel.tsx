@@ -36,7 +36,6 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Pencil,
   Printer,
   MessageSquare,
   Send,
@@ -325,7 +324,7 @@ function getDeliveryFileTypeBadge(mimeType: string, fileName: string) {
   return { label: ext.toUpperCase() || '파일', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }
 }
 
-function formatDeliveryFileSize(bytes?: number) {
+function _formatDeliveryFileSize(bytes?: number) {
   if (!bytes) return ''
   if (bytes < 1024) return `${bytes}B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
