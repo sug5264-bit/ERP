@@ -49,5 +49,26 @@ services:
       postgres:
         condition: service_healthy
 
+  # ── Next.js ERP 앱 (Docker 배포 시 사용) ──
+  app:
+    build: .
+    container_name: erp-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://erp_admin:erp_password_2026@postgres:5432/erp_database
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: change-this-secret-in-production
+      NODE_ENV: production
+      TZ: Asia/Seoul
+    ports:
+      - '3000:3000'
+    volumes:
+      # 파일 업로드 데이터 영속화 (컨테이너 재시작 시에도 유지)
+      - upload_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  upload_data:
