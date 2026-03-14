@@ -210,7 +210,7 @@ describe('POST /api/v1/closing/netting', () => {
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
       const tx = {
         voucher: { create: vi.fn().mockResolvedValue(mockVoucher) },
-        documentSequence: { upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
       }
       return fn(tx)
     })

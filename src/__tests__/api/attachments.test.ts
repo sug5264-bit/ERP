@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockReadFile, mockUnlink } = vi.hoisted(() => ({
+const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockReadFile, mockUnlink, mockAccess } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockPrisma: {
     attachment: {
@@ -24,6 +24,7 @@ const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockReadFile, mockUnlink
   mockMkdir: vi.fn().mockResolvedValue(undefined),
   mockReadFile: vi.fn(),
   mockUnlink: vi.fn().mockResolvedValue(undefined),
+  mockAccess: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -39,6 +40,8 @@ vi.mock('fs/promises', () => ({
   mkdir: (...args: unknown[]) => mockMkdir(...args),
   readFile: (...args: unknown[]) => mockReadFile(...args),
   unlink: (...args: unknown[]) => mockUnlink(...args),
+  access: (...args: unknown[]) => mockAccess(...args),
+  constants: { W_OK: 2 },
 }))
 
 vi.mock('@/lib/cache', () => ({
