@@ -59,11 +59,17 @@ const navItems: NavItem[] = [
         permission: 'sales.orders',
         children: [
           { title: '수주/출하 통합', href: '/sales/orders' },
-          { title: '수주/출하 추적', href: '/sales/deliveries/order-tracking' },
-          { title: '매출', href: '/sales/deliveries/online-sales' },
         ],
       },
-      { title: '매출현황', href: '/sales/summary', permission: 'sales.summary' },
+      {
+        title: '매출현황',
+        href: '/sales/summary',
+        permission: 'sales.summary',
+        children: [
+          { title: '매출현황', href: '/sales/summary' },
+          { title: '매출수기등록', href: '/sales/deliveries/online-sales' },
+        ],
+      },
       { title: '매출처관리', href: '/sales/partners', permission: 'sales.partners' },
       { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },

@@ -478,7 +478,7 @@ export default function OnlineSalesPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="매출" description="온라인/오프라인 채널별 매출을 등록하고 관리합니다." />
+      <PageHeader title="매출수기등록" description="온라인/오프라인 채널별 매출을 수기로 등록하고 관리합니다." />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">

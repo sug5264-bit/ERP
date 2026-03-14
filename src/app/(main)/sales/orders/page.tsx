@@ -7,9 +7,11 @@ import { PageHeader } from '@/components/common/page-header'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { OrdersPanel } from '@/components/sales/orders-panel'
 import { DeliveriesPanel } from '@/components/sales/deliveries-panel'
 import { formatCurrency } from '@/lib/format'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
 import {
   ShoppingCart,
   Truck,
@@ -25,49 +27,51 @@ interface SalesOrder {
   id: string
   status: string
   totalAmount: number
+  orderDate: string
+  salesChannel?: string
 }
 
 interface DeliveryRow {
   id: string
   status: string
+  deliveryDate: string
 }
 
 export default function OrderShipmentPage() {
   const [mainTab, setMainTab] = useState<string>('orders')
+  const [channelFilter, setChannelFilter] = useState<string>('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  // Build query params for date filtering
+  const dateParams = useMemo(() => {
+    let params = ''
+    if (startDate) params += `&startDate=${startDate}`
+    if (endDate) params += `&endDate=${endDate}`
+    return params
+  }, [startDate, endDate])
+
+  const channelParam = channelFilter && channelFilter !== 'all' ? `&salesChannel=${channelFilter}` : ''
 
   // Fetch summary data for KPI cards
-  const { data: ordersOnline } = useQuery({
-    queryKey: ['sales-orders-summary', 'ONLINE'],
+  const { data: ordersData } = useQuery({
+    queryKey: ['sales-orders-summary', channelFilter, startDate, endDate],
     queryFn: () =>
-      api.get('/sales/orders?pageSize=200&salesChannel=ONLINE') as Promise<{ data: SalesOrder[] }>,
+      api.get(`/sales/orders?pageSize=200${channelParam}${dateParams}`) as Promise<{ data: SalesOrder[] }>,
     staleTime: 2 * 60 * 1000,
   })
-  const { data: ordersOffline } = useQuery({
-    queryKey: ['sales-orders-summary', 'OFFLINE'],
+  const { data: deliveriesData } = useQuery({
+    queryKey: ['sales-deliveries-summary', channelFilter, startDate, endDate],
     queryFn: () =>
-      api.get('/sales/orders?pageSize=200&salesChannel=OFFLINE') as Promise<{ data: SalesOrder[] }>,
-    staleTime: 2 * 60 * 1000,
-  })
-  const { data: deliveriesOnline } = useQuery({
-    queryKey: ['sales-deliveries-summary', 'ONLINE'],
-    queryFn: () =>
-      api.get('/sales/deliveries?pageSize=200&salesChannel=ONLINE') as Promise<{
-        data: DeliveryRow[]
-      }>,
-    staleTime: 2 * 60 * 1000,
-  })
-  const { data: deliveriesOffline } = useQuery({
-    queryKey: ['sales-deliveries-summary', 'OFFLINE'],
-    queryFn: () =>
-      api.get('/sales/deliveries?pageSize=200&salesChannel=OFFLINE') as Promise<{
+      api.get(`/sales/deliveries?pageSize=200${channelParam}${dateParams}`) as Promise<{
         data: DeliveryRow[]
       }>,
     staleTime: 2 * 60 * 1000,
   })
 
   const stats = useMemo(() => {
-    const allOrders = [...(ordersOnline?.data || []), ...(ordersOffline?.data || [])]
-    const allDeliveries = [...(deliveriesOnline?.data || []), ...(deliveriesOffline?.data || [])]
+    const allOrders = ordersData?.data || []
+    const allDeliveries = deliveriesData?.data || []
 
     const totalOrders = allOrders.length
     const totalOrderAmount = allOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
@@ -79,7 +83,6 @@ export default function OrderShipmentPage() {
     const deliveriesShipped = allDeliveries.filter((d) => d.status === 'SHIPPED').length
     const deliveriesCompleted = allDeliveries.filter((d) => d.status === 'DELIVERED').length
 
-    // Fulfillment rate: delivered / total orders
     const fulfillmentRate =
       totalOrders > 0 ? Math.round((deliveriesCompleted / totalOrders) * 100) : 0
 
@@ -94,12 +97,10 @@ export default function OrderShipmentPage() {
       deliveriesCompleted,
       fulfillmentRate,
     }
-  }, [ordersOnline, ordersOffline, deliveriesOnline, deliveriesOffline])
+  }, [ordersData, deliveriesData])
 
-  const isLoading =
-    !ordersOnline && !ordersOffline && !deliveriesOnline && !deliveriesOffline
+  const isLoading = !ordersData && !deliveriesData
 
-  // Pipeline steps for the process flow visualization
   const pipelineSteps = [
     { label: '수주 접수', count: stats.totalOrders, icon: ShoppingCart, color: 'blue' as const },
     { label: '진행중', count: stats.ordersInProgress, icon: Clock, color: 'amber' as const },
@@ -143,10 +144,31 @@ export default function OrderShipmentPage() {
         description="수주 등록부터 출하/납품까지 통합 관리합니다"
       />
 
+      {/* Filter bar: online/offline + date range */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={channelFilter} onValueChange={setChannelFilter}>
+          <SelectTrigger className="w-full sm:w-36">
+            <SelectValue placeholder="전체 구분" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="ONLINE">온라인</SelectItem>
+            <SelectItem value="OFFLINE">오프라인</SelectItem>
+          </SelectContent>
+        </Select>
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+        />
+      </div>
+
       {/* Process Pipeline Flow */}
       <Card className="overflow-hidden border shadow-sm">
         <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
-          {/* Pipeline header with fulfillment rate */}
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp className="text-muted-foreground h-4 w-4" />
@@ -163,7 +185,6 @@ export default function OrderShipmentPage() {
             </div>
           </div>
 
-          {/* Pipeline steps */}
           <div className="flex items-center gap-1 overflow-x-auto sm:gap-0">
             {pipelineSteps.map((step, idx) => {
               const colors = colorMap[step.color]
@@ -198,7 +219,6 @@ export default function OrderShipmentPage() {
             })}
           </div>
 
-          {/* Fulfillment progress bar */}
           <div className="mt-4">
             <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
               <div
@@ -210,9 +230,8 @@ export default function OrderShipmentPage() {
         </CardContent>
       </Card>
 
-      {/* KPI Summary Cards - clickable to switch tabs */}
+      {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {/* Total Orders */}
         <Card
           className="group cursor-pointer gap-0 border-l-4 border-l-blue-500 py-4 shadow-sm transition-all hover:shadow-md"
           onClick={() => setMainTab('orders')}
@@ -238,7 +257,6 @@ export default function OrderShipmentPage() {
           </CardContent>
         </Card>
 
-        {/* Orders In Progress */}
         <Card
           className="group cursor-pointer gap-0 border-l-4 border-l-amber-500 py-4 shadow-sm transition-all hover:shadow-md"
           onClick={() => setMainTab('orders')}
@@ -264,7 +282,6 @@ export default function OrderShipmentPage() {
           </CardContent>
         </Card>
 
-        {/* Deliveries Preparing / Shipped */}
         <Card
           className="group cursor-pointer gap-0 border-l-4 border-l-violet-500 py-4 shadow-sm transition-all hover:shadow-md"
           onClick={() => setMainTab('deliveries')}
@@ -292,7 +309,6 @@ export default function OrderShipmentPage() {
           </CardContent>
         </Card>
 
-        {/* Deliveries Completed */}
         <Card
           className="group cursor-pointer gap-0 border-l-4 border-l-emerald-500 py-4 shadow-sm transition-all hover:shadow-md"
           onClick={() => setMainTab('deliveries')}
@@ -321,7 +337,7 @@ export default function OrderShipmentPage() {
         </Card>
       </div>
 
-      {/* Main Tab Section - wrapped in Card for visual distinction */}
+      {/* Main Tab Section */}
       <Card className="overflow-hidden border shadow-sm">
         <Tabs value={mainTab} onValueChange={setMainTab}>
           <div className="border-b px-4 pt-3 sm:px-6">
