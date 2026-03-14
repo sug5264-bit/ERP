@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate } from '@/lib/format'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -88,12 +89,16 @@ export function OrdersPanel() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [filterOrderId, setFilterOrderId] = useState<string>('all')
+  const [channelFilter, setChannelFilter] = useState<string>('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Write form state
   const [writeOpen, setWriteOpen] = useState(false)
   const [postOrderId, setPostOrderId] = useState<string>('')
+  const [postChannelType, setPostChannelType] = useState<string>('ONLINE')
   const [postTitle, setPostTitle] = useState('')
   const [postContent, setPostContent] = useState('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -109,12 +114,10 @@ export function OrdersPanel() {
   const orders: OrderItem[] = ordersData?.data || []
 
   const { data: notesData, isLoading } = useQuery({
-    queryKey: ['notes', 'SalesOrder', filterOrderId],
+    queryKey: ['notes', 'SalesOrder', filterOrderId, channelFilter, startDate, endDate],
     queryFn: () => {
-      const url =
-        filterOrderId && filterOrderId !== 'all'
-          ? `/notes?relatedTable=SalesOrder&relatedId=${filterOrderId}`
-          : `/notes?relatedTable=SalesOrder`
+      let url = `/notes?relatedTable=SalesOrder`
+      if (filterOrderId && filterOrderId !== 'all') url += `&relatedId=${filterOrderId}`
       return api.get(url)
     },
   })
@@ -133,14 +136,23 @@ export function OrdersPanel() {
 
   const getPostAttachments = (noteId: string) => allAttachments.filter((a) => a.relatedId === noteId)
 
-  // Filter notes by search keyword
-  const filteredNotes = searchKeyword
-    ? notes.filter(
-        (n) =>
-          n.content.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-          (orderMap.get(n.relatedId) || '').toLowerCase().includes(searchKeyword.toLowerCase())
-      )
-    : notes
+  // Filter notes by date range and search keyword
+  const filteredNotes = notes.filter((n) => {
+    // Date filter
+    if (startDate || endDate) {
+      const noteDate = n.createdAt?.split('T')[0] || ''
+      if (startDate && noteDate < startDate) return false
+      if (endDate && noteDate > endDate) return false
+    }
+    // Search filter
+    if (searchKeyword) {
+      const lowerSearch = searchKeyword.toLowerCase()
+      const matchContent = n.content.toLowerCase().includes(lowerSearch)
+      const matchOrder = (orderMap.get(n.relatedId) || '').toLowerCase().includes(lowerSearch)
+      if (!matchContent && !matchOrder) return false
+    }
+    return true
+  })
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -153,17 +165,24 @@ export function OrdersPanel() {
   }
 
   const handleSubmitPost = async () => {
-    if (!postContent.trim() || !postOrderId) {
-      toast.error('발주를 선택하고 내용을 입력해주세요.')
+    if (!postContent.trim()) {
+      toast.error('내용을 입력해주세요.')
       return
     }
     setSubmitting(true)
     try {
-      const content = postTitle ? `[${postTitle}]\n${postContent.trim()}` : postContent.trim()
+      // Build content with channel type prefix
+      const channelPrefix = postChannelType === 'ONLINE' ? '[온라인]' : '[오프라인]'
+      const titlePart = postTitle ? `[${postTitle}]` : ''
+      const content = `${channelPrefix}${titlePart}\n${postContent.trim()}`
+
+      // If order is selected, use it; otherwise create without order linkage
+      const relatedId = postOrderId || undefined
+
       const noteResult = await api.post('/notes', {
         content,
         relatedTable: 'SalesOrder',
-        relatedId: postOrderId,
+        relatedId: relatedId || 'GENERAL',
       })
       const noteId = noteResult?.data?.id
 
@@ -179,7 +198,17 @@ export function OrdersPanel() {
         }
       }
 
+      // Also create a mirrored note in Delivery table for 출하관리 to see
+      await api.post('/notes', {
+        content: `[수주글]\n${content}`,
+        relatedTable: 'DeliveryPost',
+        relatedId: noteId || 'GENERAL',
+      }).catch(() => {
+        // Silently handle if delivery note creation fails
+      })
+
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
       queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrderPost'] })
       setPostTitle('')
       setPostContent('')
@@ -220,12 +249,25 @@ export function OrdersPanel() {
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-muted-foreground text-xs font-medium">발주 선택 *</label>
-                <Select value={postOrderId} onValueChange={setPostOrderId}>
+                <label className="text-muted-foreground text-xs font-medium">온라인/오프라인 구분 *</label>
+                <Select value={postChannelType} onValueChange={setPostChannelType}>
                   <SelectTrigger>
-                    <SelectValue placeholder="발주를 선택하세요" />
+                    <SelectValue placeholder="구분 선택" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="ONLINE">온라인</SelectItem>
+                    <SelectItem value="OFFLINE">오프라인</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">발주 선택 (선택사항)</label>
+                <Select value={postOrderId} onValueChange={setPostOrderId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="발주를 선택하세요 (선택사항)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">선택 안함</SelectItem>
                     {orders.map((o) => (
                       <SelectItem key={o.id} value={o.id}>
                         {o.orderNo || o.id?.slice(-6)} - {o.partner?.partnerName || ''}
@@ -293,7 +335,7 @@ export function OrdersPanel() {
               <div className="flex justify-end pt-2">
                 <Button
                   onClick={handleSubmitPost}
-                  disabled={!postContent.trim() || !postOrderId || submitting}
+                  disabled={!postContent.trim() || submitting}
                   size="sm"
                 >
                   <Send className="mr-1 h-3.5 w-3.5" />
@@ -304,20 +346,26 @@ export function OrdersPanel() {
           </DialogContent>
         </Dialog>
 
-        {/* Filter */}
-        <Select value={filterOrderId} onValueChange={setFilterOrderId}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="전체 발주" />
+        {/* Filters */}
+        <Select value={channelFilter} onValueChange={setChannelFilter}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="전체 구분" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">전체 발주</SelectItem>
-            {orders.map((o) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.orderNo || o.id.slice(-6)} - {o.partner?.partnerName || ''}
-              </SelectItem>
-            ))}
+            <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="ONLINE">온라인</SelectItem>
+            <SelectItem value="OFFLINE">오프라인</SelectItem>
           </SelectContent>
         </Select>
+
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+        />
 
         <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -348,12 +396,21 @@ export function OrdersPanel() {
           const postNo = filteredNotes.length - idx
           const postFiles = getPostAttachments(note.id)
           const isExpanded = expandedId === note.id
-          const orderNo = orderMap.get(note.relatedId) || note.relatedId?.slice(-6)
+          const orderNo = orderMap.get(note.relatedId) || (note.relatedId === 'GENERAL' ? '일반' : note.relatedId?.slice(-6))
 
-          // Parse title from content if it starts with [title]
-          const titleMatch = note.content.match(/^\[(.+?)\]\n?/)
+          // Parse channel type and title from content
+          const channelMatch = note.content.match(/^\[(온라인|오프라인)\]/)
+          const channelType = channelMatch ? channelMatch[1] : null
+          const contentAfterChannel = channelMatch ? note.content.slice(channelMatch[0].length) : note.content
+          const titleMatch = contentAfterChannel.match(/^\[(.+?)\]\n?/)
           const title = titleMatch ? titleMatch[1] : null
-          const body = titleMatch ? note.content.slice(titleMatch[0].length) : note.content
+          const body = titleMatch ? contentAfterChannel.slice(titleMatch[0].length) : contentAfterChannel.replace(/^\n/, '')
+
+          // Filter by channel
+          if (channelFilter !== 'all') {
+            const expectedLabel = channelFilter === 'ONLINE' ? '온라인' : '오프라인'
+            if (channelType && channelType !== expectedLabel) return null
+          }
 
           return (
             <div key={note.id} className="overflow-hidden rounded-lg border transition-shadow hover:shadow-sm">
@@ -366,9 +423,16 @@ export function OrdersPanel() {
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
                       <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {orderNo}
-                      </Badge>
+                      {channelType && (
+                        <Badge variant={channelType === '온라인' ? 'default' : 'secondary'} className="text-[10px]">
+                          {channelType}
+                        </Badge>
+                      )}
+                      {note.relatedId !== 'GENERAL' && (
+                        <Badge variant="outline" className="text-[10px]">
+                          {orderNo}
+                        </Badge>
+                      )}
                       {postFiles.length > 0 && (
                         <span className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
                           <Paperclip className="h-3 w-3" />
