@@ -114,7 +114,11 @@ function getLocalDateString() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-export function DeliveriesPanel() {
+interface DeliveriesPanelProps {
+  statusFilter?: string | null
+}
+
+export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
   const { data: session } = useSession()
   const currentUserId = session?.user?.id
 
@@ -194,6 +198,11 @@ export function DeliveriesPanel() {
   }
 
   const filteredDeliveryNotes = deliveryNotes.filter((n) => {
+    // Pipeline status filter from parent
+    if (statusFilter) {
+      const postStatus = getPostStatus(n.id)
+      if (postStatus !== statusFilter) return false
+    }
     if (noteStartDate || noteEndDate) {
       const noteDate = n.createdAt?.split('T')[0] || ''
       if (noteStartDate && noteDate < noteStartDate) return false
@@ -404,6 +413,13 @@ export function DeliveriesPanel() {
         </button>
         {notesExpanded && (
           <div className="space-y-3 border-t px-4 py-3">
+            {statusFilter && (
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {POST_STATUS_MAP[statusFilter]?.label || statusFilter} 필터 적용 중
+                </Badge>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <DateRangeFilter
                 startDate={noteStartDate}
