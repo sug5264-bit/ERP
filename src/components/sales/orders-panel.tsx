@@ -136,13 +136,20 @@ export function OrdersPanel() {
 
   const getPostAttachments = (noteId: string) => allAttachments.filter((a) => a.relatedId === noteId)
 
-  // Filter notes by date range and search keyword
+  // Filter notes by date range, channel, and search keyword
   const filteredNotes = notes.filter((n) => {
     // Date filter
     if (startDate || endDate) {
       const noteDate = n.createdAt?.split('T')[0] || ''
       if (startDate && noteDate < startDate) return false
       if (endDate && noteDate > endDate) return false
+    }
+    // Channel filter
+    if (channelFilter !== 'all') {
+      const expectedLabel = channelFilter === 'ONLINE' ? '온라인' : '오프라인'
+      const channelMatch = n.content.match(/^\[(온라인|오프라인)\]/)
+      if (channelMatch && channelMatch[1] !== expectedLabel) return false
+      if (!channelMatch) return false
     }
     // Search filter
     if (searchKeyword) {
@@ -177,7 +184,7 @@ export function OrdersPanel() {
       const content = `${channelPrefix}${titlePart}\n${postContent.trim()}`
 
       // If order is selected, use it; otherwise create without order linkage
-      const relatedId = postOrderId || undefined
+      const relatedId = postOrderId && postOrderId !== 'none' ? postOrderId : undefined
 
       const noteResult = await api.post('/notes', {
         content,
@@ -234,6 +241,8 @@ export function OrdersPanel() {
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryReply'] })
+      queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrderPost'] })
+      queryClient.invalidateQueries({ queryKey: ['attachments', 'DeliveryReplyPost'] })
       toast.success('게시글이 삭제되었습니다.')
     } catch {
       toast.error('삭제에 실패했습니다.')
@@ -413,12 +422,6 @@ export function OrdersPanel() {
           const titleMatch = contentAfterChannel.match(/^\[(.+?)\]\n?/)
           const title = titleMatch ? titleMatch[1] : null
           const body = titleMatch ? contentAfterChannel.slice(titleMatch[0].length) : contentAfterChannel.replace(/^\n/, '')
-
-          // Filter by channel
-          if (channelFilter !== 'all') {
-            const expectedLabel = channelFilter === 'ONLINE' ? '온라인' : '오프라인'
-            if (channelType && channelType !== expectedLabel) return null
-          }
 
           return (
             <div key={note.id} className="overflow-hidden rounded-lg border transition-shadow hover:shadow-sm">

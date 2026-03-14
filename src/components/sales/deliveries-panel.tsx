@@ -184,21 +184,8 @@ export function DeliveriesPanel() {
         }
       }
 
-      // Auto-change related deliveries to ORDER_CONFIRMED status
-      const allDeliveries = await api.get('/sales/deliveries?pageSize=50&status=PREPARING') as ApiListResponse<DeliveryRow>
-      const preparingDeliveries = (allDeliveries?.data || []).filter(
-        (d) => d.status === 'PREPARING' && !d.orderConfirmed
-      )
-      for (const d of preparingDeliveries.slice(0, 1)) {
-        await api.patch(`/sales/deliveries/${d.id}`, {
-          orderConfirmed: true,
-          orderConfirmedAt: new Date().toISOString(),
-        }).catch(() => {})
-      }
-
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryReply'] })
       queryClient.invalidateQueries({ queryKey: ['attachments', 'DeliveryReplyPost'] })
-      queryClient.invalidateQueries({ queryKey: ['sales-deliveries'] })
       setReplyContent('')
       setReplyFiles([])
       setReplyingTo(null)
