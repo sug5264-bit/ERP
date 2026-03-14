@@ -19,9 +19,13 @@ export async function GET(request: NextRequest) {
       status: { not: 'CANCELLED' as const },
     }
 
+    const revenueWhere = {
+      revenueDate: { gte: startDate, lt: endDate },
+    }
+
     // 모든 독립 쿼리를 병렬 실행
-    const [onlineOrders, offlineOrders, monthlyAggs, topItemAggs] = await Promise.all([
-      // Channel summary
+    const [onlineOrders, offlineOrders, monthlyAggs, topItemAggs, onlineRevenue, offlineRevenue, revenueMonthlyAggs] = await Promise.all([
+      // Channel summary (수주 기반)
       prisma.salesOrder.aggregate({
         where: { ...where, salesChannel: 'ONLINE' },
         _count: true,
@@ -51,11 +55,32 @@ export async function GET(request: NextRequest) {
         orderBy: { _sum: { totalAmount: 'desc' } },
         take: 10,
       }),
+      // 매출수기등록 (OnlineSalesRevenue) 채널별 합산
+      prisma.onlineSalesRevenue.aggregate({
+        where: { ...revenueWhere, salesType: 'ONLINE' },
+        _count: true,
+        _sum: { totalSales: true, totalFee: true, netRevenue: true },
+      }),
+      prisma.onlineSalesRevenue.aggregate({
+        where: { ...revenueWhere, salesType: 'OFFLINE' },
+        _count: true,
+        _sum: { totalSales: true, totalFee: true, netRevenue: true },
+      }),
+      // 매출수기등록 월별 집계
+      prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
+        SELECT to_char("revenueDate", 'YYYY-MM') as month,
+               "salesType" as channel,
+               SUM("totalSales")::float as total
+        FROM online_sales_revenues
+        WHERE "revenueDate" >= ${startDate} AND "revenueDate" < ${endDate}
+        GROUP BY to_char("revenueDate", 'YYYY-MM'), "salesType"
+        ORDER BY month
+      `,
     ])
 
-    // Monthly breakdown 처리 (이미 DB에서 집계된 결과)
+    // Monthly breakdown 처리 (수주 + 매출수기등록 합산)
     const monthlyMap = new Map<string, { online: number; offline: number; total: number }>()
-    for (const row of monthlyAggs) {
+    for (const row of [...monthlyAggs, ...revenueMonthlyAggs]) {
       if (!monthlyMap.has(row.month)) monthlyMap.set(row.month, { online: 0, offline: 0, total: 0 })
       const entry = monthlyMap.get(row.month)!
       const amount = Number(row.total)
@@ -103,24 +128,34 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // 매출수기등록 합산
+    const onlineRevenueAmount = Number(onlineRevenue._sum.totalSales || 0)
+    const offlineRevenueAmount = Number(offlineRevenue._sum.totalSales || 0)
+    const onlineOrderAmount = Number(onlineOrders._sum.totalAmount || 0)
+    const offlineOrderAmount = Number(offlineOrders._sum.totalAmount || 0)
+
     return successResponse(
       {
         period: { year, month },
         online: {
-          count: onlineOrders._count,
-          totalAmount: Number(onlineOrders._sum.totalAmount || 0),
+          count: onlineOrders._count + onlineRevenue._count,
+          totalAmount: onlineOrderAmount + onlineRevenueAmount,
           totalSupply: Number(onlineOrders._sum.totalSupply || 0),
           totalTax: Number(onlineOrders._sum.totalTax || 0),
         },
         offline: {
-          count: offlineOrders._count,
-          totalAmount: Number(offlineOrders._sum.totalAmount || 0),
+          count: offlineOrders._count + offlineRevenue._count,
+          totalAmount: offlineOrderAmount + offlineRevenueAmount,
           totalSupply: Number(offlineOrders._sum.totalSupply || 0),
           totalTax: Number(offlineOrders._sum.totalTax || 0),
         },
         total: {
-          count: onlineOrders._count + offlineOrders._count,
-          totalAmount: Number(onlineOrders._sum.totalAmount || 0) + Number(offlineOrders._sum.totalAmount || 0),
+          count: onlineOrders._count + offlineOrders._count + onlineRevenue._count + offlineRevenue._count,
+          totalAmount: onlineOrderAmount + offlineOrderAmount + onlineRevenueAmount + offlineRevenueAmount,
+        },
+        revenue: {
+          online: { count: onlineRevenue._count, totalSales: onlineRevenueAmount, totalFee: Number(onlineRevenue._sum.totalFee || 0), netRevenue: Number(onlineRevenue._sum.netRevenue || 0) },
+          offline: { count: offlineRevenue._count, totalSales: offlineRevenueAmount, totalFee: Number(offlineRevenue._sum.totalFee || 0), netRevenue: Number(offlineRevenue._sum.netRevenue || 0) },
         },
         monthly,
         topItems,
