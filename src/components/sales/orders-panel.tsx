@@ -208,18 +208,29 @@ export function OrdersPanel() {
       }
 
       // Also create a mirrored note in Delivery table for 출하관리 to see
-      await api
+      const deliveryNoteResult = await api
         .post('/notes', {
           content: `[수주글]\n${content}`,
           relatedTable: 'DeliveryPost',
           relatedId: noteId || 'GENERAL',
         })
-        .catch(() => {
-          // Silently handle if delivery note creation fails
-        })
+        .catch(() => null)
+
+      // Create status tracking note (PREPARING = 진행중 수주)
+      const deliveryNoteId = deliveryNoteResult?.data?.id
+      if (deliveryNoteId) {
+        await api
+          .post('/notes', {
+            content: 'PREPARING',
+            relatedTable: 'DeliveryPostStatus',
+            relatedId: deliveryNoteId,
+          })
+          .catch(() => {})
+      }
 
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPostStatus'] })
       queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrderPost'] })
       setPostTitle('')
       setPostContent('')
