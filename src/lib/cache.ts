@@ -29,7 +29,8 @@ function evictIfNeeded(): void {
     const excess = store.size - MAX_CACHE_SIZE
     const keys = store.keys()
     for (let i = 0; i < excess; i++) {
-      const { value } = keys.next()
+      const { value, done } = keys.next()
+      if (done) break // 이터레이터 소진 시 중단
       if (value) store.delete(value)
     }
   }

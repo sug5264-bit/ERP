@@ -42,8 +42,13 @@ export function sanitizeSearchQuery(query: string): string {
 
 /**
  * 객체의 모든 문자열 필드를 재귀적으로 살균
+ * 순환 참조 보호를 위해 seen Set 사용
  */
-export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
+export function sanitizeObject<T extends Record<string, unknown>>(obj: T, _seen?: WeakSet<object>): T {
+  const seen = _seen || new WeakSet()
+  if (seen.has(obj)) return obj // 순환 참조 시 원본 반환
+  seen.add(obj)
+
   const result = { ...obj } as Record<string, unknown>
   for (const key of Object.keys(result)) {
     const value = result[key]
@@ -53,7 +58,7 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
       // Date 객체는 그대로 보존
       result[key] = value
     } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      result[key] = sanitizeObject(value as Record<string, unknown>)
+      result[key] = sanitizeObject(value as Record<string, unknown>, seen)
     } else if (Array.isArray(value)) {
       result[key] = value.map((item: unknown) =>
         typeof item === 'string'
@@ -61,7 +66,7 @@ export function sanitizeObject<T extends Record<string, unknown>>(obj: T): T {
           : item instanceof Date
             ? item
             : item !== null && typeof item === 'object'
-              ? sanitizeObject(item as Record<string, unknown>)
+              ? sanitizeObject(item as Record<string, unknown>, seen)
               : item
       )
     }
@@ -83,6 +88,10 @@ export function sanitizeFileName(name: string): string {
   // OS 예약 파일명 방지
   if (RESERVED_NAMES.test(sanitized)) {
     sanitized = `_${sanitized}`
+  }
+  // '.' 또는 '..' (이미 위에서 제거) 같은 디렉터리 참조 방지
+  if (sanitized === '.' || sanitized === '..') {
+    sanitized = 'unnamed_file'
   }
   // 빈 결과 방지
   if (!sanitized) {

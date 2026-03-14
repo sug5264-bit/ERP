@@ -190,10 +190,9 @@ export function handleApiError(error: unknown) {
       error: error.message,
       stack: error.stack,
     })
-    return errorResponse('서버 오류가 발생했습니다.', 'INTERNAL_ERROR', 500)
+  } else {
+    logger.error('API Error (non-Error thrown)', { error: String(error) })
   }
-
-  logger.error('API Error', { error: String(error) })
   return errorResponse('서버 오류가 발생했습니다.', 'INTERNAL_ERROR', 500)
 }
 
