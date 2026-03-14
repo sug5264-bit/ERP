@@ -49,24 +49,49 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return errorResponse('본인이 작성한 메모만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
     }
 
-    // Cascade: if this is a SalesOrder note, also delete mirrored DeliveryPost notes
-    if (note.relatedTable === 'SalesOrder') {
-      // The mirrored DeliveryPost note has relatedId = this note's id
-      const mirroredNotes = await prisma.note.findMany({
-        where: { relatedTable: 'DeliveryPost', relatedId: id },
-      })
-      for (const mirrored of mirroredNotes) {
-        // Delete replies to the mirrored note
-        await prisma.note.deleteMany({
-          where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
+    // Cascade delete in a transaction
+    await prisma.$transaction(async (tx) => {
+      if (note.relatedTable === 'SalesOrder') {
+        // Find mirrored DeliveryPost notes (relatedId = this note's id)
+        const mirroredNotes = await tx.note.findMany({
+          where: { relatedTable: 'DeliveryPost', relatedId: id },
+        })
+
+        for (const mirrored of mirroredNotes) {
+          // Find replies to the mirrored note
+          const replies = await tx.note.findMany({
+            where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
+            select: { id: true },
+          })
+          const replyIds = replies.map((r) => r.id)
+
+          // Delete reply attachments
+          if (replyIds.length > 0) {
+            await tx.attachment.deleteMany({
+              where: { relatedTable: 'DeliveryReplyPost', relatedId: { in: replyIds } },
+            })
+          }
+
+          // Delete replies
+          await tx.note.deleteMany({
+            where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
+          })
+        }
+
+        // Delete mirrored DeliveryPost notes
+        await tx.note.deleteMany({
+          where: { relatedTable: 'DeliveryPost', relatedId: id },
+        })
+
+        // Delete this note's attachments (SalesOrderPost)
+        await tx.attachment.deleteMany({
+          where: { relatedTable: 'SalesOrderPost', relatedId: id },
         })
       }
-      await prisma.note.deleteMany({
-        where: { relatedTable: 'DeliveryPost', relatedId: id },
-      })
-    }
 
-    await prisma.note.delete({ where: { id } })
+      // Delete the note itself
+      await tx.note.delete({ where: { id } })
+    })
 
     return successResponse({ deleted: true })
   } catch (error) {

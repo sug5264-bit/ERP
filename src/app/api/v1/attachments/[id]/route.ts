@@ -34,7 +34,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       headers: {
         'Content-Type': attachment.mimeType,
         'Content-Disposition': `attachment; filename="${attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
-        'Content-Length': String(attachment.fileSize),
+        'Content-Length': String(fileBuffer.length),
+        'X-Content-Type-Options': 'nosniff',
       },
     })
   } catch (error) {
