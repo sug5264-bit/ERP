@@ -104,7 +104,7 @@ export function sanitizeFileName(name: string): string {
  * 페이지네이션 파라미터 검증
  */
 export function validatePaginationParams(page: unknown, pageSize: unknown) {
-  const p = Math.max(1, Math.min(10000, Number(page) || 1))
-  const ps = Math.max(1, Math.min(100, Number(pageSize) || 20))
+  const p = Math.floor(Math.max(1, Math.min(10000, Number(page) || 1)))
+  const ps = Math.floor(Math.max(1, Math.min(100, Number(pageSize) || 20)))
   return { page: p, pageSize: ps }
 }
