@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { formatDate } from '@/lib/format'
 import { toast } from 'sonner'
 import {
@@ -38,6 +39,13 @@ function getDeliveryFileIcon(mimeType: string) {
     return FileTextIcon
   if (mimeType.includes('sheet') || mimeType.includes('excel') || mimeType.includes('csv')) return FileSpreadsheetIcon
   return FileIconGeneric
+}
+
+function formatFileSize(bytes?: number) {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
 }
 
 function getDeliveryFileTypeBadge(mimeType: string, fileName: string) {
@@ -101,6 +109,8 @@ export function DeliveriesPanel() {
   const [replyFiles, setReplyFiles] = useState<File[]>([])
   const [replySubmitting, setReplySubmitting] = useState(false)
   const [noteSearchKeyword, setNoteSearchKeyword] = useState('')
+  const [noteStartDate, setNoteStartDate] = useState('')
+  const [noteEndDate, setNoteEndDate] = useState('')
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null)
   const [editingReplyContent, setEditingReplyContent] = useState('')
   const replyFileInputRef = useRef<HTMLInputElement>(null)
@@ -125,6 +135,13 @@ export function DeliveriesPanel() {
   })
   const replyAttachments: DeliveryNoteAttachment[] = replyAttachmentsData?.data || []
 
+  // Fetch original SalesOrderPost attachments (uploaded in 수주관리)
+  const { data: postAttachmentsData } = useQuery({
+    queryKey: ['attachments', 'SalesOrderPost'],
+    queryFn: () => api.get('/attachments?relatedTable=SalesOrderPost') as Promise<{ data: DeliveryNoteAttachment[] }>,
+  })
+  const postAttachments: DeliveryNoteAttachment[] = postAttachmentsData?.data || []
+
   // Fetch deliveries for status management
   const { data: deliveriesData } = useQuery({
     queryKey: ['sales-deliveries-all'],
@@ -135,10 +152,22 @@ export function DeliveriesPanel() {
 
   const getRepliesForNote = (noteId: string) => deliveryReplies.filter((r) => r.relatedId === noteId)
   const getReplyAttachments = (replyId: string) => replyAttachments.filter((a) => a.relatedId === replyId)
+  // DeliveryPost note's relatedId = original SalesOrder note's ID
+  const getPostAttachments = (noteRelatedId: string) => postAttachments.filter((a) => a.relatedId === noteRelatedId)
 
-  const filteredDeliveryNotes = noteSearchKeyword
-    ? deliveryNotes.filter((n) => n.content.toLowerCase().includes(noteSearchKeyword.toLowerCase()))
-    : deliveryNotes
+  const filteredDeliveryNotes = deliveryNotes.filter((n) => {
+    // Date filter
+    if (noteStartDate || noteEndDate) {
+      const noteDate = n.createdAt?.split('T')[0] || ''
+      if (noteStartDate && noteDate < noteStartDate) return false
+      if (noteEndDate && noteDate > noteEndDate) return false
+    }
+    // Search filter
+    if (noteSearchKeyword) {
+      if (!n.content.toLowerCase().includes(noteSearchKeyword.toLowerCase())) return false
+    }
+    return true
+  })
 
   const handleReplyFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -306,19 +335,30 @@ export function DeliveriesPanel() {
         </button>
         {notesExpanded && (
           <div className="border-t px-4 py-3 space-y-3">
-            <div className="relative max-w-xs">
-              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              <Input
-                className="pl-9 h-8 text-xs"
-                placeholder="글 검색..."
-                value={noteSearchKeyword}
-                onChange={(e) => setNoteSearchKeyword(e.target.value)}
+            <div className="flex flex-wrap items-center gap-2">
+              <DateRangeFilter
+                startDate={noteStartDate}
+                endDate={noteEndDate}
+                onDateChange={(s, e) => {
+                  setNoteStartDate(s)
+                  setNoteEndDate(e)
+                }}
               />
+              <div className="relative min-w-[120px] flex-1 max-w-xs">
+                <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  className="pl-9 h-8 text-xs"
+                  placeholder="글 검색..."
+                  value={noteSearchKeyword}
+                  onChange={(e) => setNoteSearchKeyword(e.target.value)}
+                />
+              </div>
             </div>
             {filteredDeliveryNotes.length === 0 && (
               <p className="text-muted-foreground text-center text-xs py-6">수주관리에서 작성된 글이 없습니다.</p>
             )}
-            {filteredDeliveryNotes.map((note) => {
+            {filteredDeliveryNotes.map((note, idx) => {
+              const postNo = filteredDeliveryNotes.length - idx
               const displayContent = note.content.replace(/^\[수주글\]\n?/, '')
               const channelMatch = displayContent.match(/^\[(온라인|오프라인)\]/)
               const channelType = channelMatch ? channelMatch[1] : null
@@ -327,21 +367,57 @@ export function DeliveriesPanel() {
               const title = titleMatch ? titleMatch[1] : null
               const body = titleMatch ? afterChannel.slice(titleMatch[0].length) : afterChannel.replace(/^\n/, '')
               const replies = getRepliesForNote(note.id)
+              const notePostFiles = getPostAttachments(note.relatedId)
 
               return (
                 <div key={note.id} className="rounded-md border">
                   <div className="px-3 py-2.5">
                     <div className="flex items-center gap-2 mb-1">
+                      <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
                       <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">수주</Badge>
                       {channelType && (
                         <Badge variant={channelType === '온라인' ? 'default' : 'secondary'} className="text-[10px]">
                           {channelType}
                         </Badge>
                       )}
+                      {notePostFiles.length > 0 && (
+                        <span className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
+                          <Paperclip className="h-3 w-3" />
+                          {notePostFiles.length}
+                        </span>
+                      )}
                       <span className="text-muted-foreground text-[10px]">{formatDate(note.createdAt)}</span>
                     </div>
                     {title && <p className="text-sm font-medium">{title}</p>}
                     <p className="text-xs text-muted-foreground whitespace-pre-wrap mt-1">{body.slice(0, 200)}{body.length > 200 ? '...' : ''}</p>
+
+                    {/* Original post attachments from 수주관리 */}
+                    {notePostFiles.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-muted-foreground text-[10px] font-medium">첨부파일</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {notePostFiles.map((att) => {
+                            const Icon = getDeliveryFileIcon(att.mimeType)
+                            const typeBadge = getDeliveryFileTypeBadge(att.mimeType, att.fileName)
+                            return (
+                              <button
+                                key={att.id}
+                                onClick={() => window.open(`/api/v1/attachments/${att.id}`, '_blank')}
+                                className="bg-white dark:bg-transparent flex items-center gap-1 rounded border px-2 py-1 text-[10px] hover:bg-muted transition-colors"
+                              >
+                                <Icon className="h-3 w-3" />
+                                <span className="max-w-[120px] truncate">{att.fileName}</span>
+                                {att.fileSize && (
+                                  <span className="text-muted-foreground text-[9px]">({formatFileSize(att.fileSize)})</span>
+                                )}
+                                <span className={`rounded px-0.5 text-[8px] font-medium ${typeBadge.color}`}>{typeBadge.label}</span>
+                                <Download className="h-2.5 w-2.5" />
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Replies */}
                     {replies.length > 0 && (
