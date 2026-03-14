@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { OrdersPanel } from '@/components/sales/orders-panel'
 import { DeliveriesPanel } from '@/components/sales/deliveries-panel'
-import { formatCurrency } from '@/lib/format'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
 import {
   ShoppingCart,
@@ -26,7 +25,6 @@ import {
 interface SalesOrder {
   id: string
   status: string
-  totalAmount: number
   orderDate: string
   salesChannel?: string
 }
@@ -74,7 +72,6 @@ export default function OrderShipmentPage() {
     const allDeliveries = deliveriesData?.data || []
 
     const totalOrders = allOrders.length
-    const totalOrderAmount = allOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
     const ordersInProgress = allOrders.filter((o) => o.status === 'IN_PROGRESS').length
     const ordersCompleted = allOrders.filter((o) => o.status === 'COMPLETED').length
 
@@ -88,7 +85,6 @@ export default function OrderShipmentPage() {
 
     return {
       totalOrders,
-      totalOrderAmount,
       ordersInProgress,
       ordersCompleted,
       totalDeliveries,
@@ -250,9 +246,6 @@ export default function OrderShipmentPage() {
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
-              <p className="text-muted-foreground mt-0.5 truncate text-[10px]">
-                {formatCurrency(stats.totalOrderAmount)}
-              </p>
             </div>
           </CardContent>
         </Card>

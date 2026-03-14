@@ -188,13 +188,19 @@ export function OrdersPanel() {
 
       if (pendingFiles.length > 0 && noteId) {
         for (const file of pendingFiles) {
-          const formData = new FormData()
-          formData.append('file', file)
-          formData.append('relatedTable', 'SalesOrderPost')
-          formData.append('relatedId', noteId)
-          await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {
+          try {
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('relatedTable', 'SalesOrderPost')
+            formData.append('relatedId', noteId)
+            const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
+            if (!res.ok) {
+              const json = await res.json().catch(() => null)
+              toast.error(json?.error?.message || `"${file.name}" 업로드 실패`)
+            }
+          } catch {
             toast.error(`"${file.name}" 업로드 실패`)
-          })
+          }
         }
       }
 
@@ -226,6 +232,8 @@ export function OrdersPanel() {
     try {
       await api.delete(`/notes/${id}`)
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryReply'] })
       toast.success('게시글이 삭제되었습니다.')
     } catch {
       toast.error('삭제에 실패했습니다.')
