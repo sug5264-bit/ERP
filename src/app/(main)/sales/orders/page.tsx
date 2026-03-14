@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
@@ -20,6 +20,7 @@ import {
   TrendingUp,
   ArrowRight,
   Loader2,
+  X,
 } from 'lucide-react'
 
 interface SalesOrder {
@@ -35,11 +36,21 @@ interface DeliveryRow {
   deliveryDate: string
 }
 
+// Pipeline step index → tab & delivery status filter mapping
+const STEP_CONFIG = [
+  { tab: 'orders', deliveryStatus: null },        // 수주 접수
+  { tab: 'orders', deliveryStatus: null },         // 진행중
+  { tab: 'deliveries', deliveryStatus: 'PREPARING' },  // 출하 준비
+  { tab: 'deliveries', deliveryStatus: 'SHIPPED' },    // 배송중
+  { tab: 'deliveries', deliveryStatus: 'DELIVERED' },  // 납품 완료
+] as const
+
 export default function OrderShipmentPage() {
   const [mainTab, setMainTab] = useState<string>('orders')
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [activeStep, setActiveStep] = useState<number | null>(null)
 
   // Build query params for date filtering
   const dateParams = useMemo(() => {
@@ -97,6 +108,23 @@ export default function OrderShipmentPage() {
 
   const isLoading = !ordersData && !deliveriesData
 
+  // Derive delivery status filter from active pipeline step
+  const deliveryStatusFilter = activeStep !== null ? (STEP_CONFIG[activeStep]?.deliveryStatus ?? null) : null
+
+  const handlePipelineClick = useCallback((idx: number) => {
+    if (activeStep === idx) {
+      // Toggle off
+      setActiveStep(null)
+    } else {
+      setActiveStep(idx)
+      setMainTab(STEP_CONFIG[idx].tab)
+    }
+  }, [activeStep])
+
+  const clearActiveStep = useCallback(() => {
+    setActiveStep(null)
+  }, [])
+
   const pipelineSteps = [
     { label: '수주 접수', count: stats.totalOrders, icon: ShoppingCart, color: 'blue' as const },
     { label: '진행중', count: stats.ordersInProgress, icon: Clock, color: 'amber' as const },
@@ -110,26 +138,36 @@ export default function OrderShipmentPage() {
       bg: 'bg-blue-50 dark:bg-blue-950',
       text: 'text-blue-600 dark:text-blue-400',
       ring: 'ring-blue-200 dark:ring-blue-800',
+      activeBg: 'bg-blue-100 dark:bg-blue-900',
+      activeRing: 'ring-blue-500 dark:ring-blue-400',
     },
     amber: {
       bg: 'bg-amber-50 dark:bg-amber-950',
       text: 'text-amber-600 dark:text-amber-400',
       ring: 'ring-amber-200 dark:ring-amber-800',
+      activeBg: 'bg-amber-100 dark:bg-amber-900',
+      activeRing: 'ring-amber-500 dark:ring-amber-400',
     },
     violet: {
       bg: 'bg-violet-50 dark:bg-violet-950',
       text: 'text-violet-600 dark:text-violet-400',
       ring: 'ring-violet-200 dark:ring-violet-800',
+      activeBg: 'bg-violet-100 dark:bg-violet-900',
+      activeRing: 'ring-violet-500 dark:ring-violet-400',
     },
     sky: {
       bg: 'bg-sky-50 dark:bg-sky-950',
       text: 'text-sky-600 dark:text-sky-400',
       ring: 'ring-sky-200 dark:ring-sky-800',
+      activeBg: 'bg-sky-100 dark:bg-sky-900',
+      activeRing: 'ring-sky-500 dark:ring-sky-400',
     },
     emerald: {
       bg: 'bg-emerald-50 dark:bg-emerald-950',
       text: 'text-emerald-600 dark:text-emerald-400',
       ring: 'ring-emerald-200 dark:ring-emerald-800',
+      activeBg: 'bg-emerald-100 dark:bg-emerald-900',
+      activeRing: 'ring-emerald-500 dark:ring-emerald-400',
     },
   }
 
@@ -162,13 +200,22 @@ export default function OrderShipmentPage() {
         />
       </div>
 
-      {/* Process Pipeline Flow */}
+      {/* Process Pipeline Flow - Clickable */}
       <Card className="overflow-hidden border shadow-sm">
         <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp className="text-muted-foreground h-4 w-4" />
               <span className="text-muted-foreground text-xs font-medium">처리 현황</span>
+              {activeStep !== null && (
+                <button
+                  onClick={clearActiveStep}
+                  className="text-muted-foreground hover:text-foreground ml-1 flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                  필터 해제
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs">이행률</span>
@@ -185,11 +232,24 @@ export default function OrderShipmentPage() {
             {pipelineSteps.map((step, idx) => {
               const colors = colorMap[step.color]
               const Icon = step.icon
+              const isActive = activeStep === idx
               return (
                 <div key={step.label} className="flex min-w-0 flex-1 items-center">
-                  <div className="flex min-w-[72px] flex-1 flex-col items-center gap-1.5 sm:min-w-[96px]">
+                  <button
+                    type="button"
+                    onClick={() => handlePipelineClick(idx)}
+                    className={`flex min-w-[72px] flex-1 flex-col items-center gap-1.5 rounded-lg py-2 transition-all sm:min-w-[96px] ${
+                      isActive
+                        ? 'bg-muted/60 scale-105 shadow-sm'
+                        : 'hover:bg-muted/30'
+                    }`}
+                  >
                     <div
-                      className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 sm:h-10 sm:w-10 ${colors.bg} ${colors.ring}`}
+                      className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 transition-all sm:h-10 sm:w-10 ${
+                        isActive
+                          ? `${colors.activeBg} ${colors.activeRing} scale-110 shadow-md`
+                          : `${colors.bg} ${colors.ring}`
+                      }`}
                     >
                       {isLoading ? (
                         <Loader2 className={`h-4 w-4 animate-spin ${colors.text}`} />
@@ -198,15 +258,19 @@ export default function OrderShipmentPage() {
                       )}
                     </div>
                     <div className="text-center">
-                      <p className="text-muted-foreground text-[10px] font-medium leading-tight sm:text-xs">
+                      <p className={`text-[10px] font-medium leading-tight sm:text-xs ${
+                        isActive ? 'text-foreground' : 'text-muted-foreground'
+                      }`}>
                         {step.label}
                       </p>
-                      <p className="mt-0.5 text-sm font-bold tabular-nums sm:text-base">
+                      <p className={`mt-0.5 text-sm font-bold tabular-nums sm:text-base ${
+                        isActive ? 'text-foreground' : ''
+                      }`}>
                         {isLoading ? '-' : step.count}
                         <span className="text-muted-foreground text-[10px] font-normal">건</span>
                       </p>
                     </div>
-                  </div>
+                  </button>
                   {idx < pipelineSteps.length - 1 && (
                     <ArrowRight className="text-muted-foreground/40 mx-0.5 h-4 w-4 shrink-0 sm:mx-1" />
                   )}
@@ -229,8 +293,8 @@ export default function OrderShipmentPage() {
       {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card
-          className="group cursor-pointer gap-0 border-l-4 border-l-blue-500 py-4 shadow-sm transition-all hover:shadow-md"
-          onClick={() => setMainTab('orders')}
+          className={`group cursor-pointer gap-0 border-l-4 border-l-blue-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === 0 ? 'ring-2 ring-blue-500' : ''}`}
+          onClick={() => handlePipelineClick(0)}
         >
           <CardContent className="flex items-center gap-3 px-4 py-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 transition-transform group-hover:scale-110 dark:bg-blue-950">
@@ -251,8 +315,8 @@ export default function OrderShipmentPage() {
         </Card>
 
         <Card
-          className="group cursor-pointer gap-0 border-l-4 border-l-amber-500 py-4 shadow-sm transition-all hover:shadow-md"
-          onClick={() => setMainTab('orders')}
+          className={`group cursor-pointer gap-0 border-l-4 border-l-amber-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === 1 ? 'ring-2 ring-amber-500' : ''}`}
+          onClick={() => handlePipelineClick(1)}
         >
           <CardContent className="flex items-center gap-3 px-4 py-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 transition-transform group-hover:scale-110 dark:bg-amber-950">
@@ -276,8 +340,8 @@ export default function OrderShipmentPage() {
         </Card>
 
         <Card
-          className="group cursor-pointer gap-0 border-l-4 border-l-violet-500 py-4 shadow-sm transition-all hover:shadow-md"
-          onClick={() => setMainTab('deliveries')}
+          className={`group cursor-pointer gap-0 border-l-4 border-l-violet-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === 2 ? 'ring-2 ring-violet-500' : ''}`}
+          onClick={() => handlePipelineClick(2)}
         >
           <CardContent className="flex items-center gap-3 px-4 py-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 transition-transform group-hover:scale-110 dark:bg-violet-950">
@@ -303,8 +367,8 @@ export default function OrderShipmentPage() {
         </Card>
 
         <Card
-          className="group cursor-pointer gap-0 border-l-4 border-l-emerald-500 py-4 shadow-sm transition-all hover:shadow-md"
-          onClick={() => setMainTab('deliveries')}
+          className={`group cursor-pointer gap-0 border-l-4 border-l-emerald-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === 4 ? 'ring-2 ring-emerald-500' : ''}`}
+          onClick={() => handlePipelineClick(4)}
         >
           <CardContent className="flex items-center gap-3 px-4 py-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 transition-transform group-hover:scale-110 dark:bg-emerald-950">
@@ -332,7 +396,7 @@ export default function OrderShipmentPage() {
 
       {/* Main Tab Section */}
       <Card className="overflow-hidden border shadow-sm">
-        <Tabs value={mainTab} onValueChange={setMainTab}>
+        <Tabs value={mainTab} onValueChange={(v) => { setMainTab(v); setActiveStep(null) }}>
           <div className="border-b px-4 pt-3 sm:px-6">
             <TabsList className="h-10 bg-transparent p-0">
               <TabsTrigger
@@ -372,7 +436,7 @@ export default function OrderShipmentPage() {
               <OrdersPanel />
             </TabsContent>
             <TabsContent value="deliveries" className="mt-0">
-              <DeliveriesPanel />
+              <DeliveriesPanel statusFilter={deliveryStatusFilter} />
             </TabsContent>
           </div>
         </Tabs>

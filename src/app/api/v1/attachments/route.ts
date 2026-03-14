@@ -1,13 +1,17 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, access, constants } from 'fs/promises'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { sanitizeFileName } from '@/lib/sanitize'
+import { logger } from '@/lib/logger'
 
 const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+
+// Next.js App Router: route segment config for large file uploads
+export const maxDuration = 60 // seconds
 
 const VALID_TABLES = [
   'SalesOrder',
@@ -107,12 +111,50 @@ export async function POST(request: NextRequest) {
       return errorResponse('허용되지 않는 파일 형식입니다.', 'INVALID_FILE_TYPE', 400)
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true })
+    // Ensure upload directory exists and is writable
+    try {
+      await mkdir(UPLOAD_DIR, { recursive: true })
+    } catch (mkdirErr) {
+      logger.error('Failed to create upload directory', { dir: UPLOAD_DIR, error: mkdirErr })
+      return errorResponse(
+        '업로드 디렉토리를 생성할 수 없습니다. 서버 관리자에게 문의하세요.',
+        'STORAGE_ERROR',
+        500
+      )
+    }
+
+    try {
+      await access(UPLOAD_DIR, constants.W_OK)
+    } catch {
+      logger.error('Upload directory is not writable', { dir: UPLOAD_DIR })
+      return errorResponse(
+        '업로드 디렉토리에 쓰기 권한이 없습니다. 서버 관리자에게 문의하세요.',
+        'STORAGE_PERMISSION_ERROR',
+        500
+      )
+    }
+
     const uniqueName = `${randomUUID()}.${ext}`
     const filePath = join(UPLOAD_DIR, uniqueName)
 
-    const buffer = Buffer.from(await file.arrayBuffer())
-    await writeFile(filePath, buffer)
+    let buffer: Buffer
+    try {
+      buffer = Buffer.from(await file.arrayBuffer())
+    } catch (readErr) {
+      logger.error('Failed to read uploaded file buffer', { fileName: file.name, error: readErr })
+      return errorResponse('파일 데이터를 읽을 수 없습니다.', 'FILE_READ_ERROR', 400)
+    }
+
+    try {
+      await writeFile(filePath, buffer)
+    } catch (writeErr) {
+      logger.error('Failed to write file to disk', { filePath, error: writeErr })
+      return errorResponse(
+        '파일을 저장할 수 없습니다. 디스크 공간 또는 권한을 확인해주세요.',
+        'FILE_WRITE_ERROR',
+        500
+      )
+    }
 
     const attachment = await prisma.attachment.create({
       data: {

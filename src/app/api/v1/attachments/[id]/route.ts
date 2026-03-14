@@ -28,9 +28,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }
 
     const filePath = safePath(attachment.filePath)
-    const fileBuffer = await readFile(filePath)
+    let fileBuffer: Buffer
+    try {
+      fileBuffer = await readFile(filePath)
+    } catch (err) {
+      logger.error('File not found on disk', { filePath, attachmentId: id, error: err instanceof Error ? err.message : err })
+      return errorResponse('파일이 서버에 존재하지 않습니다. 관리자에게 문의하세요.', 'FILE_NOT_FOUND', 404)
+    }
 
-    return new Response(fileBuffer, {
+    return new Response(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': attachment.mimeType,
         'Content-Disposition': `attachment; filename="${attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
