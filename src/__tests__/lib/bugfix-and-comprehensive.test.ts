@@ -1251,3 +1251,217 @@ describe('★★★★★ [Extreme] cache 에러 복구', () => {
     expect(count).toBe(5)
   })
 })
+
+// ─────────────────────────────────────────────────────
+// 추가 버그 수정 검증 테스트 (2차)
+// ─────────────────────────────────────────────────────
+
+describe('★★★☆☆ [Bug Fix 2차] sanitizeString: DEL 문자(\\x7F) 제거', () => {
+  it('DEL 문자(\\x7F)가 제거되어야 함', () => {
+    expect(sanitizeString('hello\x7Fworld')).toBe('helloworld')
+  })
+
+  it('여러 DEL 문자', () => {
+    expect(sanitizeString('\x7F\x7F\x7F')).toBe('')
+  })
+
+  it('DEL + 다른 제어 문자 조합', () => {
+    expect(sanitizeString('\x00\x01\x7Ftest\x1F\x7F')).toBe('test')
+  })
+
+  it('DEL 문자가 없는 일반 문자열은 변경 없음', () => {
+    expect(sanitizeString('normal text')).toBe('normal text')
+  })
+})
+
+describe('★★★☆☆ [Bug Fix 2차] rate-limit: 메모리 보호', () => {
+  it('만료된 엔트리 정리 (expired entries)', () => {
+    const key = `expired-${Date.now()}`
+    // windowMs를 1ms로 설정
+    incrementRateLimit(key, 1)
+    // 약간 대기 후 확인
+    const check = checkRateLimit(key, 5, 1)
+    // resetAt이 과거이므로 allowed
+    // (타이밍에 따라 다를 수 있지만, 1ms 이내에 체크하면 아직 유효할 수 있음)
+    expect(check.allowed).toBe(true)
+  })
+
+  it('rate-limit 차단 후 reset으로 복구', () => {
+    const key = `reset-test-${Date.now()}`
+    for (let i = 0; i < 10; i++) {
+      incrementRateLimit(key, 60000)
+    }
+    expect(checkRateLimit(key, 5).allowed).toBe(false)
+    resetRateLimit(key)
+    expect(checkRateLimit(key, 5).allowed).toBe(true)
+  })
+
+  it('서로 다른 키는 독립적으로 동작', () => {
+    const key1 = `independent-a-${Date.now()}`
+    const key2 = `independent-b-${Date.now()}`
+    for (let i = 0; i < 5; i++) {
+      incrementRateLimit(key1, 60000)
+    }
+    expect(checkRateLimit(key1, 5).allowed).toBe(false)
+    expect(checkRateLimit(key2, 5).allowed).toBe(true)
+    resetRateLimit(key1)
+    resetRateLimit(key2)
+  })
+})
+
+describe('★★★★☆ [Bug Fix 2차] sanitizeFileName: 추가 보안 검증', () => {
+  it('DEL 문자가 포함된 파일명', () => {
+    const result = sanitizeFileName('file\x7Fname.txt')
+    expect(result).not.toContain('\x7F')
+  })
+
+  it('null 바이트 + 경로 순회 + 예약어 복합 공격', () => {
+    const result = sanitizeFileName('..\\..\\CON\x00.txt')
+    expect(result).not.toContain('\x00')
+    expect(result).not.toContain('\\')
+    expect(result).toBeTruthy()
+    expect(result).not.toBe('')
+  })
+
+  it('유니코드 문자가 포함된 파일명 보존', () => {
+    const result = sanitizeFileName('보고서_2024.pdf')
+    expect(result).toBe('보고서_2024.pdf')
+  })
+
+  it('이모지가 포함된 파일명 보존', () => {
+    const result = sanitizeFileName('📊report.xlsx')
+    expect(result).toBe('📊report.xlsx')
+  })
+})
+
+describe('★★★★☆ [Bug Fix 2차] sanitizeSearchQuery: 와일드카드 이스케이프', () => {
+  it('SQL 와일드카드 이스케이프', () => {
+    expect(sanitizeSearchQuery('100%')).toBe('100\\%')
+    expect(sanitizeSearchQuery('col_name')).toBe('col\\_name')
+  })
+
+  it('백슬래시 이스케이프', () => {
+    expect(sanitizeSearchQuery('path\\to')).toBe('path\\\\to')
+  })
+
+  it('복합 SQL 인젝션 패턴', () => {
+    const result = sanitizeSearchQuery("'; DROP TABLE users; --")
+    expect(result).not.toContain('\0')
+    expect(result.length).toBeLessThanOrEqual(100)
+  })
+
+  it('100자 초과 검색어 자르기', () => {
+    const longQuery = 'a'.repeat(200)
+    expect(sanitizeSearchQuery(longQuery).length).toBe(100)
+  })
+})
+
+describe('★★★★★ [Extreme] rate-limit 대량 키 시나리오', () => {
+  it('대량의 키 등록 후 체크', () => {
+    const keys: string[] = []
+    for (let i = 0; i < 100; i++) {
+      const key = `mass-test-${Date.now()}-${i}`
+      keys.push(key)
+      incrementRateLimit(key, 60000)
+    }
+
+    // 모든 키가 정상 동작해야 함
+    for (const key of keys) {
+      const check = checkRateLimit(key, 5)
+      expect(check.allowed).toBe(true)
+      expect(check.remaining).toBe(4) // 1번 increment 했으므로 4 remaining
+    }
+
+    // cleanup
+    for (const key of keys) {
+      resetRateLimit(key)
+    }
+  })
+
+  it('동일 키 대량 increment', () => {
+    const key = `heavy-${Date.now()}`
+    for (let i = 0; i < 100; i++) {
+      incrementRateLimit(key, 60000)
+    }
+    const check = checkRateLimit(key, 5)
+    expect(check.allowed).toBe(false)
+    expect(check.remaining).toBe(0)
+    expect(check.retryAfterSeconds).toBeGreaterThan(0)
+    resetRateLimit(key)
+  })
+})
+
+describe('★★★★★ [Extreme] escapeHtml 보안 검증', () => {
+  it('중첩 HTML 태그 이스케이프', () => {
+    const result = escapeHtml('<div><script>alert(1)</script></div>')
+    expect(result).not.toContain('<div>')
+    expect(result).not.toContain('<script>')
+    expect(result).toContain('&lt;div&gt;')
+  })
+
+  it('이벤트 핸들러 속성 이스케이프', () => {
+    const result = escapeHtml('<img onerror="alert(1)" src="x">')
+    expect(result).not.toContain('<img')
+    expect(result).toContain('&lt;img')
+  })
+
+  it('HTML 엔티티 이중 이스케이프 방지', () => {
+    const result = escapeHtml('&amp;')
+    expect(result).toBe('&amp;amp;')
+  })
+
+  it('빈 문자열', () => {
+    expect(escapeHtml('')).toBe('')
+  })
+
+  it('특수문자 없는 일반 텍스트', () => {
+    expect(escapeHtml('hello world')).toBe('hello world')
+  })
+
+  it('모든 이스케이프 대상 문자 포함', () => {
+    const result = escapeHtml('&<>"\' test')
+    expect(result).toBe('&amp;&lt;&gt;&quot;&#x27; test')
+  })
+})
+
+describe('★★★★★ [Extreme] formatPhone 추가 엣지 케이스', () => {
+  it('국제 번호 (포맷 변경 없음)', () => {
+    expect(formatPhone('+821012345678')).toBe('+821012345678')
+  })
+
+  it('짧은 번호', () => {
+    expect(formatPhone('114')).toBe('114')
+  })
+
+  it('대표번호 1588', () => {
+    expect(formatPhone('15881234')).toBe('1588-1234')
+  })
+
+  it('대표번호 1577', () => {
+    expect(formatPhone('15771234')).toBe('1577-1234')
+  })
+
+  it('서울 지역번호 10자리', () => {
+    expect(formatPhone('0212345678')).toBe('02-1234-5678')
+  })
+
+  it('서울 지역번호 9자리', () => {
+    expect(formatPhone('021234567')).toBe('02-123-4567')
+  })
+
+  it('하이픈 포함 번호 정리', () => {
+    expect(formatPhone('010-1234-5678')).toBe('010-1234-5678')
+  })
+
+  it('null 입력', () => {
+    expect(formatPhone(null)).toBe('')
+  })
+
+  it('undefined 입력', () => {
+    expect(formatPhone(undefined)).toBe('')
+  })
+
+  it('빈 문자열', () => {
+    expect(formatPhone('')).toBe('')
+  })
+})

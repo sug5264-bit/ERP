@@ -52,41 +52,90 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     // Cascade delete in a transaction
     await prisma.$transaction(async (tx) => {
       if (note.relatedTable === 'SalesOrder') {
-        // Find mirrored DeliveryPost notes (relatedId = this note's id)
+        // SalesOrder post → delete mirrored DeliveryPost, replies, and attachments
         const mirroredNotes = await tx.note.findMany({
           where: { relatedTable: 'DeliveryPost', relatedId: id },
         })
 
         for (const mirrored of mirroredNotes) {
-          // Find replies to the mirrored note
           const replies = await tx.note.findMany({
             where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
             select: { id: true },
           })
           const replyIds = replies.map((r) => r.id)
 
-          // Delete reply attachments
           if (replyIds.length > 0) {
             await tx.attachment.deleteMany({
               where: { relatedTable: 'DeliveryReplyPost', relatedId: { in: replyIds } },
             })
           }
 
-          // Delete replies
           await tx.note.deleteMany({
             where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
           })
         }
 
-        // Delete mirrored DeliveryPost notes
         await tx.note.deleteMany({
           where: { relatedTable: 'DeliveryPost', relatedId: id },
         })
 
-        // Delete this note's attachments (SalesOrderPost)
         await tx.attachment.deleteMany({
           where: { relatedTable: 'SalesOrderPost', relatedId: id },
         })
+      } else if (note.relatedTable === 'DeliveryPost') {
+        // Reverse cascade: DeliveryPost → delete original SalesOrder post + everything
+        const originalNoteId = note.relatedId // DeliveryPost.relatedId = original SalesOrder note ID
+
+        // Delete replies to this DeliveryPost
+        const replies = await tx.note.findMany({
+          where: { relatedTable: 'DeliveryReply', relatedId: id },
+          select: { id: true },
+        })
+        const replyIds = replies.map((r) => r.id)
+        if (replyIds.length > 0) {
+          await tx.attachment.deleteMany({
+            where: { relatedTable: 'DeliveryReplyPost', relatedId: { in: replyIds } },
+          })
+        }
+        await tx.note.deleteMany({
+          where: { relatedTable: 'DeliveryReply', relatedId: id },
+        })
+
+        // Delete attachments of the original SalesOrder post
+        if (originalNoteId && originalNoteId !== 'GENERAL') {
+          await tx.attachment.deleteMany({
+            where: { relatedTable: 'SalesOrderPost', relatedId: originalNoteId },
+          })
+
+          // Delete the original SalesOrder note
+          await tx.note.deleteMany({
+            where: { id: originalNoteId, relatedTable: 'SalesOrder' },
+          })
+
+          // Delete any other mirrored DeliveryPost notes for the same original (excluding this one)
+          const otherMirrors = await tx.note.findMany({
+            where: { relatedTable: 'DeliveryPost', relatedId: originalNoteId, id: { not: id } },
+            select: { id: true },
+          })
+          for (const mirror of otherMirrors) {
+            const mirrorReplies = await tx.note.findMany({
+              where: { relatedTable: 'DeliveryReply', relatedId: mirror.id },
+              select: { id: true },
+            })
+            const mirrorReplyIds = mirrorReplies.map((r) => r.id)
+            if (mirrorReplyIds.length > 0) {
+              await tx.attachment.deleteMany({
+                where: { relatedTable: 'DeliveryReplyPost', relatedId: { in: mirrorReplyIds } },
+              })
+            }
+            await tx.note.deleteMany({
+              where: { relatedTable: 'DeliveryReply', relatedId: mirror.id },
+            })
+          }
+          await tx.note.deleteMany({
+            where: { relatedTable: 'DeliveryPost', relatedId: originalNoteId, id: { not: id } },
+          })
+        }
       }
 
       // Delete the note itself

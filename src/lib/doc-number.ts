@@ -13,6 +13,16 @@ export async function generateDocumentNumber(prefix: string, date?: Date, tx?: T
 
   const client = tx || prisma
 
+  // 먼저 현재 시퀀스 값을 확인하여 오버플로우 방지
+  const existing = await client.documentSequence.findUnique({
+    where: { prefix_yearMonth: { prefix, yearMonth } },
+  })
+
+  if (existing && existing.lastSeq >= MAX_SEQ) {
+    logger.error('Document sequence overflow', { prefix, yearMonth, lastSeq: existing.lastSeq })
+    throw new Error(`문서번호 시퀀스 초과: ${prefix}-${yearMonth} (최대 ${MAX_SEQ})`)
+  }
+
   const sequence = await client.documentSequence.upsert({
     where: {
       prefix_yearMonth: { prefix, yearMonth },
@@ -26,11 +36,6 @@ export async function generateDocumentNumber(prefix: string, date?: Date, tx?: T
       lastSeq: 1,
     },
   })
-
-  if (sequence.lastSeq > MAX_SEQ) {
-    logger.error('Document sequence overflow', { prefix, yearMonth, lastSeq: sequence.lastSeq })
-    throw new Error(`문서번호 시퀀스 초과: ${prefix}-${yearMonth} (최대 ${MAX_SEQ})`)
-  }
 
   const seqNo = String(sequence.lastSeq).padStart(5, '0')
   return `${prefix}-${yearMonth}-${seqNo}`

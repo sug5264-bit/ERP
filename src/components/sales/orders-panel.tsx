@@ -200,25 +200,23 @@ export function OrdersPanel() {
             formData.append('file', file)
             formData.append('relatedTable', 'SalesOrderPost')
             formData.append('relatedId', noteId)
-            const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
-            if (!res.ok) {
-              const json = await res.json().catch(() => null)
-              toast.error(json?.error?.message || `"${file.name}" 업로드 실패`)
-            }
-          } catch {
-            toast.error(`"${file.name}" 업로드 실패`)
+            await api.upload('/attachments', formData)
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : `"${file.name}" 업로드 실패`)
           }
         }
       }
 
       // Also create a mirrored note in Delivery table for 출하관리 to see
-      await api.post('/notes', {
-        content: `[수주글]\n${content}`,
-        relatedTable: 'DeliveryPost',
-        relatedId: noteId || 'GENERAL',
-      }).catch(() => {
-        // Silently handle if delivery note creation fails
-      })
+      await api
+        .post('/notes', {
+          content: `[수주글]\n${content}`,
+          relatedTable: 'DeliveryPost',
+          relatedId: noteId || 'GENERAL',
+        })
+        .catch(() => {
+          // Silently handle if delivery note creation fails
+        })
 
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
@@ -350,11 +348,7 @@ export function OrdersPanel() {
                 )}
               </div>
               <div className="flex justify-end pt-2">
-                <Button
-                  onClick={handleSubmitPost}
-                  disabled={!postContent.trim() || submitting}
-                  size="sm"
-                >
+                <Button onClick={handleSubmitPost} disabled={!postContent.trim() || submitting} size="sm">
                   <Send className="mr-1 h-3.5 w-3.5" />
                   {submitting ? '등록 중...' : '등록'}
                 </Button>
@@ -413,7 +407,8 @@ export function OrdersPanel() {
           const postNo = filteredNotes.length - idx
           const postFiles = getPostAttachments(note.id)
           const isExpanded = expandedId === note.id
-          const orderNo = orderMap.get(note.relatedId) || (note.relatedId === 'GENERAL' ? '일반' : note.relatedId?.slice(-6))
+          const orderNo =
+            orderMap.get(note.relatedId) || (note.relatedId === 'GENERAL' ? '일반' : note.relatedId?.slice(-6))
 
           // Parse channel type and title from content
           const channelMatch = note.content.match(/^\[(온라인|오프라인)\]/)
@@ -421,7 +416,9 @@ export function OrdersPanel() {
           const contentAfterChannel = channelMatch ? note.content.slice(channelMatch[0].length) : note.content
           const titleMatch = contentAfterChannel.match(/^\[(.+?)\]\n?/)
           const title = titleMatch ? titleMatch[1] : null
-          const body = titleMatch ? contentAfterChannel.slice(titleMatch[0].length) : contentAfterChannel.replace(/^\n/, '')
+          const body = titleMatch
+            ? contentAfterChannel.slice(titleMatch[0].length)
+            : contentAfterChannel.replace(/^\n/, '')
 
           return (
             <div key={note.id} className="overflow-hidden rounded-lg border transition-shadow hover:shadow-sm">
