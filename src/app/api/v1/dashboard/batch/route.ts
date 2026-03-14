@@ -166,6 +166,29 @@ export async function GET() {
       }),
     ])
 
+    // 추가 대시보드 데이터: 거래처별 매출 Top 5, 최근 7일 일별 수주
+    const sevenDaysAgo = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+    const [topPartners, weeklyOrders] = await Promise.all([
+      // 거래처별 이번 달 매출 Top 5
+      prisma.$queryRaw<{ partnerName: string; totalAmount: number; orderCount: number }[]>`
+        SELECT p."partnerName", SUM(so."totalAmount")::float as "totalAmount", COUNT(so.id)::int as "orderCount"
+        FROM sales_orders so
+        JOIN partners p ON so."partnerId" = p.id
+        WHERE so."orderDate" >= ${thisMonthStart} AND so.status != 'CANCELLED'
+        GROUP BY p."partnerName"
+        ORDER BY "totalAmount" DESC
+        LIMIT 5
+      `.catch(() => [] as { partnerName: string; totalAmount: number; orderCount: number }[]),
+      // 최근 7일 일별 수주 건수
+      prisma.$queryRaw<{ day: string; count: number }[]>`
+        SELECT to_char("createdAt", 'MM-DD') as day, COUNT(*)::int as count
+        FROM sales_orders
+        WHERE "createdAt" >= ${sevenDaysAgo} AND status != 'CANCELLED'
+        GROUP BY to_char("createdAt", 'MM-DD'), DATE("createdAt")
+        ORDER BY DATE("createdAt")
+      `.catch(() => [] as { day: string; count: number }[]),
+    ])
+
     // 안전재고 이하 품목 수 & 유통기한 임박 품목 수
     let stockAlertCount = 0
     let expiryAlertCount = 0
@@ -266,7 +289,16 @@ export async function GET() {
 
     return successResponse(
       {
-        kpi: { empCount, itemCount, approvalCount, stockAlertCount, leaveCount, expiryAlertCount, deliveryPendingCount, todayOrderCount },
+        kpi: {
+          empCount,
+          itemCount,
+          approvalCount,
+          stockAlertCount,
+          leaveCount,
+          expiryAlertCount,
+          deliveryPendingCount,
+          todayOrderCount,
+        },
         trends: {
           salesAmount: { current: thisMonthAmount, previous: lastMonthAmount, change: salesTrend },
           orderCount: { current: thisMonthSales._count, previous: lastMonthSales._count, change: orderTrend },
@@ -275,6 +307,8 @@ export async function GET() {
         },
         recentOrders,
         notices,
+        topPartners: Array.isArray(topPartners) ? topPartners : [],
+        weeklyOrders: Array.isArray(weeklyOrders) ? weeklyOrders : [],
         stats: { deptData, stockData, approvalData, leaveData },
         salesSummary: {
           period: { year: now.getFullYear() },
