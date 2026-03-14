@@ -126,6 +126,8 @@ export default function GeneralBoardPage() {
       try {
         const uploadForm = new FormData()
         uploadForm.append('file', file)
+        uploadForm.append('relatedTable', 'BoardPost')
+        uploadForm.append('relatedId', 'pending')
         const res = (await api.upload('/attachments', uploadForm)) as { data?: { id: string; originalName: string } }
         if (res?.data) {
           uploadedAttachments.push({ id: res.data.id, fileName: res.data.originalName })

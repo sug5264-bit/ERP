@@ -25,7 +25,7 @@ export function escapeHtml(str: string): string {
 export function sanitizeString(input: string): string {
   return input
     .replace(/\0/g, '') // null 바이트 제거
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // 제어 문자 제거
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // 제어 문자 제거 (DEL 포함)
     .trim()
     .replace(/\s{2,}/g, ' ') // 연속 공백 → 단일 공백
 }
@@ -81,7 +81,7 @@ const RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\.|$)/i
 
 export function sanitizeFileName(name: string): string {
   let sanitized = name
-    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '') // 금지 문자 제거
+    .replace(/[<>:"/\\|?*\x00-\x1F\x7F]/g, '') // 금지 문자 제거 (DEL 포함)
     .replace(/\.\./g, '') // 경로 순회 방지
     .trim()
     .slice(0, 255)

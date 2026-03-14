@@ -126,8 +126,7 @@ export default function DeliveryNotesPage() {
       formData.append('relatedTable', 'Delivery')
       formData.append('relatedId', uploadDeliveryId)
       try {
-        const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
-        if (!res.ok) throw new Error()
+        await api.upload('/attachments', formData)
         successCount++
       } catch {
         failCount++

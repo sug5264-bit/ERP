@@ -1,9 +1,10 @@
 // 인메모리 Rate Limiter (로그인 등 민감한 엔드포인트용)
 const attempts = new Map<string, { count: number; resetAt: number }>()
+const MAX_ENTRIES = 10000 // 메모리 누수 방지 최대 엔트리 수
 
 // 5분마다 만료된 항목 정리
 if (typeof setInterval !== 'undefined') {
-  setInterval(
+  const intervalId = setInterval(
     () => {
       const now = Date.now()
       for (const [key, val] of attempts) {
@@ -12,6 +13,10 @@ if (typeof setInterval !== 'undefined') {
     },
     5 * 60 * 1000
   )
+  // Node.js 환경에서 프로세스 종료 시 타이머 해제
+  if (typeof intervalId === 'object' && 'unref' in intervalId) {
+    intervalId.unref()
+  }
 }
 
 interface RateLimitResult {
@@ -49,6 +54,17 @@ export function incrementRateLimit(key: string, windowMs: number = 15 * 60 * 100
   const now = Date.now()
   const entry = attempts.get(key)
   if (!entry || entry.resetAt < now) {
+    // 최대 엔트리 초과 시 만료된 항목 정리
+    if (attempts.size >= MAX_ENTRIES) {
+      for (const [k, v] of attempts) {
+        if (v.resetAt < now) attempts.delete(k)
+      }
+      // 정리 후에도 초과하면 가장 오래된 항목 제거
+      if (attempts.size >= MAX_ENTRIES) {
+        const firstKey = attempts.keys().next().value
+        if (firstKey) attempts.delete(firstKey)
+      }
+    }
     attempts.set(key, { count: 1, resetAt: now + windowMs })
   } else {
     entry.count += 1

@@ -75,11 +75,7 @@ export function RecordSubTabs({
     formData.append('relatedTable', relatedTable)
     formData.append('relatedId', relatedId)
     try {
-      const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}))
-        throw new Error(json?.error?.message || '업로드 실패')
-      }
+      await api.upload('/attachments', formData)
       queryClient.invalidateQueries({ queryKey: ['attachments', relatedTable, relatedId] })
       toast.success('파일이 업로드되었습니다.')
     } catch (err) {
@@ -269,8 +265,7 @@ export async function savePendingData(relatedTable: string, relatedId: string, f
     formData.append('file', file)
     formData.append('relatedTable', relatedTable)
     formData.append('relatedId', relatedId)
-    // File uploads require raw fetch (api helper doesn't support FormData)
-    promises.push(fetch('/api/v1/attachments', { method: 'POST', body: formData }))
+    promises.push(api.upload('/attachments', formData))
   }
 
   if (noteContent.trim()) {

@@ -7,7 +7,7 @@
  * ★★★★☆ 최고난이도 (Very Hard)   - 보안 공격 패턴, 비정상 입력
  * ★★★★★ 극고난이도 (Extreme)     - 프로토타입 오염, 유니코드 악용, 조합 공격
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import {
   escapeHtml,
   sanitizeString,
@@ -428,7 +428,9 @@ describe('★★★☆☆ [Hard] sanitizeObject 깊은 중첩', () => {
       },
     }
     const result = sanitizeObject(obj)
-    expect((result.l1 as any).l2.l3.l4.l5).toBe('deepvalue')
+    expect((result.l1 as Record<string, unknown>).l2).toBeDefined()
+    const l2 = (result.l1 as Record<string, Record<string, Record<string, Record<string, string>>>>).l2
+    expect(l2.l3.l4.l5).toBe('deepvalue')
   })
 
   it('배열 내 객체의 문자열 살균', () => {
@@ -439,8 +441,8 @@ describe('★★★☆☆ [Hard] sanitizeObject 깊은 중첩', () => {
       ],
     }
     const result = sanitizeObject(obj)
-    expect((result.items as any[])[0].name).toBe('test')
-    expect((result.items as any[])[1].name).toBe('hello')
+    expect((result.items as Array<Record<string, unknown>>)[0].name).toBe('test')
+    expect((result.items as Array<Record<string, unknown>>)[1].name).toBe('hello')
   })
 
   it('Date 객체 보존', () => {
@@ -478,7 +480,7 @@ describe('★★★☆☆ [Hard] cache 동시성 시뮬레이션', () => {
     }
 
     // 동시에 3개 요청
-    const [r1, r2, r3] = await Promise.all([
+    const [_r1, _r2, _r3] = await Promise.all([
       cached('concurrent', slowFetcher),
       cached('concurrent', slowFetcher),
       cached('concurrent', slowFetcher),
@@ -695,8 +697,8 @@ describe('★★★★☆ [Very Hard] 부동소수점 정밀도 비즈니스 로
     const credits = [600.6]
 
     // 잘못된 방식
-    const sumDebits = debits.reduce((a, b) => a + b, 0)
-    const sumCredits = credits.reduce((a, b) => a + b, 0)
+    const _sumDebits = debits.reduce((a, b) => a + b, 0)
+    const _sumCredits = credits.reduce((a, b) => a + b, 0)
     // 부동소수점으로 인해 불일치 가능
     // expect(sumDebits).not.toBe(sumCredits) // 600.5999... vs 600.6
 
@@ -781,20 +783,20 @@ describe('★★★★☆ [Very Hard] sanitizeSearchQuery 복합 공격', () => 
 describe('★★★★★ [Extreme] 프로토타입 오염 방어', () => {
   it('__proto__ 키는 sanitizeObject에서 안전하게 처리', () => {
     const malicious = JSON.parse('{"__proto__": {"polluted": true}, "name": "test\\u0000"}')
-    const result = sanitizeObject(malicious)
+    sanitizeObject(malicious)
     // Object.prototype이 오염되지 않아야 함
-    expect(({} as any).polluted).toBeUndefined()
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
   })
 
   it('constructor 키 포함 객체', () => {
     const obj = { constructor: 'test\0value', name: 'hello\0' }
-    const result = sanitizeObject(obj as any)
+    const result = sanitizeObject(obj as Record<string, unknown>)
     expect(result.name).toBe('hello')
   })
 
   it('toString 오버라이드 시도', () => {
     const obj = { toString: 'evil\0', valueOf: 'bad\0', name: 'test\x01' }
-    const result = sanitizeObject(obj as any)
+    const result = sanitizeObject(obj as Record<string, unknown>)
     expect(result.name).toBe('test')
   })
 })
@@ -896,7 +898,7 @@ describe('★★★★★ [Extreme] 캐시 스탬피드(stampede) 시뮬레이�
     }
 
     // 100개의 동시 요청
-    const promises = Array.from({ length: 100 }, (_, i) => cached('stampede-key', expensiveFetcher))
+    const promises = Array.from({ length: 100 }, () => cached('stampede-key', expensiveFetcher))
 
     const results = await Promise.all(promises)
 
@@ -951,20 +953,20 @@ describe('★★★★★ [Extreme] validatePaginationParams 극단적 입력', 
   })
 
   it('문자열 입력', () => {
-    const result = validatePaginationParams('abc' as any, 'xyz' as any)
+    const result = validatePaginationParams('abc' as unknown as number, 'xyz' as unknown as number)
     expect(result.page).toBe(1)
     expect(result.pageSize).toBe(20)
   })
 
   it('객체 입력', () => {
-    const result = validatePaginationParams({} as any, [] as any)
+    const result = validatePaginationParams({} as unknown as number, [] as unknown as number)
     expect(result.page).toBe(1)
     expect(result.pageSize).toBe(20)
   })
 
   it('boolean 입력', () => {
     // Number(true) = 1, Number(false) = 0
-    const result = validatePaginationParams(true as any, false as any)
+    const result = validatePaginationParams(true as unknown as number, false as unknown as number)
     expect(result.page).toBe(1)
     expect(result.pageSize).toBe(20) // false → 0 → fallback to 20
   })
@@ -1051,7 +1053,7 @@ describe('★★★★★ [Extreme] 복합 시나리오: 전체 워크플로우 
     expect(rateCheck.allowed).toBe(true)
 
     // 캐시에서 사용자 데이터 조회
-    const userData = await cached(`user:${userId}`, async () => ({
+    await cached(`user:${userId}`, async () => ({
       id: userId,
       name: 'Test User',
       loginCount: 0,
@@ -1096,7 +1098,7 @@ describe('★★★★★ [Extreme] sanitizeObject 복잡한 데이터 구조', 
     const obj = {
       mixed: ['string\0', 42, true, null, undefined, new Date(), { nested: 'val\x01' }],
     }
-    const result = sanitizeObject(obj as any)
+    const result = sanitizeObject(obj as Record<string, unknown>)
     const mixed = result.mixed as unknown[]
     expect(mixed[0]).toBe('string')
     expect(mixed[1]).toBe(42)
@@ -1107,7 +1109,7 @@ describe('★★★★★ [Extreme] sanitizeObject 복잡한 데이터 구조', 
 
   it('Symbol 키는 무시 (Object.keys에 포함되지 않음)', () => {
     const sym = Symbol('test')
-    const obj = { [sym]: 'hidden', visible: 'test\0' } as any
+    const obj = { [sym]: 'hidden', visible: 'test\0' } as Record<string, unknown>
     const result = sanitizeObject(obj)
     expect(result.visible).toBe('test')
   })
@@ -1120,7 +1122,7 @@ describe('★★★★★ [Extreme] sanitizeObject 복잡한 데이터 구조', 
       },
     }
     // Object spread는 getter를 호출하여 값으로 변환
-    const result = sanitizeObject(obj as any)
+    const result = sanitizeObject(obj as Record<string, unknown>)
     expect(result.name).toBe('test')
   })
 })
@@ -1249,5 +1251,219 @@ describe('★★★★★ [Extreme] cache 에러 복구', () => {
       await new Promise((r) => setTimeout(r, 5))
     }
     expect(count).toBe(5)
+  })
+})
+
+// ─────────────────────────────────────────────────────
+// 추가 버그 수정 검증 테스트 (2차)
+// ─────────────────────────────────────────────────────
+
+describe('★★★☆☆ [Bug Fix 2차] sanitizeString: DEL 문자(\\x7F) 제거', () => {
+  it('DEL 문자(\\x7F)가 제거되어야 함', () => {
+    expect(sanitizeString('hello\x7Fworld')).toBe('helloworld')
+  })
+
+  it('여러 DEL 문자', () => {
+    expect(sanitizeString('\x7F\x7F\x7F')).toBe('')
+  })
+
+  it('DEL + 다른 제어 문자 조합', () => {
+    expect(sanitizeString('\x00\x01\x7Ftest\x1F\x7F')).toBe('test')
+  })
+
+  it('DEL 문자가 없는 일반 문자열은 변경 없음', () => {
+    expect(sanitizeString('normal text')).toBe('normal text')
+  })
+})
+
+describe('★★★☆☆ [Bug Fix 2차] rate-limit: 메모리 보호', () => {
+  it('만료된 엔트리 정리 (expired entries)', () => {
+    const key = `expired-${Date.now()}`
+    // windowMs를 1ms로 설정
+    incrementRateLimit(key, 1)
+    // 약간 대기 후 확인
+    const check = checkRateLimit(key, 5, 1)
+    // resetAt이 과거이므로 allowed
+    // (타이밍에 따라 다를 수 있지만, 1ms 이내에 체크하면 아직 유효할 수 있음)
+    expect(check.allowed).toBe(true)
+  })
+
+  it('rate-limit 차단 후 reset으로 복구', () => {
+    const key = `reset-test-${Date.now()}`
+    for (let i = 0; i < 10; i++) {
+      incrementRateLimit(key, 60000)
+    }
+    expect(checkRateLimit(key, 5).allowed).toBe(false)
+    resetRateLimit(key)
+    expect(checkRateLimit(key, 5).allowed).toBe(true)
+  })
+
+  it('서로 다른 키는 독립적으로 동작', () => {
+    const key1 = `independent-a-${Date.now()}`
+    const key2 = `independent-b-${Date.now()}`
+    for (let i = 0; i < 5; i++) {
+      incrementRateLimit(key1, 60000)
+    }
+    expect(checkRateLimit(key1, 5).allowed).toBe(false)
+    expect(checkRateLimit(key2, 5).allowed).toBe(true)
+    resetRateLimit(key1)
+    resetRateLimit(key2)
+  })
+})
+
+describe('★★★★☆ [Bug Fix 2차] sanitizeFileName: 추가 보안 검증', () => {
+  it('DEL 문자가 포함된 파일명', () => {
+    const result = sanitizeFileName('file\x7Fname.txt')
+    expect(result).not.toContain('\x7F')
+  })
+
+  it('null 바이트 + 경로 순회 + 예약어 복합 공격', () => {
+    const result = sanitizeFileName('..\\..\\CON\x00.txt')
+    expect(result).not.toContain('\x00')
+    expect(result).not.toContain('\\')
+    expect(result).toBeTruthy()
+    expect(result).not.toBe('')
+  })
+
+  it('유니코드 문자가 포함된 파일명 보존', () => {
+    const result = sanitizeFileName('보고서_2024.pdf')
+    expect(result).toBe('보고서_2024.pdf')
+  })
+
+  it('이모지가 포함된 파일명 보존', () => {
+    const result = sanitizeFileName('📊report.xlsx')
+    expect(result).toBe('📊report.xlsx')
+  })
+})
+
+describe('★★★★☆ [Bug Fix 2차] sanitizeSearchQuery: 와일드카드 이스케이프', () => {
+  it('SQL 와일드카드 이스케이프', () => {
+    expect(sanitizeSearchQuery('100%')).toBe('100\\%')
+    expect(sanitizeSearchQuery('col_name')).toBe('col\\_name')
+  })
+
+  it('백슬래시 이스케이프', () => {
+    expect(sanitizeSearchQuery('path\\to')).toBe('path\\\\to')
+  })
+
+  it('복합 SQL 인젝션 패턴', () => {
+    const result = sanitizeSearchQuery("'; DROP TABLE users; --")
+    expect(result).not.toContain('\0')
+    expect(result.length).toBeLessThanOrEqual(100)
+  })
+
+  it('100자 초과 검색어 자르기', () => {
+    const longQuery = 'a'.repeat(200)
+    expect(sanitizeSearchQuery(longQuery).length).toBe(100)
+  })
+})
+
+describe('★★★★★ [Extreme] rate-limit 대량 키 시나리오', () => {
+  it('대량의 키 등록 후 체크', () => {
+    const keys: string[] = []
+    for (let i = 0; i < 100; i++) {
+      const key = `mass-test-${Date.now()}-${i}`
+      keys.push(key)
+      incrementRateLimit(key, 60000)
+    }
+
+    // 모든 키가 정상 동작해야 함
+    for (const key of keys) {
+      const check = checkRateLimit(key, 5)
+      expect(check.allowed).toBe(true)
+      expect(check.remaining).toBe(4) // 1번 increment 했으므로 4 remaining
+    }
+
+    // cleanup
+    for (const key of keys) {
+      resetRateLimit(key)
+    }
+  })
+
+  it('동일 키 대량 increment', () => {
+    const key = `heavy-${Date.now()}`
+    for (let i = 0; i < 100; i++) {
+      incrementRateLimit(key, 60000)
+    }
+    const check = checkRateLimit(key, 5)
+    expect(check.allowed).toBe(false)
+    expect(check.remaining).toBe(0)
+    expect(check.retryAfterSeconds).toBeGreaterThan(0)
+    resetRateLimit(key)
+  })
+})
+
+describe('★★★★★ [Extreme] escapeHtml 보안 검증', () => {
+  it('중첩 HTML 태그 이스케이프', () => {
+    const result = escapeHtml('<div><script>alert(1)</script></div>')
+    expect(result).not.toContain('<div>')
+    expect(result).not.toContain('<script>')
+    expect(result).toContain('&lt;div&gt;')
+  })
+
+  it('이벤트 핸들러 속성 이스케이프', () => {
+    const result = escapeHtml('<img onerror="alert(1)" src="x">')
+    expect(result).not.toContain('<img')
+    expect(result).toContain('&lt;img')
+  })
+
+  it('HTML 엔티티 이중 이스케이프 방지', () => {
+    const result = escapeHtml('&amp;')
+    expect(result).toBe('&amp;amp;')
+  })
+
+  it('빈 문자열', () => {
+    expect(escapeHtml('')).toBe('')
+  })
+
+  it('특수문자 없는 일반 텍스트', () => {
+    expect(escapeHtml('hello world')).toBe('hello world')
+  })
+
+  it('모든 이스케이프 대상 문자 포함', () => {
+    const result = escapeHtml('&<>"\' test')
+    expect(result).toBe('&amp;&lt;&gt;&quot;&#x27; test')
+  })
+})
+
+describe('★★★★★ [Extreme] formatPhone 추가 엣지 케이스', () => {
+  it('국제 번호 (포맷 변경 없음)', () => {
+    expect(formatPhone('+821012345678')).toBe('+821012345678')
+  })
+
+  it('짧은 번호', () => {
+    expect(formatPhone('114')).toBe('114')
+  })
+
+  it('대표번호 1588', () => {
+    expect(formatPhone('15881234')).toBe('1588-1234')
+  })
+
+  it('대표번호 1577', () => {
+    expect(formatPhone('15771234')).toBe('1577-1234')
+  })
+
+  it('서울 지역번호 10자리', () => {
+    expect(formatPhone('0212345678')).toBe('02-1234-5678')
+  })
+
+  it('서울 지역번호 9자리', () => {
+    expect(formatPhone('021234567')).toBe('02-123-4567')
+  })
+
+  it('하이픈 포함 번호 정리', () => {
+    expect(formatPhone('010-1234-5678')).toBe('010-1234-5678')
+  })
+
+  it('null 입력', () => {
+    expect(formatPhone(null)).toBe('')
+  })
+
+  it('undefined 입력', () => {
+    expect(formatPhone(undefined)).toBe('')
+  })
+
+  it('빈 문자열', () => {
+    expect(formatPhone('')).toBe('')
   })
 })

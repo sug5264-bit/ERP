@@ -38,7 +38,12 @@ import {
 
 function getDeliveryFileIcon(mimeType: string) {
   if (mimeType.startsWith('image/')) return FileImage
-  if (mimeType.includes('pdf') || mimeType.includes('text') || mimeType.includes('word') || mimeType.includes('document'))
+  if (
+    mimeType.includes('pdf') ||
+    mimeType.includes('text') ||
+    mimeType.includes('word') ||
+    mimeType.includes('document')
+  )
     return FileTextIcon
   if (mimeType.includes('sheet') || mimeType.includes('excel') || mimeType.includes('csv')) return FileSpreadsheetIcon
   return FileIconGeneric
@@ -86,7 +91,8 @@ interface SalesOrderOption {
   partner?: { partnerName: string }
 }
 
-const DELIVERY_ACCEPTED_TYPES = '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
+const DELIVERY_ACCEPTED_TYPES =
+  '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
 
 const POST_STATUS_MAP: Record<string, { label: string; color: string }> = {
   PREPARING: { label: '준비중', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
@@ -148,7 +154,8 @@ export function DeliveriesPanel() {
 
   const { data: replyAttachmentsData } = useQuery({
     queryKey: ['attachments', 'DeliveryReplyPost'],
-    queryFn: () => api.get('/attachments?relatedTable=DeliveryReplyPost') as Promise<{ data: DeliveryNoteAttachment[] }>,
+    queryFn: () =>
+      api.get('/attachments?relatedTable=DeliveryReplyPost') as Promise<{ data: DeliveryNoteAttachment[] }>,
   })
   const replyAttachments: DeliveryNoteAttachment[] = replyAttachmentsData?.data || []
 
@@ -209,12 +216,7 @@ export function DeliveriesPanel() {
     formData.append('file', file)
     formData.append('relatedTable', relatedTable)
     formData.append('relatedId', relatedId)
-    const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
-    if (!res.ok) {
-      const json = await res.json().catch(() => null)
-      throw new Error(json?.error?.message || `파일 업로드 실패: ${file.name}`)
-    }
-    return res.json()
+    return api.upload('/attachments', formData)
   }
 
   const updatePostStatus = async (noteId: string, status: string) => {
@@ -300,6 +302,22 @@ export function DeliveriesPanel() {
     }
   }
 
+  const handleDeletePost = async (noteId: string) => {
+    if (!confirm('이 게시글을 삭제하시겠습니까? 수주관리의 원글과 모든 답글이 함께 삭제됩니다.')) return
+    try {
+      await api.delete(`/notes/${noteId}`)
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryReply'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPostStatus'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
+      queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrderPost'] })
+      queryClient.invalidateQueries({ queryKey: ['attachments', 'DeliveryReplyPost'] })
+      toast.success('게시글이 삭제되었습니다.')
+    } catch {
+      toast.error('게시글 삭제에 실패했습니다.')
+    }
+  }
+
   const handleMarkDelivered = async (noteId: string) => {
     await updatePostStatus(noteId, 'DELIVERED')
     toast.success('납품완료 처리되었습니다.')
@@ -378,12 +396,14 @@ export function DeliveriesPanel() {
           <div className="flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-blue-500" />
             <span className="text-sm font-medium">수주관리 글 / 답글</span>
-            <Badge variant="secondary" className="text-[10px]">{filteredDeliveryNotes.length}건</Badge>
+            <Badge variant="secondary" className="text-[10px]">
+              {filteredDeliveryNotes.length}건
+            </Badge>
           </div>
           {notesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
         {notesExpanded && (
-          <div className="border-t px-4 py-3 space-y-3">
+          <div className="space-y-3 border-t px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <DateRangeFilter
                 startDate={noteStartDate}
@@ -393,10 +413,10 @@ export function DeliveriesPanel() {
                   setNoteEndDate(e)
                 }}
               />
-              <div className="relative min-w-[120px] flex-1 max-w-xs">
+              <div className="relative max-w-xs min-w-[120px] flex-1">
                 <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
-                  className="pl-9 h-8 text-xs"
+                  className="h-8 pl-9 text-xs"
                   placeholder="글 검색..."
                   value={noteSearchKeyword}
                   onChange={(e) => setNoteSearchKeyword(e.target.value)}
@@ -404,7 +424,7 @@ export function DeliveriesPanel() {
               </div>
             </div>
             {filteredDeliveryNotes.length === 0 && (
-              <p className="text-muted-foreground text-center text-xs py-6">수주관리에서 작성된 글이 없습니다.</p>
+              <p className="text-muted-foreground py-6 text-center text-xs">수주관리에서 작성된 글이 없습니다.</p>
             )}
             {filteredDeliveryNotes.map((note, idx) => {
               const postNo = filteredDeliveryNotes.length - idx
@@ -425,13 +445,20 @@ export function DeliveriesPanel() {
                 <div key={note.id} className="rounded-md border">
                   <div className="px-3 py-2.5">
                     {/* Header with status and more menu */}
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="mb-1 flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}
+                        >
                           {statusInfo.label}
                         </span>
-                        <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">수주</Badge>
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-[10px] text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                        >
+                          수주
+                        </Badge>
                         {channelType && (
                           <Badge variant={channelType === '온라인' ? 'default' : 'secondary'} className="text-[10px]">
                             {channelType}
@@ -446,28 +473,37 @@ export function DeliveriesPanel() {
                         <span className="text-muted-foreground text-[10px]">{formatDate(note.createdAt)}</span>
                       </div>
                       {/* More menu */}
-                      {!isTerminal && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleMarkDelivered(note.id)}>
-                              <PackageCheck className="mr-2 h-4 w-4 text-green-600" />
-                              납품완료
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openReturnDialog(note.id)}>
-                              <RotateCcw className="mr-2 h-4 w-4 text-red-600" />
-                              반품등록
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-6 w-6">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {!isTerminal && (
+                            <>
+                              <DropdownMenuItem onClick={() => handleMarkDelivered(note.id)}>
+                                <PackageCheck className="mr-2 h-4 w-4 text-green-600" />
+                                납품완료
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openReturnDialog(note.id)}>
+                                <RotateCcw className="mr-2 h-4 w-4 text-red-600" />
+                                반품등록
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem onClick={() => handleDeletePost(note.id)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                     {title && <p className="text-sm font-medium">{title}</p>}
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap mt-1">{body.slice(0, 200)}{body.length > 200 ? '...' : ''}</p>
+                    <p className="text-muted-foreground mt-1 text-xs whitespace-pre-wrap">
+                      {body.slice(0, 200)}
+                      {body.length > 200 ? '...' : ''}
+                    </p>
 
                     {/* Original post attachments from 수주관리 */}
                     {notePostFiles.length > 0 && (
@@ -481,14 +517,18 @@ export function DeliveriesPanel() {
                               <button
                                 key={att.id}
                                 onClick={() => window.open(`/api/v1/attachments/${att.id}`, '_blank')}
-                                className="bg-white dark:bg-transparent flex items-center gap-1 rounded border px-2 py-1 text-[10px] hover:bg-muted transition-colors"
+                                className="hover:bg-muted flex items-center gap-1 rounded border bg-white px-2 py-1 text-[10px] transition-colors dark:bg-transparent"
                               >
                                 <Icon className="h-3 w-3" />
                                 <span className="max-w-[120px] truncate">{att.fileName}</span>
                                 {att.fileSize && (
-                                  <span className="text-muted-foreground text-[9px]">({formatFileSize(att.fileSize)})</span>
+                                  <span className="text-muted-foreground text-[9px]">
+                                    ({formatFileSize(att.fileSize)})
+                                  </span>
                                 )}
-                                <span className={`rounded px-0.5 text-[8px] font-medium ${typeBadge.color}`}>{typeBadge.label}</span>
+                                <span className={`rounded px-0.5 text-[8px] font-medium ${typeBadge.color}`}>
+                                  {typeBadge.label}
+                                </span>
                                 <Download className="h-2.5 w-2.5" />
                               </button>
                             )
@@ -499,18 +539,28 @@ export function DeliveriesPanel() {
 
                     {/* Replies */}
                     {replies.length > 0 && (
-                      <div className="mt-2 space-y-2 pl-4 border-l-2 border-emerald-200 dark:border-emerald-800">
+                      <div className="mt-2 space-y-2 border-l-2 border-emerald-200 pl-4 dark:border-emerald-800">
                         {replies.map((reply) => {
                           const replyAtts = getReplyAttachments(reply.id)
                           const isOwner = currentUserId && reply.createdBy === currentUserId
                           const isEditing = editingReplyId === reply.id
 
                           return (
-                            <div key={reply.id} className="rounded-md bg-emerald-50/50 dark:bg-emerald-950/30 px-3 py-2">
-                              <div className="flex items-center justify-between mb-1">
+                            <div
+                              key={reply.id}
+                              className="rounded-md bg-emerald-50/50 px-3 py-2 dark:bg-emerald-950/30"
+                            >
+                              <div className="mb-1 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">답글</Badge>
-                                  <span className="text-muted-foreground text-[10px]">{formatDate(reply.createdAt)}</span>
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                                  >
+                                    답글
+                                  </Badge>
+                                  <span className="text-muted-foreground text-[10px]">
+                                    {formatDate(reply.createdAt)}
+                                  </span>
                                 </div>
                                 {isOwner && !isEditing && (
                                   <div className="flex items-center gap-0.5">
@@ -518,7 +568,10 @@ export function DeliveriesPanel() {
                                       variant="ghost"
                                       size="icon"
                                       className="h-5 w-5"
-                                      onClick={() => { setEditingReplyId(reply.id); setEditingReplyContent(reply.content) }}
+                                      onClick={() => {
+                                        setEditingReplyId(reply.id)
+                                        setEditingReplyContent(reply.content)
+                                      }}
                                       title="수정"
                                     >
                                       <Pencil className="h-3 w-3" />
@@ -526,7 +579,7 @@ export function DeliveriesPanel() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-5 w-5 text-destructive hover:text-destructive"
+                                      className="text-destructive hover:text-destructive h-5 w-5"
                                       onClick={() => handleDeleteReply(reply.id)}
                                       title="삭제"
                                     >
@@ -543,8 +596,16 @@ export function DeliveriesPanel() {
                                     rows={3}
                                     className="text-xs"
                                   />
-                                  <div className="flex items-center gap-1 justify-end">
-                                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => { setEditingReplyId(null); setEditingReplyContent('') }}>
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 text-xs"
+                                      onClick={() => {
+                                        setEditingReplyId(null)
+                                        setEditingReplyContent('')
+                                      }}
+                                    >
                                       <X className="mr-1 h-3 w-3" /> 취소
                                     </Button>
                                     <Button size="sm" className="h-6 text-xs" onClick={() => handleEditReply(reply.id)}>
@@ -556,7 +617,7 @@ export function DeliveriesPanel() {
                                 <p className="text-xs whitespace-pre-wrap">{reply.content}</p>
                               )}
                               {replyAtts.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
                                   {replyAtts.map((att) => {
                                     const Icon = getDeliveryFileIcon(att.mimeType)
                                     const typeBadge = getDeliveryFileTypeBadge(att.mimeType, att.fileName)
@@ -564,11 +625,13 @@ export function DeliveriesPanel() {
                                       <button
                                         key={att.id}
                                         onClick={() => window.open(`/api/v1/attachments/${att.id}`, '_blank')}
-                                        className="bg-white dark:bg-transparent flex items-center gap-1 rounded border px-2 py-1 text-[10px] hover:bg-muted transition-colors"
+                                        className="hover:bg-muted flex items-center gap-1 rounded border bg-white px-2 py-1 text-[10px] transition-colors dark:bg-transparent"
                                       >
                                         <Icon className="h-3 w-3" />
                                         <span className="max-w-[120px] truncate">{att.fileName}</span>
-                                        <span className={`rounded px-0.5 text-[8px] font-medium ${typeBadge.color}`}>{typeBadge.label}</span>
+                                        <span className={`rounded px-0.5 text-[8px] font-medium ${typeBadge.color}`}>
+                                          {typeBadge.label}
+                                        </span>
                                         <Download className="h-2.5 w-2.5" />
                                       </button>
                                     )
@@ -585,7 +648,7 @@ export function DeliveriesPanel() {
                     {!isTerminal && (
                       <>
                         {replyingTo === note.id ? (
-                          <div className="mt-2 space-y-2 rounded-md border bg-muted/20 p-3">
+                          <div className="bg-muted/20 mt-2 space-y-2 rounded-md border p-3">
                             <Textarea
                               placeholder="답글을 입력하세요..."
                               value={replyContent}
@@ -593,7 +656,7 @@ export function DeliveriesPanel() {
                               rows={3}
                               className="text-xs"
                             />
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex flex-wrap items-center gap-2">
                               <Button
                                 type="button"
                                 variant="outline"
@@ -614,19 +677,42 @@ export function DeliveriesPanel() {
                               {replyFiles.length > 0 && (
                                 <div className="flex flex-wrap gap-1">
                                   {replyFiles.map((f, fidx) => (
-                                    <span key={fidx} className="bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]">
+                                    <span
+                                      key={fidx}
+                                      className="bg-muted flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]"
+                                    >
                                       <Paperclip className="h-2.5 w-2.5" /> {f.name}
-                                      <button type="button" onClick={() => setReplyFiles(replyFiles.filter((_, i) => i !== fidx))} className="text-destructive ml-0.5">&times;</button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setReplyFiles(replyFiles.filter((_, i) => i !== fidx))}
+                                        className="text-destructive ml-0.5"
+                                      >
+                                        &times;
+                                      </button>
                                     </span>
                                   ))}
                                 </div>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 justify-end">
-                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setReplyingTo(null); setReplyContent(''); setReplyFiles([]) }}>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setReplyingTo(null)
+                                  setReplyContent('')
+                                  setReplyFiles([])
+                                }}
+                              >
                                 취소
                               </Button>
-                              <Button size="sm" className="h-7 text-xs" onClick={() => handleSubmitReply(note.id)} disabled={!replyContent.trim() || replySubmitting}>
+                              <Button
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => handleSubmitReply(note.id)}
+                                disabled={!replyContent.trim() || replySubmitting}
+                              >
                                 <Send className="mr-1 h-3 w-3" /> {replySubmitting ? '등록 중...' : '답글 등록'}
                               </Button>
                             </div>
@@ -660,11 +746,7 @@ export function DeliveriesPanel() {
           <div className="space-y-3">
             <div className="space-y-1">
               <label className="text-muted-foreground text-xs font-medium">반품일 *</label>
-              <Input
-                type="date"
-                value={returnDate}
-                onChange={(e) => setReturnDate(e.target.value)}
-              />
+              <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
             </div>
             <div className="space-y-1">
               <label className="text-muted-foreground text-xs font-medium">반품사유 *</label>
@@ -674,7 +756,9 @@ export function DeliveriesPanel() {
                 </SelectTrigger>
                 <SelectContent>
                   {RETURN_REASONS.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    <SelectItem key={r.value} value={r.value}>
+                      {r.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -698,7 +782,9 @@ export function DeliveriesPanel() {
               />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setReturnDialogOpen(false)}>취소</Button>
+              <Button variant="ghost" size="sm" onClick={() => setReturnDialogOpen(false)}>
+                취소
+              </Button>
               <Button size="sm" onClick={handleSubmitReturn} disabled={returnSubmitting}>
                 <RotateCcw className="mr-1 h-3.5 w-3.5" />
                 {returnSubmitting ? '등록 중...' : '반품 등록'}

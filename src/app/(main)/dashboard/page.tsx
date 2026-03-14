@@ -18,6 +18,9 @@ import {
   ArrowRight,
   Timer,
   Truck,
+  Plus,
+  Building2,
+  Target,
 } from 'lucide-react'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -118,6 +121,17 @@ interface Notice {
   createdAt: string
 }
 
+interface TopPartner {
+  partnerName: string
+  totalAmount: number
+  orderCount: number
+}
+
+interface WeeklyOrder {
+  day: string
+  count: number
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession()
 
@@ -146,9 +160,12 @@ export default function DashboardPage() {
   const orderTrend = trends?.orderCount?.change ?? 0
   const todayOrders = (trends?.todayOrders as unknown as number) ?? 0
   const thisMonthAmount = trends?.salesAmount?.current ?? 0
+  const lastMonthAmount = trends?.salesAmount?.previous ?? 0
 
   const recentOrders = (dd?.recentOrders as RecentOrder[]) || []
   const notices = (dd?.notices as Notice[]) || []
+  const topPartners = (dd?.topPartners as TopPartner[]) || []
+  const weeklyOrders = (dd?.weeklyOrders as WeeklyOrder[]) || []
 
   const greeting = getGreeting()
 
@@ -189,34 +206,85 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 매출/수주 트렌드 요약 */}
-      <Card className="animate-fade-in-up">
-        <CardContent className="p-3 sm:p-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
-            <TrendItem
-              label="이번 달 매출"
-              value={formatCurrency(thisMonthAmount)}
-              trend={salesTrend}
-              trendLabel="전월 대비"
-            />
-            <TrendItem
-              label="이번 달 수주"
-              value={`${trends?.orderCount?.current ?? 0}건`}
-              trend={orderTrend}
-              trendLabel="전월 대비"
-            />
-            <TrendItem label="금일 수주" value={`${todayOrders}건`} />
-            <TrendItem
-              label="수주 평균 금액"
-              value={
-                (trends?.orderCount?.current ?? 0) > 0
-                  ? formatCurrency(Math.round(thisMonthAmount / (trends?.orderCount?.current || 1)))
-                  : '-'
-              }
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* 매출/수주 트렌드 요약 + 주간 현황 */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+        {/* 매출 트렌드 */}
+        <Card className="animate-fade-in-up lg:col-span-2">
+          <CardContent className="p-3 sm:p-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-6">
+              <TrendItem
+                label="이번 달 매출"
+                value={formatCurrency(thisMonthAmount)}
+                trend={salesTrend}
+                trendLabel="전월 대비"
+              />
+              <TrendItem
+                label="이번 달 수주"
+                value={`${trends?.orderCount?.current ?? 0}건`}
+                trend={orderTrend}
+                trendLabel="전월 대비"
+              />
+              <TrendItem label="금일 수주" value={`${todayOrders}건`} />
+              <TrendItem
+                label="수주 평균 금액"
+                value={
+                  (trends?.orderCount?.current ?? 0) > 0
+                    ? formatCurrency(Math.round(thisMonthAmount / (trends?.orderCount?.current || 1)))
+                    : '-'
+                }
+              />
+            </div>
+            {/* 매출 목표 달성률 (전월 대비) */}
+            {lastMonthAmount > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="text-muted-foreground h-3.5 w-3.5" />
+                    <span className="text-muted-foreground text-xs">전월 매출 대비 달성률</span>
+                  </div>
+                  <span
+                    className={`text-xs font-bold ${thisMonthAmount >= lastMonthAmount ? 'text-status-success' : 'text-status-warning'}`}
+                  >
+                    {Math.round((thisMonthAmount / lastMonthAmount) * 100)}%
+                  </span>
+                </div>
+                <div className="bg-muted h-2.5 w-full overflow-hidden rounded-full">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${thisMonthAmount >= lastMonthAmount ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                    style={{ width: `${Math.min(100, Math.round((thisMonthAmount / lastMonthAmount) * 100))}%` }}
+                  />
+                </div>
+                <div className="text-muted-foreground mt-1 flex justify-between text-[10px]">
+                  <span>전월: {formatCurrency(lastMonthAmount)}</span>
+                  <span>이번 달: {formatCurrency(thisMonthAmount)}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 최근 7일 수주 추세 */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium sm:text-sm">최근 7일 수주 추세</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            {weeklyOrders.length === 0 ? (
+              <div className="text-muted-foreground flex flex-col items-center justify-center py-6 text-center">
+                <ShoppingCart className="mb-2 h-6 w-6 opacity-30" />
+                <p className="text-xs">최근 7일간 수주 데이터가 없습니다</p>
+                <Link href="/sales/orders">
+                  <Button variant="link" size="sm" className="mt-1 h-6 text-xs">
+                    <Plus className="mr-1 h-3 w-3" /> 수주 등록하기
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <WeeklyChart data={weeklyOrders} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Charts */}
       <Suspense
@@ -239,8 +307,63 @@ export default function DashboardPage() {
         />
       </Suspense>
 
-      {/* Lists */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+      {/* 거래처 매출 Top 5 + 최근 수주 + 공지사항 */}
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+        {/* 거래처별 매출 Top 5 */}
+        <Card className="animate-fade-in-up">
+          <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Building2 className="h-4 w-4" /> 거래처 매출 Top 5
+            </CardTitle>
+            <Link href="/partners">
+              <Button variant="ghost" size="sm" className="hover:text-primary text-xs">
+                더보기 <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            {topPartners.length === 0 ? (
+              <EmptyState
+                icon={Building2}
+                message="이번 달 거래 데이터가 없습니다"
+                href="/sales/orders"
+                actionLabel="수주 등록하기"
+              />
+            ) : (
+              <div className="space-y-2.5">
+                {topPartners.map((p, idx) => {
+                  const maxAmount = topPartners[0]?.totalAmount || 1
+                  const pct = Math.round((p.totalAmount / maxAmount) * 100)
+                  return (
+                    <div key={p.partnerName}>
+                      <div className="mb-1 flex items-center justify-between">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-white ${idx === 0 ? 'bg-amber-500' : idx === 1 ? 'bg-gray-400' : idx === 2 ? 'bg-amber-700' : 'bg-gray-300'}`}
+                          >
+                            {idx + 1}
+                          </span>
+                          <span className="truncate text-xs font-medium">{p.partnerName}</span>
+                        </div>
+                        <span className="text-xs font-semibold whitespace-nowrap tabular-nums">
+                          {formatCurrency(p.totalAmount)}
+                        </span>
+                      </div>
+                      <div className="bg-muted ml-7 h-1.5 overflow-hidden rounded-full">
+                        <div
+                          className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-muted-foreground mt-0.5 ml-7 text-[10px]">{p.orderCount}건</p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* 최근 수주 */}
         <Card className="animate-fade-in-up">
           <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
@@ -255,7 +378,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {recentOrders.length === 0 ? (
-              <EmptyState icon={ShoppingCart} message="수주 데이터가 없습니다" />
+              <EmptyState
+                icon={ShoppingCart}
+                message="수주 데이터가 없습니다"
+                href="/sales/orders"
+                actionLabel="수주 등록하기"
+              />
             ) : (
               <div className="space-y-0">
                 {recentOrders.slice(0, 5).map((o, idx) => (
@@ -291,7 +419,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {notices.length === 0 ? (
-              <EmptyState icon={ClipboardList} message="공지사항이 없습니다" />
+              <EmptyState
+                icon={ClipboardList}
+                message="공지사항이 없습니다"
+                href="/board/notices"
+                actionLabel="공지 작성하기"
+              />
             ) : (
               <div className="space-y-0">
                 {notices.slice(0, 5).map((n, idx) => (
@@ -357,13 +490,54 @@ const TrendItem = memo(function TrendItem({
   )
 })
 
-const EmptyState = memo(function EmptyState({ icon: Icon, message }: { icon: typeof ShoppingCart; message: string }) {
+const EmptyState = memo(function EmptyState({
+  icon: Icon,
+  message,
+  href,
+  actionLabel,
+}: {
+  icon: typeof ShoppingCart
+  message: string
+  href?: string
+  actionLabel?: string
+}) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-10">
       <div className="bg-muted rounded-full p-3">
         <Icon className="text-muted-foreground/40 h-6 w-6" />
       </div>
       <p className="text-muted-foreground text-sm">{message}</p>
+      {href && actionLabel && (
+        <Link href={href}>
+          <Button variant="outline" size="sm" className="mt-1 h-7 text-xs">
+            <Plus className="mr-1 h-3 w-3" /> {actionLabel}
+          </Button>
+        </Link>
+      )}
+    </div>
+  )
+})
+
+/** 최근 7일 수주 추세 미니 바 차트 */
+const WeeklyChart = memo(function WeeklyChart({ data }: { data: WeeklyOrder[] }) {
+  const maxCount = Math.max(...data.map((d) => d.count), 1)
+  return (
+    <div className="flex items-end justify-between gap-1.5 pt-2" style={{ height: 120 }}>
+      {data.map((d) => {
+        const heightPct = Math.max(8, (d.count / maxCount) * 100)
+        return (
+          <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
+            <span className="text-[10px] font-semibold tabular-nums">{d.count}</span>
+            <div className="flex w-full flex-1 flex-col justify-end">
+              <div
+                className="w-full rounded-t bg-indigo-500 transition-all duration-500"
+                style={{ height: `${heightPct}%`, minHeight: 4 }}
+              />
+            </div>
+            <span className="text-muted-foreground text-[9px]">{d.day}</span>
+          </div>
+        )
+      })}
     </div>
   )
 })

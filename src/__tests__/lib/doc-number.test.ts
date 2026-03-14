@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Prisma 모킹
 const mockUpsert = vi.fn()
+const mockFindUnique = vi.fn()
 vi.mock('@/lib/prisma', () => ({
   prisma: {
     documentSequence: {
       upsert: (...args: unknown[]) => mockUpsert(...args),
+      findUnique: (...args: unknown[]) => mockFindUnique(...args),
     },
   },
 }))
@@ -15,6 +17,7 @@ import { generateDocumentNumber } from '@/lib/doc-number'
 describe('generateDocumentNumber', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFindUnique.mockResolvedValue(null) // 기본: 시퀀스 없음
   })
 
   it('올바른 형식으로 문서번호 생성 (PREFIX-YYYYMM-NNNNN)', async () => {
@@ -30,13 +33,14 @@ describe('generateDocumentNumber', () => {
   })
 
   it('큰 시퀀스 번호도 처리', async () => {
+    mockFindUnique.mockResolvedValue({ lastSeq: 99998 }) // 아직 MAX 미달
     mockUpsert.mockResolvedValue({ lastSeq: 99999 })
     const result = await generateDocumentNumber('DLV', new Date(2024, 0, 1))
     expect(result).toBe('DLV-202401-99999')
   })
 
   it('5자리 초과 시퀀스 시 오버플로우 에러 발생', async () => {
-    mockUpsert.mockResolvedValue({ lastSeq: 100000 })
+    mockFindUnique.mockResolvedValue({ lastSeq: 99999 })
     await expect(generateDocumentNumber('SM', new Date(2024, 0, 1))).rejects.toThrow('문서번호 시퀀스 초과')
   })
 
