@@ -15,6 +15,8 @@ const VALID_TABLES = [
   'Quotation',
   'Delivery',
   'DeliveryPost',
+  'DeliveryReply',
+  'DeliveryReplyPost',
   'SalesReturn',
   'Partner',
   'Item',
