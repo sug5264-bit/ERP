@@ -88,7 +88,7 @@ function formatFileSize(bytes?: number) {
 export function OrdersPanel() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [filterOrderId, setFilterOrderId] = useState<string>('all')
+  const filterOrderId = 'all'
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
