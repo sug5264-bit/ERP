@@ -93,6 +93,220 @@ interface FormItemRow {
   unitPrice: number
 }
 
+function RevenueForm({
+  onSubmit,
+  defaultValues,
+  isPending,
+  submitLabel,
+  formSalesType,
+  setFormSalesType,
+  currentChannelMap,
+  formItems,
+  addFormItem,
+  updateFormItem,
+  removeFormItem,
+  itemOptions,
+}: {
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
+  defaultValues?: RevenueRow | null
+  isPending: boolean
+  submitLabel: string
+  formSalesType: string
+  setFormSalesType: (v: string) => void
+  currentChannelMap: Record<string, string>
+  formItems: FormItemRow[]
+  addFormItem: () => void
+  updateFormItem: (idx: number, field: keyof FormItemRow, value: string | number) => void
+  removeFormItem: (idx: number) => void
+  itemOptions: ItemOption[]
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label>
+            매출일 <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            name="revenueDate"
+            type="date"
+            required
+            defaultValue={defaultValues?.revenueDate?.slice(0, 10) || getLocalDateString()}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>
+            구분 <span className="text-destructive">*</span>
+          </Label>
+          <Select name="salesType" required value={formSalesType} onValueChange={(v) => setFormSalesType(v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="구분 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ONLINE">온라인</SelectItem>
+              <SelectItem value="OFFLINE">오프라인</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>
+            판매채널 <span className="text-destructive">*</span>
+          </Label>
+          <Select name="channel" required defaultValue={defaultValues?.channel}>
+            <SelectTrigger>
+              <SelectValue placeholder="채널 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(currentChannelMap).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>설명</Label>
+        <Input
+          name="description"
+          placeholder="예: 3월 1주차 쿠팡 매출"
+          defaultValue={defaultValues?.description || ''}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-2">
+          <Label>
+            총매출 <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            name="totalSales"
+            type="number"
+            required
+            placeholder="0"
+            min={0}
+            defaultValue={defaultValues ? Number(defaultValues.totalSales) : ''}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>수수료</Label>
+          <Input
+            name="totalFee"
+            type="number"
+            placeholder="0"
+            min={0}
+            defaultValue={defaultValues ? Number(defaultValues.totalFee) : ''}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>주문건수</Label>
+          <Input
+            name="orderCount"
+            type="number"
+            placeholder="0"
+            min={0}
+            defaultValue={defaultValues?.orderCount || ''}
+          />
+        </div>
+      </div>
+      {/* Items section (for stock deduction) */}
+      {!defaultValues && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">품목 내역 (재고 차감)</Label>
+            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={addFormItem}>
+              <Plus className="mr-1 h-3 w-3" /> 품목 추가
+            </Button>
+          </div>
+          {formItems.length > 0 && (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full min-w-[500px] text-xs">
+                <thead>
+                  <tr className="bg-muted/50 border-b">
+                    <th className="px-2 py-2 text-left font-medium">품목</th>
+                    <th className="px-2 py-2 text-right font-medium">수량</th>
+                    <th className="px-2 py-2 text-right font-medium">단가</th>
+                    <th className="px-2 py-2 text-right font-medium">금액</th>
+                    <th className="w-8 px-1 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formItems.map((fi, idx) => (
+                    <tr key={idx} className="border-b last:border-b-0">
+                      <td className="px-1 py-1.5">
+                        <select
+                          className="border-input bg-background h-7 w-full min-w-[180px] rounded-md border px-2 text-xs"
+                          value={fi.itemId}
+                          onChange={(e) => {
+                            updateFormItem(idx, 'itemId', e.target.value)
+                            const item = itemOptions.find((i) => i.id === e.target.value)
+                            if (item?.standardPrice) {
+                              updateFormItem(idx, 'unitPrice', Number(item.standardPrice))
+                            }
+                          }}
+                        >
+                          <option value="">품목 선택</option>
+                          {itemOptions.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.itemName} ({item.itemCode})
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          type="number"
+                          className="h-7 w-[70px] text-right text-xs"
+                          value={fi.quantity || ''}
+                          onChange={(e) => updateFormItem(idx, 'quantity', parseInt(e.target.value, 10) || 0)}
+                          min={1}
+                        />
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          type="number"
+                          className="h-7 w-[100px] text-right text-xs"
+                          value={fi.unitPrice || ''}
+                          onChange={(e) => updateFormItem(idx, 'unitPrice', parseInt(e.target.value, 10) || 0)}
+                          min={0}
+                        />
+                      </td>
+                      <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
+                        {formatCurrency(fi.quantity * fi.unitPrice)}
+                      </td>
+                      <td className="px-1 py-1.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => removeFormItem(idx)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {formItems.length === 0 && (
+            <p className="text-muted-foreground text-xs">품목을 추가하면 매출 등록 시 재고가 자동으로 차감됩니다.</p>
+          )}
+        </div>
+      )}
+      <div className="space-y-2">
+        <Label>메모</Label>
+        <Textarea name="memo" placeholder="메모 (선택)" rows={3} defaultValue={defaultValues?.memo || ''} />
+      </div>
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? '처리 중...' : submitLabel}
+      </Button>
+    </form>
+  )
+}
+
 export default function OnlineSalesPage() {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -279,201 +493,16 @@ export default function OnlineSalesPage() {
     }
   }
 
-  const RevenueForm = ({
-    onSubmit,
-    defaultValues,
-    isPending,
-    submitLabel,
-  }: {
-    onSubmit: (e: React.FormEvent<HTMLFormElement>) => void
-    defaultValues?: RevenueRow | null
-    isPending: boolean
-    submitLabel: string
-  }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label>
-            매출일 <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            name="revenueDate"
-            type="date"
-            required
-            defaultValue={defaultValues?.revenueDate?.slice(0, 10) || getLocalDateString()}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>
-            구분 <span className="text-destructive">*</span>
-          </Label>
-          <Select name="salesType" required value={formSalesType} onValueChange={(v) => setFormSalesType(v)}>
-            <SelectTrigger>
-              <SelectValue placeholder="구분 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ONLINE">온라인</SelectItem>
-              <SelectItem value="OFFLINE">오프라인</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>
-            판매채널 <span className="text-destructive">*</span>
-          </Label>
-          <Select name="channel" required defaultValue={defaultValues?.channel}>
-            <SelectTrigger>
-              <SelectValue placeholder="채널 선택" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(currentChannelMap).map(([k, v]) => (
-                <SelectItem key={k} value={k}>
-                  {v}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>설명</Label>
-        <Input
-          name="description"
-          placeholder="예: 3월 1주차 쿠팡 매출"
-          defaultValue={defaultValues?.description || ''}
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label>
-            총매출 <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            name="totalSales"
-            type="number"
-            required
-            placeholder="0"
-            min={0}
-            defaultValue={defaultValues ? Number(defaultValues.totalSales) : ''}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>수수료</Label>
-          <Input
-            name="totalFee"
-            type="number"
-            placeholder="0"
-            min={0}
-            defaultValue={defaultValues ? Number(defaultValues.totalFee) : ''}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>주문건수</Label>
-          <Input
-            name="orderCount"
-            type="number"
-            placeholder="0"
-            min={0}
-            defaultValue={defaultValues?.orderCount || ''}
-          />
-        </div>
-      </div>
-      {/* Items section (for stock deduction) */}
-      {!defaultValues && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">품목 내역 (재고 차감)</Label>
-            <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={addFormItem}>
-              <Plus className="mr-1 h-3 w-3" /> 품목 추가
-            </Button>
-          </div>
-          {formItems.length > 0 && (
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full min-w-[500px] text-xs">
-                <thead>
-                  <tr className="bg-muted/50 border-b">
-                    <th className="px-2 py-2 text-left font-medium">품목</th>
-                    <th className="px-2 py-2 text-right font-medium">수량</th>
-                    <th className="px-2 py-2 text-right font-medium">단가</th>
-                    <th className="px-2 py-2 text-right font-medium">금액</th>
-                    <th className="w-8 px-1 py-2"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {formItems.map((fi, idx) => (
-                    <tr key={idx} className="border-b last:border-b-0">
-                      <td className="px-1 py-1.5">
-                        <select
-                          className="border-input bg-background h-7 w-full min-w-[180px] rounded-md border px-2 text-xs"
-                          value={fi.itemId}
-                          onChange={(e) => {
-                            updateFormItem(idx, 'itemId', e.target.value)
-                            const item = itemOptions.find((i) => i.id === e.target.value)
-                            if (item?.standardPrice) {
-                              updateFormItem(idx, 'unitPrice', Number(item.standardPrice))
-                            }
-                          }}
-                        >
-                          <option value="">품목 선택</option>
-                          {itemOptions.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.itemName} ({item.itemCode})
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <Input
-                          type="number"
-                          className="h-7 w-[70px] text-right text-xs"
-                          value={fi.quantity || ''}
-                          onChange={(e) => updateFormItem(idx, 'quantity', parseInt(e.target.value, 10) || 0)}
-                          min={1}
-                        />
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <Input
-                          type="number"
-                          className="h-7 w-[100px] text-right text-xs"
-                          value={fi.unitPrice || ''}
-                          onChange={(e) => updateFormItem(idx, 'unitPrice', parseInt(e.target.value, 10) || 0)}
-                          min={0}
-                        />
-                      </td>
-                      <td className="px-2 py-1.5 text-right font-mono font-medium whitespace-nowrap">
-                        {formatCurrency(fi.quantity * fi.unitPrice)}
-                      </td>
-                      <td className="px-1 py-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => removeFormItem(idx)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {formItems.length === 0 && (
-            <p className="text-muted-foreground text-xs">품목을 추가하면 매출 등록 시 재고가 자동으로 차감됩니다.</p>
-          )}
-        </div>
-      )}
-      <div className="space-y-2">
-        <Label>메모</Label>
-        <Textarea name="memo" placeholder="메모 (선택)" rows={3} defaultValue={defaultValues?.memo || ''} />
-      </div>
-      <Button type="submit" className="w-full" disabled={isPending}>
-        {isPending ? '처리 중...' : submitLabel}
-      </Button>
-    </form>
-  )
+  const revenueFormProps = {
+    formSalesType,
+    setFormSalesType,
+    currentChannelMap,
+    formItems,
+    addFormItem,
+    updateFormItem,
+    removeFormItem,
+    itemOptions,
+  }
 
   return (
     <div className="space-y-4">
@@ -773,7 +802,7 @@ export default function OnlineSalesPage() {
               <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
             </DialogDescription>
           </DialogHeader>
-          <RevenueForm onSubmit={handleCreate} isPending={createMutation.isPending} submitLabel="매출 등록" />
+          <RevenueForm onSubmit={handleCreate} isPending={createMutation.isPending} submitLabel="매출 등록" {...revenueFormProps} />
         </DialogContent>
       </Dialog>
 
@@ -791,6 +820,7 @@ export default function OnlineSalesPage() {
               defaultValues={editTarget}
               isPending={updateMutation.isPending}
               submitLabel="수정 저장"
+              {...revenueFormProps}
             />
           )}
         </DialogContent>
