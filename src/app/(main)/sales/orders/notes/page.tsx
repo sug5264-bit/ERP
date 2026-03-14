@@ -125,8 +125,7 @@ export default function OrderNotesPage() {
       formData.append('relatedTable', 'SalesOrder')
       formData.append('relatedId', uploadOrderId)
       try {
-        const res = await fetch('/api/v1/attachments', { method: 'POST', body: formData })
-        if (!res.ok) throw new Error()
+        await api.upload('/attachments', formData)
         successCount++
       } catch {
         failCount++

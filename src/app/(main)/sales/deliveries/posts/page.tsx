@@ -136,13 +136,15 @@ export default function DeliveryPostsPage() {
 
       if (pendingFiles.length > 0 && noteId) {
         for (const file of pendingFiles) {
-          const formData = new FormData()
-          formData.append('file', file)
-          formData.append('relatedTable', 'DeliveryPost')
-          formData.append('relatedId', noteId)
-          await fetch('/api/v1/attachments', { method: 'POST', body: formData }).catch(() => {
+          try {
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('relatedTable', 'DeliveryPost')
+            formData.append('relatedId', noteId)
+            await api.upload('/attachments', formData)
+          } catch {
             toast.error(`첨부파일 "${file.name}" 업로드에 실패했습니다.`)
-          })
+          }
         }
       }
 
