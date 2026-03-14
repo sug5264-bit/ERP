@@ -293,7 +293,7 @@ export default function OrderTrackingPage() {
       const res = (await api.get(`/attachments?relatedTable=Delivery&relatedId=${deliveryId}`)) as {
         data?: AttachmentRow[]
       }
-      setAttachments(Array.isArray(res) ? res : res.data || [])
+      setAttachments(res?.data || [])
     } catch {
       setAttachments([])
     }

@@ -30,9 +30,14 @@ export default function SalesPage() {
       title: '수주/출하',
       value: `${orders?.meta?.totalCount || 0}건`,
       icon: ShoppingCart,
+      href: '/sales/orders',
+    },
+    {
+      title: '출하관리',
+      value: `${deliveries?.meta?.totalCount || 0}건`,
+      icon: Truck,
       href: '/sales/deliveries/order-tracking',
     },
-    { title: '출하관리', value: `${deliveries?.meta?.totalCount || 0}건`, icon: Truck, href: '/sales/orders' },
     { title: '매출 거래처', value: `${partners?.meta?.totalCount || 0}개`, icon: Users, href: '/sales/partners' },
   ]
 

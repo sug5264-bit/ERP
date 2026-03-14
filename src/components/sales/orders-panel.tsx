@@ -121,12 +121,9 @@ export function OrdersPanel() {
   const notes: NoteItem[] = notesData?.data || []
 
   const { data: allAttachmentsData } = useQuery({
-    queryKey: ['attachments', 'SalesOrderPost', filterOrderId],
+    queryKey: ['attachments', 'SalesOrderPost'],
     queryFn: () => {
-      const url =
-        filterOrderId && filterOrderId !== 'all'
-          ? `/attachments?relatedTable=SalesOrderPost&relatedId=${filterOrderId}`
-          : `/attachments?relatedTable=SalesOrderPost`
+      const url = `/attachments?relatedTable=SalesOrderPost`
       return api.get(url)
     },
   })

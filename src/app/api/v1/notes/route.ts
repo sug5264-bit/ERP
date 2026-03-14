@@ -17,8 +17,10 @@ export async function GET(request: NextRequest) {
 
     const VALID_TABLES = [
       'SalesOrder',
+      'SalesOrderPost',
       'Quotation',
       'Delivery',
+      'DeliveryPost',
       'SalesReturn',
       'Partner',
       'Item',
@@ -61,8 +63,10 @@ export async function POST(request: NextRequest) {
 
     const VALID_TABLES = [
       'SalesOrder',
+      'SalesOrderPost',
       'Quotation',
       'Delivery',
+      'DeliveryPost',
       'SalesReturn',
       'Partner',
       'Item',

@@ -102,12 +102,9 @@ export default function OrderPostsPage() {
 
   // 게시글별 첨부파일 조회
   const { data: allAttachmentsData } = useQuery({
-    queryKey: ['attachments', 'SalesOrderPost', selectedOrderId],
+    queryKey: ['attachments', 'SalesOrderPost'],
     queryFn: () => {
-      const url =
-        selectedOrderId && selectedOrderId !== 'all'
-          ? `/attachments?relatedTable=SalesOrderPost&relatedId=${selectedOrderId}`
-          : `/attachments?relatedTable=SalesOrderPost`
+      const url = `/attachments?relatedTable=SalesOrderPost`
       return api.get(url)
     },
   })

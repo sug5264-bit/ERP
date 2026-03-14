@@ -7,7 +7,7 @@ export default function DeliveriesRedirectPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace('/sales/orders')
+    router.replace('/sales/deliveries/order-tracking')
   }, [router])
 
   return null
