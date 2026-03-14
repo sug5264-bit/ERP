@@ -236,7 +236,7 @@ describe('POST /api/v1/inventory/stock-movement', () => {
           update: vi.fn(),
           create: vi.fn(),
         },
-        documentSequence: { upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
         $queryRaw: vi.fn().mockResolvedValue([]),
       }
       return fn(tx)
@@ -265,7 +265,7 @@ describe('POST /api/v1/inventory/stock-movement', () => {
           findFirst: vi.fn().mockResolvedValue({ quantity: 3 }),
         },
         item: { findUnique: vi.fn().mockResolvedValue({ itemName: '테스트품목' }) },
-        documentSequence: { upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
       }
       return fn(tx)
     })
