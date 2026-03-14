@@ -102,12 +102,9 @@ export default function DeliveryPostsPage() {
   const notes: NoteItem[] = notesData?.data || []
 
   const { data: allAttachmentsData } = useQuery({
-    queryKey: ['attachments', 'DeliveryPost', selectedDeliveryId],
+    queryKey: ['attachments', 'DeliveryPost'],
     queryFn: () => {
-      const url =
-        selectedDeliveryId && selectedDeliveryId !== 'all'
-          ? `/attachments?relatedTable=DeliveryPost&relatedId=${selectedDeliveryId}`
-          : `/attachments?relatedTable=DeliveryPost`
+      const url = `/attachments?relatedTable=DeliveryPost`
       return api.get(url)
     },
   })

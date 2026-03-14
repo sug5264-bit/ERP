@@ -446,7 +446,7 @@ export function DeliveriesPanel() {
       const res = (await api.get(`/attachments?relatedTable=Delivery&relatedId=${deliveryId}`)) as {
         data?: { id: string; fileName: string; fileSize: number; createdAt: string }[]
       }
-      setAttachments(Array.isArray(res) ? res : res.data || [])
+      setAttachments(res?.data || [])
     } catch {
       setAttachments([])
     }
