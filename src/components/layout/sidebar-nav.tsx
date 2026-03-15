@@ -54,11 +54,12 @@ const navItems: NavItem[] = [
     module: 'sales',
     children: [
       {
-        title: '수주/출하관리',
+        title: '발주/출고관리',
         href: '/sales/orders',
         permission: 'sales.orders',
         children: [
-          { title: '수주/출하 통합', href: '/sales/orders' },
+          { title: '발주/출고관리(온라인)', href: '/sales/orders' },
+          { title: '발주/출고관리(오프라인)', href: '/sales/orders/offline' },
         ],
       },
       {

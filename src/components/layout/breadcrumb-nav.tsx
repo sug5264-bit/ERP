@@ -15,7 +15,7 @@ import { Fragment } from 'react'
 // 상위 모듈별 하위 경로 라벨 (동일 slug가 모듈마다 다른 이름을 가질 때 사용)
 const moduleChildLabels: Record<string, Record<string, string>> = {
   sales: {
-    orders: '수주현황',
+    orders: '발주/출고관리',
     summary: '매출현황',
     partners: '매출처관리',
     deliveries: '출하관리',
@@ -34,7 +34,8 @@ const pathLabels: Record<string, string> = {
   dashboard: '대시보드',
   // 영업관리
   sales: '영업관리',
-  orders: '수주현황',
+  orders: '발주/출고관리',
+  offline: '오프라인',
   deliveries: '출하관리',
   summary: '매출현황',
   partners: '매출처관리',

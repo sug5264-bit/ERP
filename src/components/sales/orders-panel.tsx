@@ -89,7 +89,6 @@ export function OrdersPanel() {
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const filterOrderId = 'all'
-  const [channelFilter, setChannelFilter] = useState<string>('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
@@ -98,7 +97,7 @@ export function OrdersPanel() {
   // Write form state
   const [writeOpen, setWriteOpen] = useState(false)
   const [postOrderId, setPostOrderId] = useState<string>('')
-  const [postChannelType, setPostChannelType] = useState<string>('ONLINE')
+  const postChannelType = 'ONLINE'
   const [postTitle, setPostTitle] = useState('')
   const [postContent, setPostContent] = useState('')
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -114,7 +113,7 @@ export function OrdersPanel() {
   const orders: OrderItem[] = ordersData?.data || []
 
   const { data: notesData, isLoading } = useQuery({
-    queryKey: ['notes', 'SalesOrder', filterOrderId, channelFilter, startDate, endDate],
+    queryKey: ['notes', 'SalesOrder', filterOrderId, startDate, endDate],
     queryFn: () => {
       let url = `/notes?relatedTable=SalesOrder`
       if (filterOrderId && filterOrderId !== 'all') url += `&relatedId=${filterOrderId}`
@@ -171,13 +170,6 @@ export function OrdersPanel() {
       const noteDate = n.createdAt?.split('T')[0] || ''
       if (startDate && noteDate < startDate) return false
       if (endDate && noteDate > endDate) return false
-    }
-    // Channel filter
-    if (channelFilter !== 'all') {
-      const expectedLabel = channelFilter === 'ONLINE' ? '온라인' : '오프라인'
-      const channelMatch = n.content.match(/^\[(온라인|오프라인)\]/)
-      if (channelMatch && channelMatch[1] !== expectedLabel) return false
-      if (!channelMatch) return false
     }
     // Search filter
     if (searchKeyword) {
@@ -304,18 +296,6 @@ export function OrdersPanel() {
             </DialogHeader>
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-muted-foreground text-xs font-medium">온라인/오프라인 구분 *</label>
-                <Select value={postChannelType} onValueChange={setPostChannelType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="구분 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ONLINE">온라인</SelectItem>
-                    <SelectItem value="OFFLINE">오프라인</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
                 <label className="text-muted-foreground text-xs font-medium">발주 선택 (선택사항)</label>
                 <Select value={postOrderId} onValueChange={setPostOrderId}>
                   <SelectTrigger>
@@ -396,18 +376,6 @@ export function OrdersPanel() {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Filters */}
-        <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="전체 구분" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="ONLINE">온라인</SelectItem>
-            <SelectItem value="OFFLINE">오프라인</SelectItem>
-          </SelectContent>
-        </Select>
 
         <DateRangeFilter
           startDate={startDate}
