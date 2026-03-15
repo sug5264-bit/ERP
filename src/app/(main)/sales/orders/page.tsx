@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Loader2,
   ExternalLink,
-  DollarSign,
   BarChart3,
 } from 'lucide-react'
 
@@ -172,9 +171,7 @@ export default function OrdersDashboardPage() {
     : 0
 
   const formatCurrency = (value: number) => {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-    if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`
-    return value.toLocaleString()
+    return value.toLocaleString('ko-KR')
   }
 
   return (
@@ -227,7 +224,7 @@ export default function OrdersDashboardPage() {
         <Card className="gap-0 border-l-4 border-l-slate-500 py-4 shadow-sm">
           <CardContent className="flex items-center gap-3 px-4 py-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-900">
-              <DollarSign className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+              <span className="text-base font-bold text-slate-600 dark:text-slate-400">₩</span>
             </div>
             <div className="min-w-0">
               <p className="text-muted-foreground text-xs font-medium">전체 매출</p>
@@ -425,7 +422,7 @@ export default function OrdersDashboardPage() {
               </div>
               <div className="rounded-lg border bg-slate-50/50 p-3 dark:bg-slate-950/30">
                 <div className="flex items-center gap-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-slate-600 dark:text-slate-400" />
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">₩</span>
                   <span className="text-muted-foreground text-[10px] font-medium">총 매출액</span>
                 </div>
                 {isLoading ? (

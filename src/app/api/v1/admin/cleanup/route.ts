@@ -1,11 +1,17 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
+import { successResponse, handleApiError, requireAuth, errorResponse } from '@/lib/api-helpers'
+import { NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requirePermissionCheck('sales', 'delete')
-    if (isErrorResponse(authResult)) return authResult
+    const authResult = await requireAuth()
+    if (authResult instanceof NextResponse) return authResult
+    const { session } = authResult
+    const roles = session.user.roles || []
+    if (!roles.includes('SYSTEM_ADMIN') && !roles.includes('관리자')) {
+      return errorResponse('관리자 권한이 필요합니다.', 'FORBIDDEN', 403)
+    }
 
     const body = await request.json()
     const targets = body.targets as string[] | undefined
