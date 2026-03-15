@@ -189,12 +189,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const quotation = await prisma.quotation.findUnique({ where: { id } })
     if (!quotation) return errorResponse('견적을 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    if (quotation.status === 'ORDERED') {
-      return errorResponse('발주 전환된 견적은 삭제할 수 없습니다. 먼저 발주를 삭제하세요.', 'HAS_ORDERS', 400)
-    }
-
     await prisma.$transaction(async (tx) => {
       await tx.quotationDetail.deleteMany({ where: { quotationId: id } })
+      // 발주 전환된 견적도 삭제 가능 (연결된 수주는 유지)
+      if (quotation.status === 'ORDERED') {
+        // 연결된 수주의 quotationId 참조를 해제
+        await tx.salesOrder.updateMany({
+          where: { quotationId: id },
+          data: { quotationId: null },
+        })
+      }
       await tx.quotation.delete({ where: { id } })
     })
 

@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/common/page-header'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+// Select removed - online page no longer needs channel filter
 import { OrdersPanel } from '@/components/sales/orders-panel'
 import { DeliveriesPanel } from '@/components/sales/deliveries-panel'
 import { DateRangeFilter } from '@/components/common/date-range-filter'
@@ -47,7 +47,6 @@ const STEP_CONFIG = [
 
 export default function OrderShipmentPage() {
   const [mainTab, setMainTab] = useState<string>('orders')
-  const [channelFilter, setChannelFilter] = useState<string>('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [activeStep, setActiveStep] = useState<number | null>(null)
@@ -60,13 +59,11 @@ export default function OrderShipmentPage() {
     return params
   }, [startDate, endDate])
 
-  const channelParam = channelFilter && channelFilter !== 'all' ? `&salesChannel=${channelFilter}` : ''
-
-  // Fetch summary data for KPI cards
+  // Fetch summary data for KPI cards (online only)
   const { data: ordersData } = useQuery({
-    queryKey: ['sales-orders-summary', channelFilter, startDate, endDate],
+    queryKey: ['sales-orders-summary', 'ONLINE', startDate, endDate],
     queryFn: () =>
-      api.get(`/sales/orders?pageSize=200${channelParam}${dateParams}`) as Promise<{ data: SalesOrder[] }>,
+      api.get(`/sales/orders?pageSize=200&salesChannel=ONLINE${dateParams}`) as Promise<{ data: SalesOrder[] }>,
     staleTime: 2 * 60 * 1000,
   })
 
@@ -89,13 +86,11 @@ export default function OrderShipmentPage() {
 
     const totalOrders = allOrders.length
 
-    // Filter delivery notes by channel and date (matching parent filters)
+    // Filter delivery notes by date and online channel
     const filteredDeliveryNotes = deliveryNotes.filter((n) => {
-      if (channelFilter && channelFilter !== 'all') {
-        const expectedLabel = channelFilter === 'ONLINE' ? '온라인' : '오프라인'
-        const channelMatch = n.content.match(/\[(온라인|오프라인)\]/)
-        if (!channelMatch || channelMatch[1] !== expectedLabel) return false
-      }
+      // Only show online posts
+      const channelMatch = n.content.match(/\[(온라인|오프라인)\]/)
+      if (channelMatch && channelMatch[1] !== '온라인') return false
       if (startDate || endDate) {
         const noteDate = n.createdAt?.split('T')[0] || ''
         if (startDate && noteDate < startDate) return false
@@ -139,7 +134,7 @@ export default function OrderShipmentPage() {
       returned,
       fulfillmentRate,
     }
-  }, [ordersData, deliveryNotesData, statusNotesData, channelFilter, startDate, endDate])
+  }, [ordersData, deliveryNotesData, statusNotesData, startDate, endDate])
 
   const isLoading = !ordersData && !deliveryNotesData
 
@@ -201,22 +196,12 @@ export default function OrderShipmentPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="수주/출하 통합관리"
-        description="수주 등록부터 출하/납품까지 통합 관리합니다"
+        title="발주/출고관리(온라인)"
+        description="온라인 발주 등록부터 출고/납품까지 통합 관리합니다"
       />
 
-      {/* Filter bar: online/offline + date range */}
+      {/* Filter bar: date range only (online fixed) */}
       <div className="flex flex-wrap items-center gap-2">
-        <Select value={channelFilter} onValueChange={setChannelFilter}>
-          <SelectTrigger className="w-full sm:w-36">
-            <SelectValue placeholder="전체 구분" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체</SelectItem>
-            <SelectItem value="ONLINE">온라인</SelectItem>
-            <SelectItem value="OFFLINE">오프라인</SelectItem>
-          </SelectContent>
-        </Select>
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}
@@ -434,7 +419,7 @@ export default function OrderShipmentPage() {
                 className="data-[state=active]:border-b-primary relative gap-1.5 rounded-none border-b-2 border-transparent px-4 text-sm shadow-none data-[state=active]:shadow-none"
               >
                 <ShoppingCart className="h-4 w-4" />
-                수주관리
+                발주관리
                 {stats.totalOrders > 0 && (
                   <Badge
                     variant={mainTab === 'orders' ? 'default' : 'secondary'}
@@ -449,7 +434,7 @@ export default function OrderShipmentPage() {
                 className="data-[state=active]:border-b-primary relative gap-1.5 rounded-none border-b-2 border-transparent px-4 text-sm shadow-none data-[state=active]:shadow-none"
               >
                 <Truck className="h-4 w-4" />
-                출하관리
+                출고관리
                 {stats.totalPosts > 0 && (
                   <Badge
                     variant={mainTab === 'deliveries' ? 'default' : 'secondary'}
