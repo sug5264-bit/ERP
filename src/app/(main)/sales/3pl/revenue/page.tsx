@@ -126,7 +126,7 @@ export default function RevenuePage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" fontSize={12} />
               <YAxis fontSize={12} tickFormatter={(v) => `${(v / 10000).toFixed(0)}만`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} labelStyle={{ fontWeight: 'bold' }} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value))} labelStyle={{ fontWeight: 'bold' }} />
               <Bar dataKey="매출액" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
