@@ -5,8 +5,9 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 // Select removed - online page no longer needs channel filter
 import { OrdersPanel } from '@/components/sales/orders-panel'
 import { DeliveriesPanel } from '@/components/sales/deliveries-panel'
@@ -23,7 +24,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from 'lucide-react'
+import { exportToExcel } from '@/lib/export/excel-export'
+import { formatDate } from '@/lib/format'
+import type { TransactionStatementData } from '@/lib/export/transaction-statement-pdf'
 
 function getMonthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
@@ -34,9 +41,24 @@ function getMonthRange(year: number, month: number) {
 
 interface SalesOrder {
   id: string
+  orderNo: string
   status: string
   orderDate: string
   salesChannel?: string
+  totalAmount: number
+  totalSupply: number
+  totalTax: number
+  vatIncluded: boolean
+  description?: string
+  partner?: { id: string; partnerName: string; partnerCode: string; bizNo?: string; ceoName?: string; address?: string; phone?: string }
+  details?: { id: string; itemId: string; quantity: number; unitPrice: number; supplyAmount: number; taxAmount: number; totalAmount: number; deliveredQty: number; remainingQty: number; item?: { id: string; itemCode: string; itemName: string; specification?: string; unit?: string }; remark?: string }[]
+}
+
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  ORDERED: { label: '발주완료', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  IN_PROGRESS: { label: '진행중', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+  COMPLETED: { label: '완료', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+  CANCELLED: { label: '취소', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
 }
 
 interface NoteItem {
@@ -56,6 +78,7 @@ const STEP_CONFIG = [
 
 export default function OrderShipmentPage() {
   const [mainTab, setMainTab] = useState<string>('orders')
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
   const now = new Date()
   const [kpiYear, setKpiYear] = useState(now.getFullYear())
   const [kpiMonth, setKpiMonth] = useState(now.getMonth() + 1)
@@ -80,7 +103,7 @@ export default function OrderShipmentPage() {
   const { data: ordersData } = useQuery({
     queryKey: ['sales-orders-summary', 'ONLINE', startDate, endDate],
     queryFn: () =>
-      api.get(`/sales/orders?pageSize=200&salesChannel=ONLINE${dateParams}`) as Promise<{ data: SalesOrder[] }>,
+      api.get(`/sales/orders?pageSize=500&salesChannel=ONLINE${dateParams}`) as Promise<{ data: SalesOrder[] }>,
     staleTime: 2 * 60 * 1000,
   })
 
@@ -171,6 +194,147 @@ export default function OrderShipmentPage() {
   const clearActiveStep = useCallback(() => {
     setActiveStep(null)
   }, [])
+
+  const allOrders = useMemo(() => ordersData?.data || [], [ordersData])
+
+  const toggleOrderSelection = useCallback((orderId: string) => {
+    setSelectedOrders((prev) => {
+      const next = new Set(prev)
+      if (next.has(orderId)) next.delete(orderId)
+      else next.add(orderId)
+      return next
+    })
+  }, [])
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedOrders.size === allOrders.length) {
+      setSelectedOrders(new Set())
+    } else {
+      setSelectedOrders(new Set(allOrders.map((o) => o.id)))
+    }
+  }, [selectedOrders.size, allOrders])
+
+  const handleSinglePdfDownload = useCallback(async (order: SalesOrder) => {
+    let fullOrder = order
+    if (!order.details || order.details.length === 0) {
+      try {
+        const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+        fullOrder = res.data
+      } catch { /* use what we have */ }
+    }
+    const { generateTransactionStatement } = await import('@/lib/export/transaction-statement-pdf')
+    await generateTransactionStatement({
+      orderNo: fullOrder.orderNo,
+      orderDate: fullOrder.orderDate,
+      partnerName: fullOrder.partner?.partnerName,
+      partnerBizNo: fullOrder.partner?.bizNo,
+      partnerCeo: fullOrder.partner?.ceoName,
+      partnerAddress: fullOrder.partner?.address,
+      partnerContact: fullOrder.partner?.phone,
+      totalSupply: Number(fullOrder.totalSupply),
+      totalTax: Number(fullOrder.totalTax),
+      totalAmount: Number(fullOrder.totalAmount),
+      vatIncluded: fullOrder.vatIncluded,
+      description: fullOrder.description,
+      items: (fullOrder.details || []).map((d) => ({
+        itemName: d.item?.itemName || '',
+        itemCode: d.item?.itemCode,
+        specification: d.item?.specification,
+        unit: d.item?.unit,
+        quantity: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        supplyAmount: Number(d.supplyAmount),
+        taxAmount: Number(d.taxAmount),
+        totalAmount: Number(d.totalAmount),
+        remark: d.remark,
+      })),
+    } as TransactionStatementData)
+  }, [])
+
+  const handleBulkPdfDownload = useCallback(async () => {
+    if (selectedOrders.size === 0) return
+    const selected = allOrders.filter((o) => selectedOrders.has(o.id))
+    const JSZip = (await import('jszip')).default
+    const { generateTransactionStatementBlob } = await import('@/lib/export/transaction-statement-pdf')
+    const zip = new JSZip()
+
+    for (const order of selected) {
+      let fullOrder = order
+      if (!order.details || order.details.length === 0) {
+        try {
+          const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+          fullOrder = res.data
+        } catch { /* use what we have */ }
+      }
+      const blob = await generateTransactionStatementBlob({
+        orderNo: fullOrder.orderNo,
+        orderDate: fullOrder.orderDate,
+        partnerName: fullOrder.partner?.partnerName,
+        partnerBizNo: fullOrder.partner?.bizNo,
+        partnerCeo: fullOrder.partner?.ceoName,
+        partnerAddress: fullOrder.partner?.address,
+        partnerContact: fullOrder.partner?.phone,
+        totalSupply: Number(fullOrder.totalSupply),
+        totalTax: Number(fullOrder.totalTax),
+        totalAmount: Number(fullOrder.totalAmount),
+        vatIncluded: fullOrder.vatIncluded,
+        description: fullOrder.description,
+        items: (fullOrder.details || []).map((d) => ({
+          itemName: d.item?.itemName || '',
+          itemCode: d.item?.itemCode,
+          specification: d.item?.specification,
+          unit: d.item?.unit,
+          quantity: Number(d.quantity),
+          unitPrice: Number(d.unitPrice),
+          supplyAmount: Number(d.supplyAmount),
+          taxAmount: Number(d.taxAmount),
+          totalAmount: Number(d.totalAmount),
+          remark: d.remark,
+        })),
+      } as TransactionStatementData)
+      zip.file(`거래명세서_${fullOrder.orderNo || fullOrder.id}.pdf`, blob)
+    }
+
+    const content = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(content)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `거래명세서_${selected.length}건.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [selectedOrders, allOrders])
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const excelColumns = [
+    { header: '발주번호', accessor: 'orderNo' },
+    { header: '상태', accessor: (r: any) => STATUS_MAP[r.status]?.label || r.status },
+    { header: '거래처', accessor: (r: any) => r.partner?.partnerName || '-' },
+    { header: '발주일', accessor: (r: any) => formatDate(r.orderDate) },
+    { header: '공급가', accessor: (r: any) => Number(r.totalSupply).toLocaleString() },
+    { header: '세액', accessor: (r: any) => Number(r.totalTax).toLocaleString() },
+    { header: '합계금액', accessor: (r: any) => Number(r.totalAmount).toLocaleString() },
+  ]
+
+  const handleBulkExcelDownload = useCallback(() => {
+    const selected = allOrders.filter((o) => selectedOrders.has(o.id))
+    if (selected.length === 0) return
+    exportToExcel({
+      fileName: `온라인_발주목록_${startDate}_${endDate}`,
+      sheetName: '발주목록',
+      columns: excelColumns,
+      data: selected,
+    })
+  }, [selectedOrders, allOrders, startDate, endDate])
+
+  const handleExcelExportAll = useCallback(() => {
+    if (allOrders.length === 0) return
+    exportToExcel({
+      fileName: `온라인_발주목록_전체_${startDate}_${endDate}`,
+      sheetName: '발주목록',
+      columns: excelColumns,
+      data: allOrders,
+    })
+  }, [allOrders, startDate, endDate])
 
   const pipelineSteps = [
     { label: '수주 접수', count: stats.totalOrders, icon: ShoppingCart, color: 'blue' as const },
@@ -428,6 +592,96 @@ export default function OrderShipmentPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 발주 목록 Section */}
+      <Card className="overflow-hidden border shadow-sm">
+        <CardHeader className="border-b px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base font-semibold">발주 목록</CardTitle>
+              <Badge variant="secondary" className="text-xs">
+                {allOrders.length}건
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedOrders.size > 0 && (
+                <>
+                  <Badge variant="outline" className="text-xs">
+                    {selectedOrders.size}건 선택
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={handleBulkExcelDownload}>
+                    <Download className="mr-1 h-3.5 w-3.5" />
+                    엑셀 다운로드
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleBulkPdfDownload}>
+                    <FileText className="mr-1 h-3.5 w-3.5" />
+                    거래명세서 ZIP
+                  </Button>
+                </>
+              )}
+              <Button variant="outline" size="sm" onClick={handleExcelExportAll}>
+                <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
+                전체 엑셀
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {allOrders.length === 0 ? (
+            <div className="text-muted-foreground flex items-center justify-center py-12 text-sm">
+              해당 기간의 발주 데이터가 없습니다
+            </div>
+          ) : (
+            <div className="divide-y">
+              {/* Select all header */}
+              <div className="bg-muted/30 flex items-center gap-3 px-4 py-2 sm:px-6">
+                <Checkbox
+                  checked={allOrders.length > 0 && selectedOrders.size === allOrders.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-muted-foreground text-xs font-medium">전체 선택</span>
+              </div>
+              {/* Order rows */}
+              {allOrders.map((order) => {
+                const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: 'bg-gray-100 text-gray-800' }
+                return (
+                  <div
+                    key={order.id}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/20 sm:px-6"
+                  >
+                    <Checkbox
+                      checked={selectedOrders.has(order.id)}
+                      onCheckedChange={() => toggleOrderSelection(order.id)}
+                    />
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1">
+                      <span className="text-sm font-medium">{order.orderNo || order.id}</span>
+                      <Badge className={`text-[10px] ${statusInfo.color}`} variant="secondary">
+                        {statusInfo.label}
+                      </Badge>
+                      {order.partner?.partnerName && (
+                        <span className="text-muted-foreground text-xs">{order.partner.partnerName}</span>
+                      )}
+                      <span className="text-muted-foreground text-xs">{formatDate(order.orderDate)}</span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        {Number(order.totalAmount || 0).toLocaleString()}원
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      title="거래명세서 PDF"
+                      onClick={() => handleSinglePdfDownload(order)}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Main Tab Section */}
       <Card className="overflow-hidden border shadow-sm">
