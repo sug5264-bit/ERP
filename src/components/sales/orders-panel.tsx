@@ -132,9 +132,37 @@ export function OrdersPanel() {
   })
   const allAttachments: AttachmentItem[] = allAttachmentsData?.data || []
 
+  // Fetch DeliveryPost and status data for showing status badges
+  const { data: deliveryPostsData } = useQuery({
+    queryKey: ['notes', 'DeliveryPost'],
+    queryFn: () => api.get('/notes?relatedTable=DeliveryPost'),
+  })
+  const deliveryPosts: NoteItem[] = deliveryPostsData?.data || []
+
+  const { data: deliveryStatusData } = useQuery({
+    queryKey: ['notes', 'DeliveryPostStatus'],
+    queryFn: () => api.get('/notes?relatedTable=DeliveryPostStatus'),
+  })
+  const deliveryStatuses: NoteItem[] = deliveryStatusData?.data || []
+
   const orderMap = new Map(orders.map((o) => [o.id, o.orderNo || o.id?.slice(-6) || '']))
 
   const getPostAttachments = (noteId: string) => allAttachments.filter((a) => a.relatedId === noteId)
+
+  // Map SalesOrder note ID → delivery status
+  const getDeliveryStatus = (salesNoteId: string): string | null => {
+    const deliveryPost = deliveryPosts.find((dp) => dp.relatedId === salesNoteId)
+    if (!deliveryPost) return null
+    const status = deliveryStatuses.find((s) => s.relatedId === deliveryPost.id)
+    return status?.content || 'PREPARING'
+  }
+
+  const DELIVERY_STATUS_MAP: Record<string, { label: string; color: string }> = {
+    PREPARING: { label: '준비중', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+    SHIPPED: { label: '출하대기', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+    DELIVERED: { label: '납품완료', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+    RETURNED: { label: '반품등록', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+  }
 
   // Filter notes by date range, channel, and search keyword
   const filteredNotes = notes.filter((n) => {
@@ -250,6 +278,7 @@ export function OrdersPanel() {
       queryClient.invalidateQueries({ queryKey: ['notes', 'SalesOrder'] })
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPost'] })
       queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryReply'] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'DeliveryPostStatus'] })
       queryClient.invalidateQueries({ queryKey: ['attachments', 'SalesOrderPost'] })
       queryClient.invalidateQueries({ queryKey: ['attachments', 'DeliveryReplyPost'] })
       toast.success('게시글이 삭제되었습니다.')
@@ -442,6 +471,18 @@ export function OrdersPanel() {
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
                       <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
+                      {(() => {
+                        const deliveryStatus = getDeliveryStatus(note.id)
+                        if (deliveryStatus) {
+                          const statusInfo = DELIVERY_STATUS_MAP[deliveryStatus] || DELIVERY_STATUS_MAP.PREPARING
+                          return (
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </span>
+                          )
+                        }
+                        return null
+                      })()}
                       {channelType && (
                         <Badge variant={channelType === '온라인' ? 'default' : 'secondary'} className="text-[10px]">
                           {channelType}
