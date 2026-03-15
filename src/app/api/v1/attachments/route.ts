@@ -1,13 +1,11 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
-import { writeFile, mkdir, access, constants, unlink } from 'fs/promises'
-import { join } from 'path'
+import { put } from '@vercel/blob'
 import { randomUUID } from 'crypto'
 import { sanitizeFileName } from '@/lib/sanitize'
 import { logger } from '@/lib/logger'
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads', 'attachments')
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 // Next.js App Router: route segment config for large file uploads
@@ -132,31 +130,7 @@ export async function POST(request: NextRequest) {
       return errorResponse('허용되지 않는 파일 형식입니다.', 'INVALID_FILE_TYPE', 400)
     }
 
-    // Ensure upload directory exists and is writable
-    try {
-      await mkdir(UPLOAD_DIR, { recursive: true })
-    } catch (mkdirErr) {
-      logger.error('Failed to create upload directory', { dir: UPLOAD_DIR, error: mkdirErr })
-      return errorResponse(
-        '업로드 디렉토리를 생성할 수 없습니다. 서버 관리자에게 문의하세요.',
-        'STORAGE_ERROR',
-        500
-      )
-    }
-
-    try {
-      await access(UPLOAD_DIR, constants.W_OK)
-    } catch {
-      logger.error('Upload directory is not writable', { dir: UPLOAD_DIR })
-      return errorResponse(
-        '업로드 디렉토리에 쓰기 권한이 없습니다. 서버 관리자에게 문의하세요.',
-        'STORAGE_PERMISSION_ERROR',
-        500
-      )
-    }
-
-    const uniqueName = `${randomUUID()}.${ext}`
-    const filePath = join(UPLOAD_DIR, uniqueName)
+    const uniqueName = `attachments/${randomUUID()}.${ext}`
 
     let buffer: Buffer
     try {
@@ -175,13 +149,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    let blob
     try {
-      await writeFile(filePath, buffer)
-    } catch (writeErr) {
-      logger.error('Failed to write file to disk', { filePath, error: writeErr })
+      blob = await put(uniqueName, buffer, {
+        access: 'public',
+        contentType: file.type || 'application/octet-stream',
+      })
+    } catch (uploadErr) {
+      logger.error('Failed to upload file to blob storage', { uniqueName, error: uploadErr })
       return errorResponse(
-        '파일을 저장할 수 없습니다. 디스크 공간 또는 권한을 확인해주세요.',
-        'FILE_WRITE_ERROR',
+        '파일을 저장할 수 없습니다. 스토리지 설정을 확인해주세요.',
+        'STORAGE_ERROR',
         500
       )
     }
@@ -191,7 +169,7 @@ export async function POST(request: NextRequest) {
       attachment = await prisma.attachment.create({
         data: {
           fileName: sanitizeFileName(file.name),
-          filePath: uniqueName,
+          filePath: blob.url,
           fileSize: file.size,
           mimeType: file.type || 'application/octet-stream',
           relatedTable,
@@ -200,8 +178,9 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (dbErr) {
-      // DB 저장 실패 시 고아 파일 정리
-      await unlink(filePath).catch(() => {})
+      // DB 저장 실패 시 Blob에서 고아 파일 정리
+      const { del } = await import('@vercel/blob')
+      await del(blob.url).catch(() => {})
       throw dbErr
     }
 

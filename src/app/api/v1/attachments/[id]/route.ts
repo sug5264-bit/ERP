@@ -2,19 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, requireAuth, isErrorResponse, successResponse } from '@/lib/api-helpers'
 import { logger } from '@/lib/logger'
-import { readFile, unlink } from 'fs/promises'
-import { resolve } from 'path'
-
-const UPLOAD_DIR = resolve(process.cwd(), 'uploads', 'attachments')
-
-/** 경로 순회 방지: 최종 경로가 UPLOAD_DIR 안에 있는지 검증 */
-function safePath(fileName: string): string {
-  const full = resolve(UPLOAD_DIR, fileName)
-  if (!full.startsWith(UPLOAD_DIR + '/')) {
-    throw new Error('잘못된 파일 경로입니다.')
-  }
-  return full
-}
+import { del } from '@vercel/blob'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -27,20 +15,23 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
-    const filePath = safePath(attachment.filePath)
-    let fileBuffer: Buffer
+    // filePath는 Blob URL이므로 fetch로 가져옴
+    let fileResponse: Response
     try {
-      fileBuffer = await readFile(filePath)
+      fileResponse = await fetch(attachment.filePath)
+      if (!fileResponse.ok) throw new Error(`Blob fetch failed: ${fileResponse.status}`)
     } catch (err) {
-      logger.error('File not found on disk', { filePath, attachmentId: id, error: err instanceof Error ? err.message : err })
+      logger.error('File not found in blob storage', { url: attachment.filePath, attachmentId: id, error: err instanceof Error ? err.message : err })
       return errorResponse('파일이 서버에 존재하지 않습니다. 관리자에게 문의하세요.', 'FILE_NOT_FOUND', 404)
     }
+
+    const fileBuffer = await fileResponse.arrayBuffer()
 
     return new Response(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': attachment.mimeType,
         'Content-Disposition': `attachment; filename="${attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
-        'Content-Length': String(fileBuffer.length),
+        'Content-Length': String(fileBuffer.byteLength),
         'X-Content-Type-Options': 'nosniff',
       },
     })
@@ -65,15 +56,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return errorResponse('본인이 업로드한 파일만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
     }
 
-    // Delete file from filesystem
-    const filePath = safePath(attachment.filePath)
+    // Delete file from blob storage
     try {
-      await unlink(filePath)
+      await del(attachment.filePath)
     } catch (err) {
-      // ENOENT는 이미 삭제된 경우로 무시, 나머지는 로깅
-      if (err instanceof Error && !err.message.includes('ENOENT')) {
-        logger.error('Failed to delete attachment file', { filePath, error: err.message })
-      }
+      logger.error('Failed to delete attachment from blob storage', { url: attachment.filePath, error: err instanceof Error ? err.message : err })
     }
 
     await prisma.attachment.delete({ where: { id } })
