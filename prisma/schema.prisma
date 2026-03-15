@@ -1893,8 +1893,20 @@ model ShipperCompany {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  users         User[]
-  shipperOrders ShipperOrder[]
+  // 추가 필드 - 3PL 화주사 관리 확장
+  contactName   String?   // 담당자명
+  contactPhone  String?   // 담당자 연락처
+  contactEmail  String?   // 담당자 이메일
+  contractType  String    @default("STANDARD") // STANDARD(일반), PREMIUM(프리미엄), CUSTOM(맞춤)
+  paymentTerms  String    @default("POSTPAID") // PREPAID(선불), POSTPAID(후불)
+  billingCycle  String    @default("MONTHLY")  // MONTHLY(월별), BIWEEKLY(격주)
+  memo          String?   // 비고
+
+  users          User[]
+  shipperOrders  ShipperOrder[]
+  shipperRates   ShipperRate[]
+  shipperItems   ShipperItem[]
+  shipperSales   ShipperSales[]
 
   @@index([companyName])
   @@map("shipper_companies")
@@ -1925,6 +1937,16 @@ model ShipperOrder {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  // 추가 필드 - 3PL 배송관제 확장
+  shipperItemId   String?          // 화주사 품목 연결
+  shipperItem     ShipperItem?     @relation(fields: [shipperItemId], references: [id])
+  regionCode      String?          // 배송 권역코드
+  assignedDriver  String?          // 배송기사명
+  assignedDriverPhone String?      // 배송기사 연락처
+  pickedUpAt      DateTime?        // 집하 일시
+  appliedRate     Decimal?  @db.Decimal(15, 2) // 적용 요율 금액
+  surcharge       Decimal?  @db.Decimal(15, 2) // 부가요금 (도서산간 등)
+
   shipper ShipperCompany @relation(fields: [shipperId], references: [id])
 
   @@index([shipperId])
@@ -1932,4 +1954,120 @@ model ShipperOrder {
   @@index([status])
   @@index([trackingNo])
   @@map("shipper_orders")
+}
+
+// ============================================================
+// 3PL 화주사 요율 관리
+// ============================================================
+
+model ShipperRate {
+  id            String   @id @default(cuid())
+  shipperId     String
+  rateName      String          // 요율명 (예: "수도권 일반 5kg 이하")
+  regionCode    String?         // 권역코드 (CAPITAL, METRO, RURAL, ISLAND 등)
+  regionName    String?         // 권역명
+  weightMin     Decimal? @db.Decimal(10, 2)  // 최소 중량 (kg)
+  weightMax     Decimal? @db.Decimal(10, 2)  // 최대 중량 (kg)
+  baseRate      Decimal  @db.Decimal(15, 2)  // 기본 요율 (원)
+  surchargeRate Decimal  @default(0) @db.Decimal(15, 2)  // 부가요율 (도서산간 등)
+  shippingMethod String  @default("NORMAL")  // NORMAL, EXPRESS, SAME_DAY
+  isActive      Boolean  @default(true)
+  effectiveFrom DateTime? @db.Date  // 적용 시작일
+  effectiveTo   DateTime? @db.Date  // 적용 종료일
+  memo          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shipper ShipperCompany @relation(fields: [shipperId], references: [id])
+
+  @@index([shipperId])
+  @@index([regionCode])
+  @@index([shippingMethod])
+  @@map("shipper_rates")
+}
+
+// ============================================================
+// 3PL 화주사 품목 관리
+// ============================================================
+
+model ShipperItem {
+  id            String   @id @default(cuid())
+  shipperId     String
+  itemCode      String          // 화주사 자체 품목코드
+  itemName      String          // 품목명
+  barcode       String?         // 바코드
+  category      String?         // 카테고리
+  weight        Decimal? @db.Decimal(10, 2)  // 중량 (kg)
+  width         Decimal? @db.Decimal(10, 2)  // 가로 (cm)
+  height        Decimal? @db.Decimal(10, 2)  // 세로 (cm)
+  depth         Decimal? @db.Decimal(10, 2)  // 높이 (cm)
+  storageTemp   String   @default("AMBIENT") // AMBIENT(상온), REFRIGERATED(냉장), FROZEN(냉동)
+  shelfLifeDays Int?            // 유통기한 (일)
+  unitPrice     Decimal? @db.Decimal(15, 2)  // 단가
+  isActive      Boolean  @default(true)
+  memo          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shipper          ShipperCompany     @relation(fields: [shipperId], references: [id])
+  shipperInventory ShipperInventory[]
+  shipperOrders    ShipperOrder[]
+
+  @@unique([shipperId, itemCode])
+  @@index([shipperId])
+  @@index([itemName])
+  @@index([barcode])
+  @@map("shipper_items")
+}
+
+// ============================================================
+// 3PL 화주사 위탁 재고
+// ============================================================
+
+model ShipperInventory {
+  id            String   @id @default(cuid())
+  shipperId     String
+  shipperItemId String
+  warehouseId   String?         // 기존 창고 연결 (선택)
+  zoneName      String?         // 구역명 (A-1, B-2 등)
+  quantity      Int      @default(0) // 현재 수량
+  lotNo         String?         // LOT 번호
+  expiryDate    DateTime? @db.Date  // 유통기한
+  inboundDate   DateTime? @db.Date  // 입고일
+  memo          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shipperItem ShipperItem @relation(fields: [shipperItemId], references: [id])
+
+  @@index([shipperId])
+  @@index([shipperItemId])
+  @@index([expiryDate])
+  @@map("shipper_inventory")
+}
+
+// ============================================================
+// 3PL 화주사 매출 (수기 등록)
+// ============================================================
+
+model ShipperSales {
+  id            String   @id @default(cuid())
+  shipperId     String
+  salesDate     DateTime @db.Date       // 매출일
+  salesChannel  String?                 // 판매 채널 (자사몰, 쿠팡, 네이버 등)
+  customerName  String?                 // 판매처/고객명
+  itemName      String                  // 상품명
+  quantity      Int      @default(1)    // 수량
+  unitPrice     Decimal  @db.Decimal(15, 2)  // 단가
+  totalAmount   Decimal  @db.Decimal(15, 2)  // 합계 금액
+  memo          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  shipper ShipperCompany @relation(fields: [shipperId], references: [id])
+
+  @@index([shipperId])
+  @@index([salesDate])
+  @@index([salesChannel])
+  @@map("shipper_sales")
 }

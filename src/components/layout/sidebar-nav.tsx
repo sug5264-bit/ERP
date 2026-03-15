@@ -75,6 +75,19 @@ const navItems: NavItem[] = [
       { title: '견적관리', href: '/sales/quotations', permission: 'sales.quotations' },
       { title: '반품관리', href: '/sales/returns', permission: 'sales.returns' },
       { title: '단가관리', href: '/sales/pricing', permission: 'sales.pricing' },
+      {
+        title: '택배화주사관리',
+        href: '/sales/3pl',
+        permission: 'sales.3pl',
+        children: [
+          { title: '화주사관리', href: '/sales/3pl/shippers' },
+          { title: '계약/요율관리', href: '/sales/3pl/rates' },
+          { title: '주문접수현황', href: '/sales/3pl/orders' },
+          { title: '배송관제', href: '/sales/3pl/dispatch' },
+          { title: '정산관리', href: '/sales/3pl/settlement' },
+          { title: '매출현황', href: '/sales/3pl/revenue' },
+        ],
+      },
     ],
   },
   {

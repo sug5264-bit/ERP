@@ -476,6 +476,144 @@ async function main() {
     changeCount++
   }
 
+  // ── shipper_companies: 3PL 확장 컬럼 ──
+  if (await tableExists('shipper_companies')) {
+    const shipperCompanyCols = [
+      ['contactName', 'TEXT'],
+      ['contactPhone', 'TEXT'],
+      ['contactEmail', 'TEXT'],
+      ['contractType', "TEXT NOT NULL DEFAULT 'STANDARD'"],
+      ['paymentTerms', "TEXT NOT NULL DEFAULT 'POSTPAID'"],
+      ['billingCycle', "TEXT NOT NULL DEFAULT 'MONTHLY'"],
+      ['memo', 'TEXT'],
+    ]
+    for (const [col, def] of shipperCompanyCols) {
+      if (await addColumnIfMissing('shipper_companies', col, def)) changeCount++
+    }
+  }
+
+  // ── shipper_orders: 3PL 확장 컬럼 ──
+  if (await tableExists('shipper_orders')) {
+    const shipperOrderCols = [
+      ['shipperItemId', 'TEXT'],
+      ['regionCode', 'TEXT'],
+      ['assignedDriver', 'TEXT'],
+      ['assignedDriverPhone', 'TEXT'],
+      ['pickedUpAt', 'TIMESTAMP(3)'],
+      ['appliedRate', 'DECIMAL(15,2)'],
+      ['surcharge', 'DECIMAL(15,2)'],
+    ]
+    for (const [col, def] of shipperOrderCols) {
+      if (await addColumnIfMissing('shipper_orders', col, def)) changeCount++
+    }
+  }
+
+  // ── shipper_rates 테이블 ──
+  if (!(await tableExists('shipper_rates'))) {
+    console.log('  + Creating table: shipper_rates')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "shipper_rates" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "shipperId" TEXT NOT NULL REFERENCES "shipper_companies"("id"),
+        "rateName" TEXT NOT NULL,
+        "regionCode" TEXT,
+        "regionName" TEXT,
+        "weightMin" DECIMAL(10,2),
+        "weightMax" DECIMAL(10,2),
+        "baseRate" DECIMAL(15,2) NOT NULL,
+        "surchargeRate" DECIMAL(15,2) NOT NULL DEFAULT 0,
+        "shippingMethod" TEXT NOT NULL DEFAULT 'NORMAL',
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "effectiveFrom" DATE,
+        "effectiveTo" DATE,
+        "memo" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_rates_shipperId_idx" ON "shipper_rates"("shipperId")`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_rates_regionCode_idx" ON "shipper_rates"("regionCode")`)
+    changeCount++
+  }
+
+  // ── shipper_items 테이블 ──
+  if (!(await tableExists('shipper_items'))) {
+    console.log('  + Creating table: shipper_items')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "shipper_items" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "shipperId" TEXT NOT NULL REFERENCES "shipper_companies"("id"),
+        "itemCode" TEXT NOT NULL,
+        "itemName" TEXT NOT NULL,
+        "barcode" TEXT,
+        "category" TEXT,
+        "weight" DECIMAL(10,2),
+        "width" DECIMAL(10,2),
+        "height" DECIMAL(10,2),
+        "depth" DECIMAL(10,2),
+        "storageTemp" TEXT NOT NULL DEFAULT 'AMBIENT',
+        "shelfLifeDays" INTEGER,
+        "unitPrice" DECIMAL(15,2),
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "memo" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE("shipperId", "itemCode")
+      )
+    `)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_items_shipperId_idx" ON "shipper_items"("shipperId")`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_items_itemName_idx" ON "shipper_items"("itemName")`)
+    changeCount++
+  }
+
+  // ── shipper_inventory 테이블 ──
+  if (!(await tableExists('shipper_inventory'))) {
+    console.log('  + Creating table: shipper_inventory')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "shipper_inventory" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "shipperId" TEXT NOT NULL,
+        "shipperItemId" TEXT NOT NULL REFERENCES "shipper_items"("id"),
+        "warehouseId" TEXT,
+        "zoneName" TEXT,
+        "quantity" INTEGER NOT NULL DEFAULT 0,
+        "lotNo" TEXT,
+        "expiryDate" DATE,
+        "inboundDate" DATE,
+        "memo" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_inventory_shipperId_idx" ON "shipper_inventory"("shipperId")`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_inventory_shipperItemId_idx" ON "shipper_inventory"("shipperItemId")`)
+    changeCount++
+  }
+
+  // ── shipper_sales 테이블 ──
+  if (!(await tableExists('shipper_sales'))) {
+    console.log('  + Creating table: shipper_sales')
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE "shipper_sales" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "shipperId" TEXT NOT NULL REFERENCES "shipper_companies"("id"),
+        "salesDate" DATE NOT NULL,
+        "salesChannel" TEXT,
+        "customerName" TEXT,
+        "itemName" TEXT NOT NULL,
+        "quantity" INTEGER NOT NULL DEFAULT 1,
+        "unitPrice" DECIMAL(15,2) NOT NULL,
+        "totalAmount" DECIMAL(15,2) NOT NULL,
+        "memo" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_sales_shipperId_idx" ON "shipper_sales"("shipperId")`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_sales_salesDate_idx" ON "shipper_sales"("salesDate")`)
+    changeCount++
+  }
+
   if (changeCount === 0) {
     console.log('[db-sync] Schema is up to date. No changes needed.')
   } else {
