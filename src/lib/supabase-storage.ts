@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const BUCKET = 'uploads'
+const BUCKET = 'upload'
 
 let _supabase: SupabaseClient | null = null
 
