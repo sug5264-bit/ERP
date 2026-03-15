@@ -149,9 +149,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let publicUrl: string
     try {
-      publicUrl = await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
+      await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
     } catch (uploadErr) {
       logger.error('Failed to upload file to storage', { uniqueName, error: uploadErr })
       return errorResponse(
