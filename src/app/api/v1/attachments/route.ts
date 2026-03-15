@@ -108,12 +108,16 @@ export async function POST(request: NextRequest) {
     const authResult = await requireAuth()
     if (isErrorResponse(authResult)) return authResult
 
+    logger.info('[DEBUG 첨부파일 API] POST /attachments 호출됨')
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const relatedTable = formData.get('relatedTable') as string
     const relatedId = formData.get('relatedId') as string
 
+    logger.info('[DEBUG 첨부파일 API] 파라미터:', { hasFile: !!file, fileName: file?.name, fileSize: file?.size, relatedTable, relatedId })
+
     if (!file || !relatedTable || !relatedId) {
+      logger.error('[DEBUG 첨부파일 API] 필수 파라미터 누락', { hasFile: !!file, relatedTable, relatedId })
       return errorResponse('file, relatedTable, relatedId가 필요합니다.', 'VALIDATION_ERROR', 400)
     }
 
@@ -150,9 +154,11 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      logger.info('[DEBUG 첨부파일 API] Supabase Storage 업로드 시작:', { uniqueName, contentType: file.type })
       await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
+      logger.info('[DEBUG 첨부파일 API] Supabase Storage 업로드 성공')
     } catch (uploadErr) {
-      logger.error('Failed to upload file to storage', { uniqueName, error: uploadErr })
+      logger.error('[DEBUG 첨부파일 API] Supabase Storage 업로드 실패', { uniqueName, error: uploadErr instanceof Error ? uploadErr.message : uploadErr })
       return errorResponse(
         '파일을 저장할 수 없습니다. 스토리지 설정을 확인해주세요.',
         'STORAGE_ERROR',
@@ -162,6 +168,7 @@ export async function POST(request: NextRequest) {
 
     let attachment
     try {
+      logger.info('[DEBUG 첨부파일 API] DB 레코드 생성 시작')
       attachment = await prisma.attachment.create({
         data: {
           fileName: sanitizeFileName(file.name),
@@ -179,8 +186,10 @@ export async function POST(request: NextRequest) {
       throw dbErr
     }
 
+    logger.info('[DEBUG 첨부파일 API] 업로드 완료:', { attachmentId: attachment.id, fileName: attachment.fileName })
     return successResponse(attachment)
   } catch (error) {
+    logger.error('[DEBUG 첨부파일 API] 예상치 못한 에러:', { error: error instanceof Error ? error.message : error })
     return handleApiError(error)
   }
 }
