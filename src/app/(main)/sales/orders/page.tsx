@@ -145,18 +145,18 @@ export default function OrdersDashboardPage() {
     const totalOrders = allOrders.length
     const totalRevenue = allOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0)
 
-    let pending = 0
+    let ordered = 0
     let inProgress = 0
     let completed = 0
 
     for (const order of allOrders) {
-      const s = order.status?.toUpperCase() || ''
-      if (s === 'COMPLETED' || s === 'DELIVERED') completed++
-      else if (s === 'PENDING' || s === 'NEW') pending++
-      else inProgress++
+      const s = order.status
+      if (s === 'COMPLETED') completed++
+      else if (s === 'IN_PROGRESS') inProgress++
+      else if (s === 'ORDERED') ordered++
     }
 
-    const pendingAndInProgress = pending + inProgress
+    const pendingAndInProgress = ordered + inProgress
     const fulfillmentRate = totalOrders > 0 ? Math.round((completed / totalOrders) * 100) : 0
 
     return { totalOrders, totalRevenue, pendingAndInProgress, completed, fulfillmentRate }
