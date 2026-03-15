@@ -29,11 +29,12 @@ async function fetchFontBase64(): Promise<string | null> {
         const arrayBuffer = await response.arrayBuffer()
         if (!arrayBuffer || arrayBuffer.byteLength === 0) continue
         const bytes = new Uint8Array(arrayBuffer)
-        const chunkSize = 4096
+        // 안전한 청크 크기 (String.fromCharCode 스택 오버플로우 방지)
+        const chunkSize = 8192
         const chunks: string[] = []
         for (let i = 0; i < bytes.length; i += chunkSize) {
           const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
-          chunks.push(String.fromCharCode(...chunk))
+          chunks.push(String.fromCharCode.apply(null, Array.from(chunk)))
         }
         return btoa(chunks.join(''))
       }

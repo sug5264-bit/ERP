@@ -136,9 +136,10 @@ export function handleApiError(error: unknown) {
   // Prisma 에러 처리 (DB 내부 정보 노출 방지)
   if (isPrismaError(error)) {
     const prismaMessage = getPrismaErrorMessage(error)
+    const rawMsg = 'message' in error ? String((error as { message?: string }).message) : String(error)
     logger.error('Prisma Error', {
       code: error.code,
-      error: 'message' in error ? String((error as { message?: string }).message) : String(error),
+      error: rawMsg.replace(/\/\/[^@]+@/g, '//***:***@').slice(0, 500),
     })
     return errorResponse(prismaMessage, 'DATABASE_ERROR', 400)
   }
