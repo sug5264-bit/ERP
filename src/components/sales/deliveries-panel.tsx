@@ -256,12 +256,16 @@ export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
       const replyId = replyResult?.data?.id
 
       // Upload files
-      if (replyFiles.length > 0 && replyId) {
-        for (const file of replyFiles) {
-          try {
-            await uploadFile(file, 'DeliveryReplyPost', replyId)
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : `"${file.name}" 업로드 실패`)
+      if (replyFiles.length > 0) {
+        if (!replyId) {
+          toast.error('답글은 등록되었으나 파일 첨부에 필요한 ID를 받지 못했습니다.')
+        } else {
+          for (const file of replyFiles) {
+            try {
+              await uploadFile(file, 'DeliveryReplyPost', replyId)
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : `"${file.name}" 업로드 실패`)
+            }
           }
         }
       }
