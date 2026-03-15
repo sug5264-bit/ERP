@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 // Select removed - online page no longer needs channel filter
 import { OrdersPanel } from '@/components/sales/orders-panel'
 import { DeliveriesPanel } from '@/components/sales/deliveries-panel'
-import { DateRangeFilter } from '@/components/common/date-range-filter'
+import { Button } from '@/components/ui/button'
 import {
   ShoppingCart,
   Truck,
@@ -21,7 +21,16 @@ import {
   ArrowRight,
   Loader2,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
+
+function getMonthRange(year: number, month: number) {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  return { start, end }
+}
 
 interface SalesOrder {
   id: string
@@ -47,16 +56,24 @@ const STEP_CONFIG = [
 
 export default function OrderShipmentPage() {
   const [mainTab, setMainTab] = useState<string>('orders')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const now = new Date()
+  const [kpiYear, setKpiYear] = useState(now.getFullYear())
+  const [kpiMonth, setKpiMonth] = useState(now.getMonth() + 1)
+  const { start: startDate, end: endDate } = useMemo(() => getMonthRange(kpiYear, kpiMonth), [kpiYear, kpiMonth])
   const [activeStep, setActiveStep] = useState<number | null>(null)
+
+  const prevMonth = useCallback(() => {
+    if (kpiMonth === 1) { setKpiYear(kpiYear - 1); setKpiMonth(12) }
+    else setKpiMonth(kpiMonth - 1)
+  }, [kpiYear, kpiMonth])
+  const nextMonth = useCallback(() => {
+    if (kpiMonth === 12) { setKpiYear(kpiYear + 1); setKpiMonth(1) }
+    else setKpiMonth(kpiMonth + 1)
+  }, [kpiYear, kpiMonth])
 
   // Build query params for date filtering
   const dateParams = useMemo(() => {
-    let params = ''
-    if (startDate) params += `&startDate=${startDate}`
-    if (endDate) params += `&endDate=${endDate}`
-    return params
+    return `&startDate=${startDate}&endDate=${endDate}`
   }, [startDate, endDate])
 
   // Fetch summary data for KPI cards (online only)
@@ -200,16 +217,19 @@ export default function OrderShipmentPage() {
         description="온라인 발주 등록부터 출고/납품까지 통합 관리합니다"
       />
 
-      {/* Filter bar: date range only (online fixed) */}
+      {/* Month selector */}
       <div className="flex flex-wrap items-center gap-2">
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e) => {
-            setStartDate(s)
-            setEndDate(e)
-          }}
-        />
+        <div className="flex items-center gap-1 rounded-lg border px-2 py-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[120px] text-center text-sm font-medium">
+            {kpiYear}년 {kpiMonth}월
+          </span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Process Pipeline Flow - Clickable */}
