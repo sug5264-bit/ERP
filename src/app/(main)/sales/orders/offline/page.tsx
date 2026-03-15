@@ -37,6 +37,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Eye,
+  Pencil,
+  Filter,
 } from 'lucide-react'
 
 interface Partner {
@@ -132,6 +135,7 @@ const EXCEL_KEY_MAP: Record<string, string> = {
   '납기일': 'deliveryDate',
   '부가세': 'vatType',
   '바코드': 'barcode',
+  '발주그룹': 'orderGroupNo',
 }
 
 export default function OfflineOrdersPage() {
@@ -148,6 +152,9 @@ export default function OfflineOrdersPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [detailOrder, setDetailOrder] = useState<SalesOrder | null>(null)
+  const [editOrder, setEditOrder] = useState<SalesOrder | null>(null)
 
   // Create form state
   const [orderDate, setOrderDate] = useState(getLocalDateString())
@@ -159,6 +166,14 @@ export default function OfflineOrdersPage() {
   const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([
     { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 },
   ])
+
+  // Edit form state
+  const [editDate, setEditDate] = useState('')
+  const [editPartnerId, setEditPartnerId] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editDeliveryDate, setEditDeliveryDate] = useState('')
+  const [editVatIncluded, setEditVatIncluded] = useState(true)
+  const [editDetails, setEditDetails] = useState<OrderDetail[]>([])
 
   // Excel import state
   const [excelPreview, setExcelPreview] = useState<Record<string, unknown>[] | null>(null)
@@ -183,7 +198,19 @@ export default function OfflineOrdersPage() {
     queryFn: () =>
       api.get(`/sales/orders?pageSize=500${dateParams}`) as Promise<{ data: SalesOrder[] }>,
   })
-  const orders = ordersData?.data || []
+  const allOrders = ordersData?.data || []
+  const orders = useMemo(() => {
+    if (statusFilter === 'all') return allOrders
+    if (statusFilter === 'active') return allOrders.filter((o) => o.status !== 'CANCELLED')
+    return allOrders.filter((o) => o.status === statusFilter)
+  }, [allOrders, statusFilter])
+
+  // Fetch full order details for detail/edit views
+  const { data: detailData } = useQuery({
+    queryKey: ['sales-order-detail', detailOrder?.id || editOrder?.id],
+    queryFn: () => api.get(`/sales/orders/${detailOrder?.id || editOrder?.id}`) as Promise<{ data: SalesOrder & { deliveries?: { id: string; deliveryNo: string; deliveryDate: string; details: { itemId: string; quantity: number; item?: Item }[] }[] } }>,
+    enabled: !!(detailOrder?.id || editOrder?.id),
+  })
 
   const { data: partnersData } = useQuery({
     queryKey: ['partners-list'],
@@ -208,9 +235,9 @@ export default function OfflineOrdersPage() {
     ).slice(0, 20)
   }, [partners, partnerSearch])
 
-  // Stats
+  // Stats (always based on allOrders, not filtered view)
   const stats = useMemo(() => {
-    const activeOrders = orders.filter((o) => o.status !== 'CANCELLED')
+    const activeOrders = allOrders.filter((o) => o.status !== 'CANCELLED')
     const total = activeOrders.length
     const ordered = activeOrders.filter((o) => o.status === 'ORDERED').length
     const inProgress = activeOrders.filter((o) => o.status === 'IN_PROGRESS').length
@@ -218,7 +245,7 @@ export default function OfflineOrdersPage() {
     const totalAmount = activeOrders.reduce((s, o) => s + Number(o.totalAmount || 0), 0)
     const fulfillmentRate = total > 0 ? Math.round((completed / total) * 100) : 0
     return { total, ordered, inProgress, completed, totalAmount, fulfillmentRate }
-  }, [orders])
+  }, [allOrders])
 
   // Tax calculation helper
   const calcTax = useCallback((supplyAmount: number, itemId: string, isVatIncluded: boolean): number => {
@@ -263,13 +290,44 @@ export default function OfflineOrdersPage() {
     },
   })
 
+  // Edit order mutation
+  const editMutation = useMutation({
+    mutationFn: async () => {
+      if (!editOrder) throw new Error('수정할 발주가 없습니다.')
+      const validDetails = editDetails.filter((d) => d.itemId && d.quantity > 0)
+      if (validDetails.length === 0) throw new Error('최소 1개 이상의 품목이 필요합니다.')
+      return api.put(`/sales/orders/${editOrder.id}`, {
+        action: 'update',
+        orderDate: editDate,
+        partnerId: editPartnerId || undefined,
+        deliveryDate: editDeliveryDate || undefined,
+        description: editDescription || undefined,
+        vatIncluded: editVatIncluded,
+        details: validDetails.map((d) => ({
+          itemId: d.itemId,
+          quantity: d.quantity,
+          unitPrice: d.unitPrice,
+          remark: d.remark || undefined,
+        })),
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders-offline'] })
+      queryClient.invalidateQueries({ queryKey: ['sales-order-detail'] })
+      setEditOrder(null)
+      toast.success('발주가 수정되었습니다.')
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : '수정에 실패했습니다.'),
+  })
+
   // Excel bulk import mutation
   const excelImportMutation = useMutation({
     mutationFn: async (rows: Record<string, unknown>[]) => {
-      // Group rows by orderDate + partnerCode/partnerName
+      // Group by orderGroupNo, or by orderDate+partner if no group specified
       const grouped = new Map<string, Record<string, unknown>[]>()
       for (const row of rows) {
-        const key = `${row.orderDate || getLocalDateString()}|${row.partnerCode || row.partnerName || 'none'}`
+        const groupKey = row.orderGroupNo ? String(row.orderGroupNo) : `${row.orderDate || getLocalDateString()}|${row.partnerCode || row.partnerName || 'none'}`
+        const key = groupKey
         if (!grouped.has(key)) grouped.set(key, [])
         grouped.get(key)!.push(row)
       }
@@ -363,6 +421,43 @@ export default function OfflineOrdersPage() {
     setOrderDetails([{ itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 }])
   }
 
+  const openEditDialog = (order: SalesOrder) => {
+    setEditOrder(order)
+    setEditDate(order.orderDate?.split('T')[0] || getLocalDateString())
+    setEditPartnerId(order.partner?.id || '')
+    setEditDescription(order.description || '')
+    setEditDeliveryDate('')
+    setEditVatIncluded(order.vatIncluded !== false)
+    setEditDetails(
+      (order.details || []).map((d) => ({
+        itemId: d.itemId,
+        itemName: d.item?.itemName || '',
+        quantity: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        supplyAmount: Number(d.supplyAmount),
+        taxAmount: Number(d.taxAmount),
+        amount: Number(d.totalAmount),
+        remark: d.remark,
+      }))
+    )
+  }
+
+  const updateEditDetail = (idx: number, field: string, value: string | number) => {
+    setEditDetails((prev) => {
+      const updated = [...prev]
+      const detail = { ...updated[idx], [field]: value }
+      if (field === 'itemId' && typeof value === 'string') {
+        const item = items.find((i) => i.id === value)
+        if (item) { detail.itemName = item.itemName; detail.unitPrice = Number(item.standardPrice) }
+      }
+      detail.supplyAmount = Math.round(detail.quantity * detail.unitPrice)
+      detail.taxAmount = calcTax(detail.supplyAmount, detail.itemId, editVatIncluded)
+      detail.amount = detail.supplyAmount + detail.taxAmount
+      updated[idx] = detail
+      return updated
+    })
+  }
+
   const updateDetail = (idx: number, field: string, value: string | number) => {
     setOrderDetails((prev) => {
       const updated = [...prev]
@@ -454,6 +549,7 @@ export default function OfflineOrdersPage() {
         { header: '납기일', key: 'deliveryDate', example: '2026-03-20', width: 14 },
         { header: '부가세', key: 'vatType', example: '포함', width: 10 },
         { header: '바코드', key: 'barcode', example: '8801234567890', width: 16 },
+        { header: '발주그룹', key: 'orderGroupNo', example: '1', width: 10 },
       ],
     })
   }
@@ -799,6 +895,22 @@ export default function OfflineOrdersPage() {
         </Button>
         <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleExcelUpload} />
 
+        {/* Status filter */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-[130px] text-xs">
+            <Filter className="mr-1 h-3.5 w-3.5" />
+            <SelectValue placeholder="상태 필터" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체</SelectItem>
+            <SelectItem value="active">활성 (취소제외)</SelectItem>
+            <SelectItem value="ORDERED">발주완료</SelectItem>
+            <SelectItem value="IN_PROGRESS">진행중</SelectItem>
+            <SelectItem value="COMPLETED">완료</SelectItem>
+            <SelectItem value="CANCELLED">취소</SelectItem>
+          </SelectContent>
+        </Select>
+
         <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input className="pl-9" placeholder="발주번호, 거래처 검색..." value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} />
@@ -973,6 +1085,14 @@ export default function OfflineOrdersPage() {
                       {order.description && <p className="text-muted-foreground mt-1 text-xs">{order.description}</p>}
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="상세보기" onClick={() => setDetailOrder(order)}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="수정" onClick={() => openEditDialog(order)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-7 w-7" title="거래명세서 다운로드" onClick={() => handleSinglePdfDownload(order)}>
                         <FileText className="h-3.5 w-3.5" />
                       </Button>
@@ -1094,6 +1214,216 @@ export default function OfflineOrdersPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editOrder} onOpenChange={(v) => !v && setEditOrder(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader><DialogTitle>발주 수정</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">발주일 *</label>
+                <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">납기일</label>
+                <Input type="date" value={editDeliveryDate} onChange={(e) => setEditDeliveryDate(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-muted-foreground text-xs font-medium">거래처</label>
+              <Select value={editPartnerId} onValueChange={setEditPartnerId}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="거래처 선택" /></SelectTrigger>
+                <SelectContent>
+                  {partners.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.partnerName} ({p.partnerCode})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-muted-foreground text-xs font-medium">부가세 구분</label>
+              <div className="flex gap-1 rounded-md border p-0.5">
+                <button
+                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${editVatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  onClick={() => { setEditVatIncluded(true); setEditDetails((prev) => prev.map((d) => { const tax = calcTax(d.supplyAmount, d.itemId, true); return { ...d, taxAmount: tax, amount: d.supplyAmount + tax } })) }}
+                >
+                  부가세 포함
+                </button>
+                <button
+                  className={`rounded px-3 py-1 text-xs font-medium transition-colors ${!editVatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  onClick={() => { setEditVatIncluded(false); setEditDetails((prev) => prev.map((d) => ({ ...d, taxAmount: 0, amount: d.supplyAmount }))) }}
+                >
+                  부가세 별도
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-muted-foreground text-xs font-medium">비고</label>
+              <Textarea placeholder="비고 사항..." value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">품목 목록 *</label>
+                <Button type="button" variant="outline" size="sm" onClick={() => setEditDetails((prev) => [...prev, { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 }])}>
+                  <Plus className="mr-1 h-3 w-3" /> 품목 추가
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {editDetails.map((detail, idx) => (
+                  <div key={idx} className="flex items-end gap-2 rounded-md border p-2">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <label className="text-muted-foreground text-[10px]">품목</label>
+                      <Select value={detail.itemId} onValueChange={(v) => updateEditDetail(idx, 'itemId', v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                        <SelectContent>
+                          {items.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>{item.itemName} ({item.itemCode})</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-20 space-y-1">
+                      <label className="text-muted-foreground text-[10px]">수량</label>
+                      <Input type="number" min={1} className="h-8 text-xs" value={detail.quantity} onChange={(e) => updateEditDetail(idx, 'quantity', parseInt(e.target.value) || 0)} />
+                    </div>
+                    <div className="w-24 space-y-1">
+                      <label className="text-muted-foreground text-[10px]">단가</label>
+                      <Input type="number" min={0} className="h-8 text-xs" value={detail.unitPrice} onChange={(e) => updateEditDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)} />
+                    </div>
+                    <div className="w-24 space-y-1">
+                      <label className="text-muted-foreground text-[10px]">공급가액</label>
+                      <div className="flex h-8 items-center text-xs tabular-nums">{detail.supplyAmount.toLocaleString()}</div>
+                    </div>
+                    {editVatIncluded && (
+                      <div className="w-20 space-y-1">
+                        <label className="text-muted-foreground text-[10px]">세액</label>
+                        <div className="flex h-8 items-center text-xs tabular-nums">{detail.taxAmount.toLocaleString()}</div>
+                      </div>
+                    )}
+                    <div className="w-24 space-y-1">
+                      <label className="text-muted-foreground text-[10px]">합계</label>
+                      <div className="flex h-8 items-center text-xs font-medium tabular-nums">{detail.amount.toLocaleString()}</div>
+                    </div>
+                    {editDetails.length > 1 && (
+                      <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEditDetails((prev) => prev.filter((_, i) => i !== idx))}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end gap-4 text-sm">
+                <span className="text-muted-foreground">공급가액: <strong className="text-foreground">{editDetails.reduce((s, d) => s + d.supplyAmount, 0).toLocaleString()}</strong></span>
+                {editVatIncluded && <span className="text-muted-foreground">세액: <strong className="text-foreground">{editDetails.reduce((s, d) => s + d.taxAmount, 0).toLocaleString()}</strong></span>}
+                <span className="font-bold">합계: {editDetails.reduce((s, d) => s + d.amount, 0).toLocaleString()}원</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setEditOrder(null)}>취소</Button>
+              <Button onClick={() => editMutation.mutate()} disabled={editMutation.isPending} size="sm">
+                {editMutation.isPending ? '수정 중...' : '발주 수정'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail View Dialog */}
+      <Dialog open={!!detailOrder} onOpenChange={(v) => !v && setDetailOrder(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader><DialogTitle>발주 상세</DialogTitle></DialogHeader>
+          {detailOrder && (() => {
+            const fullOrder = (detailData?.data as SalesOrder & { deliveries?: { id: string; deliveryNo: string; deliveryDate: string; details: { itemId: string; quantity: number; item?: Item }[] }[] }) || detailOrder
+            const statusInfo = STATUS_MAP[fullOrder.status] || STATUS_MAP.ORDERED
+            return (
+              <div className="space-y-4">
+                {/* Order info */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border p-3">
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">발주번호</span><span className="font-medium">{fullOrder.orderNo}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">상태</span><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>{statusInfo.label}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">발주일</span><span>{formatDate(fullOrder.orderDate)}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">거래처</span><span>{fullOrder.partner?.partnerName || '-'}</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">공급가액</span><span className="tabular-nums">{Number(fullOrder.totalSupply).toLocaleString()}원</span></div>
+                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">세액</span><span className="tabular-nums">{Number(fullOrder.totalTax).toLocaleString()}원</span></div>
+                  <div className="col-span-2 flex justify-between text-xs"><span className="text-muted-foreground">합계금액</span><span className="font-bold tabular-nums">{Number(fullOrder.totalAmount).toLocaleString()}원</span></div>
+                  {fullOrder.description && <div className="col-span-2 flex justify-between text-xs"><span className="text-muted-foreground">비고</span><span>{fullOrder.description}</span></div>}
+                </div>
+
+                {/* Order items */}
+                <div>
+                  <h4 className="mb-2 text-xs font-medium">품목 내역</h4>
+                  <div className="overflow-auto rounded-md border">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left font-medium">품목</th>
+                          <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                          <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                          <th className="px-2 py-1.5 text-right font-medium">금액</th>
+                          <th className="px-2 py-1.5 text-right font-medium">잔여</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(fullOrder.details || []).map((d, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="px-2 py-1">{d.item?.itemName || d.itemId}</td>
+                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.quantity)}</td>
+                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.unitPrice).toLocaleString()}</td>
+                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.totalAmount).toLocaleString()}</td>
+                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.remainingQty)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Delivery history */}
+                {fullOrder.deliveries && fullOrder.deliveries.length > 0 && (
+                  <div>
+                    <h4 className="mb-2 text-xs font-medium">출고 이력 ({fullOrder.deliveries.length}건)</h4>
+                    <div className="space-y-2">
+                      {fullOrder.deliveries.map((del) => (
+                        <div key={del.id} className="rounded-md border p-2">
+                          <div className="mb-1 flex items-center gap-2">
+                            <Truck className="h-3.5 w-3.5 text-emerald-600" />
+                            <span className="text-xs font-medium">{del.deliveryNo}</span>
+                            <span className="text-muted-foreground text-xs">{formatDate(del.deliveryDate)}</span>
+                          </div>
+                          <div className="ml-5 space-y-0.5">
+                            {del.details?.map((dd, idx) => (
+                              <div key={idx} className="text-muted-foreground flex justify-between text-[11px]">
+                                <span>{dd.item?.itemName || dd.itemId}</span>
+                                <span className="tabular-nums">{Number(dd.quantity)}개</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!fullOrder.deliveries || fullOrder.deliveries.length === 0) && (
+                  <div className="text-muted-foreground py-4 text-center text-xs">출고 이력이 없습니다.</div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="ghost" size="sm" onClick={() => setDetailOrder(null)}>닫기</Button>
+                  <Button variant="outline" size="sm" onClick={() => handleSinglePdfDownload(fullOrder)}>
+                    <FileText className="mr-1 h-3.5 w-3.5" /> 거래명세서
+                  </Button>
+                </div>
+              </div>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
