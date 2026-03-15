@@ -145,8 +145,10 @@ export default auth((request) => {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-request-id', requestId)
 
-  // ─── CSP 헤더 설정 ───
-  requestHeaders.set('Content-Security-Policy', cspHeader)
+  // ─── CSP 헤더는 응답(response)에만 설정 ───
+  // 주의: requestHeaders에 CSP를 설정하면 Next.js가 자동으로 nonce 기반
+  // CSP를 추가 생성하여 충돌이 발생합니다 (브라우저가 두 CSP를 모두 적용).
+  // 따라서 response.headers에만 설정합니다.
 
   // ─── 블록된 IP 체크 ───
   const ip = getIp(request)
