@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest) {
     // Verify order exists
     const order = await prisma.shipperOrder.findUnique({
       where: { id: body.orderId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, pickedUpAt: true, deliveredAt: true },
     })
     if (!order) {
       return errorResponse('주문을 찾을 수 없습니다.', 'NOT_FOUND', 404)
@@ -104,7 +104,12 @@ export async function PATCH(request: NextRequest) {
         return errorResponse(`유효하지 않은 상태값입니다. (${validStatuses.join(', ')})`, 'VALIDATION_ERROR', 400)
       }
       updateData.status = body.status
-      if (body.status === 'DELIVERED') {
+
+      // Auto-set timestamps on status changes
+      if (body.status === 'PROCESSING' && !order.pickedUpAt) {
+        updateData.pickedUpAt = new Date()
+      }
+      if (body.status === 'DELIVERED' && !order.deliveredAt) {
         updateData.deliveredAt = new Date()
       }
     }
