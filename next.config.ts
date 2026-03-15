@@ -18,26 +18,8 @@ const securityHeaders = [
   ...(process.env.NODE_ENV === 'production'
     ? [{ key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }]
     : []),
-  // Content Security Policy
-  {
-    key: 'Content-Security-Policy',
-    value: [
-      "default-src 'self'",
-      // unsafe-eval은 개발 환경에서만 허용 (React DevTools 등)
-      // 프로덕션: strict-dynamic으로 인라인 스크립트 차단 강화
-      process.env.NODE_ENV === 'production'
-        ? "script-src 'self'"
-        : "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
-      "font-src 'self' data:",
-      "connect-src 'self'",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      'upgrade-insecure-requests',
-    ].join('; '),
-  },
+  // Content Security Policy는 미들웨어에서 nonce 기반으로 동적 설정
+  // (next.config.ts의 정적 헤더로는 nonce를 생성할 수 없음)
   // Cross-Origin 보안 정책
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
   { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
