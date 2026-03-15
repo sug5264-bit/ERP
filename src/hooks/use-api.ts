@@ -191,6 +191,7 @@ type ApiResponse = Record<string, any>
 
 async function uploadRequest(url: string, formData: FormData): Promise<unknown> {
   const requestId = generateClientRequestId()
+  console.log('[DEBUG upload] uploadRequest 시작:', { url: `${BASE_URL}${url}`, requestId })
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS * 2) // longer timeout for uploads
   try {
@@ -204,16 +205,19 @@ async function uploadRequest(url: string, formData: FormData): Promise<unknown> 
       body: formData,
     })
     clearTimeout(timeoutId)
+    console.log('[DEBUG upload] 응답 수신:', { status: res.status, statusText: res.statusText })
     if (res.status === 401) {
       window.location.href = '/login?error=session_expired'
       throw new Error('세션이 만료되었습니다.')
     }
     if (res.status === 403) throw new PermissionError('권한이 없습니다.')
     const json = await res.json()
+    console.log('[DEBUG upload] 응답 JSON:', JSON.stringify(json).slice(0, 300))
     if (!res.ok) throw new ApiError(json?.error?.message || '업로드 실패', json?.error?.code || 'ERROR', res.status)
     return json
   } catch (error) {
     clearTimeout(timeoutId)
+    console.error('[DEBUG upload] 에러 발생:', error)
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new Error('업로드 시간이 초과되었습니다.')
     }
