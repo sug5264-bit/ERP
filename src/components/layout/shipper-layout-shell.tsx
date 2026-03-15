@@ -22,6 +22,8 @@ import {
   LayoutDashboard,
   PackagePlus,
   Truck,
+  Package,
+  TrendingUp,
   Receipt,
   Bell,
   LogOut,
@@ -42,6 +44,8 @@ const shipperNavItems: ShipperNavItem[] = [
   { title: '대시보드', href: '/shipper/dashboard', icon: LayoutDashboard },
   { title: '주문등록', href: '/shipper/orders/new', icon: PackagePlus },
   { title: '배송현황', href: '/shipper/orders', icon: Truck },
+  { title: '재고현황', href: '/shipper/inventory', icon: Package },
+  { title: '매출현황', href: '/shipper/sales', icon: TrendingUp },
   { title: '정산내역', href: '/shipper/settlement', icon: Receipt },
   { title: '공지사항', href: '/shipper/notices', icon: Bell },
 ]
