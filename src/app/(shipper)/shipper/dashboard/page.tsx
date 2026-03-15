@@ -130,7 +130,8 @@ export default function ShipperDashboardPage() {
                         color: 'hsl(var(--popover-foreground))',
                         fontSize: '13px',
                       }}
-                      formatter={(value: number) => [`${value}건`, '접수']}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      formatter={(value: any) => [`${value}건`, '접수']}
                     />
                     <Area
                       type="monotone"
