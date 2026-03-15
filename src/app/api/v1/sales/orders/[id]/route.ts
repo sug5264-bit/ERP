@@ -236,6 +236,45 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         where: { salesReturn: { salesOrderId: id } },
       })
       await tx.salesReturn.deleteMany({ where: { salesOrderId: id } })
+      // 관련 Notes 삭제 (게시글, 출하게시글, 상태노트, 답글, 첨부파일)
+      const salesNotes = await tx.note.findMany({
+        where: { relatedTable: 'SalesOrder', relatedId: id },
+        select: { id: true },
+      })
+      if (salesNotes.length > 0) {
+        const salesNoteIds = salesNotes.map((n) => n.id)
+        // SalesOrder 노트에 연결된 DeliveryPost 노트 찾기
+        const deliveryPosts = await tx.note.findMany({
+          where: { relatedTable: 'DeliveryPost', relatedId: { in: salesNoteIds } },
+          select: { id: true },
+        })
+        if (deliveryPosts.length > 0) {
+          const dpIds = deliveryPosts.map((n) => n.id)
+          // DeliveryPostStatus, DeliveryReply 삭제
+          await tx.note.deleteMany({
+            where: { relatedTable: 'DeliveryPostStatus', relatedId: { in: dpIds } },
+          })
+          await tx.note.deleteMany({
+            where: { relatedTable: 'DeliveryReply', relatedId: { in: dpIds } },
+          })
+          // DeliveryPost 노트에 연결된 첨부파일 삭제
+          await tx.note.deleteMany({
+            where: { relatedTable: 'NoteAttachment', relatedId: { in: dpIds } },
+          })
+          // DeliveryPost 삭제
+          await tx.note.deleteMany({
+            where: { relatedTable: 'DeliveryPost', relatedId: { in: salesNoteIds } },
+          })
+        }
+        // SalesOrder 노트에 연결된 첨부파일 삭제
+        await tx.note.deleteMany({
+          where: { relatedTable: 'NoteAttachment', relatedId: { in: salesNoteIds } },
+        })
+        // SalesOrder 노트 삭제
+        await tx.note.deleteMany({
+          where: { relatedTable: 'SalesOrder', relatedId: id },
+        })
+      }
       await tx.salesOrderDetail.deleteMany({ where: { salesOrderId: id } })
       await tx.salesOrder.delete({ where: { id } })
     })
