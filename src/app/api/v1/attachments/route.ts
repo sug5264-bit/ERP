@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
-import { put } from '@vercel/blob'
+import { uploadFile, deleteFile } from '@/lib/supabase-storage'
 import { randomUUID } from 'crypto'
 import { sanitizeFileName } from '@/lib/sanitize'
 import { logger } from '@/lib/logger'
@@ -149,14 +149,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let blob
+    let publicUrl: string
     try {
-      blob = await put(uniqueName, buffer, {
-        access: 'public',
-        contentType: file.type || 'application/octet-stream',
-      })
+      publicUrl = await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
     } catch (uploadErr) {
-      logger.error('Failed to upload file to blob storage', { uniqueName, error: uploadErr })
+      logger.error('Failed to upload file to storage', { uniqueName, error: uploadErr })
       return errorResponse(
         '파일을 저장할 수 없습니다. 스토리지 설정을 확인해주세요.',
         'STORAGE_ERROR',
@@ -169,7 +166,7 @@ export async function POST(request: NextRequest) {
       attachment = await prisma.attachment.create({
         data: {
           fileName: sanitizeFileName(file.name),
-          filePath: blob.url,
+          filePath: uniqueName,
           fileSize: file.size,
           mimeType: file.type || 'application/octet-stream',
           relatedTable,
@@ -178,9 +175,8 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (dbErr) {
-      // DB 저장 실패 시 Blob에서 고아 파일 정리
-      const { del } = await import('@vercel/blob')
-      await del(blob.url).catch(() => {})
+      // DB 저장 실패 시 스토리지에서 고아 파일 정리
+      await deleteFile(uniqueName).catch(() => {})
       throw dbErr
     }
 

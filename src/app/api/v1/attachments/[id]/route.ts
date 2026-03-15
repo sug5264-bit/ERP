@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, requireAuth, isErrorResponse, successResponse } from '@/lib/api-helpers'
 import { logger } from '@/lib/logger'
-import { del } from '@vercel/blob'
+import { downloadFile, deleteFile } from '@/lib/supabase-storage'
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,23 +15,19 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
-    // filePath는 Blob URL이므로 fetch로 가져옴
-    let fileResponse: Response
+    let fileBuffer: Buffer
     try {
-      fileResponse = await fetch(attachment.filePath)
-      if (!fileResponse.ok) throw new Error(`Blob fetch failed: ${fileResponse.status}`)
+      fileBuffer = await downloadFile(attachment.filePath)
     } catch (err) {
-      logger.error('File not found in blob storage', { url: attachment.filePath, attachmentId: id, error: err instanceof Error ? err.message : err })
+      logger.error('File not found in storage', { path: attachment.filePath, attachmentId: id, error: err instanceof Error ? err.message : err })
       return errorResponse('파일이 서버에 존재하지 않습니다. 관리자에게 문의하세요.', 'FILE_NOT_FOUND', 404)
     }
-
-    const fileBuffer = await fileResponse.arrayBuffer()
 
     return new Response(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': attachment.mimeType,
         'Content-Disposition': `attachment; filename="${attachment.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}"; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
-        'Content-Length': String(fileBuffer.byteLength),
+        'Content-Length': String(fileBuffer.length),
         'X-Content-Type-Options': 'nosniff',
       },
     })
@@ -56,11 +52,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
       return errorResponse('본인이 업로드한 파일만 삭제할 수 있습니다.', 'FORBIDDEN', 403)
     }
 
-    // Delete file from blob storage
+    // Delete file from Supabase Storage
     try {
-      await del(attachment.filePath)
+      await deleteFile(attachment.filePath)
     } catch (err) {
-      logger.error('Failed to delete attachment from blob storage', { url: attachment.filePath, error: err instanceof Error ? err.message : err })
+      logger.error('Failed to delete attachment from storage', { path: attachment.filePath, error: err instanceof Error ? err.message : err })
     }
 
     await prisma.attachment.delete({ where: { id } })

@@ -4,12 +4,12 @@
  * - 로고, 법인인감, 사업자등록증, 통장사본 업로드
  * - 매직 바이트 검증 (확장자 위조 방지)
  * - 필드별 허용 확장자 제한
- * - 파일 서빙 (경로 순회 방지)
+ * - 파일 서빙 (Supabase Storage)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockUnlink, mockExistsSync, mockReadFile } = vi.hoisted(() => ({
+const { mockAuth, mockPrisma, mockUploadFile, mockDownloadFile, mockDeleteFile } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockPrisma: {
     company: {
@@ -17,11 +17,9 @@ const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockUnlink, mockExistsSy
       update: vi.fn(),
     },
   },
-  mockWriteFile: vi.fn().mockResolvedValue(undefined),
-  mockMkdir: vi.fn().mockResolvedValue(undefined),
-  mockUnlink: vi.fn().mockResolvedValue(undefined),
-  mockExistsSync: vi.fn().mockReturnValue(false),
-  mockReadFile: vi.fn(),
+  mockUploadFile: vi.fn().mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/company/file.png'),
+  mockDownloadFile: vi.fn(),
+  mockDeleteFile: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -32,15 +30,11 @@ vi.mock('@/lib/prisma', () => ({
   prisma: mockPrisma,
 }))
 
-vi.mock('fs/promises', () => ({
-  writeFile: (...args: unknown[]) => mockWriteFile(...args),
-  mkdir: (...args: unknown[]) => mockMkdir(...args),
-  unlink: (...args: unknown[]) => mockUnlink(...args),
-  readFile: (...args: unknown[]) => mockReadFile(...args),
-}))
-
-vi.mock('fs', () => ({
-  existsSync: (...args: unknown[]) => mockExistsSync(...args),
+vi.mock('@/lib/supabase-storage', () => ({
+  uploadFile: (...args: unknown[]) => mockUploadFile(...args),
+  downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
+  deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
+  getPublicUrl: (path: string) => `https://project.supabase.co/storage/v1/object/public/uploads/${path}`,
 }))
 
 vi.mock('@/lib/cache', () => ({
@@ -86,9 +80,8 @@ const companyParams = Promise.resolve({ id: 'company-1' })
 describe('POST /api/v1/admin/company/[id]/upload', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mockUnlink.mockResolvedValue(undefined)
-    mockMkdir.mockResolvedValue(undefined)
-    mockWriteFile.mockResolvedValue(undefined)
+    mockDeleteFile.mockResolvedValue(undefined)
+    mockUploadFile.mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/company/file.png')
   })
 
   function createUploadReq(fileName: string, field: string, content?: number[]): NextRequest {
@@ -199,21 +192,20 @@ describe('POST /api/v1/admin/company/[id]/upload', () => {
       { params: companyParams }
     )
     expect(resp.status).toBe(200)
-    expect(mockWriteFile).toHaveBeenCalled()
+    expect(mockUploadFile).toHaveBeenCalled()
   })
 
   it('기존 파일 교체 시 이전 파일 삭제', async () => {
     setAdmin()
     mockPrisma.company.findUnique
       .mockResolvedValueOnce({ id: 'company-1' })
-      .mockResolvedValueOnce({ sealPath: 'old-seal.png' })
-    mockExistsSync.mockReturnValue(true)
+      .mockResolvedValueOnce({ sealPath: 'company/old-seal.png' })
     mockPrisma.company.update.mockResolvedValue({ id: 'company-1', sealPath: 'new-seal.png' })
     const resp = await UploadCompanyFile(createUploadReq('seal.png', 'sealPath', [0x89, 0x50, 0x4e, 0x47]), {
       params: companyParams,
     })
     expect(resp.status).toBe(200)
-    expect(mockUnlink).toHaveBeenCalled()
+    expect(mockDeleteFile).toHaveBeenCalledWith('company/old-seal.png')
   })
 })
 
@@ -222,7 +214,7 @@ describe('POST /api/v1/admin/company/[id]/upload', () => {
 describe('DELETE /api/v1/admin/company/[id]/upload', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mockUnlink.mockResolvedValue(undefined)
+    mockDeleteFile.mockResolvedValue(undefined)
   })
 
   it('유효하지 않은 필드 → 400', async () => {
@@ -244,17 +236,16 @@ describe('DELETE /api/v1/admin/company/[id]/upload', () => {
     expect(resp.status).toBe(404)
   })
 
-  it('정상 삭제: 파일 존재 시 물리적 삭제', async () => {
+  it('정상 삭제: Supabase Storage에서 파일 삭제', async () => {
     setAdmin()
-    mockPrisma.company.findUnique.mockResolvedValue({ logoPath: 'old-logo.png' })
-    mockExistsSync.mockReturnValue(true)
+    mockPrisma.company.findUnique.mockResolvedValue({ logoPath: 'company/old-logo.png' })
     mockPrisma.company.update.mockResolvedValue({ id: 'company-1', logoPath: null })
     const resp = await DeleteCompanyFile(
       new NextRequest(new URL('http://localhost/api/v1/admin/company/company-1/upload?field=logoPath')),
       { params: companyParams }
     )
     expect(resp.status).toBe(200)
-    expect(mockUnlink).toHaveBeenCalled()
+    expect(mockDeleteFile).toHaveBeenCalledWith('company/old-logo.png')
   })
 })
 
@@ -281,7 +272,7 @@ describe('GET /api/v1/admin/company/file/[filename]', () => {
 
   it('존재하지 않는 파일 → 404', async () => {
     setAdmin()
-    mockExistsSync.mockReturnValue(false)
+    mockDownloadFile.mockRejectedValue(new Error('Object not found'))
     const resp = await ServeCompanyFile(createReq('http://localhost/api/v1/admin/company/file/missing.png'), {
       params: Promise.resolve({ filename: 'missing.png' }),
     })
@@ -290,8 +281,7 @@ describe('GET /api/v1/admin/company/file/[filename]', () => {
 
   it('정상 서빙: PNG 파일', async () => {
     setAdmin()
-    mockExistsSync.mockReturnValue(true)
-    mockReadFile.mockResolvedValue(Buffer.from('PNG content'))
+    mockDownloadFile.mockResolvedValue(Buffer.from('PNG content'))
     const resp = await ServeCompanyFile(createReq('http://localhost/api/v1/admin/company/file/logo.png'), {
       params: Promise.resolve({ filename: 'logo.png' }),
     })
@@ -302,8 +292,7 @@ describe('GET /api/v1/admin/company/file/[filename]', () => {
 
   it('알 수 없는 확장자 → application/octet-stream', async () => {
     setAdmin()
-    mockExistsSync.mockReturnValue(true)
-    mockReadFile.mockResolvedValue(Buffer.from('binary data'))
+    mockDownloadFile.mockResolvedValue(Buffer.from('binary data'))
     const resp = await ServeCompanyFile(createReq('http://localhost/api/v1/admin/company/file/data.bin'), {
       params: Promise.resolve({ filename: 'data.bin' }),
     })
