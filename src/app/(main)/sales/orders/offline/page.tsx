@@ -1002,11 +1002,11 @@ export default function OfflineOrdersPage() {
         </Card>
         <Card className="gap-0 border-l-4 border-l-violet-500 py-4 shadow-sm">
           <CardContent className="flex items-center gap-3 px-4 py-0">
-            <TrendingUp className="h-5 w-5 text-violet-600" />
+            <span className="text-base font-bold text-violet-600">₩</span>
             <div>
               <p className="text-muted-foreground text-xs">총 매출액</p>
-              <span className="text-lg font-bold tabular-nums">{(stats.totalAmount / 10000).toFixed(0)}</span>
-              <span className="text-muted-foreground text-xs"> 만원</span>
+              <span className="text-lg font-bold tabular-nums">{stats.totalAmount.toLocaleString('ko-KR')}</span>
+              <span className="text-muted-foreground text-xs">원</span>
             </div>
           </CardContent>
         </Card>
