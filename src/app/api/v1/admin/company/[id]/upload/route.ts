@@ -1,12 +1,9 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
-import { writeFile, mkdir, unlink } from 'fs/promises'
-import { join } from 'path'
 import { randomUUID } from 'crypto'
-import { existsSync } from 'fs'
+import { uploadFile, deleteFile } from '@/lib/supabase-storage'
 
-const UPLOAD_DIR = join(process.cwd(), 'uploads', 'company')
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 // 파일 매직 바이트로 실제 MIME 타입 검증 (확장자 위조 방지)
@@ -83,8 +80,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
-    await mkdir(UPLOAD_DIR, { recursive: true })
-
     // Delete old file if exists
     const existing = await prisma.company.findUnique({
       where: { id },
@@ -92,14 +87,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
     const oldPath = (existing as Record<string, unknown> | null)?.[uploadField] as string | null
     if (oldPath) {
-      const oldFilePath = join(UPLOAD_DIR, oldPath)
-      if (existsSync(oldFilePath)) {
-        await unlink(oldFilePath).catch(() => {})
-      }
+      await deleteFile(oldPath).catch(() => {})
     }
 
-    const uniqueName = `${id}-${uploadField}-${randomUUID()}.${ext}`
-    const filePath = join(UPLOAD_DIR, uniqueName)
+    const uniqueName = `company/${id}-${uploadField}-${randomUUID()}.${ext}`
 
     const buffer = Buffer.from(await file.arrayBuffer())
 
@@ -112,7 +103,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       )
     }
 
-    await writeFile(filePath, buffer)
+    await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
 
     let updated
     try {
@@ -122,7 +113,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       })
     } catch (dbError) {
       // DB 업데이트 실패 시 고아 파일 정리
-      await unlink(filePath).catch(() => {})
+      await deleteFile(uniqueName).catch(() => {})
       throw dbError
     }
 
@@ -153,12 +144,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     })
     if (!company) return errorResponse('회사 정보를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    const filePath = company[uploadField] as string | null
-    if (filePath) {
-      const fullPath = join(UPLOAD_DIR, filePath)
-      if (existsSync(fullPath)) {
-        await unlink(fullPath).catch(() => {})
-      }
+    const storagePath = company[uploadField] as string | null
+    if (storagePath) {
+      await deleteFile(storagePath).catch(() => {})
     }
 
     const updated = await prisma.company.update({

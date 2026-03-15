@@ -1,16 +1,15 @@
 /**
  * 난이도: 매우 어려움 (Very Hard)
  * 첨부파일 API (GET/POST/DELETE) 테스트
- * - 파일 업로드 (multipart/form-data)
- * - 파일 다운로드 (바이너리 스트림)
+ * - 파일 업로드 (multipart/form-data → Supabase Storage)
+ * - 파일 다운로드 (Supabase Storage)
  * - 파일 삭제 (소유자 검증)
  * - 파일 크기/확장자 검증
- * - 경로 순회 방지 (path traversal)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockReadFile, mockUnlink, mockAccess } = vi.hoisted(() => ({
+const { mockAuth, mockPrisma, mockUploadFile, mockDownloadFile, mockDeleteFile } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockPrisma: {
     attachment: {
@@ -20,11 +19,9 @@ const { mockAuth, mockPrisma, mockWriteFile, mockMkdir, mockReadFile, mockUnlink
       delete: vi.fn(),
     },
   },
-  mockWriteFile: vi.fn().mockResolvedValue(undefined),
-  mockMkdir: vi.fn().mockResolvedValue(undefined),
-  mockReadFile: vi.fn(),
-  mockUnlink: vi.fn().mockResolvedValue(undefined),
-  mockAccess: vi.fn().mockResolvedValue(undefined),
+  mockUploadFile: vi.fn(),
+  mockDownloadFile: vi.fn(),
+  mockDeleteFile: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -35,13 +32,11 @@ vi.mock('@/lib/prisma', () => ({
   prisma: mockPrisma,
 }))
 
-vi.mock('fs/promises', () => ({
-  writeFile: (...args: unknown[]) => mockWriteFile(...args),
-  mkdir: (...args: unknown[]) => mockMkdir(...args),
-  readFile: (...args: unknown[]) => mockReadFile(...args),
-  unlink: (...args: unknown[]) => mockUnlink(...args),
-  access: (...args: unknown[]) => mockAccess(...args),
-  constants: { W_OK: 2 },
+vi.mock('@/lib/supabase-storage', () => ({
+  uploadFile: (...args: unknown[]) => mockUploadFile(...args),
+  downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
+  deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
+  getPublicUrl: (path: string) => `https://project.supabase.co/storage/v1/object/public/uploads/${path}`,
 }))
 
 vi.mock('@/lib/cache', () => ({
@@ -188,7 +183,6 @@ describe('POST /api/v1/attachments', () => {
 
   it('파일 크기 초과 (50MB) → 413', async () => {
     setAuthenticated()
-    // File 객체의 size를 직접 mock할 수 없으므로, 큰 ArrayBuffer를 생성
     const bigContent = new ArrayBuffer(51 * 1024 * 1024) // 51MB
     const file = new File([bigContent], 'big.pdf', { type: 'application/pdf' })
     const formData = new FormData()
@@ -221,10 +215,11 @@ describe('POST /api/v1/attachments', () => {
 
   it('정상 업로드: PDF', async () => {
     setAuthenticated()
+    mockUploadFile.mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.pdf')
     mockPrisma.attachment.create.mockResolvedValue({
       id: 'att-new',
       fileName: 'test.pdf',
-      filePath: 'uuid.pdf',
+      filePath: 'attachments/uuid.pdf',
       fileSize: 4,
       mimeType: 'application/pdf',
     })
@@ -232,13 +227,13 @@ describe('POST /api/v1/attachments', () => {
     const body = await resp.json()
     expect(resp.status).toBe(200)
     expect(body.data.fileName).toBe('test.pdf')
-    expect(mockWriteFile).toHaveBeenCalled()
-    expect(mockMkdir).toHaveBeenCalled()
+    expect(mockUploadFile).toHaveBeenCalled()
   })
 
   it('정상 업로드: 허용된 확장자 (xlsx, png, jpg, csv)', async () => {
     setAuthenticated()
     for (const ext of ['xlsx', 'png', 'jpg', 'csv']) {
+      mockUploadFile.mockResolvedValue(`https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.${ext}`)
       mockPrisma.attachment.create.mockResolvedValue({ id: `att-${ext}`, fileName: `file.${ext}` })
       const resp = await UploadAttachment(createUploadReq('content', `file.${ext}`, 'Item', 'item-1'))
       expect(resp.status).toBe(200)
@@ -249,6 +244,7 @@ describe('POST /api/v1/attachments', () => {
     setAuthenticated()
     const tables = ['SalesOrder', 'Quotation', 'Delivery', 'Partner', 'Item', 'Voucher', 'Employee', 'Project']
     for (const table of tables) {
+      mockUploadFile.mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.pdf')
       mockPrisma.attachment.create.mockResolvedValue({ id: 'att-1', fileName: 'test.pdf' })
       const resp = await UploadAttachment(createUploadReq('data', 'doc.pdf', table, 'id-1'))
       expect(resp.status).toBe(200)
@@ -281,11 +277,11 @@ describe('GET /api/v1/attachments/[id] (다운로드)', () => {
     mockPrisma.attachment.findUnique.mockResolvedValue({
       id: 'att-1',
       fileName: 'report.pdf',
-      filePath: 'uuid-123.pdf',
+      filePath: 'attachments/uuid-123.pdf',
       fileSize: 1024,
       mimeType: 'application/pdf',
     })
-    mockReadFile.mockResolvedValue(Buffer.from('PDF content'))
+    mockDownloadFile.mockResolvedValue(Buffer.from('PDF content'))
     const resp = await DownloadAttachment(createReq('http://localhost/api/v1/attachments/att-1'), { params })
     expect(resp.status).toBe(200)
     expect(resp.headers.get('Content-Type')).toBe('application/pdf')
@@ -298,11 +294,11 @@ describe('GET /api/v1/attachments/[id] (다운로드)', () => {
     mockPrisma.attachment.findUnique.mockResolvedValue({
       id: 'att-2',
       fileName: '보고서_2024.xlsx',
-      filePath: 'uuid-456.xlsx',
+      filePath: 'attachments/uuid-456.xlsx',
       fileSize: 2048,
       mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
-    mockReadFile.mockResolvedValue(Buffer.from('Excel content'))
+    mockDownloadFile.mockResolvedValue(Buffer.from('Excel content'))
     const resp = await DownloadAttachment(createReq('http://localhost/api/v1/attachments/att-2'), { params })
     expect(resp.status).toBe(200)
     const disposition = resp.headers.get('Content-Disposition') || ''
@@ -310,18 +306,18 @@ describe('GET /api/v1/attachments/[id] (다운로드)', () => {
     expect(disposition).toContain(encodeURIComponent('보고서_2024.xlsx'))
   })
 
-  it('경로 순회 방지: ../가 포함된 filePath', async () => {
+  it('스토리지에서 파일을 찾을 수 없는 경우 → 404', async () => {
     setAuthenticated()
     mockPrisma.attachment.findUnique.mockResolvedValue({
-      id: 'att-evil',
-      fileName: 'evil.txt',
-      filePath: '../../etc/passwd',
+      id: 'att-missing',
+      fileName: 'missing.txt',
+      filePath: 'attachments/gone.txt',
       fileSize: 100,
       mimeType: 'text/plain',
     })
-    const resp = await DownloadAttachment(createReq('http://localhost/api/v1/attachments/att-evil'), { params })
-    // safePath 함수가 에러를 throw → handleApiError가 500으로 처리
-    expect(resp.status).toBe(500)
+    mockDownloadFile.mockRejectedValue(new Error('Object not found'))
+    const resp = await DownloadAttachment(createReq('http://localhost/api/v1/attachments/att-missing'), { params })
+    expect(resp.status).toBe(404)
   })
 })
 
@@ -348,7 +344,7 @@ describe('DELETE /api/v1/attachments/[id]', () => {
     mockPrisma.attachment.findUnique.mockResolvedValue({
       id: 'att-1',
       uploadedBy: 'other-user',
-      filePath: 'uuid.pdf',
+      filePath: 'attachments/uuid.pdf',
     })
     const resp = await DeleteAttachment(createReq('http://localhost/api/v1/attachments/att-1'), { params })
     const body = await resp.json()
@@ -361,25 +357,26 @@ describe('DELETE /api/v1/attachments/[id]', () => {
     mockPrisma.attachment.findUnique.mockResolvedValue({
       id: 'att-1',
       uploadedBy: 'user-1',
-      filePath: 'uuid-123.pdf',
+      filePath: 'attachments/uuid-123.pdf',
     })
+    mockDeleteFile.mockResolvedValue(undefined)
     mockPrisma.attachment.delete.mockResolvedValue({ id: 'att-1' })
     const resp = await DeleteAttachment(createReq('http://localhost/api/v1/attachments/att-1'), { params })
     const body = await resp.json()
     expect(resp.status).toBe(200)
     expect(body.data.deleted).toBe(true)
-    expect(mockUnlink).toHaveBeenCalled()
+    expect(mockDeleteFile).toHaveBeenCalled()
     expect(mockPrisma.attachment.delete).toHaveBeenCalledWith({ where: { id: 'att-1' } })
   })
 
-  it('파일이 이미 삭제된 경우 (ENOENT) → 정상 처리', async () => {
+  it('스토리지 삭제 실패해도 DB 삭제는 정상 처리', async () => {
     setAuthenticated()
     mockPrisma.attachment.findUnique.mockResolvedValue({
       id: 'att-1',
       uploadedBy: 'user-1',
-      filePath: 'uuid-gone.pdf',
+      filePath: 'attachments/uuid-gone.pdf',
     })
-    mockUnlink.mockRejectedValue(new Error('ENOENT: no such file'))
+    mockDeleteFile.mockRejectedValue(new Error('Storage error'))
     mockPrisma.attachment.delete.mockResolvedValue({ id: 'att-1' })
     const resp = await DeleteAttachment(createReq('http://localhost/api/v1/attachments/att-1'), { params })
     expect(resp.status).toBe(200)

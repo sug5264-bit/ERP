@@ -97,12 +97,12 @@ const ROLE_PERMISSIONS: Record<string, { modules: string[]; actions: string[] }>
 
 describe('RBAC 권한 매트릭스', () => {
   for (const role of ROLES) {
-    for (const module of MODULES) {
+    for (const mod of MODULES) {
       for (const action of ACTIONS) {
         const perms = ROLE_PERMISSIONS[role]
-        const hasAccess = perms?.modules.includes(module) && perms?.actions.includes(action)
+        const hasAccess = perms?.modules.includes(mod) && perms?.actions.includes(action)
 
-        it(`${role} × ${module} × ${action}: ${hasAccess ? '허용' : '차단'}`, () => {
+        it(`${role} × ${mod} × ${action}: ${hasAccess ? '허용' : '차단'}`, () => {
           if (role === 'SYSTEM_ADMIN' || role === '관리자') {
             expect(hasAccess).toBe(true)
           }
