@@ -38,6 +38,13 @@ const BILLING_CYCLE_MAP: Record<string, string> = {
   BIWEEKLY: '격주',
 }
 
+interface ShipperAccount {
+  id: string
+  username: string
+  email: string
+  name: string
+}
+
 interface ShipperRow {
   id: string
   companyCode: string
@@ -57,6 +64,7 @@ interface ShipperRow {
   contractEnd: string | null
   memo: string | null
   isActive: boolean
+  account?: ShipperAccount | null
 }
 
 const columns: ColumnDef<ShipperRow>[] = [
@@ -163,6 +171,11 @@ export default function ShippersPage() {
       contractStart: form.get('contractStart') || undefined,
       contractEnd: form.get('contractEnd') || undefined,
       memo: form.get('memo') || undefined,
+      // 계정 정보
+      username: form.get('username') || undefined,
+      password: form.get('password') || undefined,
+      accountName: form.get('accountName') || undefined,
+      accountEmail: form.get('accountEmail') || undefined,
     })
   }
 
@@ -192,123 +205,195 @@ export default function ShippersPage() {
   }
 
   const renderForm = (target?: ShipperRow) => (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div className="space-y-2">
-        <Label>
-          회사명 <span className="text-destructive">*</span>
-        </Label>
-        <Input name="companyName" required aria-required="true" defaultValue={target?.companyName || ''} />
+    <div className="space-y-6">
+      {/* 회사 정보 */}
+      <div>
+        <h3 className="mb-3 border-b pb-2 text-sm font-semibold">회사 정보</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>
+              회사명 <span className="text-destructive">*</span>
+            </Label>
+            <Input name="companyName" required aria-required="true" defaultValue={target?.companyName || ''} />
+          </div>
+          <div className="space-y-2">
+            <Label>회사코드</Label>
+            {target ? (
+              <Input value={target.companyCode} disabled className="bg-muted" />
+            ) : (
+              <Input disabled placeholder="자동생성" className="bg-muted" />
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>사업자번호</Label>
+            <Input name="bizNo" defaultValue={target?.bizNo || ''} placeholder="000-00-00000" />
+          </div>
+          <div className="space-y-2">
+            <Label>대표자</Label>
+            <Input name="ceoName" defaultValue={target?.ceoName || ''} />
+          </div>
+          <div className="space-y-2">
+            <Label>전화번호</Label>
+            <Input name="phone" defaultValue={target?.phone || ''} />
+          </div>
+          <div className="space-y-2">
+            <Label>이메일</Label>
+            <Input name="email" type="email" defaultValue={target?.email || ''} />
+          </div>
+          <div className="col-span-full space-y-2">
+            <Label>주소</Label>
+            <Input name="address" defaultValue={target?.address || ''} />
+          </div>
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label>회사코드</Label>
-        {target ? (
-          <Input value={target.companyCode} disabled className="bg-muted" />
-        ) : (
-          <Input disabled placeholder="자동생성" className="bg-muted" />
-        )}
+
+      {/* 담당자 정보 */}
+      <div>
+        <h3 className="mb-3 border-b pb-2 text-sm font-semibold">담당자 정보</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>담당자</Label>
+            <Input name="contactName" defaultValue={target?.contactName || ''} />
+          </div>
+          <div className="space-y-2">
+            <Label>담당자 연락처</Label>
+            <Input name="contactPhone" defaultValue={target?.contactPhone || ''} />
+          </div>
+          <div className="col-span-full space-y-2">
+            <Label>담당자 이메일</Label>
+            <Input name="contactEmail" type="email" defaultValue={target?.contactEmail || ''} />
+          </div>
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label>사업자번호</Label>
-        <Input name="bizNo" defaultValue={target?.bizNo || ''} placeholder="000-00-00000" />
+
+      {/* 계약 정보 */}
+      <div>
+        <h3 className="mb-3 border-b pb-2 text-sm font-semibold">계약 정보</h3>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label>계약유형</Label>
+            <Select name="contractType" defaultValue={target?.contractType || 'STANDARD'}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(CONTRACT_TYPE_MAP).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>결제조건</Label>
+            <Select name="paymentTerms" defaultValue={target?.paymentTerms || 'PREPAID'}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PAYMENT_TERMS_MAP).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>정산주기</Label>
+            <Select name="billingCycle" defaultValue={target?.billingCycle || 'MONTHLY'}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(BILLING_CYCLE_MAP).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>
+                    {v}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>계약 시작일</Label>
+            <Input name="contractStart" type="date" defaultValue={target?.contractStart || ''} />
+          </div>
+          <div className="space-y-2">
+            <Label>계약 종료일</Label>
+            <Input name="contractEnd" type="date" defaultValue={target?.contractEnd || ''} />
+          </div>
+          {target && (
+            <div className="space-y-2">
+              <Label>상태</Label>
+              <Select name="isActive" defaultValue={target.isActive ? 'true' : 'false'}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="true">활성</SelectItem>
+                  <SelectItem value="false">비활성</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label>대표자</Label>
-        <Input name="ceoName" defaultValue={target?.ceoName || ''} />
-      </div>
-      <div className="space-y-2">
-        <Label>전화번호</Label>
-        <Input name="phone" defaultValue={target?.phone || ''} />
-      </div>
-      <div className="space-y-2">
-        <Label>이메일</Label>
-        <Input name="email" type="email" defaultValue={target?.email || ''} />
-      </div>
-      <div className="col-span-full space-y-2">
-        <Label>주소</Label>
-        <Input name="address" defaultValue={target?.address || ''} />
-      </div>
-      <div className="space-y-2">
-        <Label>담당자</Label>
-        <Input name="contactName" defaultValue={target?.contactName || ''} />
-      </div>
-      <div className="space-y-2">
-        <Label>담당자 연락처</Label>
-        <Input name="contactPhone" defaultValue={target?.contactPhone || ''} />
-      </div>
-      <div className="col-span-full space-y-2">
-        <Label>담당자 이메일</Label>
-        <Input name="contactEmail" type="email" defaultValue={target?.contactEmail || ''} />
-      </div>
-      <div className="space-y-2">
-        <Label>계약유형</Label>
-        <Select name="contractType" defaultValue={target?.contractType || 'STANDARD'}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(CONTRACT_TYPE_MAP).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>결제조건</Label>
-        <Select name="paymentTerms" defaultValue={target?.paymentTerms || 'PREPAID'}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(PAYMENT_TERMS_MAP).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>정산주기</Label>
-        <Select name="billingCycle" defaultValue={target?.billingCycle || 'MONTHLY'}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(BILLING_CYCLE_MAP).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>계약 시작일</Label>
-        <Input name="contractStart" type="date" defaultValue={target?.contractStart || ''} />
-      </div>
-      <div className="space-y-2">
-        <Label>계약 종료일</Label>
-        <Input name="contractEnd" type="date" defaultValue={target?.contractEnd || ''} />
-      </div>
-      {target && (
-        <div className="space-y-2">
-          <Label>상태</Label>
-          <Select name="isActive" defaultValue={target.isActive ? 'true' : 'false'}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">활성</SelectItem>
-              <SelectItem value="false">비활성</SelectItem>
-            </SelectContent>
-          </Select>
+
+      {/* 포털 계정 정보 - 신규 등록 시에만 표시 */}
+      {!target && (
+        <div>
+          <h3 className="mb-3 border-b pb-2 text-sm font-semibold">포털 계정 정보</h3>
+          <p className="text-muted-foreground mb-3 text-xs">
+            화주사 포털 접속용 계정입니다. 입력하면 계정이 함께 생성됩니다.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>아이디</Label>
+              <Input name="username" placeholder="영문/숫자 3자 이상" />
+            </div>
+            <div className="space-y-2">
+              <Label>비밀번호</Label>
+              <Input name="password" type="password" placeholder="4자 이상" />
+            </div>
+            <div className="space-y-2">
+              <Label>계정 이름</Label>
+              <Input name="accountName" placeholder="미입력 시 회사명 사용" />
+            </div>
+            <div className="space-y-2">
+              <Label>계정 이메일</Label>
+              <Input name="accountEmail" type="email" placeholder="미입력 시 자동생성" />
+            </div>
+          </div>
         </div>
       )}
-      <div className="col-span-full space-y-2">
-        <Label>메모</Label>
-        <Input name="memo" defaultValue={target?.memo || ''} />
+
+      {/* 수정 시 계정 정보 표시 */}
+      {target?.account && (
+        <div>
+          <h3 className="mb-3 border-b pb-2 text-sm font-semibold">포털 계정 정보</h3>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>아이디</Label>
+              <Input value={target.account.username} disabled className="bg-muted" />
+            </div>
+            <div className="space-y-2">
+              <Label>이메일</Label>
+              <Input value={target.account.email} disabled className="bg-muted" />
+            </div>
+          </div>
+          <p className="text-muted-foreground mt-2 text-xs">
+            계정 비밀번호 변경은 시스템관리 &gt; 사용자관리에서 가능합니다.
+          </p>
+        </div>
+      )}
+
+      <div>
+        <h3 className="mb-3 border-b pb-2 text-sm font-semibold">기타</h3>
+        <div className="space-y-2">
+          <Label>메모</Label>
+          <Input name="memo" defaultValue={target?.memo || ''} />
+        </div>
       </div>
     </div>
   )
