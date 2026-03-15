@@ -3,6 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 const BUCKET = 'upload'
 
 let _supabase: SupabaseClient | null = null
+let _bucketEnsured = false
 
 function getClient(): SupabaseClient {
   if (!_supabase) {
@@ -16,11 +17,23 @@ function getClient(): SupabaseClient {
   return _supabase
 }
 
+async function ensureBucket() {
+  if (_bucketEnsured) return
+  const client = getClient()
+  const { data } = await client.storage.getBucket(BUCKET)
+  if (!data) {
+    await client.storage.createBucket(BUCKET, { public: false })
+  }
+  _bucketEnsured = true
+}
+
 export async function uploadFile(
   path: string,
   buffer: Buffer,
   contentType: string
 ): Promise<string> {
+  await ensureBucket()
+
   const { error } = await getClient().storage
     .from(BUCKET)
     .upload(path, buffer, { contentType, upsert: false })
