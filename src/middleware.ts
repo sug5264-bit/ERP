@@ -101,27 +101,24 @@ function generateEdgeRequestId(): string {
   return `${ts}-${seq}`
 }
 
-// ─── CSP Nonce 기반 보안 ───
-// Next.js는 하이드레이션을 위해 인라인 스크립트를 주입하므로,
-// nonce 기반 CSP로 이를 안전하게 허용합니다.
-function generateCspHeaders(nonce: string) {
-  const csp = [
-    "default-src 'self'",
-    // nonce 기반 인라인 스크립트 허용 + strict-dynamic으로 하이드레이션 스크립트 지원
-    process.env.NODE_ENV === 'production'
-      ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
-      : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-eval'`,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "connect-src 'self'",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    'upgrade-insecure-requests',
-  ].join('; ')
-  return csp
-}
+// ─── Content Security Policy ───
+// Next.js는 하이드레이션/RSC를 위해 인라인 스크립트를 주입하므로,
+// script-src에 'unsafe-inline'을 허용합니다.
+// XSS 방어는 React의 자동 이스케이핑 + sanitize 유틸리티로 보장합니다.
+const cspHeader = [
+  "default-src 'self'",
+  process.env.NODE_ENV === 'production'
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  'upgrade-insecure-requests',
+].join('; ')
 
 export default auth((request) => {
   const { pathname } = request.nextUrl
@@ -148,14 +145,7 @@ export default auth((request) => {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-request-id', requestId)
 
-  // ─── CSP Nonce 생성 ───
-  // Edge Runtime 호환: crypto.getRandomValues()로 16바이트 난수 생성 후 base64 변환
-  const nonceBytes = new Uint8Array(16)
-  crypto.getRandomValues(nonceBytes)
-  const nonce = btoa(String.fromCharCode(...nonceBytes))
-  requestHeaders.set('x-nonce', nonce)
-  const cspHeader = generateCspHeaders(nonce)
-  // Next.js가 요청 헤더의 CSP에서 nonce를 추출하여 인라인 스크립트에 자동 적용
+  // ─── CSP 헤더 설정 ───
   requestHeaders.set('Content-Security-Policy', cspHeader)
 
   // ─── 블록된 IP 체크 ───
