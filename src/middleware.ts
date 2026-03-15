@@ -155,6 +155,8 @@ export default auth((request) => {
   const nonce = btoa(String.fromCharCode(...nonceBytes))
   requestHeaders.set('x-nonce', nonce)
   const cspHeader = generateCspHeaders(nonce)
+  // Next.js가 요청 헤더의 CSP에서 nonce를 추출하여 인라인 스크립트에 자동 적용
+  requestHeaders.set('Content-Security-Policy', cspHeader)
 
   // ─── 블록된 IP 체크 ───
   const ip = getIp(request)
