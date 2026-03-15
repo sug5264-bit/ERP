@@ -52,7 +52,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     // Cascade delete in a transaction
     await prisma.$transaction(async (tx) => {
       if (note.relatedTable === 'SalesOrder') {
-        // SalesOrder post → delete mirrored DeliveryPost, replies, and attachments
+        // SalesOrder post → delete mirrored DeliveryPost, replies, statuses, and attachments
         const mirroredNotes = await tx.note.findMany({
           where: { relatedTable: 'DeliveryPost', relatedId: id },
         })
@@ -72,6 +72,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
 
           await tx.note.deleteMany({
             where: { relatedTable: 'DeliveryReply', relatedId: mirrored.id },
+          })
+
+          // Delete status tracking notes for this DeliveryPost
+          await tx.note.deleteMany({
+            where: { relatedTable: 'DeliveryPostStatus', relatedId: mirrored.id },
           })
         }
 
@@ -99,6 +104,11 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
         }
         await tx.note.deleteMany({
           where: { relatedTable: 'DeliveryReply', relatedId: id },
+        })
+
+        // Delete status tracking notes for this DeliveryPost
+        await tx.note.deleteMany({
+          where: { relatedTable: 'DeliveryPostStatus', relatedId: id },
         })
 
         // Delete attachments of the original SalesOrder post
@@ -130,6 +140,10 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
             }
             await tx.note.deleteMany({
               where: { relatedTable: 'DeliveryReply', relatedId: mirror.id },
+            })
+            // Delete status tracking notes for this mirror
+            await tx.note.deleteMany({
+              where: { relatedTable: 'DeliveryPostStatus', relatedId: mirror.id },
             })
           }
           await tx.note.deleteMany({

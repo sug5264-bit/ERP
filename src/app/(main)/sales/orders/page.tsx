@@ -30,18 +30,18 @@ interface SalesOrder {
   salesChannel?: string
 }
 
-interface DeliveryRow {
+interface NoteItem {
   id: string
-  status: string
-  deliveryDate: string
+  content: string
+  relatedId: string
+  createdAt: string
 }
 
 // Pipeline step index → tab & delivery status filter mapping
 const STEP_CONFIG = [
   { tab: 'orders', deliveryStatus: null },        // 수주 접수
-  { tab: 'orders', deliveryStatus: null },         // 진행중
-  { tab: 'deliveries', deliveryStatus: 'PREPARING' },  // 출하 준비
-  { tab: 'deliveries', deliveryStatus: 'SHIPPED' },    // 배송중
+  { tab: 'deliveries', deliveryStatus: 'PREPARING' },  // 진행중 (준비중)
+  { tab: 'deliveries', deliveryStatus: 'SHIPPED' },    // 출하 준비 (출하대기)
   { tab: 'deliveries', deliveryStatus: 'DELIVERED' },  // 납품 완료
 ] as const
 
@@ -69,44 +69,79 @@ export default function OrderShipmentPage() {
       api.get(`/sales/orders?pageSize=200${channelParam}${dateParams}`) as Promise<{ data: SalesOrder[] }>,
     staleTime: 2 * 60 * 1000,
   })
-  const { data: deliveriesData } = useQuery({
-    queryKey: ['sales-deliveries-summary', channelFilter, startDate, endDate],
+
+  // Fetch notes-based status tracking (actual workflow data)
+  const { data: deliveryNotesData } = useQuery({
+    queryKey: ['notes', 'DeliveryPost'],
     queryFn: () =>
-      api.get(`/sales/deliveries?pageSize=200${channelParam}${dateParams}`) as Promise<{
-        data: DeliveryRow[]
-      }>,
-    staleTime: 2 * 60 * 1000,
+      api.get('/notes?relatedTable=DeliveryPost') as Promise<{ data: NoteItem[] }>,
+  })
+  const { data: statusNotesData } = useQuery({
+    queryKey: ['notes', 'DeliveryPostStatus'],
+    queryFn: () =>
+      api.get('/notes?relatedTable=DeliveryPostStatus') as Promise<{ data: NoteItem[] }>,
   })
 
   const stats = useMemo(() => {
     const allOrders = ordersData?.data || []
-    const allDeliveries = deliveriesData?.data || []
+    const deliveryNotes = deliveryNotesData?.data || []
+    const statusNotesArr = statusNotesData?.data || []
 
     const totalOrders = allOrders.length
-    const ordersInProgress = allOrders.filter((o) => o.status === 'IN_PROGRESS').length
-    const ordersCompleted = allOrders.filter((o) => o.status === 'COMPLETED').length
 
-    const totalDeliveries = allDeliveries.length
-    const deliveriesPreparing = allDeliveries.filter((d) => d.status === 'PREPARING').length
-    const deliveriesShipped = allDeliveries.filter((d) => d.status === 'SHIPPED').length
-    const deliveriesCompleted = allDeliveries.filter((d) => d.status === 'DELIVERED').length
+    // Filter delivery notes by channel and date (matching parent filters)
+    const filteredDeliveryNotes = deliveryNotes.filter((n) => {
+      if (channelFilter && channelFilter !== 'all') {
+        const expectedLabel = channelFilter === 'ONLINE' ? '온라인' : '오프라인'
+        const channelMatch = n.content.match(/\[(온라인|오프라인)\]/)
+        if (!channelMatch || channelMatch[1] !== expectedLabel) return false
+      }
+      if (startDate || endDate) {
+        const noteDate = n.createdAt?.split('T')[0] || ''
+        if (startDate && noteDate < startDate) return false
+        if (endDate && noteDate > endDate) return false
+      }
+      return true
+    })
 
+    // Compute per-post status from DeliveryPostStatus notes
+    // Notes are sorted by createdAt desc, so first match per relatedId is the latest
+    const latestStatusByPost = new Map<string, string>()
+    for (const s of statusNotesArr) {
+      if (!latestStatusByPost.has(s.relatedId)) {
+        latestStatusByPost.set(s.relatedId, s.content || 'PREPARING')
+      }
+    }
+
+    let preparing = 0
+    let shipped = 0
+    let delivered = 0
+    let returned = 0
+
+    for (const note of filteredDeliveryNotes) {
+      const status = latestStatusByPost.get(note.id) || 'PREPARING'
+      if (status === 'PREPARING') preparing++
+      else if (status === 'SHIPPED') shipped++
+      else if (status === 'DELIVERED') delivered++
+      else if (status === 'RETURNED') returned++
+    }
+
+    const totalPosts = filteredDeliveryNotes.length
     const fulfillmentRate =
-      totalOrders > 0 ? Math.round((deliveriesCompleted / totalOrders) * 100) : 0
+      totalPosts > 0 ? Math.round((delivered / totalPosts) * 100) : 0
 
     return {
       totalOrders,
-      ordersInProgress,
-      ordersCompleted,
-      totalDeliveries,
-      deliveriesPreparing,
-      deliveriesShipped,
-      deliveriesCompleted,
+      totalPosts,
+      preparing,
+      shipped,
+      delivered,
+      returned,
       fulfillmentRate,
     }
-  }, [ordersData, deliveriesData])
+  }, [ordersData, deliveryNotesData, statusNotesData, channelFilter, startDate, endDate])
 
-  const isLoading = !ordersData && !deliveriesData
+  const isLoading = !ordersData && !deliveryNotesData
 
   // Derive delivery status filter from active pipeline step
   const deliveryStatusFilter = activeStep !== null ? (STEP_CONFIG[activeStep]?.deliveryStatus ?? null) : null
@@ -127,10 +162,9 @@ export default function OrderShipmentPage() {
 
   const pipelineSteps = [
     { label: '수주 접수', count: stats.totalOrders, icon: ShoppingCart, color: 'blue' as const },
-    { label: '진행중', count: stats.ordersInProgress, icon: Clock, color: 'amber' as const },
-    { label: '출하 준비', count: stats.deliveriesPreparing, icon: Package, color: 'violet' as const },
-    { label: '배송중', count: stats.deliveriesShipped, icon: Truck, color: 'sky' as const },
-    { label: '납품 완료', count: stats.deliveriesCompleted, icon: CheckCircle2, color: 'emerald' as const },
+    { label: '진행중', count: stats.preparing, icon: Clock, color: 'amber' as const },
+    { label: '출하 대기', count: stats.shipped, icon: Package, color: 'violet' as const },
+    { label: '납품 완료', count: stats.delivered, icon: CheckCircle2, color: 'emerald' as const },
   ]
 
   const colorMap = {
@@ -154,13 +188,6 @@ export default function OrderShipmentPage() {
       ring: 'ring-violet-200 dark:ring-violet-800',
       activeBg: 'bg-violet-100 dark:bg-violet-900',
       activeRing: 'ring-violet-500 dark:ring-violet-400',
-    },
-    sky: {
-      bg: 'bg-sky-50 dark:bg-sky-950',
-      text: 'text-sky-600 dark:text-sky-400',
-      ring: 'ring-sky-200 dark:ring-sky-800',
-      activeBg: 'bg-sky-100 dark:bg-sky-900',
-      activeRing: 'ring-sky-500 dark:ring-sky-400',
     },
     emerald: {
       bg: 'bg-emerald-50 dark:bg-emerald-950',
@@ -310,6 +337,9 @@ export default function OrderShipmentPage() {
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
+              <p className="text-muted-foreground mt-0.5 text-[10px]">
+                게시글 {stats.totalPosts}건
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -323,17 +353,17 @@ export default function OrderShipmentPage() {
               <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="min-w-0">
-              <p className="text-muted-foreground text-xs font-medium">진행중 수주</p>
+              <p className="text-muted-foreground text-xs font-medium">진행중</p>
               {isLoading ? (
                 <Loader2 className="text-muted-foreground mt-1 h-4 w-4 animate-spin" />
               ) : (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-lg font-bold tabular-nums">{stats.ordersInProgress}</span>
+                  <span className="text-lg font-bold tabular-nums">{stats.preparing}</span>
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
               <p className="text-muted-foreground mt-0.5 text-[10px]">
-                완료 {stats.ordersCompleted}건
+                완료 {stats.delivered}건
               </p>
             </div>
           </CardContent>
@@ -354,21 +384,21 @@ export default function OrderShipmentPage() {
               ) : (
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-lg font-bold tabular-nums">
-                    {stats.deliveriesPreparing}
+                    {stats.shipped}
                   </span>
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
               <p className="text-muted-foreground mt-0.5 text-[10px]">
-                배송중 {stats.deliveriesShipped}건
+                반품 {stats.returned}건
               </p>
             </div>
           </CardContent>
         </Card>
 
         <Card
-          className={`group cursor-pointer gap-0 border-l-4 border-l-emerald-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === 4 ? 'ring-2 ring-emerald-500' : ''}`}
-          onClick={() => handlePipelineClick(4)}
+          className={`group cursor-pointer gap-0 border-l-4 border-l-emerald-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === 3 ? 'ring-2 ring-emerald-500' : ''}`}
+          onClick={() => handlePipelineClick(3)}
         >
           <CardContent className="flex items-center gap-3 px-4 py-0">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 transition-transform group-hover:scale-110 dark:bg-emerald-950">
@@ -381,13 +411,13 @@ export default function OrderShipmentPage() {
               ) : (
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-lg font-bold tabular-nums">
-                    {stats.deliveriesCompleted}
+                    {stats.delivered}
                   </span>
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
               <p className="text-muted-foreground mt-0.5 text-[10px]">
-                전체 {stats.totalDeliveries}건 중
+                전체 {stats.totalPosts}건 중
               </p>
             </div>
           </CardContent>
@@ -420,12 +450,12 @@ export default function OrderShipmentPage() {
               >
                 <Truck className="h-4 w-4" />
                 출하관리
-                {stats.totalDeliveries > 0 && (
+                {stats.totalPosts > 0 && (
                   <Badge
                     variant={mainTab === 'deliveries' ? 'default' : 'secondary'}
                     className="ml-1 h-5 min-w-[20px] px-1.5 text-[10px]"
                   >
-                    {stats.totalDeliveries}
+                    {stats.totalPosts}
                   </Badge>
                 )}
               </TabsTrigger>
