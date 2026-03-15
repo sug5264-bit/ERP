@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
@@ -11,9 +11,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { DateRangeFilter } from '@/components/common/date-range-filter'
+import { Checkbox } from '@/components/ui/checkbox'
 import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { formatDate } from '@/lib/format'
+import { readExcelFile } from '@/lib/export/excel-reader'
+import { downloadImportTemplate } from '@/lib/export/excel-template'
+import { exportToExcel } from '@/lib/export/excel-export'
 import { toast } from 'sonner'
 import {
   Plus,
@@ -27,6 +30,13 @@ import {
   Loader2,
   Truck,
   ArrowRight,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from 'lucide-react'
 
 interface Partner {
@@ -34,6 +44,9 @@ interface Partner {
   partnerCode: string
   partnerName: string
   bizNo?: string
+  ceoName?: string
+  address?: string
+  phone?: string
 }
 
 interface Item {
@@ -43,6 +56,7 @@ interface Item {
   specification?: string
   unit: string
   standardPrice: number
+  taxType?: string
   barcode?: string
 }
 
@@ -51,7 +65,10 @@ interface OrderDetail {
   itemName?: string
   quantity: number
   unitPrice: number
+  supplyAmount: number
+  taxAmount: number
   amount: number
+  remark?: string
 }
 
 interface SalesOrder {
@@ -63,6 +80,7 @@ interface SalesOrder {
   totalAmount: number
   totalSupply: number
   totalTax: number
+  vatIncluded: boolean
   description?: string
   partner?: Partner
   details?: {
@@ -70,16 +88,26 @@ interface SalesOrder {
     itemId: string
     quantity: number
     unitPrice: number
+    supplyAmount: number
+    taxAmount: number
     totalAmount: number
     deliveredQty: number
     remainingQty: number
     item?: Item
+    remark?: string
   }[]
 }
 
 function getLocalDateString() {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function getMonthRange(year: number, month: number) {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`
+  const lastDay = new Date(year, month, 0).getDate()
+  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  return { start, end }
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -89,48 +117,77 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: '취소', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
 }
 
+const EXCEL_KEY_MAP: Record<string, string> = {
+  '거래처코드': 'partnerCode',
+  '거래처명': 'partnerName',
+  '사업자번호': 'bizNo',
+  '품목코드': 'itemCode',
+  '품목명': 'itemName',
+  '규격': 'specification',
+  '단위': 'unit',
+  '수량': 'quantity',
+  '단가': 'unitPrice',
+  '비고': 'remark',
+  '발주일': 'orderDate',
+  '납기일': 'deliveryDate',
+  '부가세': 'vatType',
+  '바코드': 'barcode',
+}
+
 export default function OfflineOrdersPage() {
   const queryClient = useQueryClient()
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Month selector for KPI
+  const now = new Date()
+  const [kpiYear, setKpiYear] = useState(now.getFullYear())
+  const [kpiMonth, setKpiMonth] = useState(now.getMonth() + 1)
+  const { start: monthStart, end: monthEnd } = useMemo(() => getMonthRange(kpiYear, kpiMonth), [kpiYear, kpiMonth])
+
   const [searchKeyword, setSearchKeyword] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
 
   // Create form state
   const [orderDate, setOrderDate] = useState(getLocalDateString())
   const [partnerId, setPartnerId] = useState('')
-  const [partnerName, setPartnerName] = useState('')
+  const [partnerSearch, setPartnerSearch] = useState('')
   const [description, setDescription] = useState('')
   const [deliveryDate, setDeliveryDate] = useState('')
+  const [vatIncluded, setVatIncluded] = useState(true)
   const [orderDetails, setOrderDetails] = useState<OrderDetail[]>([
-    { itemId: '', itemName: '', quantity: 1, unitPrice: 0, amount: 0 },
+    { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 },
   ])
+
+  // Excel import state
+  const [excelPreview, setExcelPreview] = useState<Record<string, unknown>[] | null>(null)
+  const [excelDialogOpen, setExcelDialogOpen] = useState(false)
+  const [excelErrors, setExcelErrors] = useState<string[]>([])
 
   // Delivery form
   const [deliveryDialogOpen, setDeliveryDialogOpen] = useState(false)
   const [deliveryOrderId, setDeliveryOrderId] = useState('')
   const [deliveryFormDate, setDeliveryFormDate] = useState(getLocalDateString())
 
-  // Data queries
+  // Data queries - monthly based
   const dateParams = useMemo(() => {
     let params = '&salesChannel=OFFLINE'
-    if (startDate) params += `&startDate=${startDate}`
-    if (endDate) params += `&endDate=${endDate}`
+    params += `&startDate=${monthStart}&endDate=${monthEnd}`
     if (searchKeyword) params += `&search=${encodeURIComponent(searchKeyword)}`
     return params
-  }, [startDate, endDate, searchKeyword])
+  }, [monthStart, monthEnd, searchKeyword])
 
   const { data: ordersData, isLoading } = useQuery({
-    queryKey: ['sales-orders-offline', startDate, endDate, searchKeyword],
+    queryKey: ['sales-orders-offline', monthStart, monthEnd, searchKeyword],
     queryFn: () =>
-      api.get(`/sales/orders?pageSize=200${dateParams}`) as Promise<{ data: SalesOrder[] }>,
+      api.get(`/sales/orders?pageSize=500${dateParams}`) as Promise<{ data: SalesOrder[] }>,
   })
   const orders = ordersData?.data || []
 
   const { data: partnersData } = useQuery({
     queryKey: ['partners-list'],
-    queryFn: () => api.get('/partners?pageSize=500&partnerType=CUSTOMER') as Promise<{ data: Partner[] }>,
+    queryFn: () => api.get('/partners?pageSize=500') as Promise<{ data: Partner[] }>,
     staleTime: 5 * 60 * 1000,
   })
   const partners = partnersData?.data || []
@@ -142,15 +199,34 @@ export default function OfflineOrdersPage() {
   })
   const items = itemsData?.data || []
 
+  // Filtered partners for autocomplete
+  const filteredPartners = useMemo(() => {
+    if (!partnerSearch) return partners.slice(0, 20)
+    const q = partnerSearch.toLowerCase()
+    return partners.filter(
+      (p) => p.partnerName.toLowerCase().includes(q) || p.partnerCode.toLowerCase().includes(q) || (p.bizNo && p.bizNo.includes(q))
+    ).slice(0, 20)
+  }, [partners, partnerSearch])
+
   // Stats
   const stats = useMemo(() => {
-    const total = orders.length
-    const ordered = orders.filter((o) => o.status === 'ORDERED').length
-    const inProgress = orders.filter((o) => o.status === 'IN_PROGRESS').length
-    const completed = orders.filter((o) => o.status === 'COMPLETED').length
-    const totalAmount = orders.reduce((s, o) => s + Number(o.totalAmount || 0), 0)
-    return { total, ordered, inProgress, completed, totalAmount }
+    const activeOrders = orders.filter((o) => o.status !== 'CANCELLED')
+    const total = activeOrders.length
+    const ordered = activeOrders.filter((o) => o.status === 'ORDERED').length
+    const inProgress = activeOrders.filter((o) => o.status === 'IN_PROGRESS').length
+    const completed = activeOrders.filter((o) => o.status === 'COMPLETED').length
+    const totalAmount = activeOrders.reduce((s, o) => s + Number(o.totalAmount || 0), 0)
+    const fulfillmentRate = total > 0 ? Math.round((completed / total) * 100) : 0
+    return { total, ordered, inProgress, completed, totalAmount, fulfillmentRate }
   }, [orders])
+
+  // Tax calculation helper
+  const calcTax = useCallback((supplyAmount: number, itemId: string, isVatIncluded: boolean): number => {
+    if (!isVatIncluded) return 0
+    const item = items.find((i) => i.id === itemId)
+    const taxType = item?.taxType || 'TAXABLE'
+    return taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+  }, [items])
 
   // Create order mutation
   const createMutation = useMutation({
@@ -162,16 +238,16 @@ export default function OfflineOrdersPage() {
       return api.post('/sales/orders', {
         orderDate,
         partnerId: partnerId || undefined,
-        partnerName: !partnerId ? partnerName || undefined : undefined,
         salesChannel: 'OFFLINE',
         deliveryDate: deliveryDate || undefined,
         description: description || undefined,
-        vatIncluded: true,
+        vatIncluded,
         details: validDetails.map((d) => ({
           itemId: d.itemId || undefined,
           itemName: d.itemName || undefined,
           quantity: d.quantity,
           unitPrice: d.unitPrice,
+          remark: d.remark || undefined,
         })),
       })
     },
@@ -187,27 +263,68 @@ export default function OfflineOrdersPage() {
     },
   })
 
-  // Create delivery mutation (출고 처리 - 재고 차감 + 매출 반영)
+  // Excel bulk import mutation
+  const excelImportMutation = useMutation({
+    mutationFn: async (rows: Record<string, unknown>[]) => {
+      // Group rows by orderDate + partnerCode/partnerName
+      const grouped = new Map<string, Record<string, unknown>[]>()
+      for (const row of rows) {
+        const key = `${row.orderDate || getLocalDateString()}|${row.partnerCode || row.partnerName || 'none'}`
+        if (!grouped.has(key)) grouped.set(key, [])
+        grouped.get(key)!.push(row)
+      }
+
+      const results = []
+      for (const [, groupRows] of grouped) {
+        const first = groupRows[0]
+        const vatType = String(first.vatType || '포함')
+        const isVat = vatType !== '별도' && vatType !== 'false' && vatType !== '0'
+
+        const result = await api.post('/sales/orders', {
+          orderDate: String(first.orderDate || getLocalDateString()),
+          partnerCode: first.partnerCode ? String(first.partnerCode) : undefined,
+          partnerName: first.partnerName ? String(first.partnerName) : undefined,
+          bizNo: first.bizNo ? String(first.bizNo) : undefined,
+          salesChannel: 'OFFLINE',
+          deliveryDate: first.deliveryDate ? String(first.deliveryDate) : undefined,
+          vatIncluded: isVat,
+          details: groupRows.map((r) => ({
+            itemCode: r.itemCode ? String(r.itemCode) : undefined,
+            itemName: r.itemName ? String(r.itemName) : undefined,
+            specification: r.specification ? String(r.specification) : undefined,
+            unit: r.unit ? String(r.unit) : undefined,
+            barcode: r.barcode ? String(r.barcode) : undefined,
+            quantity: Number(r.quantity) || 1,
+            unitPrice: Number(r.unitPrice) || 0,
+            remark: r.remark ? String(r.remark) : undefined,
+          })),
+        })
+        results.push(result)
+      }
+      return results
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders-offline'] })
+      queryClient.invalidateQueries({ queryKey: ['sales-orders-summary'] })
+      setExcelPreview(null)
+      setExcelDialogOpen(false)
+      toast.success(`${results.length}건의 발주가 등록되었습니다.`)
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : '엑셀 업로드에 실패했습니다.')
+    },
+  })
+
+  // Create delivery mutation
   const deliveryMutation = useMutation({
     mutationFn: async () => {
       const order = orders.find((o) => o.id === deliveryOrderId)
       if (!order) throw new Error('발주를 찾을 수 없습니다.')
-
       const details = order.details
         ?.filter((d) => Number(d.remainingQty) > 0)
-        .map((d) => ({
-          itemId: d.itemId,
-          quantity: Number(d.remainingQty),
-          unitPrice: Number(d.unitPrice),
-        }))
-
+        .map((d) => ({ itemId: d.itemId, quantity: Number(d.remainingQty), unitPrice: Number(d.unitPrice) }))
       if (!details || details.length === 0) throw new Error('출고할 잔여 수량이 없습니다.')
-
-      return api.post('/sales/deliveries', {
-        deliveryDate: deliveryFormDate,
-        salesOrderId: deliveryOrderId,
-        details,
-      })
+      return api.post('/sales/deliveries', { deliveryDate: deliveryFormDate, salesOrderId: deliveryOrderId, details })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales-orders-offline'] })
@@ -217,7 +334,7 @@ export default function OfflineOrdersPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-movement'] })
       setDeliveryDialogOpen(false)
       setDeliveryOrderId('')
-      toast.success('출고 처리가 완료되었습니다. 재고가 차감되었습니다.')
+      toast.success('출고 처리가 완료되었습니다.')
     },
     onError: (err) => {
       toast.error(err instanceof Error ? err.message : '출고 처리에 실패했습니다.')
@@ -239,10 +356,11 @@ export default function OfflineOrdersPage() {
   const resetForm = () => {
     setOrderDate(getLocalDateString())
     setPartnerId('')
-    setPartnerName('')
+    setPartnerSearch('')
     setDescription('')
     setDeliveryDate('')
-    setOrderDetails([{ itemId: '', itemName: '', quantity: 1, unitPrice: 0, amount: 0 }])
+    setVatIncluded(true)
+    setOrderDetails([{ itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 }])
   }
 
   const updateDetail = (idx: number, field: string, value: string | number) => {
@@ -256,21 +374,35 @@ export default function OfflineOrdersPage() {
           detail.unitPrice = Number(item.standardPrice)
         }
       }
-      detail.amount = Math.round(detail.quantity * detail.unitPrice)
+      detail.supplyAmount = Math.round(detail.quantity * detail.unitPrice)
+      detail.taxAmount = calcTax(detail.supplyAmount, detail.itemId, vatIncluded)
+      detail.amount = detail.supplyAmount + detail.taxAmount
       updated[idx] = detail
       return updated
     })
   }
 
+  const recalcAllDetails = useCallback((isVat: boolean) => {
+    setOrderDetails((prev) =>
+      prev.map((d) => {
+        const supply = Math.round(d.quantity * d.unitPrice)
+        const tax = isVat ? calcTax(supply, d.itemId, true) : 0
+        return { ...d, supplyAmount: supply, taxAmount: tax, amount: supply + tax }
+      })
+    )
+  }, [calcTax])
+
   const addDetail = () => {
-    setOrderDetails((prev) => [...prev, { itemId: '', itemName: '', quantity: 1, unitPrice: 0, amount: 0 }])
+    setOrderDetails((prev) => [...prev, { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 }])
   }
 
   const removeDetail = (idx: number) => {
     setOrderDetails((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  const totalAmount = orderDetails.reduce((s, d) => s + d.amount, 0)
+  const totalSupply = orderDetails.reduce((s, d) => s + d.supplyAmount, 0)
+  const totalTax = orderDetails.reduce((s, d) => s + d.taxAmount, 0)
+  const totalAmount = totalSupply + totalTax
 
   const openDeliveryDialog = (orderId: string) => {
     setDeliveryOrderId(orderId)
@@ -278,9 +410,202 @@ export default function OfflineOrdersPage() {
     setDeliveryDialogOpen(true)
   }
 
+  // Excel handlers
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const rows = await readExcelFile(file, EXCEL_KEY_MAP)
+      if (rows.length === 0) {
+        toast.error('데이터가 없습니다. 템플릿을 확인해주세요.')
+        return
+      }
+      // Validate
+      const errors: string[] = []
+      rows.forEach((row, idx) => {
+        if (!row.itemCode && !row.itemName) errors.push(`${idx + 2}행: 품목코드 또는 품목명이 필요합니다`)
+        if (!row.quantity || Number(row.quantity) <= 0) errors.push(`${idx + 2}행: 수량을 확인해주세요`)
+      })
+      setExcelErrors(errors)
+      setExcelPreview(rows)
+      setExcelDialogOpen(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '엑셀 파일 읽기 실패')
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleTemplateDownload = () => {
+    downloadImportTemplate({
+      fileName: '오프라인_발주_템플릿',
+      sheetName: '발주데이터',
+      columns: [
+        { header: '거래처코드', key: 'partnerCode', example: 'P001', width: 14 },
+        { header: '거래처명', key: 'partnerName', example: '(주)한국식품', width: 20, required: true },
+        { header: '사업자번호', key: 'bizNo', example: '123-45-67890', width: 16 },
+        { header: '품목코드', key: 'itemCode', example: 'ITM001', width: 14 },
+        { header: '품목명', key: 'itemName', example: '유기농 사과', width: 20, required: true },
+        { header: '규격', key: 'specification', example: '1kg', width: 12 },
+        { header: '단위', key: 'unit', example: 'EA', width: 8 },
+        { header: '수량', key: 'quantity', example: '100', width: 10, required: true },
+        { header: '단가', key: 'unitPrice', example: '5000', width: 12, required: true },
+        { header: '비고', key: 'remark', example: '긴급 배송', width: 16 },
+        { header: '발주일', key: 'orderDate', example: '2026-03-15', width: 14 },
+        { header: '납기일', key: 'deliveryDate', example: '2026-03-20', width: 14 },
+        { header: '부가세', key: 'vatType', example: '포함', width: 10 },
+        { header: '바코드', key: 'barcode', example: '8801234567890', width: 16 },
+      ],
+    })
+  }
+
+  // Bulk download handlers
+  const handleBulkExcelDownload = async () => {
+    const selected = orders.filter((o) => selectedOrders.has(o.id))
+    if (selected.length === 0) { toast.error('다운로드할 발주를 선택하세요.'); return }
+    await exportToExcel({
+      fileName: `오프라인_발주목록_${getLocalDateString()}`,
+      title: '오프라인 발주 목록',
+      columns: [
+        { header: '발주번호', accessor: 'orderNo' },
+        { header: '발주일', accessor: (r) => formatDate(r.orderDate) },
+        { header: '거래처', accessor: (r) => r.partner?.partnerName || '-' },
+        { header: '상태', accessor: (r) => STATUS_MAP[r.status]?.label || r.status },
+        { header: '공급가액', accessor: (r) => Number(r.totalSupply).toLocaleString() },
+        { header: '세액', accessor: (r) => Number(r.totalTax).toLocaleString() },
+        { header: '합계', accessor: (r) => Number(r.totalAmount).toLocaleString() },
+        { header: '비고', accessor: (r) => r.description || '' },
+      ],
+      data: selected,
+    })
+    toast.success(`${selected.length}건 엑셀 다운로드 완료`)
+  }
+
+  const handleBulkPdfDownload = async () => {
+    const selected = orders.filter((o) => selectedOrders.has(o.id))
+    if (selected.length === 0) { toast.error('다운로드할 발주를 선택하세요.'); return }
+
+    // Dynamically import and generate PDFs
+    const { generateTransactionStatementBlob } = await import('@/lib/export/transaction-statement-pdf')
+    const { default: JSZip } = await import('jszip')
+    const zip = new JSZip()
+
+    for (const order of selected) {
+      // Fetch full order details for PDF
+      let fullOrder = order
+      if (!order.details || order.details.length === 0) {
+        try {
+          const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+          fullOrder = res.data
+        } catch { /* use what we have */ }
+      }
+      const blob = await generateTransactionStatementBlob({
+        orderNo: fullOrder.orderNo,
+        orderDate: fullOrder.orderDate,
+        partnerName: fullOrder.partner?.partnerName,
+        partnerBizNo: fullOrder.partner?.bizNo,
+        partnerCeo: fullOrder.partner?.ceoName,
+        partnerAddress: fullOrder.partner?.address,
+        partnerContact: fullOrder.partner?.phone,
+        totalSupply: Number(fullOrder.totalSupply),
+        totalTax: Number(fullOrder.totalTax),
+        totalAmount: Number(fullOrder.totalAmount),
+        vatIncluded: fullOrder.vatIncluded,
+        description: fullOrder.description,
+        items: (fullOrder.details || []).map((d) => ({
+          itemName: d.item?.itemName || '',
+          itemCode: d.item?.itemCode,
+          specification: d.item?.specification,
+          unit: d.item?.unit,
+          quantity: Number(d.quantity),
+          unitPrice: Number(d.unitPrice),
+          supplyAmount: Number(d.supplyAmount),
+          taxAmount: Number(d.taxAmount),
+          totalAmount: Number(d.totalAmount),
+          remark: d.remark,
+        })),
+      })
+      zip.file(`거래명세서_${fullOrder.orderNo}.pdf`, blob)
+    }
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(zipBlob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `거래명세서_일괄_${getLocalDateString()}.zip`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    toast.success(`${selected.length}건 거래명세서 ZIP 다운로드 완료`)
+  }
+
+  const handleSinglePdfDownload = async (order: SalesOrder) => {
+    let fullOrder = order
+    if (!order.details || order.details.length === 0) {
+      try {
+        const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+        fullOrder = res.data
+      } catch { /* use what we have */ }
+    }
+    const { generateTransactionStatement } = await import('@/lib/export/transaction-statement-pdf')
+    await generateTransactionStatement({
+      orderNo: fullOrder.orderNo,
+      orderDate: fullOrder.orderDate,
+      partnerName: fullOrder.partner?.partnerName,
+      partnerBizNo: fullOrder.partner?.bizNo,
+      partnerCeo: fullOrder.partner?.ceoName,
+      partnerAddress: fullOrder.partner?.address,
+      partnerContact: fullOrder.partner?.phone,
+      totalSupply: Number(fullOrder.totalSupply),
+      totalTax: Number(fullOrder.totalTax),
+      totalAmount: Number(fullOrder.totalAmount),
+      vatIncluded: fullOrder.vatIncluded,
+      description: fullOrder.description,
+      items: (fullOrder.details || []).map((d) => ({
+        itemName: d.item?.itemName || '',
+        itemCode: d.item?.itemCode,
+        specification: d.item?.specification,
+        unit: d.item?.unit,
+        quantity: Number(d.quantity),
+        unitPrice: Number(d.unitPrice),
+        supplyAmount: Number(d.supplyAmount),
+        taxAmount: Number(d.taxAmount),
+        totalAmount: Number(d.totalAmount),
+        remark: d.remark,
+      })),
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedOrders.size === orders.length) {
+      setSelectedOrders(new Set())
+    } else {
+      setSelectedOrders(new Set(orders.map((o) => o.id)))
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedOrders((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  // Month navigation
+  const prevMonth = () => {
+    if (kpiMonth === 1) { setKpiYear(kpiYear - 1); setKpiMonth(12) }
+    else setKpiMonth(kpiMonth - 1)
+  }
+  const nextMonth = () => {
+    if (kpiMonth === 12) { setKpiYear(kpiYear + 1); setKpiMonth(1) }
+    else setKpiMonth(kpiMonth + 1)
+  }
+
   const pipelineSteps = [
     { label: '전체 발주', count: stats.total, icon: ShoppingCart, color: 'blue' },
-    { label: '진행중', count: stats.inProgress, icon: Clock, color: 'amber' },
+    { label: '대기/진행', count: stats.ordered + stats.inProgress, icon: Clock, color: 'amber' },
     { label: '출고 완료', count: stats.completed, icon: CheckCircle2, color: 'emerald' },
   ]
 
@@ -297,18 +622,26 @@ export default function OfflineOrdersPage() {
         description="오프라인 거래처 발주 등록 및 출고/재고 연동 관리"
       />
 
-      {/* Filter bar */}
+      {/* Month selector + toolbar */}
       <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border px-2 py-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="min-w-[120px] text-center text-sm font-medium">
+            {kpiYear}년 {kpiMonth}월
+          </span>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-1.5 h-4 w-4" /> 발주 등록
-            </Button>
+            <Button size="sm"><Plus className="mr-1.5 h-4 w-4" /> 발주 등록</Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>오프라인 발주 등록</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>오프라인 발주 등록</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -320,38 +653,71 @@ export default function OfflineOrdersPage() {
                   <Input type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} />
                 </div>
               </div>
+
+              {/* Partner autocomplete */}
               <div className="space-y-1">
                 <label className="text-muted-foreground text-xs font-medium">거래처</label>
-                <Select value={partnerId} onValueChange={(v) => { setPartnerId(v); setPartnerName('') }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="거래처 선택 (미선택 시 직접 입력)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">직접 입력</SelectItem>
-                    {partners.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.partnerName} ({p.partnerCode})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {(!partnerId || partnerId === 'none') && (
+                <div className="relative">
+                  <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
                   <Input
-                    className="mt-1"
-                    placeholder="거래처명 직접 입력 (자동 생성됨)"
-                    value={partnerName}
-                    onChange={(e) => setPartnerName(e.target.value)}
+                    className="pl-8"
+                    placeholder="거래처명, 코드, 사업자번호로 검색..."
+                    value={partnerSearch}
+                    onChange={(e) => { setPartnerSearch(e.target.value); setPartnerId('') }}
                   />
+                  {partnerId && (
+                    <button
+                      className="absolute top-1/2 right-2 -translate-y-1/2"
+                      onClick={() => { setPartnerId(''); setPartnerSearch('') }}
+                    >
+                      <X className="text-muted-foreground h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                {partnerSearch && !partnerId && filteredPartners.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto rounded-md border bg-white shadow-lg dark:bg-gray-950">
+                    {filteredPartners.map((p) => (
+                      <button
+                        key={p.id}
+                        className="hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
+                        onClick={() => { setPartnerId(p.id); setPartnerSearch(p.partnerName) }}
+                      >
+                        <span className="font-medium">{p.partnerName}</span>
+                        <span className="text-muted-foreground text-xs">({p.partnerCode})</span>
+                        {p.bizNo && <span className="text-muted-foreground text-xs">{p.bizNo}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {partnerSearch && !partnerId && filteredPartners.length === 0 && (
+                  <p className="text-muted-foreground px-1 text-xs">
+                    일치하는 거래처가 없습니다. 입력한 이름으로 자동 생성됩니다.
+                  </p>
                 )}
               </div>
+
+              {/* VAT toggle */}
+              <div className="flex items-center gap-3">
+                <label className="text-muted-foreground text-xs font-medium">부가세 구분</label>
+                <div className="flex gap-1 rounded-md border p-0.5">
+                  <button
+                    className={`rounded px-3 py-1 text-xs font-medium transition-colors ${vatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                    onClick={() => { setVatIncluded(true); recalcAllDetails(true) }}
+                  >
+                    부가세 포함
+                  </button>
+                  <button
+                    className={`rounded px-3 py-1 text-xs font-medium transition-colors ${!vatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                    onClick={() => { setVatIncluded(false); recalcAllDetails(false) }}
+                  >
+                    부가세 별도
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-muted-foreground text-xs font-medium">비고</label>
-                <Textarea
-                  placeholder="비고 사항..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                />
+                <Textarea placeholder="비고 사항..." value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
               </div>
 
               {/* Order details */}
@@ -367,13 +733,8 @@ export default function OfflineOrdersPage() {
                     <div key={idx} className="flex items-end gap-2 rounded-md border p-2">
                       <div className="min-w-0 flex-1 space-y-1">
                         <label className="text-muted-foreground text-[10px]">품목</label>
-                        <Select
-                          value={detail.itemId}
-                          onValueChange={(v) => updateDetail(idx, 'itemId', v)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="품목 선택" />
-                          </SelectTrigger>
+                        <Select value={detail.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
                           <SelectContent>
                             {items.map((item) => (
                               <SelectItem key={item.id} value={item.id}>
@@ -385,55 +746,43 @@ export default function OfflineOrdersPage() {
                       </div>
                       <div className="w-20 space-y-1">
                         <label className="text-muted-foreground text-[10px]">수량</label>
-                        <Input
-                          type="number"
-                          min={1}
-                          className="h-8 text-xs"
-                          value={detail.quantity}
-                          onChange={(e) => updateDetail(idx, 'quantity', parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="w-28 space-y-1">
-                        <label className="text-muted-foreground text-[10px]">단가</label>
-                        <Input
-                          type="number"
-                          min={0}
-                          className="h-8 text-xs"
-                          value={detail.unitPrice}
-                          onChange={(e) => updateDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)}
-                        />
+                        <Input type="number" min={1} className="h-8 text-xs" value={detail.quantity} onChange={(e) => updateDetail(idx, 'quantity', parseInt(e.target.value) || 0)} />
                       </div>
                       <div className="w-24 space-y-1">
-                        <label className="text-muted-foreground text-[10px]">금액</label>
-                        <div className="flex h-8 items-center text-xs font-medium tabular-nums">
-                          {detail.amount.toLocaleString()}원
+                        <label className="text-muted-foreground text-[10px]">단가</label>
+                        <Input type="number" min={0} className="h-8 text-xs" value={detail.unitPrice} onChange={(e) => updateDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)} />
+                      </div>
+                      <div className="w-24 space-y-1">
+                        <label className="text-muted-foreground text-[10px]">공급가액</label>
+                        <div className="flex h-8 items-center text-xs tabular-nums">{detail.supplyAmount.toLocaleString()}</div>
+                      </div>
+                      {vatIncluded && (
+                        <div className="w-20 space-y-1">
+                          <label className="text-muted-foreground text-[10px]">세액</label>
+                          <div className="flex h-8 items-center text-xs tabular-nums">{detail.taxAmount.toLocaleString()}</div>
                         </div>
+                      )}
+                      <div className="w-24 space-y-1">
+                        <label className="text-muted-foreground text-[10px]">합계</label>
+                        <div className="flex h-8 items-center text-xs font-medium tabular-nums">{detail.amount.toLocaleString()}</div>
                       </div>
                       {orderDetails.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive h-8 w-8"
-                          onClick={() => removeDetail(idx)}
-                        >
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeDetail(idx)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>
                   ))}
                 </div>
-                <div className="text-right text-sm font-bold">
-                  합계: {totalAmount.toLocaleString()}원
+                <div className="flex justify-end gap-4 text-sm">
+                  <span className="text-muted-foreground">공급가액: <strong className="text-foreground">{totalSupply.toLocaleString()}</strong></span>
+                  {vatIncluded && <span className="text-muted-foreground">세액: <strong className="text-foreground">{totalTax.toLocaleString()}</strong></span>}
+                  <span className="font-bold">합계: {totalAmount.toLocaleString()}원</span>
                 </div>
               </div>
 
               <div className="flex justify-end pt-2">
-                <Button
-                  onClick={() => createMutation.mutate()}
-                  disabled={createMutation.isPending}
-                  size="sm"
-                >
+                <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} size="sm">
                   {createMutation.isPending ? '등록 중...' : '발주 등록'}
                 </Button>
               </div>
@@ -441,20 +790,18 @@ export default function OfflineOrdersPage() {
           </DialogContent>
         </Dialog>
 
-        <DateRangeFilter
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={(s, e) => { setStartDate(s); setEndDate(e) }}
-        />
+        {/* Excel buttons */}
+        <Button variant="outline" size="sm" onClick={handleTemplateDownload}>
+          <FileSpreadsheet className="mr-1.5 h-4 w-4" /> 템플릿
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+          <Upload className="mr-1.5 h-4 w-4" /> 엑셀 업로드
+        </Button>
+        <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={handleExcelUpload} />
 
         <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <Input
-            className="pl-9"
-            placeholder="발주번호, 거래처 검색..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-          />
+          <Input className="pl-9" placeholder="발주번호, 거래처 검색..." value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} />
         </div>
       </div>
 
@@ -466,8 +813,11 @@ export default function OfflineOrdersPage() {
               <TrendingUp className="text-muted-foreground h-4 w-4" />
               <span className="text-muted-foreground text-xs font-medium">처리 현황</span>
             </div>
-            <div className="text-sm font-bold tabular-nums">
-              총 매출 {stats.totalAmount.toLocaleString()}원
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-xs">이행률</span>
+              <Badge variant={stats.fulfillmentRate >= 80 ? 'default' : stats.fulfillmentRate >= 50 ? 'secondary' : 'outline'} className="tabular-nums text-xs">
+                {isLoading ? '...' : `${stats.fulfillmentRate}%`}
+              </Badge>
             </div>
           </div>
           <div className="flex items-center gap-1 overflow-x-auto sm:gap-0">
@@ -494,6 +844,14 @@ export default function OfflineOrdersPage() {
                 </div>
               )
             })}
+          </div>
+          <div className="mt-3">
+            <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-amber-500 to-emerald-500 transition-all duration-700 ease-out"
+                style={{ width: isLoading ? '0%' : `${stats.fulfillmentRate}%` }}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -545,11 +903,24 @@ export default function OfflineOrdersPage() {
       {/* Orders list */}
       <Card className="overflow-hidden border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <Package className="h-4 w-4" />
-            오프라인 발주 목록
-            <Badge variant="secondary" className="text-[10px]">{orders.length}건</Badge>
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Package className="h-4 w-4" />
+              오프라인 발주 목록
+              <Badge variant="secondary" className="text-[10px]">{orders.length}건</Badge>
+            </CardTitle>
+            {selectedOrders.size > 0 && (
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-xs">{selectedOrders.size}건 선택</Badge>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={handleBulkExcelDownload}>
+                  <Download className="h-3 w-3" /> 엑셀
+                </Button>
+                <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={handleBulkPdfDownload}>
+                  <FileText className="h-3 w-3" /> 거래명세서
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {isLoading && <div className="text-muted-foreground py-12 text-center text-sm">불러오는 중...</div>}
@@ -559,13 +930,28 @@ export default function OfflineOrdersPage() {
               <p>등록된 오프라인 발주가 없습니다.</p>
             </div>
           )}
+          {orders.length > 0 && (
+            <div className="mb-2 flex items-center gap-2 border-b pb-2">
+              <Checkbox
+                checked={selectedOrders.size === orders.length && orders.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-muted-foreground text-xs">전체 선택</span>
+            </div>
+          )}
           <div className="space-y-2">
             {orders.map((order) => {
               const statusInfo = STATUS_MAP[order.status] || STATUS_MAP.ORDERED
               const hasRemaining = order.details?.some((d) => Number(d.remainingQty) > 0)
               return (
                 <div key={order.id} className="rounded-lg border p-3 transition-shadow hover:shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex pt-0.5">
+                      <Checkbox
+                        checked={selectedOrders.has(order.id)}
+                        onCheckedChange={() => toggleSelect(order.id)}
+                      />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <span className="text-xs font-medium">{order.orderNo}</span>
@@ -573,44 +959,30 @@ export default function OfflineOrdersPage() {
                           {statusInfo.label}
                         </span>
                         {order.partner && (
-                          <Badge variant="outline" className="text-[10px]">
-                            {order.partner.partnerName}
-                          </Badge>
+                          <Badge variant="outline" className="text-[10px]">{order.partner.partnerName}</Badge>
                         )}
+                        <Badge variant="secondary" className="text-[10px]">
+                          {order.vatIncluded !== false ? '부가세포함' : '부가세별도'}
+                        </Badge>
                       </div>
                       <div className="flex flex-wrap items-center gap-3 text-xs">
                         <span className="text-muted-foreground">발주일: {formatDate(order.orderDate)}</span>
-                        <span className="font-medium tabular-nums">
-                          {Number(order.totalAmount).toLocaleString()}원
-                        </span>
-                        {order.details && (
-                          <span className="text-muted-foreground">
-                            품목 {order.details.length}건
-                          </span>
-                        )}
+                        <span className="font-medium tabular-nums">{Number(order.totalAmount).toLocaleString()}원</span>
+                        {order.details && <span className="text-muted-foreground">품목 {order.details.length}건</span>}
                       </div>
-                      {order.description && (
-                        <p className="text-muted-foreground mt-1 text-xs">{order.description}</p>
-                      )}
+                      {order.description && <p className="text-muted-foreground mt-1 text-xs">{order.description}</p>}
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" title="거래명세서 다운로드" onClick={() => handleSinglePdfDownload(order)}>
+                        <FileText className="h-3.5 w-3.5" />
+                      </Button>
                       {hasRemaining && order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 gap-1 text-xs"
-                          onClick={() => openDeliveryDialog(order.id)}
-                        >
+                        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => openDeliveryDialog(order.id)}>
                           <Truck className="h-3 w-3" /> 출고
                         </Button>
                       )}
-                      {order.status === 'ORDERED' && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive h-7 w-7"
-                          onClick={() => setDeleteTarget(order.id)}
-                        >
+                      {order.status !== 'CANCELLED' && (
+                        <Button variant="ghost" size="icon" className="text-destructive h-7 w-7" onClick={() => setDeleteTarget(order.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -623,16 +995,75 @@ export default function OfflineOrdersPage() {
         </CardContent>
       </Card>
 
+      {/* Excel Import Preview Dialog */}
+      <Dialog open={excelDialogOpen} onOpenChange={setExcelDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>엑셀 업로드 미리보기</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {excelErrors.length > 0 && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950">
+                <p className="mb-1 text-xs font-medium text-red-800 dark:text-red-300">오류 항목 ({excelErrors.length}건)</p>
+                <div className="max-h-24 overflow-y-auto text-xs text-red-600 dark:text-red-400">
+                  {excelErrors.map((err, i) => <p key={i}>{err}</p>)}
+                </div>
+              </div>
+            )}
+            <div className="text-sm">
+              <span className="font-medium">{excelPreview?.length || 0}건</span>의 데이터가 읽혔습니다.
+            </div>
+            {excelPreview && excelPreview.length > 0 && (
+              <div className="max-h-60 overflow-auto rounded-md border">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="px-2 py-1.5 text-left font-medium">거래처</th>
+                      <th className="px-2 py-1.5 text-left font-medium">품목</th>
+                      <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                      <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                      <th className="px-2 py-1.5 text-left font-medium">발주일</th>
+                      <th className="px-2 py-1.5 text-left font-medium">부가세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {excelPreview.slice(0, 50).map((row, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1">{String(row.partnerName || row.partnerCode || '-')}</td>
+                        <td className="px-2 py-1">{String(row.itemName || row.itemCode || '-')}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{String(row.quantity || '-')}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">{Number(row.unitPrice || 0).toLocaleString()}</td>
+                        <td className="px-2 py-1">{String(row.orderDate || '-')}</td>
+                        <td className="px-2 py-1">{String(row.vatType || '포함')}</td>
+                      </tr>
+                    ))}
+                    {(excelPreview.length > 50) && (
+                      <tr className="border-t"><td colSpan={6} className="text-muted-foreground px-2 py-1 text-center">... 외 {excelPreview.length - 50}건</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => { setExcelDialogOpen(false); setExcelPreview(null) }}>취소</Button>
+              <Button
+                size="sm"
+                onClick={() => excelPreview && excelImportMutation.mutate(excelPreview)}
+                disabled={excelImportMutation.isPending || excelErrors.length > 0}
+              >
+                {excelImportMutation.isPending ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> 등록 중...</> : `${excelPreview?.length || 0}건 등록`}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Delivery Dialog */}
       <Dialog open={deliveryDialogOpen} onOpenChange={setDeliveryDialogOpen}>
         <DialogContent className="max-w-sm sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>출고 처리</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>출고 처리</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <p className="text-muted-foreground text-xs">
-              잔여 수량 전체를 출고합니다. 재고가 자동으로 차감되며 매출에 반영됩니다.
-            </p>
+            <p className="text-muted-foreground text-xs">잔여 수량 전체를 출고합니다. 재고가 자동으로 차감되며 매출에 반영됩니다.</p>
             <div className="space-y-1">
               <label className="text-muted-foreground text-xs font-medium">출고일 *</label>
               <Input type="date" value={deliveryFormDate} onChange={(e) => setDeliveryFormDate(e.target.value)} />
@@ -657,11 +1088,7 @@ export default function OfflineOrdersPage() {
             })()}
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={() => setDeliveryDialogOpen(false)}>취소</Button>
-              <Button
-                size="sm"
-                onClick={() => deliveryMutation.mutate()}
-                disabled={deliveryMutation.isPending}
-              >
+              <Button size="sm" onClick={() => deliveryMutation.mutate()} disabled={deliveryMutation.isPending}>
                 <Truck className="mr-1 h-3.5 w-3.5" />
                 {deliveryMutation.isPending ? '처리 중...' : '출고 처리'}
               </Button>
@@ -674,7 +1101,7 @@ export default function OfflineOrdersPage() {
         open={!!deleteTarget}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="발주 삭제"
-        description="이 발주를 삭제하시겠습니까?"
+        description="이 발주를 삭제하시겠습니까? 완료된 발주는 재고가 복원됩니다."
         onConfirm={() => { if (deleteTarget) deleteMutation.mutate(deleteTarget) }}
         variant="destructive"
       />

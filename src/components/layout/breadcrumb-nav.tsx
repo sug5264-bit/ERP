@@ -35,6 +35,7 @@ const pathLabels: Record<string, string> = {
   // 영업관리
   sales: '영업관리',
   orders: '발주/출고관리',
+  online: '온라인',
   offline: '오프라인',
   deliveries: '출하관리',
   summary: '매출현황',
