@@ -39,8 +39,8 @@ interface ShipperOrderDetail {
   updatedAt: string
   shipperItem?: {
     id: string
-    name: string
-    code: string
+    itemName: string
+    itemCode: string
   } | null
 }
 
@@ -278,7 +278,10 @@ export default function ShipperOrderDetailPage() {
                     <InfoRow label="수량" value={order.quantity} />
                     <InfoRow label="중량(kg)" value={order.weight} />
                     {order.shipperItem && (
-                      <InfoRow label="품목코드" value={`${order.shipperItem.code} (${order.shipperItem.name})`} />
+                      <InfoRow
+                        label="품목코드"
+                        value={`${order.shipperItem.itemCode} (${order.shipperItem.itemName})`}
+                      />
                     )}
                   </CardContent>
                 </Card>
