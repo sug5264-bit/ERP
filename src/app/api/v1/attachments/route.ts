@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { successResponse, errorResponse, handleApiError, requireAuth, isErrorResponse } from '@/lib/api-helpers'
-import { uploadFile, deleteFile } from '@/lib/supabase-storage'
+import { uploadFile, deleteFile, SHIPPER_BUCKET } from '@/lib/supabase-storage'
 import { randomUUID } from 'crypto'
 import { sanitizeFileName } from '@/lib/sanitize'
 import { logger } from '@/lib/logger'
@@ -144,6 +144,8 @@ export async function POST(request: NextRequest) {
       return errorResponse('허용되지 않는 파일 형식입니다.', 'INVALID_FILE_TYPE', 400)
     }
 
+    const isShipper = relatedTable === 'ShipperOrderAttachment'
+    const bucket = isShipper ? SHIPPER_BUCKET : undefined
     const uniqueName = `attachments/${randomUUID()}.${ext}`
 
     let buffer: Buffer
@@ -165,7 +167,7 @@ export async function POST(request: NextRequest) {
 
     try {
       logger.info('[DEBUG 첨부파일 API] Supabase Storage 업로드 시작:', { uniqueName, contentType: file.type })
-      await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
+      await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream', bucket)
       logger.info('[DEBUG 첨부파일 API] Supabase Storage 업로드 성공')
     } catch (uploadErr) {
       logger.error('[DEBUG 첨부파일 API] Supabase Storage 업로드 실패', {
