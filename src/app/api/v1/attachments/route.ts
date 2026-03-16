@@ -14,7 +14,10 @@ export const maxDuration = 60 // seconds
 // 파일 매직 바이트로 실제 MIME 타입 검증 (확장자 위조 방지)
 const MAGIC_BYTES: [string[], number[]][] = [
   [['png'], [0x89, 0x50, 0x4e, 0x47]],
-  [['jpg', 'jpeg'], [0xff, 0xd8, 0xff]],
+  [
+    ['jpg', 'jpeg'],
+    [0xff, 0xd8, 0xff],
+  ],
   [['gif'], [0x47, 0x49, 0x46]],
   [['pdf'], [0x25, 0x50, 0x44, 0x46]],
   [['zip'], [0x50, 0x4b, 0x03, 0x04]],
@@ -48,6 +51,7 @@ const VALID_TABLES = [
   'Employee',
   'Project',
   'Recruitment',
+  'ShipperOrderAttachment',
 ]
 
 /** 허용된 확장자만 업로드 가능 */
@@ -114,7 +118,13 @@ export async function POST(request: NextRequest) {
     const relatedTable = formData.get('relatedTable') as string
     const relatedId = formData.get('relatedId') as string
 
-    logger.info('[DEBUG 첨부파일 API] 파라미터:', { hasFile: !!file, fileName: file?.name, fileSize: file?.size, relatedTable, relatedId })
+    logger.info('[DEBUG 첨부파일 API] 파라미터:', {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      relatedTable,
+      relatedId,
+    })
 
     if (!file || !relatedTable || !relatedId) {
       logger.error('[DEBUG 첨부파일 API] 필수 파라미터 누락', { hasFile: !!file, relatedTable, relatedId })
@@ -158,12 +168,11 @@ export async function POST(request: NextRequest) {
       await uploadFile(uniqueName, buffer, file.type || 'application/octet-stream')
       logger.info('[DEBUG 첨부파일 API] Supabase Storage 업로드 성공')
     } catch (uploadErr) {
-      logger.error('[DEBUG 첨부파일 API] Supabase Storage 업로드 실패', { uniqueName, error: uploadErr instanceof Error ? uploadErr.message : uploadErr })
-      return errorResponse(
-        '파일을 저장할 수 없습니다. 스토리지 설정을 확인해주세요.',
-        'STORAGE_ERROR',
-        500
-      )
+      logger.error('[DEBUG 첨부파일 API] Supabase Storage 업로드 실패', {
+        uniqueName,
+        error: uploadErr instanceof Error ? uploadErr.message : uploadErr,
+      })
+      return errorResponse('파일을 저장할 수 없습니다. 스토리지 설정을 확인해주세요.', 'STORAGE_ERROR', 500)
     }
 
     let attachment
