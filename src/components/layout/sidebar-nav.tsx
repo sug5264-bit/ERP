@@ -83,7 +83,7 @@ const navItems: NavItem[] = [
           { title: '화주사관리', href: '/sales/3pl/shippers' },
           { title: '계약/요율관리', href: '/sales/3pl/rates' },
           { title: '주문접수현황', href: '/sales/3pl/orders' },
-          { title: '배송관제', href: '/sales/3pl/dispatch' },
+          { title: '수주/출하 게시판', href: '/sales/3pl/orders/posts' },
           { title: '정산관리', href: '/sales/3pl/settlement' },
           { title: '매출현황', href: '/sales/3pl/revenue' },
         ],
