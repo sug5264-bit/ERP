@@ -35,6 +35,10 @@ export async function GET(request: NextRequest) {
       'ShipperOrderPost',
       'ShipperOrderReply',
       'ShipperOrderAttachment',
+      'ShipperDeliveryPost',
+      'ShipperDeliveryReply',
+      'ShipperDeliveryReplyPost',
+      'ShipperDeliveryPostStatus',
       'SettlementPaid',
     ]
     if (!VALID_TABLES.includes(relatedTable)) {
@@ -88,6 +92,10 @@ export async function POST(request: NextRequest) {
       'ShipperOrderPost',
       'ShipperOrderReply',
       'ShipperOrderAttachment',
+      'ShipperDeliveryPost',
+      'ShipperDeliveryReply',
+      'ShipperDeliveryReplyPost',
+      'ShipperDeliveryPostStatus',
       'SettlementPaid',
     ]
     if (!VALID_TABLES.includes(relatedTable)) {
