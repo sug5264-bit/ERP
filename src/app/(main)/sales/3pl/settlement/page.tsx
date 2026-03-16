@@ -1,17 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ColumnDef } from '@tanstack/react-table'
 import { api } from '@/hooks/use-api'
 import { DataTable } from '@/components/common/data-table'
 import { PageHeader } from '@/components/common/page-header'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDate } from '@/lib/format'
+import { toast } from 'sonner'
+import { CheckCircle2 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 
 interface SettlementRow {
   id: string
+  shipperId: string
   companyName: string
   period: string
   totalOrders: number
@@ -19,58 +24,85 @@ interface SettlementRow {
   totalSurcharge: number
   totalAmount: number
   status: string
+  paidAt: string | null
 }
 
-const columns: ColumnDef<SettlementRow>[] = [
-  {
-    accessorKey: 'companyName',
-    header: '화주사',
-    cell: ({ row }) => <span className="font-medium">{row.original.companyName}</span>,
-  },
-  {
-    accessorKey: 'period',
-    header: '정산기간',
-    cell: ({ row }) => row.original.period || '-',
-  },
-  {
-    accessorKey: 'totalOrders',
-    header: '주문건수',
-    cell: ({ row }) => row.original.totalOrders?.toLocaleString() || '0',
-  },
-  {
-    id: 'totalShippingCost',
-    header: '배송비',
-    cell: ({ row }) => formatCurrency(row.original.totalShippingCost),
-  },
-  {
-    id: 'totalSurcharge',
-    header: '부가요금',
-    cell: ({ row }) => formatCurrency(row.original.totalSurcharge),
-  },
-  {
-    id: 'totalAmount',
-    header: '합계',
-    cell: ({ row }) => <span className="font-bold">{formatCurrency(row.original.totalAmount)}</span>,
-  },
-  {
-    id: 'status',
-    header: '상태',
-    cell: ({ row }) => (
-      <Badge
-        variant={row.original.status === 'CONFIRMED' ? 'default' : 'secondary'}
-        className={
-          row.original.status === 'CONFIRMED' ? 'bg-green-500 hover:bg-green-600' : 'bg-yellow-500 hover:bg-yellow-600'
-        }
-      >
-        {row.original.status === 'CONFIRMED' ? '확정' : '정산중'}
+function StatusCell({ row, onMarkPaid }: { row: SettlementRow; onMarkPaid: (row: SettlementRow) => void }) {
+  const s = row.status
+  if (s === 'PAID') {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge className="bg-green-500 hover:bg-green-600">지급완료</Badge>
+        {row.paidAt && <span className="text-muted-foreground text-xs">{formatDate(row.paidAt)}</span>}
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
+        확정
       </Badge>
-    ),
-  },
-]
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-6 text-xs"
+        onClick={(e) => {
+          e.stopPropagation()
+          onMarkPaid(row)
+        }}
+      >
+        <CheckCircle2 className="mr-1 h-3 w-3" />
+        지급처리
+      </Button>
+    </div>
+  )
+}
+
+function getColumns(onMarkPaid: (row: SettlementRow) => void): ColumnDef<SettlementRow>[] {
+  return [
+    {
+      accessorKey: 'companyName',
+      header: '화주사',
+      cell: ({ row }) => <span className="font-medium">{row.original.companyName}</span>,
+    },
+    {
+      accessorKey: 'period',
+      header: '정산기간',
+      cell: ({ row }) => row.original.period || '-',
+    },
+    {
+      accessorKey: 'totalOrders',
+      header: '주문건수',
+      cell: ({ row }) => row.original.totalOrders?.toLocaleString() || '0',
+    },
+    {
+      id: 'totalShippingCost',
+      header: '배송비',
+      cell: ({ row }) => formatCurrency(row.original.totalShippingCost),
+    },
+    {
+      id: 'totalSurcharge',
+      header: '부가요금',
+      cell: ({ row }) => formatCurrency(row.original.totalSurcharge),
+    },
+    {
+      id: 'totalAmount',
+      header: '합계',
+      cell: ({ row }) => <span className="font-bold">{formatCurrency(row.original.totalAmount)}</span>,
+    },
+    {
+      id: 'status',
+      header: '상태',
+      cell: ({ row }) => <StatusCell row={row.original} onMarkPaid={onMarkPaid} />,
+    },
+  ]
+}
 
 export default function SettlementPage() {
+  const queryClient = useQueryClient()
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [confirmTarget, setConfirmTarget] = useState<SettlementRow | null>(null)
 
   const qp = new URLSearchParams()
   if (startDate) qp.set('startDate', startDate)
@@ -86,6 +118,23 @@ export default function SettlementPage() {
   const totalAmount = settlements.reduce((sum, s) => sum + (s.totalAmount || 0), 0)
   const totalOrders = settlements.reduce((sum, s) => sum + (s.totalOrders || 0), 0)
   const uniqueShippers = new Set(settlements.map((s) => s.companyName)).size
+
+  const handleMarkPaid = async (row: SettlementRow) => {
+    try {
+      await api.post('/notes', {
+        content: `${row.companyName} ${row.period} 정산 지급완료`,
+        relatedTable: 'SettlementPaid',
+        relatedId: `${row.shipperId}_${row.period}`,
+      })
+      queryClient.invalidateQueries({ queryKey: ['3pl-settlement'] })
+      toast.success(`${row.companyName} ${row.period} 정산이 지급 처리되었습니다.`)
+    } catch {
+      toast.error('지급 처리에 실패했습니다.')
+    }
+    setConfirmTarget(null)
+  }
+
+  const columns = getColumns((row) => setConfirmTarget(row))
 
   return (
     <div className="space-y-6">
@@ -133,6 +182,20 @@ export default function SettlementPage() {
         isError={isError}
         onRetry={() => refetch()}
         pageSize={50}
+      />
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        onOpenChange={(v) => !v && setConfirmTarget(null)}
+        title="정산 지급 처리"
+        description={
+          confirmTarget
+            ? `${confirmTarget.companyName} ${confirmTarget.period} 정산을 지급 완료 처리하시겠습니까? (${formatCurrency(confirmTarget.totalAmount)})`
+            : ''
+        }
+        onConfirm={() => {
+          if (confirmTarget) handleMarkPaid(confirmTarget)
+        }}
       />
     </div>
   )

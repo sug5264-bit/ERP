@@ -42,6 +42,8 @@ export async function GET(_request: NextRequest) {
       monthlyDeliveredCount,
       monthlyDeliveredOrders,
       weeklyOrders,
+      totalPosts,
+      unrepliedPosts,
     ] = await Promise.all([
       prisma.shipperOrder.count({
         where: { shipperId, createdAt: { gte: today, lt: tomorrow } },
@@ -92,6 +94,25 @@ export async function GET(_request: NextRequest) {
         where: { shipperId, createdAt: { gte: weekStart, lt: tomorrow } },
         select: { createdAt: true },
       }),
+      // Total posts by this shipper
+      prisma.note.count({
+        where: { relatedTable: 'ShipperOrderPost', relatedId: shipperId },
+      }),
+      // Posts without replies (unreplied)
+      prisma.note
+        .findMany({
+          where: { relatedTable: 'ShipperOrderPost', relatedId: shipperId },
+          select: { id: true },
+        })
+        .then(async (posts) => {
+          if (posts.length === 0) return 0
+          const replies = await prisma.note.findMany({
+            where: { relatedTable: 'ShipperOrderReply', relatedId: { in: posts.map((p) => p.id) } },
+            select: { relatedId: true },
+          })
+          const repliedIds = new Set(replies.map((r) => r.relatedId))
+          return posts.filter((p) => !repliedIds.has(p.id)).length
+        }),
     ])
 
     // Build weekly data for chart
@@ -126,7 +147,7 @@ export async function GET(_request: NextRequest) {
       monthlyTotalOrders > 0 ? Math.round((monthlyDeliveredCount / monthlyTotalOrders) * 1000) / 10 : 0
 
     return successResponse({
-      stats: { todayCount, processingCount, inTransitCount, deliveredCount },
+      stats: { todayCount, processingCount, inTransitCount, deliveredCount, totalPosts, unrepliedPosts },
       recentOrders,
       weeklyData,
       monthlyStats: {

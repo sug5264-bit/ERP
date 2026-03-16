@@ -71,10 +71,19 @@ export async function GET(request: NextRequest) {
       monthMap.set(period, existing)
     }
 
+    // Check paid status from Note table
+    const paidNotes = await prisma.note.findMany({
+      where: { relatedTable: 'SettlementPaid' },
+      select: { relatedId: true, createdAt: true },
+    })
+    const paidMap = new Map(paidNotes.map((n) => [n.relatedId, n]))
+
     const settlements = Array.from(monthMap.entries())
       .map(([period, data]) => {
         const allDelivered = data.statuses.every((s) => s === 'DELIVERED')
-        const status = allDelivered ? 'CONFIRMED' : 'PROCESSING'
+        const paidKey = `${shipperId}_${period}`
+        const paidNote = paidMap.get(paidKey)
+        const status = paidNote ? 'PAID' : allDelivered ? 'CONFIRMED' : 'PROCESSING'
         return {
           id: period,
           period,
@@ -83,7 +92,7 @@ export async function GET(request: NextRequest) {
           additionalCharges: 0,
           totalAmount: data.totalShippingCost,
           status,
-          paidAt: null,
+          paidAt: paidNote?.createdAt ?? null,
         }
       })
       .sort((a, b) => b.period.localeCompare(a.period))

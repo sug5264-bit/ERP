@@ -88,10 +88,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const data = Array.from(summaryMap.values()).sort((a, b) => {
+    const rows = Array.from(summaryMap.values()).sort((a, b) => {
       const shipperCmp = a.companyName.localeCompare(b.companyName)
       if (shipperCmp !== 0) return shipperCmp
       return b.month.localeCompare(a.month)
+    })
+
+    // Check paid status from Note table (relatedTable=SettlementPaid, relatedId=shipperId_month)
+    const paidNotes = await prisma.note.findMany({
+      where: { relatedTable: 'SettlementPaid' },
+      select: { relatedId: true, content: true, createdAt: true },
+    })
+    const paidMap = new Map(paidNotes.map((n) => [n.relatedId, n]))
+
+    const data = rows.map((row) => {
+      const key = `${row.shipperId}_${row.month}`
+      const paidNote = paidMap.get(key)
+      return {
+        ...row,
+        id: key,
+        period: row.month,
+        status: paidNote ? 'PAID' : 'CONFIRMED',
+        paidAt: paidNote?.createdAt ?? null,
+      }
     })
 
     return successResponse(data)

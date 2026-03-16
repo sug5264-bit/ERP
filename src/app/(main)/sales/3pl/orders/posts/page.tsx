@@ -154,7 +154,7 @@ export default function ThreePLOrderPostsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader title="수주/출하 게시판" description="화주사 게시글 확인 및 답글 작성" />
+      <PageHeader title="발주/출고 게시판" description="화주사 발주 게시글 확인 및 출고 답글 작성" />
 
       {/* 필터 */}
       <div className="flex items-center gap-2">
