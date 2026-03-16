@@ -1,7 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 const DEFAULT_BUCKET = 'upload'
-export const SHIPPER_BUCKET = 'shipper-upload'
+export const SHIPPER_BUCKET = 'upload2'
 
 let _supabase: SupabaseClient | null = null
 const _ensuredBuckets = new Set<string>()
