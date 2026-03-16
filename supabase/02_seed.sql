@@ -13,8 +13,125 @@
 INSERT INTO "roles" ("id", "name", "description", "isSystem", "createdAt") VALUES
   ('role-admin', '관리자', '시스템 관리자', true, NOW()),
   ('role-user', '일반사용자', '일반 사용자', false, NOW()),
-  ('role-manager', '부서장', '부서 관리자', false, NOW())
+  ('role-manager', '부서장', '부서 관리자', false, NOW()),
+  ('role-hr-manager', '인사 관리자', '인사 모듈 관리자', false, NOW()),
+  ('role-finance-manager', '재무 관리자', '회계/재무 모듈 관리자', false, NOW()),
+  ('role-sales-manager', '영업 관리자', '영업/마감 모듈 관리자', false, NOW())
 ON CONFLICT ("name") DO NOTHING;
+
+-- ============================================================
+-- 1-2. 권한 (Permissions) & 역할-권한 매핑 (Role Permissions)
+-- ============================================================
+DO $$
+DECLARE
+  modules TEXT[] := ARRAY[
+    'sales','sales.orders','sales.summary','sales.partners','sales.quotations',
+    'sales.deliveries','sales.returns','sales.pricing','sales.3pl',
+    'purchasing','purchasing.orders','purchasing.receiving','purchasing.suppliers','purchasing.summary',
+    'production','production.oem','production.bom','production.plan','production.result',
+    'inventory','inventory.items','inventory.stock','inventory.status','inventory.warehouses',
+    'inventory.expiry','inventory.lot',
+    'quality','quality.incoming','quality.outgoing','quality.standards',
+    'closing','closing.sales','closing.purchase','closing.netting','closing.payments',
+    'accounting','accounting.vouchers','accounting.journal','accounting.ledger',
+    'accounting.financial','accounting.tax','accounting.budget',
+    'hr','hr.employees','hr.organization','hr.attendance','hr.leave','hr.payroll','hr.recruitment',
+    'projects',
+    'approval','approval.draft','approval.pending','approval.completed','approval.rejected',
+    'board','board.notices','board.general','board.messages',
+    'admin','admin.users','admin.roles','admin.codes','admin.logs','admin.company','admin.settings'
+  ];
+  actions TEXT[] := ARRAY['read','create','update','delete','export','import','approve'];
+  m TEXT;
+  a TEXT;
+  perm_id TEXT;
+BEGIN
+  -- 권한 생성
+  FOREACH m IN ARRAY modules LOOP
+    FOREACH a IN ARRAY actions LOOP
+      perm_id := 'perm-' || replace(m, '.', '-') || '-' || a;
+      INSERT INTO "permissions" ("id", "module", "action", "description")
+      VALUES (perm_id, m, a, m || ' ' || a)
+      ON CONFLICT ("module", "action") DO NOTHING;
+    END LOOP;
+  END LOOP;
+
+  -- 관리자: 모든 권한
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-admin', p."id" FROM "permissions" p
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 인사 관리자: 인사 모듈 전체
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-hr-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('hr','hr.employees','hr.organization','hr.attendance','hr.payroll','hr.recruitment')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 인사 관리자: 게시판/결재/프로젝트 read,create
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-hr-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('board','board.notices','board.general','board.messages',
+    'approval','approval.draft','approval.pending','approval.completed','approval.rejected','projects')
+    AND p."action" IN ('read','create')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 재무 관리자: 회계 + 마감 전체
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-finance-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('accounting','accounting.vouchers','accounting.journal','accounting.ledger',
+    'accounting.financial','accounting.tax','accounting.budget',
+    'closing','closing.sales','closing.purchase','closing.netting','closing.payments')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 재무 관리자: 게시판/결재/프로젝트 read,create
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-finance-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('board','board.notices','board.general','board.messages',
+    'approval','approval.draft','approval.pending','approval.completed','approval.rejected','projects')
+    AND p."action" IN ('read','create')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 영업 관리자: 영업 + 마감 전체
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-sales-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('sales','sales.summary','sales.partners','sales.quotations','sales.orders',
+    'sales.deliveries','sales.returns','sales.pricing',
+    'closing','closing.sales','closing.purchase','closing.netting','closing.payments')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 영업 관리자: 재고 읽기
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-sales-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('inventory','inventory.items','inventory.stock','inventory.status',
+    'inventory.warehouses','inventory.expiry','inventory.lot')
+    AND p."action" = 'read'
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 영업 관리자: 게시판/결재/프로젝트 read,create
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-sales-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('board','board.notices','board.general','board.messages',
+    'approval','approval.draft','approval.pending','approval.completed','approval.rejected','projects')
+    AND p."action" IN ('read','create')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 부서장: 재고/매출/마감/프로젝트/휴가/결재/게시판 전체
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-manager', p."id" FROM "permissions" p
+  WHERE p."module" IN ('inventory','sales','closing','projects','hr.leave',
+    'approval','approval.draft','approval.pending','approval.completed','approval.rejected',
+    'board','board.notices','board.general','board.messages')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+
+  -- 일반사용자: 게시판/결재/프로젝트/휴가 read,create
+  INSERT INTO "role_permissions" ("roleId", "permissionId")
+  SELECT 'role-user', p."id" FROM "permissions" p
+  WHERE p."module" IN ('board','board.notices','board.general','board.messages',
+    'approval','approval.draft','approval.pending','approval.completed','approval.rejected',
+    'projects','hr.leave')
+    AND p."action" IN ('read','create')
+  ON CONFLICT ("roleId", "permissionId") DO NOTHING;
+END $$;
 
 -- ============================================================
 -- 2. 부서 (Departments)
