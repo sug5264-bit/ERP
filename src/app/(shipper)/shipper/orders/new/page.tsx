@@ -84,7 +84,7 @@ export default function ShipperNewOrderPage() {
         weight: form.weight ? Number(form.weight) : null,
       })
       toast.success('주문이 등록되었습니다')
-      router.push('/shipper/orders')
+      router.push('/shipper/orders/tracking')
     } catch {
       toast.error('주문 등록에 실패했습니다')
     } finally {
@@ -99,7 +99,7 @@ export default function ShipperNewOrderPage() {
           title="주문등록"
           description="새로운 배송 주문을 등록합니다"
           actions={
-            <Link href="/shipper/orders">
+            <Link href="/shipper/orders/tracking">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" /> 목록
               </Button>
@@ -276,7 +276,7 @@ export default function ShipperNewOrderPage() {
               </Card>
 
               <div className="flex justify-end gap-2">
-                <Link href="/shipper/orders">
+                <Link href="/shipper/orders/tracking">
                   <Button type="button" variant="outline">
                     취소
                   </Button>
@@ -322,7 +322,7 @@ export default function ShipperNewOrderPage() {
               templateFileName="배송주문_업로드_템플릿"
               keyMap={keyMap}
               onSuccess={() => {
-                router.push('/shipper/orders')
+                router.push('/shipper/orders/tracking')
               }}
             />
           </TabsContent>

@@ -81,8 +81,8 @@ export default function ShipperDashboardPage() {
   ]
 
   const quickLinks = [
-    { label: '주문등록', href: '/shipper/orders/new', icon: PackagePlus, color: 'text-blue-600' },
-    { label: '배송현황', href: '/shipper/orders', icon: ClipboardList, color: 'text-indigo-600' },
+    { label: '주문등록', href: '/shipper/orders/online', icon: PackagePlus, color: 'text-blue-600' },
+    { label: '배송현황', href: '/shipper/orders/tracking', icon: ClipboardList, color: 'text-indigo-600' },
     { label: '재고현황', href: '/shipper/inventory', icon: Warehouse, color: 'text-amber-600' },
     { label: '매출현황', href: '/shipper/sales', icon: BarChart3, color: 'text-emerald-600' },
     { label: '정산내역', href: '/shipper/settlement', icon: Receipt, color: 'text-purple-600' },
@@ -95,7 +95,7 @@ export default function ShipperDashboardPage() {
           title="대시보드"
           description="배송 현황을 한눈에 확인하세요"
           actions={
-            <Link href="/shipper/orders/new">
+            <Link href="/shipper/orders/online">
               <Button>
                 <PackagePlus className="mr-2 h-4 w-4" /> 주문등록
               </Button>
@@ -210,7 +210,7 @@ export default function ShipperDashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6">
             <CardTitle className="text-sm sm:text-base">최근 주문</CardTitle>
-            <Link href="/shipper/orders">
+            <Link href="/shipper/orders/tracking">
               <Button variant="ghost" size="sm" className="text-xs">
                 전체보기 <ArrowRight className="ml-1 h-3 w-3" />
               </Button>

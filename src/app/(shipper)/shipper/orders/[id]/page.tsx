@@ -206,7 +206,7 @@ export default function ShipperOrderDetailPage() {
           title="주문 상세"
           description={order?.orderNo ?? ''}
           actions={
-            <Link href="/shipper/orders">
+            <Link href="/shipper/orders/tracking">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" /> 목록
               </Button>
