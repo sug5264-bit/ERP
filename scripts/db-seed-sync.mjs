@@ -96,6 +96,7 @@ async function applyPermissions() {
     // 영업관리
     'sales', 'sales.orders', 'sales.summary', 'sales.partners',
     'sales.quotations', 'sales.deliveries', 'sales.returns', 'sales.pricing',
+    'sales.3pl',
     // 구매관리
     'purchasing', 'purchasing.orders', 'purchasing.receiving',
     'purchasing.suppliers', 'purchasing.summary',
@@ -131,17 +132,14 @@ async function applyPermissions() {
   ]
   const actions = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
-  // 권한이 이미 존재하는지 확인
+  // 권한 테이블 존재 확인
   try {
-    const permCount = await prisma.$queryRawUnsafe(
-      `SELECT COUNT(*)::int as count FROM "permissions"`
-    )
-    if (permCount[0]?.count > 10) return // 이미 충분한 권한 데이터 존재
+    await prisma.$queryRawUnsafe(`SELECT 1 FROM "permissions" LIMIT 1`)
   } catch {
     return // 테이블 없으면 스킵
   }
 
-  console.log('[db-seed-sync] Applying permissions...')
+  console.log('[db-seed-sync] Syncing permissions (adding missing modules)...')
 
   for (const mod of modules) {
     for (const action of actions) {

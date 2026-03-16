@@ -58,6 +58,7 @@ async function main() {
     'sales.deliveries',
     'sales.returns',
     'sales.pricing',
+    'sales.3pl',
     // 구매관리
     'purchasing',
     'purchasing.orders',
