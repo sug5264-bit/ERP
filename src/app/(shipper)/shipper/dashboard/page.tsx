@@ -22,6 +22,7 @@ import {
   Receipt,
   CalendarCheck,
   TrendingUp,
+  MessageSquare,
 } from 'lucide-react'
 import Link from 'next/link'
 import { ShipperLayoutShell } from '@/components/layout/shipper-layout-shell'
@@ -77,6 +78,20 @@ export default function ShipperDashboardPage() {
       icon: Package,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+    },
+    {
+      label: '발주 게시글',
+      value: stats?.totalPosts || 0,
+      icon: MessageSquare,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+    },
+    {
+      label: '미답변 게시글',
+      value: stats?.unrepliedPosts || 0,
+      icon: MessageSquare,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
     },
   ]
 

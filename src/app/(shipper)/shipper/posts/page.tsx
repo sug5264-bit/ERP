@@ -133,14 +133,14 @@ export default function ShipperPostsPage() {
   return (
     <ShipperLayoutShell>
       <div className="space-y-4 sm:space-y-6">
-        <PageHeader title="수주/출하" description="수주/출하 관련 문의 및 파일을 게시하고, 관리자 답변을 확인합니다" />
+        <PageHeader title="발주/출고" description="발주/출고 관련 문의 및 파일을 게시하고, 관리자 답변을 확인합니다" />
 
         {/* 작성 영역 */}
         <div className="space-y-3 rounded-lg border p-4">
           <h3 className="text-sm font-medium">게시글 작성</h3>
           <div className="space-y-2">
             <Textarea
-              placeholder="수주/출하 관련 내용을 작성하세요..."
+              placeholder="발주/출고 관련 내용을 작성하세요..."
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
               rows={3}

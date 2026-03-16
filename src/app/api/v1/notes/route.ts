@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
       'ShipperOrderPost',
       'ShipperOrderReply',
       'ShipperOrderAttachment',
+      'SettlementPaid',
     ]
     if (!VALID_TABLES.includes(relatedTable)) {
       return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
       'ShipperOrderPost',
       'ShipperOrderReply',
       'ShipperOrderAttachment',
+      'SettlementPaid',
     ]
     if (!VALID_TABLES.includes(relatedTable)) {
       return errorResponse('유효하지 않은 테이블입니다.', 'VALIDATION_ERROR', 400)
