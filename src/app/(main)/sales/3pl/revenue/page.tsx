@@ -13,10 +13,20 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 interface RevenueRow {
   date: string
-  month: string
   totalOrders: number
   totalRevenue: number
   averagePerOrder: number
+}
+
+interface RevenueResponse {
+  data: {
+    summary: {
+      totalOrders: number
+      totalRevenue: number
+      averagePerOrder: number
+    }
+    details: RevenueRow[]
+  }
 }
 
 export default function RevenuePage() {
@@ -31,22 +41,21 @@ export default function RevenuePage() {
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['3pl-revenue', startDate, endDate, groupBy],
-    queryFn: () => api.get(`/sales/3pl/revenue?${qp.toString()}`) as Promise<{ data: RevenueRow[] }>,
+    queryFn: () => api.get(`/sales/3pl/revenue?${qp.toString()}`) as Promise<RevenueResponse>,
   })
 
-  const rows: RevenueRow[] = data?.data || []
+  const rows: RevenueRow[] = data?.data?.details || []
+  const summary = data?.data?.summary
 
-  const totalRevenue = rows.reduce((sum, r) => sum + (r.totalRevenue || 0), 0)
-  const totalOrders = rows.reduce((sum, r) => sum + (r.totalOrders || 0), 0)
-  const averagePerOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0
+  const totalRevenue = summary?.totalRevenue ?? 0
+  const totalOrders = summary?.totalOrders ?? 0
+  const averagePerOrder = summary?.averagePerOrder ?? 0
 
   const columns: ColumnDef<RevenueRow>[] = [
     {
       id: 'period',
       header: '기간',
-      cell: ({ row }) => (
-        <span className="font-medium">{groupBy === 'daily' ? row.original.date : row.original.month}</span>
-      ),
+      cell: ({ row }) => <span className="font-medium">{row.original.date}</span>,
     },
     {
       accessorKey: 'totalOrders',
@@ -66,7 +75,7 @@ export default function RevenuePage() {
   ]
 
   const chartData = rows.map((r) => ({
-    name: groupBy === 'daily' ? r.date : r.month,
+    name: r.date,
     매출액: r.totalRevenue,
     주문건수: r.totalOrders,
   }))
