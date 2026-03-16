@@ -1,9 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const BUCKET = 'upload'
+const DEFAULT_BUCKET = 'upload'
+export const SHIPPER_BUCKET = 'shipper-upload'
 
 let _supabase: SupabaseClient | null = null
-let _bucketEnsured = false
+const _ensuredBuckets = new Set<string>()
 
 function getClient(): SupabaseClient {
   if (!_supabase) {
@@ -17,46 +18,45 @@ function getClient(): SupabaseClient {
   return _supabase
 }
 
-async function ensureBucket() {
-  if (_bucketEnsured) return
+async function ensureBucket(bucket: string) {
+  if (_ensuredBuckets.has(bucket)) return
   const client = getClient()
-  const { data } = await client.storage.getBucket(BUCKET)
+  const { data } = await client.storage.getBucket(bucket)
   if (!data) {
-    await client.storage.createBucket(BUCKET, { public: false })
+    await client.storage.createBucket(bucket, { public: false })
   }
-  _bucketEnsured = true
+  _ensuredBuckets.add(bucket)
 }
 
 export async function uploadFile(
   path: string,
   buffer: Buffer,
-  contentType: string
+  contentType: string,
+  bucket: string = DEFAULT_BUCKET
 ): Promise<string> {
-  await ensureBucket()
+  await ensureBucket(bucket)
 
-  const { error } = await getClient().storage
-    .from(BUCKET)
-    .upload(path, buffer, { contentType, upsert: false })
+  const { error } = await getClient().storage.from(bucket).upload(path, buffer, { contentType, upsert: false })
 
   if (error) throw error
 
-  const { data } = getClient().storage.from(BUCKET).getPublicUrl(path)
+  const { data } = getClient().storage.from(bucket).getPublicUrl(path)
   return data.publicUrl
 }
 
-export async function downloadFile(path: string): Promise<Buffer> {
-  const { data, error } = await getClient().storage.from(BUCKET).download(path)
+export async function downloadFile(path: string, bucket: string = DEFAULT_BUCKET): Promise<Buffer> {
+  const { data, error } = await getClient().storage.from(bucket).download(path)
   if (error) throw error
   const arrayBuffer = await data.arrayBuffer()
   return Buffer.from(arrayBuffer)
 }
 
-export async function deleteFile(path: string): Promise<void> {
-  const { error } = await getClient().storage.from(BUCKET).remove([path])
+export async function deleteFile(path: string, bucket: string = DEFAULT_BUCKET): Promise<void> {
+  const { error } = await getClient().storage.from(bucket).remove([path])
   if (error) throw error
 }
 
-export function getPublicUrl(path: string): string {
-  const { data } = getClient().storage.from(BUCKET).getPublicUrl(path)
+export function getPublicUrl(path: string, bucket: string = DEFAULT_BUCKET): string {
+  const { data } = getClient().storage.from(bucket).getPublicUrl(path)
   return data.publicUrl
 }

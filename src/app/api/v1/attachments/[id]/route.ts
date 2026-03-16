@@ -2,7 +2,11 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { errorResponse, handleApiError, requireAuth, isErrorResponse, successResponse } from '@/lib/api-helpers'
 import { logger } from '@/lib/logger'
-import { downloadFile, deleteFile } from '@/lib/supabase-storage'
+import { downloadFile, deleteFile, SHIPPER_BUCKET } from '@/lib/supabase-storage'
+
+function getBucket(relatedTable: string): string | undefined {
+  return relatedTable === 'ShipperOrderAttachment' ? SHIPPER_BUCKET : undefined
+}
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,11 +19,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
+    const bucket = getBucket(attachment.relatedTable)
     let fileBuffer: Buffer
     try {
-      fileBuffer = await downloadFile(attachment.filePath)
+      fileBuffer = await downloadFile(attachment.filePath, bucket)
     } catch (err) {
-      logger.error('File not found in storage', { path: attachment.filePath, attachmentId: id, error: err instanceof Error ? err.message : err })
+      logger.error('File not found in storage', {
+        path: attachment.filePath,
+        attachmentId: id,
+        error: err instanceof Error ? err.message : err,
+      })
       return errorResponse('파일이 서버에 존재하지 않습니다. 관리자에게 문의하세요.', 'FILE_NOT_FOUND', 404)
     }
 
@@ -53,10 +62,14 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     }
 
     // Delete file from Supabase Storage
+    const delBucket = getBucket(attachment.relatedTable)
     try {
-      await deleteFile(attachment.filePath)
+      await deleteFile(attachment.filePath, delBucket)
     } catch (err) {
-      logger.error('Failed to delete attachment from storage', { path: attachment.filePath, error: err instanceof Error ? err.message : err })
+      logger.error('Failed to delete attachment from storage', {
+        path: attachment.filePath,
+        error: err instanceof Error ? err.message : err,
+      })
     }
 
     await prisma.attachment.delete({ where: { id } })
