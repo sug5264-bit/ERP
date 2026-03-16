@@ -268,6 +268,26 @@ export default auth((request) => {
     return res
   }
 
+  // ─── 화주사 계정 라우팅 ───
+  const user = request.auth.user as Record<string, unknown> | undefined
+  const accountType = user?.accountType as string | undefined
+
+  if (accountType === 'SHIPPER') {
+    // 화주사 계정이 ERP 페이지에 접근하면 화주사 포털로 리다이렉트
+    if (!pathname.startsWith('/shipper') && !pathname.startsWith('/api')) {
+      const res = NextResponse.redirect(new URL('/shipper/dashboard', request.url))
+      res.headers.set('Content-Security-Policy', cspHeader)
+      return res
+    }
+  } else {
+    // ERP 계정이 화주사 포털에 접근하면 ERP 대시보드로 리다이렉트
+    if (pathname.startsWith('/shipper') && !pathname.startsWith('/api')) {
+      const res = NextResponse.redirect(new URL('/dashboard', request.url))
+      res.headers.set('Content-Security-Policy', cspHeader)
+      return res
+    }
+  }
+
   // CSP 헤더를 미들웨어에서 동적으로 설정 (nonce 기반)
   const response = NextResponse.next({
     request: { headers: requestHeaders },

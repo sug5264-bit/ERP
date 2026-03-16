@@ -46,7 +46,11 @@ function LoginForm() {
           setError(`로그인 실패: ${result.error}`)
         }
       } else if (result?.ok) {
-        router.push(callbackUrl)
+        // 로그인 성공 후 세션을 가져와서 화주사 계정이면 화주사 포털로 이동
+        const sessionRes = await fetch('/api/auth/session')
+        const session = await sessionRes.json()
+        const dest = session?.user?.accountType === 'SHIPPER' ? '/shipper/dashboard' : callbackUrl
+        router.push(dest)
         router.refresh()
       } else {
         setError('로그인 응답을 처리할 수 없습니다. 다시 시도해주세요.')
