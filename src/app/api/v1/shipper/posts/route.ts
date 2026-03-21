@@ -45,11 +45,72 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const data = notes.map((note) => ({
-      ...note,
-      replies: replies.filter((r) => r.relatedId === note.id),
-      attachments: attachments.filter((a) => a.relatedId === note.id),
-    }))
+    // 출고 게시글 (ShipperDeliveryPost) - relatedId = ShipperOrderPost noteId
+    const deliveryPosts = await prisma.note.findMany({
+      where: {
+        relatedTable: 'ShipperDeliveryPost',
+        relatedId: { in: noteIds },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const deliveryPostIds = deliveryPosts.map((dp) => dp.id)
+
+    // 출고 상태
+    const deliveryStatuses =
+      deliveryPostIds.length > 0
+        ? await prisma.note.findMany({
+            where: {
+              relatedTable: 'ShipperDeliveryPostStatus',
+              relatedId: { in: deliveryPostIds },
+            },
+            orderBy: { createdAt: 'desc' },
+          })
+        : []
+
+    // 출고 답글
+    const deliveryReplies =
+      deliveryPostIds.length > 0
+        ? await prisma.note.findMany({
+            where: {
+              relatedTable: 'ShipperDeliveryReply',
+              relatedId: { in: deliveryPostIds },
+            },
+            orderBy: { createdAt: 'asc' },
+          })
+        : []
+
+    // 출고 답글 첨부파일
+    const deliveryReplyIds = deliveryReplies.map((r) => r.id)
+    const deliveryReplyAttachments =
+      deliveryReplyIds.length > 0
+        ? await prisma.attachment.findMany({
+            where: {
+              relatedTable: 'ShipperDeliveryReplyPost',
+              relatedId: { in: deliveryReplyIds },
+            },
+          })
+        : []
+
+    const data = notes.map((note) => {
+      const dp = deliveryPosts.find((d) => d.relatedId === note.id)
+      const dpStatus = dp ? deliveryStatuses.find((s) => s.relatedId === dp.id)?.content || 'PREPARING' : null
+      const dpReplies = dp
+        ? deliveryReplies
+            .filter((r) => r.relatedId === dp.id)
+            .map((r) => ({
+              ...r,
+              attachments: deliveryReplyAttachments.filter((a) => a.relatedId === r.id),
+            }))
+        : []
+
+      return {
+        ...note,
+        replies: replies.filter((r) => r.relatedId === note.id),
+        attachments: attachments.filter((a) => a.relatedId === note.id),
+        deliveryPost: dp ? { ...dp, status: dpStatus, replies: dpReplies } : null,
+      }
+    })
 
     return successResponse(data)
   } catch (error) {
@@ -82,6 +143,25 @@ export async function POST(request: NextRequest) {
         content: body.content.trim(),
         relatedTable: 'ShipperOrderPost',
         relatedId: user.shipperId,
+        createdBy: userId,
+      },
+    })
+
+    // Auto-create mirrored delivery post (출고관리 게시글) + PREPARING status
+    const deliveryPost = await prisma.note.create({
+      data: {
+        content: `[발주글]\n${body.content.trim()}`,
+        relatedTable: 'ShipperDeliveryPost',
+        relatedId: note.id,
+        createdBy: userId,
+      },
+    })
+
+    await prisma.note.create({
+      data: {
+        content: 'PREPARING',
+        relatedTable: 'ShipperDeliveryPostStatus',
+        relatedId: deliveryPost.id,
         createdBy: userId,
       },
     })

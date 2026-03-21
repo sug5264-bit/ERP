@@ -98,7 +98,7 @@ export async function GET(_request: NextRequest) {
       prisma.note.count({
         where: { relatedTable: 'ShipperOrderPost', relatedId: shipperId },
       }),
-      // Posts without replies (unreplied)
+      // Posts without replies (unreplied) - check delivery replies
       prisma.note
         .findMany({
           where: { relatedTable: 'ShipperOrderPost', relatedId: shipperId },
@@ -106,12 +106,22 @@ export async function GET(_request: NextRequest) {
         })
         .then(async (posts) => {
           if (posts.length === 0) return 0
-          const replies = await prisma.note.findMany({
-            where: { relatedTable: 'ShipperOrderReply', relatedId: { in: posts.map((p) => p.id) } },
+          // Find delivery posts for these order posts
+          const dps = await prisma.note.findMany({
+            where: { relatedTable: 'ShipperDeliveryPost', relatedId: { in: posts.map((p) => p.id) } },
+            select: { id: true, relatedId: true },
+          })
+          if (dps.length === 0) return posts.length
+          const dpReplies = await prisma.note.findMany({
+            where: { relatedTable: 'ShipperDeliveryReply', relatedId: { in: dps.map((d) => d.id) } },
             select: { relatedId: true },
           })
-          const repliedIds = new Set(replies.map((r) => r.relatedId))
-          return posts.filter((p) => !repliedIds.has(p.id)).length
+          const repliedDpIds = new Set(dpReplies.map((r) => r.relatedId))
+          const dpToOrder = new Map(dps.map((d) => [d.id, d.relatedId]))
+          const repliedOrderIds = new Set(
+            [...repliedDpIds].map((dpId) => dpToOrder.get(dpId)).filter(Boolean) as string[]
+          )
+          return posts.filter((p) => !repliedOrderIds.has(p.id)).length
         }),
     ])
 

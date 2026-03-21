@@ -1,271 +1,578 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useMemo, useCallback, useRef } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/hooks/use-api'
 import { PageHeader } from '@/components/common/page-header'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Checkbox } from '@/components/ui/checkbox'
-import { ExcelImportDialog } from '@/components/common/excel-import-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { SHIPPER_ORDER_STATUS_LABELS, SHIPPING_METHOD_LABELS } from '@/lib/constants'
+import { DateRangeFilter } from '@/components/common/date-range-filter'
 import { formatDate } from '@/lib/format'
-import { exportToExcel, type ExportColumn } from '@/lib/export'
-import type { TemplateColumn } from '@/lib/export'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import {
-  ShoppingCart,
-  Truck,
+  Plus,
+  Trash2,
+  Send,
+  Search,
+  MessageSquare,
+  Paperclip,
+  FileImage,
+  FileText,
+  FileSpreadsheet,
+  File as FileIcon,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  TrendingUp,
+  Clock,
   Package,
   CheckCircle2,
-  Clock,
-  TrendingUp,
-  ArrowRight,
-  Loader2,
+  ShoppingCart,
   X,
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  FileSpreadsheet,
-  Plus,
-  Upload,
+  CornerDownRight,
+  Reply,
 } from 'lucide-react'
-import Link from 'next/link'
 import { ShipperLayoutShell } from '@/components/layout/shipper-layout-shell'
 
-interface ShipperOrder {
+// ── Types ──
+interface NoteItem {
   id: string
-  orderNo: string
-  orderDate: string
-  recipientName: string
-  recipientPhone?: string
-  recipientAddress: string
-  recipientZipCode?: string
-  senderName?: string
-  senderPhone?: string
-  senderAddress?: string
-  itemName: string
-  quantity: number
-  weight?: number
-  shippingMethod: string
-  specialNote?: string
-  status: string
-  trackingNo?: string
-  carrier?: string
-  deliveredAt?: string
+  content: string
+  relatedId: string
+  createdBy?: string
+  createdAt: string
 }
 
-const templateColumns: TemplateColumn[] = [
-  { header: '수취인명*', key: 'recipientName', required: true, example: '홍길동' },
-  { header: '수취인 연락처', key: 'recipientPhone', example: '010-1234-5678' },
-  { header: '수취인 우편번호', key: 'recipientZipCode', example: '06234' },
-  { header: '수취인 주소*', key: 'recipientAddress', required: true, example: '서울시 강남구 역삼동 123' },
-  { header: '상품명*', key: 'itemName', required: true, example: '건강식품 세트' },
-  { header: '수량', key: 'quantity', example: '1' },
-  { header: '중량(kg)', key: 'weight', example: '2.5' },
-  { header: '배송방법', key: 'shippingMethod', example: 'NORMAL' },
-  { header: '특이사항', key: 'specialNote', example: '부재시 경비실' },
-  { header: '발송인명', key: 'senderName', example: '(주)웰그린' },
-  { header: '발송인 연락처', key: 'senderPhone', example: '02-1234-5678' },
-  { header: '발송인 주소', key: 'senderAddress', example: '서울시 서초구' },
-]
-
-const keyMap: Record<string, string> = {
-  수취인명: 'recipientName',
-  '수취인 연락처': 'recipientPhone',
-  '수취인 우편번호': 'recipientZipCode',
-  '수취인 주소': 'recipientAddress',
-  상품명: 'itemName',
-  수량: 'quantity',
-  '중량(kg)': 'weight',
-  배송방법: 'shippingMethod',
-  특이사항: 'specialNote',
-  발송인명: 'senderName',
-  '발송인 연락처': 'senderPhone',
-  '발송인 주소': 'senderAddress',
+interface AttachmentItem {
+  id: string
+  relatedId: string
+  mimeType: string
+  fileName: string
+  fileSize?: number
 }
 
-function getMonthRange(year: number, month: number) {
-  const start = `${year}-${String(month).padStart(2, '0')}-01`
-  const lastDay = new Date(year, month, 0).getDate()
-  const end = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-  return { start, end }
+interface DeliveryReplyItem extends NoteItem {
+  attachments: AttachmentItem[]
 }
 
-export default function ShipperOnlineOrdersPage() {
-  const router = useRouter()
-  const now = new Date()
-  const [kpiYear, setKpiYear] = useState(now.getFullYear())
-  const [kpiMonth, setKpiMonth] = useState(now.getMonth() + 1)
-  const { start: startDate, end: endDate } = useMemo(() => getMonthRange(kpiYear, kpiMonth), [kpiYear, kpiMonth])
+interface PostItem extends NoteItem {
+  replies: NoteItem[]
+  attachments: AttachmentItem[]
+  deliveryPost: {
+    id: string
+    content: string
+    relatedId: string
+    createdAt: string
+    status: string
+    replies: DeliveryReplyItem[]
+  } | null
+}
 
-  const [activeStep, setActiveStep] = useState<number | null>(null)
-  const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set())
-  const [createOpen, setCreateOpen] = useState(false)
-  const [excelDialogOpen, setExcelDialogOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+// ── Helpers ──
+const ACCEPTED_TYPES = '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
 
-  // Form state
-  const [form, setForm] = useState({
-    senderName: '',
-    senderPhone: '',
-    senderAddress: '',
-    recipientName: '',
-    recipientPhone: '',
-    recipientZipCode: '',
-    recipientAddress: '',
-    itemName: '',
-    quantity: 1,
-    weight: '',
-    shippingMethod: 'NORMAL',
-    specialNote: '',
-  })
+const DELIVERY_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  PREPARING: { label: '준비중', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
+  SHIPPED: { label: '출하대기', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+  DELIVERED: { label: '납품완료', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
+  RETURNED: { label: '반품등록', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+}
 
-  const updateField = (field: string, value: string | number) => setForm((prev) => ({ ...prev, [field]: value }))
-
-  const prevMonth = useCallback(() => {
-    if (kpiMonth === 1) {
-      setKpiYear(kpiYear - 1)
-      setKpiMonth(12)
-    } else setKpiMonth(kpiMonth - 1)
-  }, [kpiYear, kpiMonth])
-
-  const nextMonth = useCallback(() => {
-    if (kpiMonth === 12) {
-      setKpiYear(kpiYear + 1)
-      setKpiMonth(1)
-    } else setKpiMonth(kpiMonth + 1)
-  }, [kpiYear, kpiMonth])
-
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ['shipper-orders-online', startDate, endDate],
-    queryFn: () =>
-      api.get(`/shipper/orders?startDate=${startDate}&endDate=${endDate}`) as Promise<{ data: ShipperOrder[] }>,
-  })
-
-  const allOrders = useMemo(() => data?.data || [], [data])
-
-  const stats = useMemo(() => {
-    const total = allOrders.length
-    const received = allOrders.filter((o) => o.status === 'RECEIVED').length
-    const processing = allOrders.filter((o) => o.status === 'PROCESSING').length
-    const shipped = allOrders.filter((o) => ['SHIPPED', 'IN_TRANSIT'].includes(o.status)).length
-    const delivered = allOrders.filter((o) => o.status === 'DELIVERED').length
-    const fulfillmentRate = total > 0 ? Math.round((delivered / total) * 100) : 0
-    return { total, received, processing, shipped, delivered, fulfillmentRate }
-  }, [allOrders])
-
-  const filteredOrders = useMemo(() => {
-    if (activeStep === null) return allOrders
-    const statusMap: Record<number, string[]> = {
-      0: [], // all
-      1: ['RECEIVED', 'PROCESSING'],
-      2: ['SHIPPED', 'IN_TRANSIT'],
-      3: ['DELIVERED'],
-    }
-    const statuses = statusMap[activeStep]
-    if (!statuses || statuses.length === 0) return allOrders
-    return allOrders.filter((o) => statuses.includes(o.status))
-  }, [allOrders, activeStep])
-
-  const handlePipelineClick = useCallback(
-    (idx: number) => {
-      setActiveStep(activeStep === idx ? null : idx)
-    },
-    [activeStep]
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) return FileImage
+  if (
+    mimeType.includes('pdf') ||
+    mimeType.includes('text') ||
+    mimeType.includes('word') ||
+    mimeType.includes('document')
   )
+    return FileText
+  if (mimeType.includes('sheet') || mimeType.includes('excel') || mimeType.includes('csv')) return FileSpreadsheet
+  return FileIcon
+}
 
-  const toggleOrderSelection = useCallback((orderId: string) => {
-    setSelectedOrders((prev) => {
-      const next = new Set(prev)
-      if (next.has(orderId)) next.delete(orderId)
-      else next.add(orderId)
-      return next
-    })
-  }, [])
+function getFileTypeBadge(mimeType: string, fileName: string) {
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+  if (mimeType.includes('pdf') || ext === 'pdf')
+    return { label: 'PDF', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' }
+  if (mimeType.includes('sheet') || mimeType.includes('excel') || ['xlsx', 'xls', 'csv'].includes(ext))
+    return { label: 'Excel', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' }
+  if (mimeType.includes('word') || mimeType.includes('document') || ['doc', 'docx'].includes(ext))
+    return { label: 'Word', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' }
+  if (mimeType.startsWith('image/'))
+    return { label: '이미지', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' }
+  return { label: ext.toUpperCase() || '파일', color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' }
+}
 
-  const toggleSelectAll = useCallback(() => {
-    if (selectedOrders.size === filteredOrders.length) {
-      setSelectedOrders(new Set())
-    } else {
-      setSelectedOrders(new Set(filteredOrders.map((o) => o.id)))
-    }
-  }, [selectedOrders.size, filteredOrders])
+function FileAttachments({ files }: { files: AttachmentItem[] }) {
+  if (files.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-2">
+      {files.map((att) => {
+        const Icon = getFileIcon(att.mimeType)
+        const typeBadge = getFileTypeBadge(att.mimeType, att.fileName)
+        return (
+          <button
+            key={att.id}
+            onClick={() => window.open(`/api/v1/attachments/${att.id}`, '_blank')}
+            className="bg-muted/50 hover:bg-muted flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs"
+          >
+            <Icon className="h-3.5 w-3.5" />
+            <span className="max-w-[120px] truncate">{att.fileName}</span>
+            <span className={`rounded px-1 py-0.5 text-[9px] font-medium ${typeBadge.color}`}>{typeBadge.label}</span>
+            <Download className="text-muted-foreground h-3 w-3" />
+          </button>
+        )
+      })}
+    </div>
+  )
+}
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!form.recipientName || !form.recipientAddress || !form.itemName) {
-      toast.error('필수 항목을 입력해주세요')
-      return
+// ── 발주관리 탭 ──
+function OrdersTab({ posts, onRefresh }: { posts: PostItem[]; onRefresh: () => void }) {
+  const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [writeOpen, setWriteOpen] = useState(false)
+  const [postTitle, setPostTitle] = useState('')
+  const [postContent, setPostContent] = useState('')
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  const filtered = posts.filter((n) => {
+    if (startDate || endDate) {
+      const d = n.createdAt?.split('T')[0] || ''
+      if (startDate && d < startDate) return false
+      if (endDate && d > endDate) return false
     }
-    setIsSubmitting(true)
-    try {
-      await api.post('/shipper/orders', {
-        ...form,
-        quantity: Number(form.quantity),
-        weight: form.weight ? Number(form.weight) : null,
-      })
-      toast.success('주문이 등록되었습니다')
-      setCreateOpen(false)
-      setForm({
-        senderName: '',
-        senderPhone: '',
-        senderAddress: '',
-        recipientName: '',
-        recipientPhone: '',
-        recipientZipCode: '',
-        recipientAddress: '',
-        itemName: '',
-        quantity: 1,
-        weight: '',
-        shippingMethod: 'NORMAL',
-        specialNote: '',
-      })
-      refetch()
-    } catch {
-      toast.error('주문 등록에 실패했습니다')
-    } finally {
-      setIsSubmitting(false)
+    if (searchKeyword) {
+      return n.content.toLowerCase().includes(searchKeyword.toLowerCase())
     }
+    return true
+  })
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) setPendingFiles((prev) => [...prev, ...Array.from(files)])
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleExcelExport = useCallback(() => {
-    const target = selectedOrders.size > 0 ? filteredOrders.filter((o) => selectedOrders.has(o.id)) : filteredOrders
-    if (target.length === 0) return
+  const handleSubmit = async () => {
+    if (!postContent.trim()) {
+      toast.error('내용을 입력해주세요.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const titlePart = postTitle ? `[${postTitle}]\n` : ''
+      const content = `[온라인]${titlePart}${postContent.trim()}`
+      const result = await api.post('/shipper/posts', { content })
+      const noteId = result?.data?.id
 
-    const exportColumns: ExportColumn[] = [
-      { header: '주문번호', accessor: 'orderNo' },
-      { header: '주문일', accessor: (r) => formatDate(r.orderDate) },
-      { header: '수취인', accessor: 'recipientName' },
-      { header: '상품명', accessor: 'itemName' },
-      { header: '수량', accessor: 'quantity' },
-      { header: '배송방법', accessor: (r) => SHIPPING_METHOD_LABELS[r.shippingMethod as string] || r.shippingMethod },
-      { header: '상태', accessor: (r) => SHIPPER_ORDER_STATUS_LABELS[r.status as string] || r.status },
-      { header: '운송장번호', accessor: (r) => r.trackingNo || '' },
-    ]
+      if (pendingFiles.length > 0 && noteId) {
+        for (const file of pendingFiles) {
+          try {
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('relatedTable', 'ShipperOrderAttachment')
+            fd.append('relatedId', noteId)
+            await api.upload('/attachments', fd)
+          } catch {
+            toast.error(`"${file.name}" 업로드 실패`)
+          }
+        }
+      }
 
-    exportToExcel({
-      fileName: `온라인주문_${startDate}_${endDate}`,
-      sheetName: '주문목록',
-      columns: exportColumns,
-      data: target,
-    })
-    toast.success(`${target.length}건 엑셀 다운로드 완료`)
-  }, [filteredOrders, selectedOrders, startDate, endDate])
+      queryClient.invalidateQueries({ queryKey: ['shipper-posts'] })
+      onRefresh()
+      setPostTitle('')
+      setPostContent('')
+      setPendingFiles([])
+      setWriteOpen(false)
+      toast.success('발주 게시글이 등록되었습니다.')
+    } catch {
+      toast.error('게시글 등록에 실패했습니다.')
+    }
+    setSubmitting(false)
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/notes/${id}`)
+      onRefresh()
+      toast.success('게시글이 삭제되었습니다.')
+    } catch {
+      toast.error('삭제에 실패했습니다.')
+    }
+    setDeleteTarget(null)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Dialog open={writeOpen} onOpenChange={setWriteOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="mr-1.5 h-4 w-4" /> 발주 글쓰기
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-h-[90vh] max-w-sm overflow-y-auto sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>발주 게시글 작성</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">제목</label>
+                <Input placeholder="제목 (선택사항)" value={postTitle} onChange={(e) => setPostTitle(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-muted-foreground text-xs font-medium">내용 *</label>
+                <Textarea
+                  placeholder="발주 내용을 입력하세요..."
+                  value={postContent}
+                  onChange={(e) => setPostContent(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="mr-1 h-3 w-3" /> 파일 첨부
+                  </Button>
+                  <span className="text-muted-foreground text-[10px]">PDF, Excel, Word, 이미지 등 (최대 50MB)</span>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPTED_TYPES}
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                {pendingFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {pendingFiles.map((f, idx) => (
+                      <span key={idx} className="bg-muted flex items-center gap-1 rounded px-2 py-1 text-xs">
+                        {f.name}
+                        <button
+                          type="button"
+                          onClick={() => setPendingFiles((prev) => prev.filter((_, i) => i !== idx))}
+                          className="text-destructive ml-1"
+                        >
+                          &times;
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleSubmit} disabled={!postContent.trim() || submitting} size="sm">
+                  <Send className="mr-1 h-3.5 w-3.5" /> {submitting ? '등록 중...' : '등록'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+        />
+        <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            className="pl-9"
+            placeholder="검색..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+          />
+        </div>
+        <Badge variant="secondary" className="ml-auto">
+          {filtered.length}건
+        </Badge>
+      </div>
+
+      <div className="space-y-2">
+        {filtered.length === 0 && (
+          <div className="text-muted-foreground flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
+            <MessageSquare className="mb-2 h-8 w-8" />
+            <p className="text-sm">등록된 발주 게시글이 없습니다.</p>
+            <p className="mt-1 text-xs">글쓰기 버튼으로 새 발주를 작성하세요.</p>
+          </div>
+        )}
+        {filtered.map((note, idx) => {
+          const postNo = filtered.length - idx
+          const isExpanded = expandedId === note.id
+          const channelMatch = note.content.match(/^\[(온라인|오프라인)\]/)
+          const afterChannel = channelMatch ? note.content.slice(channelMatch[0].length) : note.content
+          const titleMatch = afterChannel.match(/^\[(.+?)\]\n?/)
+          const title = titleMatch ? titleMatch[1] : null
+          const body = titleMatch ? afterChannel.slice(titleMatch[0].length) : afterChannel.replace(/^\n/, '')
+          const statusInfo = note.deliveryPost
+            ? DELIVERY_STATUS_MAP[note.deliveryPost.status] || DELIVERY_STATUS_MAP.PREPARING
+            : null
+
+          return (
+            <div key={note.id} className="overflow-hidden rounded-lg border transition-shadow hover:shadow-sm">
+              <button
+                type="button"
+                className="hover:bg-muted/30 w-full px-4 py-3 text-left transition-colors"
+                onClick={() => setExpandedId(isExpanded ? null : note.id)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
+                      {statusInfo && (
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}
+                        >
+                          {statusInfo.label}
+                        </span>
+                      )}
+                      <Badge variant="default" className="text-[10px]">
+                        온라인
+                      </Badge>
+                      {note.attachments.length > 0 && (
+                        <span className="text-muted-foreground flex items-center gap-0.5 text-[10px]">
+                          <Paperclip className="h-3 w-3" />
+                          {note.attachments.length}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-sm font-semibold">{title || body.slice(0, 60)}</p>
+                    {title && <p className="text-muted-foreground mt-0.5 truncate text-xs">{body.slice(0, 80)}</p>}
+                    <span className="text-muted-foreground mt-1 block text-[11px]">{formatDate(note.createdAt)}</span>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronUp className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
+                  ) : (
+                    <ChevronDown className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
+                  )}
+                </div>
+              </button>
+              {isExpanded && (
+                <div className="space-y-3 border-t bg-white px-4 py-4 dark:bg-transparent">
+                  <p className="text-sm break-all whitespace-pre-wrap">{body}</p>
+                  <FileAttachments files={note.attachments} />
+                  <div className="flex items-center justify-end border-t pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive h-7 gap-1 text-xs"
+                      onClick={() => setDeleteTarget(note.id)}
+                    >
+                      <Trash2 className="h-3 w-3" /> 삭제
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(v) => !v && setDeleteTarget(null)}
+        title="게시글 삭제"
+        description="이 게시글을 삭제하시겠습니까?"
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget)
+        }}
+        variant="destructive"
+      />
+    </div>
+  )
+}
+
+// ── 출고관리 탭 ──
+function DeliveriesTab({
+  posts,
+  statusFilter,
+  onRefresh,
+}: {
+  posts: PostItem[]
+  statusFilter: string | null
+  onRefresh: () => void
+}) {
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+
+  const filtered = posts.filter((p) => {
+    if (!p.deliveryPost) return false
+    if (statusFilter && p.deliveryPost.status !== statusFilter) return false
+    if (startDate || endDate) {
+      const d = p.createdAt?.split('T')[0] || ''
+      if (startDate && d < startDate) return false
+      if (endDate && d > endDate) return false
+    }
+    if (searchKeyword) return p.content.toLowerCase().includes(searchKeyword.toLowerCase())
+    return true
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {statusFilter && (
+          <Badge variant="outline" className="text-xs">
+            {DELIVERY_STATUS_MAP[statusFilter]?.label || statusFilter} 필터 적용 중
+          </Badge>
+        )}
+        <DateRangeFilter
+          startDate={startDate}
+          endDate={endDate}
+          onDateChange={(s, e) => {
+            setStartDate(s)
+            setEndDate(e)
+          }}
+        />
+        <div className="relative max-w-xs min-w-[120px] flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            className="h-8 pl-9 text-xs"
+            placeholder="검색..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+          />
+        </div>
+        <Badge variant="secondary" className="ml-auto">
+          {filtered.length}건
+        </Badge>
+      </div>
+
+      {filtered.length === 0 && (
+        <p className="text-muted-foreground py-6 text-center text-xs">출고 게시글이 없습니다.</p>
+      )}
+
+      {filtered.map((post, idx) => {
+        const dp = post.deliveryPost!
+        const postNo = filtered.length - idx
+        const displayContent = dp.content.replace(/^\[발주글\]\n?/, '')
+        const channelMatch = displayContent.match(/^\[(온라인|오프라인)\]/)
+        const afterChannel = channelMatch ? displayContent.slice(channelMatch[0].length) : displayContent
+        const titleMatch = afterChannel.match(/^\[(.+?)\]\n?/)
+        const title = titleMatch ? titleMatch[1] : null
+        const body = titleMatch ? afterChannel.slice(titleMatch[0].length) : afterChannel.replace(/^\n/, '')
+        const statusInfo = DELIVERY_STATUS_MAP[dp.status] || DELIVERY_STATUS_MAP.PREPARING
+
+        return (
+          <div key={dp.id} className="rounded-md border">
+            <div className="px-3 py-2.5">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="text-muted-foreground text-xs font-medium">#{postNo}</span>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}
+                >
+                  {statusInfo.label}
+                </span>
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-[10px] text-blue-700 dark:bg-blue-950 dark:text-blue-300"
+                >
+                  발주
+                </Badge>
+                <span className="text-muted-foreground text-[10px]">{formatDate(dp.createdAt)}</span>
+              </div>
+              {title && <p className="text-sm font-medium">{title}</p>}
+              <p className="text-muted-foreground mt-1 text-xs whitespace-pre-wrap">
+                {body.slice(0, 200)}
+                {body.length > 200 ? '...' : ''}
+              </p>
+
+              <FileAttachments files={post.attachments} />
+
+              {/* 관리자 답글 (읽기 전용) */}
+              {dp.replies.length > 0 && (
+                <div className="mt-2 space-y-2 border-l-2 border-emerald-200 pl-4 dark:border-emerald-800">
+                  {dp.replies.map((reply) => (
+                    <div key={reply.id} className="rounded-md bg-emerald-50/50 px-3 py-2 dark:bg-emerald-950/30">
+                      <div className="mb-1 flex items-center gap-2">
+                        <CornerDownRight className="text-primary h-3 w-3" />
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                        >
+                          관리자 답변
+                        </Badge>
+                        <span className="text-muted-foreground text-[10px]">{formatDate(reply.createdAt)}</span>
+                      </div>
+                      <p className="text-xs whitespace-pre-wrap">{reply.content}</p>
+                      {reply.attachments && <FileAttachments files={reply.attachments} />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── 메인 페이지 ──
+export default function ShipperOnlineOrdersPage() {
+  const [activeTab, setActiveTab] = useState('orders')
+  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+
+  const { data: postsData, refetch } = useQuery({
+    queryKey: ['shipper-posts'],
+    queryFn: () => api.get('/shipper/posts'),
+  })
+  const posts: PostItem[] = useMemo(() => (postsData?.data || []) as PostItem[], [postsData])
+
+  // Filter online only
+  const onlinePosts = useMemo(() => posts.filter((p) => p.content.startsWith('[온라인]')), [posts])
+
+  const stats = useMemo(() => {
+    const withDp = onlinePosts.filter((p) => p.deliveryPost)
+    const total = withDp.length
+    const preparing = withDp.filter((p) => p.deliveryPost?.status === 'PREPARING').length
+    const shipped = withDp.filter((p) => p.deliveryPost?.status === 'SHIPPED').length
+    const delivered = withDp.filter((p) => p.deliveryPost?.status === 'DELIVERED').length
+    const returned = withDp.filter((p) => p.deliveryPost?.status === 'RETURNED').length
+    return { total: onlinePosts.length, preparing, shipped, delivered, returned }
+  }, [onlinePosts])
+
+  const handlePipelineClick = useCallback((status: string | null) => {
+    if (status) {
+      setActiveTab('deliveries')
+      setStatusFilter((prev) => (prev === status ? null : status))
+    } else {
+      setActiveTab('orders')
+      setStatusFilter(null)
+    }
+  }, [])
 
   const pipelineSteps = [
-    { label: '전체 주문', count: stats.total, icon: ShoppingCart, color: 'blue' as const },
-    { label: '처리중', count: stats.received + stats.processing, icon: Clock, color: 'amber' as const },
-    { label: '배송중', count: stats.shipped, icon: Package, color: 'violet' as const },
-    { label: '배송완료', count: stats.delivered, icon: CheckCircle2, color: 'emerald' as const },
+    { label: '발주 접수', count: stats.total, status: null, icon: ShoppingCart, color: 'blue' as const },
+    { label: '준비중', count: stats.preparing, status: 'PREPARING', icon: Clock, color: 'amber' as const },
+    { label: '출하대기', count: stats.shipped, status: 'SHIPPED', icon: Package, color: 'violet' as const },
+    { label: '납품완료', count: stats.delivered, status: 'DELIVERED', icon: CheckCircle2, color: 'emerald' as const },
   ]
 
   const colorMap = {
@@ -299,218 +606,23 @@ export default function ShipperOnlineOrdersPage() {
     },
   }
 
+  const fulfillmentRate = stats.total > 0 ? Math.round((stats.delivered / stats.total) * 100) : 0
+
   return (
     <ShipperLayoutShell>
       <div className="space-y-6">
-        <PageHeader
-          title="온라인 주문관리"
-          description="온라인 주문 등록부터 배송까지 통합 관리합니다"
-          actions={
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setExcelDialogOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" /> 엑셀 업로드
-              </Button>
-              <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" /> 주문등록
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>온라인 주문등록</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <Card>
-                      <CardHeader className="p-4 pb-2">
-                        <CardTitle className="text-sm">발송인 정보</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 gap-3 p-4 pt-2 sm:grid-cols-2">
-                        <div>
-                          <Label className="text-xs">이름</Label>
-                          <Input
-                            value={form.senderName}
-                            onChange={(e) => updateField('senderName', e.target.value)}
-                            placeholder="발송인명"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">전화번호</Label>
-                          <Input
-                            value={form.senderPhone}
-                            onChange={(e) => updateField('senderPhone', e.target.value)}
-                            placeholder="010-0000-0000"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <Label className="text-xs">주소</Label>
-                          <Input
-                            value={form.senderAddress}
-                            onChange={(e) => updateField('senderAddress', e.target.value)}
-                            placeholder="발송인 주소"
-                            className="mt-1"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="p-4 pb-2">
-                        <CardTitle className="text-sm">
-                          수취인 정보 <span className="text-destructive">*</span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 gap-3 p-4 pt-2 sm:grid-cols-3">
-                        <div>
-                          <Label className="text-xs">이름 *</Label>
-                          <Input
-                            required
-                            value={form.recipientName}
-                            onChange={(e) => updateField('recipientName', e.target.value)}
-                            placeholder="수취인명"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">전화번호</Label>
-                          <Input
-                            value={form.recipientPhone}
-                            onChange={(e) => updateField('recipientPhone', e.target.value)}
-                            placeholder="010-0000-0000"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">우편번호</Label>
-                          <Input
-                            value={form.recipientZipCode}
-                            onChange={(e) => updateField('recipientZipCode', e.target.value)}
-                            placeholder="12345"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div className="sm:col-span-3">
-                          <Label className="text-xs">주소 *</Label>
-                          <Input
-                            required
-                            value={form.recipientAddress}
-                            onChange={(e) => updateField('recipientAddress', e.target.value)}
-                            placeholder="수취인 주소"
-                            className="mt-1"
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="p-4 pb-2">
-                        <CardTitle className="text-sm">상품 · 배송 정보</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 gap-3 p-4 pt-2 sm:grid-cols-4">
-                        <div className="sm:col-span-2">
-                          <Label className="text-xs">상품명 *</Label>
-                          <Input
-                            required
-                            value={form.itemName}
-                            onChange={(e) => updateField('itemName', e.target.value)}
-                            placeholder="상품명"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">수량</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={form.quantity}
-                            onChange={(e) => updateField('quantity', e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">중량(kg)</Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={form.weight}
-                            onChange={(e) => updateField('weight', e.target.value)}
-                            placeholder="0.0"
-                            className="mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs">배송방법</Label>
-                          <Select value={form.shippingMethod} onValueChange={(v) => updateField('shippingMethod', v)}>
-                            <SelectTrigger className="mt-1">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(SHIPPING_METHOD_LABELS).map(([k, v]) => (
-                                <SelectItem key={k} value={k}>
-                                  {v}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="sm:col-span-3">
-                          <Label className="text-xs">특이사항</Label>
-                          <Textarea
-                            value={form.specialNote}
-                            onChange={(e) => updateField('specialNote', e.target.value)}
-                            placeholder="배송 요청사항"
-                            className="mt-1"
-                            rows={2}
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
-                        취소
-                      </Button>
-                      <Button type="submit" disabled={isSubmitting}>
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 등록 중...
-                          </>
-                        ) : (
-                          '주문등록'
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          }
-        />
+        <PageHeader title="온라인 주문 (발주/출고)" description="발주 게시글을 작성하고 출고 현황을 확인합니다" />
 
-        {/* Month selector */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg border px-2 py-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={prevMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="min-w-[120px] text-center text-sm font-medium">
-              {kpiYear}년 {kpiMonth}월
-            </span>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={nextMonth}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Process Pipeline Flow */}
+        {/* Pipeline */}
         <Card className="overflow-hidden border shadow-sm">
           <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="text-muted-foreground h-4 w-4" />
                 <span className="text-muted-foreground text-xs font-medium">처리 현황</span>
-                {activeStep !== null && (
+                {statusFilter && (
                   <button
-                    onClick={() => setActiveStep(null)}
+                    onClick={() => setStatusFilter(null)}
                     className="text-muted-foreground hover:text-foreground ml-1 flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] transition-colors"
                   >
                     <X className="h-3 w-3" /> 필터 해제
@@ -520,12 +632,10 @@ export default function ShipperOnlineOrdersPage() {
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-xs">이행률</span>
                 <Badge
-                  variant={
-                    stats.fulfillmentRate >= 80 ? 'default' : stats.fulfillmentRate >= 50 ? 'secondary' : 'outline'
-                  }
+                  variant={fulfillmentRate >= 80 ? 'default' : fulfillmentRate >= 50 ? 'secondary' : 'outline'}
                   className="text-xs tabular-nums"
                 >
-                  {isLoading ? '...' : `${stats.fulfillmentRate}%`}
+                  {fulfillmentRate}%
                 </Badge>
               </div>
             </div>
@@ -534,28 +644,19 @@ export default function ShipperOnlineOrdersPage() {
               {pipelineSteps.map((step, idx) => {
                 const colors = colorMap[step.color]
                 const Icon = step.icon
-                const isActive = activeStep === idx
+                const isActive =
+                  step.status === null ? activeTab === 'orders' && !statusFilter : statusFilter === step.status
                 return (
                   <div key={step.label} className="flex min-w-0 flex-1 items-center">
                     <button
                       type="button"
-                      onClick={() => handlePipelineClick(idx)}
-                      className={`flex min-w-[72px] flex-1 flex-col items-center gap-1.5 rounded-lg py-2 transition-all sm:min-w-[96px] ${
-                        isActive ? 'bg-muted/60 scale-105 shadow-sm' : 'hover:bg-muted/30'
-                      }`}
+                      onClick={() => handlePipelineClick(step.status)}
+                      className={`flex min-w-[72px] flex-1 flex-col items-center gap-1.5 rounded-lg py-2 transition-all sm:min-w-[96px] ${isActive ? 'bg-muted/60 scale-105 shadow-sm' : 'hover:bg-muted/30'}`}
                     >
                       <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 transition-all sm:h-10 sm:w-10 ${
-                          isActive
-                            ? `${colors.activeBg} ${colors.activeRing} scale-110 shadow-md`
-                            : `${colors.bg} ${colors.ring}`
-                        }`}
+                        className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 transition-all sm:h-10 sm:w-10 ${isActive ? `${colors.activeBg} ${colors.activeRing} scale-110 shadow-md` : `${colors.bg} ${colors.ring}`}`}
                       >
-                        {isLoading ? (
-                          <Loader2 className={`h-4 w-4 animate-spin ${colors.text}`} />
-                        ) : (
-                          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${colors.text}`} />
-                        )}
+                        <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${colors.text}`} />
                       </div>
                       <div className="text-center">
                         <p
@@ -566,7 +667,7 @@ export default function ShipperOnlineOrdersPage() {
                         <p
                           className={`mt-0.5 text-sm font-bold tabular-nums sm:text-base ${isActive ? 'text-foreground' : ''}`}
                         >
-                          {isLoading ? '-' : step.count}
+                          {step.count}
                           <span className="text-muted-foreground text-[10px] font-normal">건</span>
                         </p>
                       </div>
@@ -583,154 +684,32 @@ export default function ShipperOnlineOrdersPage() {
               <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-blue-500 via-violet-500 to-emerald-500 transition-all duration-700 ease-out"
-                  style={{ width: isLoading ? '0%' : `${stats.fulfillmentRate}%` }}
+                  style={{ width: `${fulfillmentRate}%` }}
                 />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* KPI Summary Cards */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[
-            {
-              label: '전체 주문',
-              count: stats.total,
-              step: 0,
-              color: 'blue',
-              icon: ShoppingCart,
-              sub: `접수 ${stats.received}건`,
-            },
-            {
-              label: '처리중',
-              count: stats.received + stats.processing,
-              step: 1,
-              color: 'amber',
-              icon: Clock,
-              sub: `처리 ${stats.processing}건`,
-            },
-            { label: '배송중', count: stats.shipped, step: 2, color: 'violet', icon: Package, sub: `출고 포함` },
-            {
-              label: '배송완료',
-              count: stats.delivered,
-              step: 3,
-              color: 'emerald',
-              icon: CheckCircle2,
-              sub: `전체 ${stats.total}건 중`,
-            },
-          ].map((card) => (
-            <Card
-              key={card.label}
-              className={`group cursor-pointer gap-0 border-l-4 border-l-${card.color}-500 py-4 shadow-sm transition-all hover:shadow-md ${activeStep === card.step ? `ring-2 ring-${card.color}-500` : ''}`}
-              onClick={() => handlePipelineClick(card.step)}
-            >
-              <CardContent className="flex items-center gap-3 px-4 py-0">
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-${card.color}-50 transition-transform group-hover:scale-110 dark:bg-${card.color}-950`}
-                >
-                  <card.icon className={`h-5 w-5 text-${card.color}-600 dark:text-${card.color}-400`} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-muted-foreground text-xs font-medium">{card.label}</p>
-                  {isLoading ? (
-                    <Loader2 className="text-muted-foreground mt-1 h-4 w-4 animate-spin" />
-                  ) : (
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-lg font-bold tabular-nums">{card.count}</span>
-                      <span className="text-muted-foreground text-xs">건</span>
-                    </div>
-                  )}
-                  <p className="text-muted-foreground mt-0.5 text-[10px]">{card.sub}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Order List */}
-        <Card className="overflow-hidden border shadow-sm">
-          <CardHeader className="border-b px-4 py-3 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base font-semibold">주문 목록</CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {filteredOrders.length}건
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                {selectedOrders.size > 0 && (
-                  <Badge variant="outline" className="text-xs">
-                    {selectedOrders.size}건 선택
-                  </Badge>
-                )}
-                <Button variant="outline" size="sm" onClick={handleExcelExport}>
-                  <FileSpreadsheet className="mr-1 h-3.5 w-3.5" />
-                  {selectedOrders.size > 0 ? '선택 엑셀' : '전체 엑셀'}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {filteredOrders.length === 0 ? (
-              <div className="text-muted-foreground flex items-center justify-center py-12 text-sm">
-                해당 기간의 주문 데이터가 없습니다
-              </div>
-            ) : (
-              <div className="divide-y">
-                <div className="bg-muted/30 flex items-center gap-3 px-4 py-2 sm:px-6">
-                  <Checkbox
-                    checked={filteredOrders.length > 0 && selectedOrders.size === filteredOrders.length}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                  <span className="text-muted-foreground text-xs font-medium">전체 선택</span>
-                </div>
-                {filteredOrders.map((order) => {
-                  const statusLabel = SHIPPER_ORDER_STATUS_LABELS[order.status] || order.status
-                  return (
-                    <div
-                      key={order.id}
-                      className="hover:bg-muted/20 flex items-center gap-3 px-4 py-3 transition-colors sm:px-6"
-                    >
-                      <Checkbox
-                        checked={selectedOrders.has(order.id)}
-                        onCheckedChange={() => toggleOrderSelection(order.id)}
-                      />
-                      <Link
-                        href={`/shipper/orders/${order.id}`}
-                        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1"
-                      >
-                        <span className="font-mono text-sm font-medium text-blue-600 hover:underline">
-                          {order.orderNo || order.id.slice(0, 8)}
-                        </span>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {statusLabel}
-                        </Badge>
-                        <span className="text-muted-foreground text-xs">{order.recipientName}</span>
-                        <span className="text-muted-foreground text-xs">{order.itemName}</span>
-                        <span className="text-muted-foreground text-xs">{formatDate(order.orderDate)}</span>
-                        {order.trackingNo && (
-                          <span className="font-mono text-xs text-green-600">{order.trackingNo}</span>
-                        )}
-                      </Link>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Excel Import Dialog */}
-        <ExcelImportDialog
-          open={excelDialogOpen}
-          onOpenChange={setExcelDialogOpen}
-          title="온라인 주문 대량 업로드"
-          apiEndpoint="/shipper/orders/import"
-          templateColumns={templateColumns}
-          templateFileName="온라인주문_업로드_템플릿"
-          keyMap={keyMap}
-          onSuccess={() => refetch()}
-        />
+        {/* Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => {
+            setActiveTab(v)
+            if (v === 'orders') setStatusFilter(null)
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="orders">발주관리</TabsTrigger>
+            <TabsTrigger value="deliveries">출고관리</TabsTrigger>
+          </TabsList>
+          <TabsContent value="orders" className="mt-4">
+            <OrdersTab posts={onlinePosts} onRefresh={refetch} />
+          </TabsContent>
+          <TabsContent value="deliveries" className="mt-4">
+            <DeliveriesTab posts={onlinePosts} statusFilter={statusFilter} onRefresh={refetch} />
+          </TabsContent>
+        </Tabs>
       </div>
     </ShipperLayoutShell>
   )
