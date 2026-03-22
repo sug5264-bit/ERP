@@ -52,6 +52,7 @@ const VALID_TABLES = [
   'Project',
   'Recruitment',
   'ShipperOrderAttachment',
+  'ShipperDeliveryReplyPost',
 ]
 
 /** 허용된 확장자만 업로드 가능 */

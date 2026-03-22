@@ -18,7 +18,6 @@ import {
   Send,
   Search,
   MessageSquare,
-  CornerDownRight,
   FileImage,
   FileText,
   FileSpreadsheet,
@@ -30,7 +29,6 @@ import {
   PackageCheck,
   RotateCcw,
 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 
 // ── Types ──
 interface ShipperItem {
@@ -39,19 +37,39 @@ interface ShipperItem {
   companyName: string
 }
 
-interface NoteItem {
-  id: string
-  content: string
-  relatedId: string
-  createdBy: string
-  createdAt: string
-}
-
 interface AttachmentItem {
   id: string
   relatedId: string
   mimeType: string
   fileName: string
+}
+
+interface DeliveryReplyItem {
+  id: string
+  content: string
+  relatedId: string
+  createdBy: string
+  createdAt: string
+  attachments: AttachmentItem[]
+}
+
+interface DeliveryPostItem {
+  id: string
+  content: string
+  relatedId: string
+  createdAt: string
+  status: string
+  replies: DeliveryReplyItem[]
+}
+
+interface PostWithDelivery {
+  id: string
+  content: string
+  relatedId: string
+  createdBy: string
+  createdAt: string
+  attachments: AttachmentItem[]
+  deliveryPost: DeliveryPostItem | null
 }
 
 // ── Helpers ──
@@ -115,33 +133,19 @@ function FileAttachments({ files }: { files: AttachmentItem[] }) {
 }
 
 // ── 발주관리 탭 (읽기 전용) ──
-function OrdersTab({
-  shippers,
-  selectedShipperId,
-  notes,
-  attachments,
-}: {
-  shippers: ShipperItem[]
-  selectedShipperId: string
-  notes: NoteItem[]
-  attachments: AttachmentItem[]
-}) {
+function OrdersTab({ shippers, posts }: { shippers: ShipperItem[]; posts: PostWithDelivery[] }) {
   const shipperMap = new Map(shippers.map((s) => [s.id, s]))
-  const getPostAttachments = (noteId: string) => attachments.filter((a) => a.relatedId === noteId)
-
-  const filtered = selectedShipperId !== 'all' ? notes.filter((n) => n.relatedId === selectedShipperId) : notes
 
   return (
     <div className="space-y-3">
-      {filtered.length === 0 ? (
+      {posts.length === 0 ? (
         <div className="text-muted-foreground flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
           <MessageSquare className="mb-2 h-8 w-8" />
           <p className="text-sm">작성된 발주 게시글이 없습니다.</p>
         </div>
       ) : (
-        filtered.map((note) => {
+        posts.map((note) => {
           const shipper = shipperMap.get(note.relatedId)
-          const postFiles = getPostAttachments(note.id)
           const content = note.content
           const channelMatch = content.match(/^\[(온라인|오프라인)\]/)
           const afterChannel = channelMatch ? content.slice(channelMatch[0].length) : content
@@ -168,7 +172,7 @@ function OrdersTab({
                   <p className="text-sm break-all whitespace-pre-wrap">{body}</p>
                 </div>
               </div>
-              {postFiles.length > 0 && <FileAttachments files={postFiles} />}
+              {note.attachments.length > 0 && <FileAttachments files={note.attachments} />}
             </div>
           )
         })
@@ -180,14 +184,12 @@ function OrdersTab({
 // ── 출고관리 탭 (답글/상태 변경) ──
 function DeliveriesTab({
   shippers,
-  selectedShipperId,
-  notes,
-  attachments,
+  posts,
+  onRefresh,
 }: {
   shippers: ShipperItem[]
-  selectedShipperId: string
-  notes: NoteItem[]
-  attachments: AttachmentItem[]
+  posts: PostWithDelivery[]
+  onRefresh: () => void
 }) {
   const queryClient = useQueryClient()
   const replyFileInputRef = useRef<HTMLInputElement>(null)
@@ -199,61 +201,19 @@ function DeliveriesTab({
 
   const shipperMap = new Map(shippers.map((s) => [s.id, s]))
 
-  // Fetch delivery posts
-  const { data: dpData } = useQuery({
-    queryKey: ['shipper-delivery-posts'],
-    queryFn: () => api.get('/notes?relatedTable=ShipperDeliveryPost'),
-  })
-  const deliveryPosts: NoteItem[] = dpData?.data || []
-
-  // Fetch statuses
-  const { data: statusData } = useQuery({
-    queryKey: ['shipper-delivery-statuses'],
-    queryFn: () => api.get('/notes?relatedTable=ShipperDeliveryPostStatus'),
-  })
-  const statuses: NoteItem[] = statusData?.data || []
-
-  // Fetch replies
-  const { data: repliesData } = useQuery({
-    queryKey: ['shipper-delivery-replies'],
-    queryFn: () => api.get('/notes?relatedTable=ShipperDeliveryReply'),
-  })
-  const replies: NoteItem[] = repliesData?.data || []
-
-  // Fetch reply attachments
-  const { data: replyAttsData } = useQuery({
-    queryKey: ['shipper-delivery-reply-attachments'],
-    queryFn: () => api.get('/attachments?relatedTable=ShipperDeliveryReplyPost'),
-  })
-  const replyAttachments: AttachmentItem[] = replyAttsData?.data || []
-
-  const getStatus = (dpId: string) => {
-    const s = statuses.filter((st) => st.relatedId === dpId)
-    return s.length > 0 ? s[0].content : 'PREPARING'
-  }
-
-  const getReplies = (dpId: string) => replies.filter((r) => r.relatedId === dpId)
-  const getReplyAtts = (replyId: string) => replyAttachments.filter((a) => a.relatedId === replyId)
-  const getPostAttachments = (noteId: string) => attachments.filter((a) => a.relatedId === noteId)
-
-  // Map note IDs to their delivery posts
-  const noteIdToDp = new Map(deliveryPosts.map((dp) => [dp.relatedId, dp]))
-
-  const filteredNotes = (
-    selectedShipperId !== 'all' ? notes.filter((n) => n.relatedId === selectedShipperId) : notes
-  ).filter((n) => noteIdToDp.has(n.id))
+  const postsWithDp = posts.filter((p) => p.deliveryPost)
 
   const updateStatus = async (dpId: string, status: string) => {
     try {
       await api.post('/notes', { content: status, relatedTable: 'ShipperDeliveryPostStatus', relatedId: dpId })
-      queryClient.invalidateQueries({ queryKey: ['shipper-delivery-statuses'] })
+      onRefresh()
       toast.success(`${DELIVERY_STATUS_MAP[status]?.label || status} 처리되었습니다.`)
     } catch {
       toast.error('상태 변경에 실패했습니다.')
     }
   }
 
-  const handleReply = async (dpId: string) => {
+  const handleReply = async (dpId: string, currentStatus: string) => {
     if (!replyContent.trim()) {
       toast.error('내용을 입력해주세요.')
       return
@@ -282,13 +242,11 @@ function DeliveriesTab({
       }
 
       // Auto-transition PREPARING → SHIPPED
-      const currentStatus = getStatus(dpId)
       if (currentStatus === 'PREPARING') {
-        await updateStatus(dpId, 'SHIPPED')
+        await api.post('/notes', { content: 'SHIPPED', relatedTable: 'ShipperDeliveryPostStatus', relatedId: dpId })
       }
 
-      queryClient.invalidateQueries({ queryKey: ['shipper-delivery-replies'] })
-      queryClient.invalidateQueries({ queryKey: ['shipper-delivery-reply-attachments'] })
+      onRefresh()
       setReplyContent('')
       setReplyFiles([])
       setReplyTargetId(null)
@@ -302,7 +260,7 @@ function DeliveriesTab({
   const handleDeleteReply = async (id: string) => {
     try {
       await api.delete(`/notes/${id}`)
-      queryClient.invalidateQueries({ queryKey: ['shipper-delivery-replies'] })
+      onRefresh()
       toast.success('답글이 삭제되었습니다.')
     } catch {
       toast.error('답글 삭제에 실패했습니다.')
@@ -312,16 +270,15 @@ function DeliveriesTab({
 
   return (
     <div className="space-y-3">
-      {filteredNotes.length === 0 ? (
+      {postsWithDp.length === 0 ? (
         <p className="text-muted-foreground py-6 text-center text-xs">출고 게시글이 없습니다.</p>
       ) : (
-        filteredNotes.map((note) => {
-          const dp = noteIdToDp.get(note.id)!
+        postsWithDp.map((note) => {
+          const dp = note.deliveryPost!
           const shipper = shipperMap.get(note.relatedId)
-          const dpStatus = getStatus(dp.id)
+          const dpStatus = dp.status || 'PREPARING'
           const statusInfo = DELIVERY_STATUS_MAP[dpStatus] || DELIVERY_STATUS_MAP.PREPARING
-          const dpReplies = getReplies(dp.id)
-          const noteFiles = getPostAttachments(note.id)
+          const dpReplies = dp.replies || []
           const isTerminal = dpStatus === 'DELIVERED' || dpStatus === 'RETURNED'
 
           const displayContent = dp.content.replace(/^\[발주글\]\n?/, '')
@@ -375,47 +332,44 @@ function DeliveriesTab({
                   {body.length > 200 ? '...' : ''}
                 </p>
 
-                {noteFiles.length > 0 && (
+                {note.attachments.length > 0 && (
                   <div className="mt-2">
-                    <FileAttachments files={noteFiles} />
+                    <FileAttachments files={note.attachments} />
                   </div>
                 )}
 
                 {/* Replies */}
                 {dpReplies.length > 0 && (
                   <div className="mt-2 space-y-2 border-l-2 border-emerald-200 pl-4 dark:border-emerald-800">
-                    {dpReplies.map((reply) => {
-                      const replyAtts = getReplyAtts(reply.id)
-                      return (
-                        <div key={reply.id} className="rounded-md bg-emerald-50/50 px-3 py-2 dark:bg-emerald-950/30">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant="outline"
-                                className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                              >
-                                답글
-                              </Badge>
-                              <span className="text-muted-foreground text-[10px]">{formatDate(reply.createdAt)}</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive h-5 w-5"
-                              onClick={() => setDeleteTarget(reply.id)}
+                    {dpReplies.map((reply) => (
+                      <div key={reply.id} className="rounded-md bg-emerald-50/50 px-3 py-2 dark:bg-emerald-950/30">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className="bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
                             >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                              답글
+                            </Badge>
+                            <span className="text-muted-foreground text-[10px]">{formatDate(reply.createdAt)}</span>
                           </div>
-                          <p className="text-xs whitespace-pre-wrap">{reply.content}</p>
-                          {replyAtts.length > 0 && (
-                            <div className="mt-1">
-                              <FileAttachments files={replyAtts} />
-                            </div>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive h-5 w-5"
+                            onClick={() => setDeleteTarget(reply.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
-                      )
-                    })}
+                        <p className="text-xs whitespace-pre-wrap">{reply.content}</p>
+                        {reply.attachments.length > 0 && (
+                          <div className="mt-1">
+                            <FileAttachments files={reply.attachments} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -484,7 +438,7 @@ function DeliveriesTab({
                           <Button
                             size="sm"
                             className="h-7 text-xs"
-                            onClick={() => handleReply(dp.id)}
+                            onClick={() => handleReply(dp.id, dpStatus)}
                             disabled={!replyContent.trim() || submitting}
                           >
                             <Send className="mr-1 h-3 w-3" /> {submitting ? '등록 중...' : '답글 등록'}
@@ -534,23 +488,15 @@ export default function ThreePLOrderPostsPage() {
   })
   const shippers: ShipperItem[] = shippersData?.data || []
 
-  const { data: notesData } = useQuery({
-    queryKey: ['shipper-order-posts', selectedShipperId],
+  // 통합 API 1회 호출로 발주글 + 출고 체인 전체 조회
+  const { data: postsData, refetch } = useQuery({
+    queryKey: ['3pl-order-deliveries', selectedShipperId],
     queryFn: () => {
-      const url =
-        selectedShipperId !== 'all'
-          ? `/notes?relatedTable=ShipperOrderPost&relatedId=${selectedShipperId}`
-          : `/notes?relatedTable=ShipperOrderPost`
-      return api.get(url)
+      const qp = selectedShipperId !== 'all' ? `?shipperId=${selectedShipperId}` : ''
+      return api.get(`/sales/3pl/orders/deliveries${qp}`)
     },
   })
-  const notes: NoteItem[] = notesData?.data || []
-
-  const { data: attachmentsData } = useQuery({
-    queryKey: ['shipper-order-attachments'],
-    queryFn: () => api.get('/attachments?relatedTable=ShipperOrderAttachment'),
-  })
-  const allAttachments: AttachmentItem[] = attachmentsData?.data || []
+  const posts: PostWithDelivery[] = postsData?.data || []
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -571,7 +517,7 @@ export default function ThreePLOrderPostsPage() {
             ))}
           </SelectContent>
         </Select>
-        <Badge variant="secondary">{notes.length}건</Badge>
+        <Badge variant="secondary">{posts.length}건</Badge>
       </div>
 
       <Tabs defaultValue="orders">
@@ -580,20 +526,10 @@ export default function ThreePLOrderPostsPage() {
           <TabsTrigger value="deliveries">출고관리</TabsTrigger>
         </TabsList>
         <TabsContent value="orders" className="mt-4">
-          <OrdersTab
-            shippers={shippers}
-            selectedShipperId={selectedShipperId}
-            notes={notes}
-            attachments={allAttachments}
-          />
+          <OrdersTab shippers={shippers} posts={posts} />
         </TabsContent>
         <TabsContent value="deliveries" className="mt-4">
-          <DeliveriesTab
-            shippers={shippers}
-            selectedShipperId={selectedShipperId}
-            notes={notes}
-            attachments={allAttachments}
-          />
+          <DeliveriesTab shippers={shippers} posts={posts} onRefresh={refetch} />
         </TabsContent>
       </Tabs>
     </div>

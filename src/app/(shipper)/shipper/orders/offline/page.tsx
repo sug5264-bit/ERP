@@ -37,6 +37,7 @@ import {
   ShoppingCart,
   X,
   CornerDownRight,
+  Pencil,
 } from 'lucide-react'
 import { ShipperLayoutShell } from '@/components/layout/shipper-layout-shell'
 
@@ -145,6 +146,8 @@ function OrdersTab({ posts, onRefresh }: { posts: PostItem[]; onRefresh: () => v
   const [submitting, setSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [editTarget, setEditTarget] = useState<{ id: string; content: string } | null>(null)
+  const [editContent, setEditContent] = useState('')
   const [searchKeyword, setSearchKeyword] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -213,6 +216,27 @@ function OrdersTab({ posts, onRefresh }: { posts: PostItem[]; onRefresh: () => v
       toast.error('삭제에 실패했습니다.')
     }
     setDeleteTarget(null)
+  }
+
+  const handleEdit = async () => {
+    if (!editTarget || !editContent.trim()) return
+    setSubmitting(true)
+    try {
+      await api.patch(`/notes/${editTarget.id}`, { content: editContent.trim() })
+      onRefresh()
+      setEditTarget(null)
+      setEditContent('')
+      toast.success('게시글이 수정되었습니다.')
+    } catch {
+      toast.error('수정에 실패했습니다.')
+    }
+    setSubmitting(false)
+  }
+
+  const startEdit = (note: PostItem) => {
+    setEditTarget({ id: note.id, content: note.content })
+    setEditContent(note.content)
+    setExpandedId(note.id)
   }
 
   return (
@@ -370,18 +394,62 @@ function OrdersTab({ posts, onRefresh }: { posts: PostItem[]; onRefresh: () => v
               </button>
               {isExpanded && (
                 <div className="space-y-3 border-t bg-white px-4 py-4 dark:bg-transparent">
-                  <p className="text-sm break-all whitespace-pre-wrap">{body}</p>
-                  <FileAttachments files={note.attachments} />
-                  <div className="flex items-center justify-end border-t pt-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive h-7 gap-1 text-xs"
-                      onClick={() => setDeleteTarget(note.id)}
-                    >
-                      <Trash2 className="h-3 w-3" /> 삭제
-                    </Button>
-                  </div>
+                  {editTarget?.id === note.id ? (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        rows={4}
+                        className="text-sm"
+                      />
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setEditTarget(null)
+                            setEditContent('')
+                          }}
+                        >
+                          취소
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={handleEdit}
+                          disabled={!editContent.trim() || submitting}
+                        >
+                          {submitting ? '수정 중...' : '수정 완료'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm break-all whitespace-pre-wrap">{body}</p>
+                      <FileAttachments files={note.attachments} />
+                      <div className="flex items-center justify-end gap-2 border-t pt-2">
+                        {(!note.deliveryPost || note.deliveryPost.status === 'PREPARING') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => startEdit(note)}
+                          >
+                            <Pencil className="h-3 w-3" /> 수정
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive h-7 gap-1 text-xs"
+                          onClick={() => setDeleteTarget(note.id)}
+                        >
+                          <Trash2 className="h-3 w-3" /> 삭제
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
