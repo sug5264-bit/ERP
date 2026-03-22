@@ -236,7 +236,10 @@ describe('POST /api/v1/inventory/stock-movement', () => {
           update: vi.fn(),
           create: vi.fn(),
         },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
         $queryRaw: vi.fn().mockResolvedValue([]),
       }
       return fn(tx)
@@ -265,7 +268,10 @@ describe('POST /api/v1/inventory/stock-movement', () => {
           findFirst: vi.fn().mockResolvedValue({ quantity: 3 }),
         },
         item: { findUnique: vi.fn().mockResolvedValue({ itemName: '테스트품목' }) },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
       }
       return fn(tx)
     })
@@ -281,5 +287,34 @@ describe('POST /api/v1/inventory/stock-movement', () => {
     expect(resp.status).toBe(400)
     expect(body.error.message).toContain('재고가 부족')
     expect(body.error.message).toContain('테스트품목')
+  })
+
+  it('입고 시 FOR UPDATE 쿼리 DB 에러 → 500 (에러 무시하지 않고 전파)', async () => {
+    setAuth()
+    mockPrisma.employee.findFirst.mockResolvedValue({ id: 'emp-1' })
+    const dbError = new Error('DB connection lost')
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
+      const tx = {
+        stockMovement: { create: vi.fn().mockResolvedValue({ id: 'sm-1' }) },
+        stockMovementDetail: { createMany: vi.fn() },
+        stockBalance: { updateMany: vi.fn(), create: vi.fn() },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
+        $queryRaw: vi.fn().mockRejectedValue(dbError),
+      }
+      return fn(tx)
+    })
+    const resp = await POST(
+      createReq('http://localhost/api/v1/inventory/stock-movement', {
+        movementType: 'INBOUND',
+        movementDate: '2026-01-01',
+        targetWarehouseId: 'wh-1',
+        details: [{ itemId: 'item-1', quantity: 5, unitPrice: 1000 }],
+      })
+    )
+    // DB 에러는 무시되지 않고 500으로 전파되어야 함
+    expect(resp.status).toBe(500)
   })
 })
