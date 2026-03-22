@@ -124,6 +124,19 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// 서버리스 환경 DB 기반 로그인 시도 추적 (인메모리 rate limiting 대체)
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  username  String
+  ipAddress String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([username, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("login_attempts")
+}
+
 model Attachment {
   id           String   @id @default(cuid())
   fileName     String
