@@ -339,6 +339,7 @@ describe('DELETE /api/v1/sales/orders/[id]', () => {
         salesReturn: { deleteMany: vi.fn() },
         salesOrderDetail: { deleteMany: vi.fn() },
         salesOrder: { delete: vi.fn() },
+        note: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
       }
       return fn(tx)
     })
@@ -355,7 +356,7 @@ describe('DELETE /api/v1/sales/orders/[id]', () => {
     mockPrisma.salesOrder.findUnique.mockResolvedValue({ id: 'order-1', status: 'ORDERED' })
     mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       const tx = {
-        delivery: { findMany: vi.fn().mockResolvedValue([{ id: 'dlv-1' }]) },
+        delivery: { findMany: vi.fn().mockResolvedValue([{ id: 'dlv-1' }]), deleteMany: vi.fn() },
         stockMovement: {
           findMany: vi.fn().mockResolvedValue([{ id: 'sm-1', sourceWarehouseId: 'wh-1', targetWarehouseId: null }]),
           deleteMany: vi.fn(),
@@ -368,11 +369,11 @@ describe('DELETE /api/v1/sales/orders/[id]', () => {
         qualityInspectionItem: { deleteMany: vi.fn() },
         qualityInspection: { deleteMany: vi.fn() },
         deliveryDetail: { deleteMany: vi.fn() },
-        delivery: { deleteMany: vi.fn(), findMany: vi.fn().mockResolvedValue([{ id: 'dlv-1' }]) },
         salesReturnDetail: { deleteMany: vi.fn() },
         salesReturn: { deleteMany: vi.fn() },
         salesOrderDetail: { deleteMany: vi.fn() },
         salesOrder: { delete: vi.fn() },
+        note: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
       }
       return fn(tx)
     })
