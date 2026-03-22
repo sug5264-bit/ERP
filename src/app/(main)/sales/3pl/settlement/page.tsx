@@ -37,24 +37,31 @@ function StatusCell({ row, onMarkPaid }: { row: SettlementRow; onMarkPaid: (row:
       </div>
     )
   }
+  if (s === 'CONFIRMED') {
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
+          확정
+        </Badge>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 text-xs"
+          onClick={(e) => {
+            e.stopPropagation()
+            onMarkPaid(row)
+          }}
+        >
+          <CheckCircle2 className="mr-1 h-3 w-3" />
+          지급처리
+        </Button>
+      </div>
+    )
+  }
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant="secondary" className="bg-blue-500 text-white hover:bg-blue-600">
-        확정
-      </Badge>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-6 text-xs"
-        onClick={(e) => {
-          e.stopPropagation()
-          onMarkPaid(row)
-        }}
-      >
-        <CheckCircle2 className="mr-1 h-3 w-3" />
-        지급처리
-      </Button>
-    </div>
+    <Badge variant="outline" className="text-yellow-600">
+      처리중
+    </Badge>
   )
 }
 
@@ -121,6 +128,14 @@ export default function SettlementPage() {
 
   const handleMarkPaid = async (row: SettlementRow) => {
     try {
+      // Check if already paid to prevent duplicate notes
+      const existing = await api.get(`/notes?relatedTable=SettlementPaid&relatedId=${row.shipperId}_${row.period}`)
+      if (existing?.data?.length > 0) {
+        toast.info('이미 지급 처리된 정산입니다.')
+        queryClient.invalidateQueries({ queryKey: ['3pl-settlement'] })
+        setConfirmTarget(null)
+        return
+      }
       await api.post('/notes', {
         content: `${row.companyName} ${row.period} 정산 지급완료`,
         relatedTable: 'SettlementPaid',

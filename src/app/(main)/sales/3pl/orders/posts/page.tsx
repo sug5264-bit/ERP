@@ -351,25 +351,23 @@ function DeliveriesTab({
                     )}
                     <span className="text-muted-foreground text-[10px]">{formatDate(dp.createdAt)}</span>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {!isTerminal && (
-                        <>
-                          <DropdownMenuItem onClick={() => updateStatus(dp.id, 'DELIVERED')}>
-                            <PackageCheck className="mr-2 h-4 w-4 text-green-600" /> 납품완료
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => updateStatus(dp.id, 'RETURNED')}>
-                            <RotateCcw className="mr-2 h-4 w-4 text-red-600" /> 반품등록
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {!isTerminal && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => updateStatus(dp.id, 'DELIVERED')}>
+                          <PackageCheck className="mr-2 h-4 w-4 text-green-600" /> 납품완료
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => updateStatus(dp.id, 'RETURNED')}>
+                          <RotateCcw className="mr-2 h-4 w-4 text-red-600" /> 반품등록
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
                 {title && <p className="text-sm font-medium">{title}</p>}
                 <p className="text-muted-foreground mt-1 text-xs whitespace-pre-wrap">

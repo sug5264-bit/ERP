@@ -27,15 +27,7 @@ export async function GET(request: NextRequest) {
       take: 200,
     })
 
-    // 각 게시글의 답글 조회
     const noteIds = notes.map((n) => n.id)
-    const replies = await prisma.note.findMany({
-      where: {
-        relatedTable: 'ShipperOrderReply',
-        relatedId: { in: noteIds },
-      },
-      orderBy: { createdAt: 'asc' },
-    })
 
     // 첨부파일 조회
     const attachments = await prisma.attachment.findMany({
@@ -106,7 +98,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...note,
-        replies: replies.filter((r) => r.relatedId === note.id),
+        replies: [],
         attachments: attachments.filter((a) => a.relatedId === note.id),
         deliveryPost: dp ? { ...dp, status: dpStatus, replies: dpReplies } : null,
       }
