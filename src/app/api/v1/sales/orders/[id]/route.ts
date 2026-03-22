@@ -174,7 +174,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const order = await prisma.salesOrder.findUnique({ where: { id } })
     if (!order) return errorResponse('발주를 찾을 수 없습니다.', 'NOT_FOUND', 404)
 
-    // 완료된 발주도 삭제 가능 (재고 복원 처리됨)
+    if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
+      return errorResponse('완료 또는 취소된 발주는 삭제할 수 없습니다.', 'INVALID_STATUS', 400)
+    }
 
     await prisma.$transaction(async (tx) => {
       const deliveries = await tx.delivery.findMany({
