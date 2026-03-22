@@ -19,11 +19,17 @@ export async function GET(request: NextRequest) {
     const sp = request.nextUrl.searchParams
     const { page, pageSize, skip } = getPaginationParams(sp)
     const where: Record<string, unknown> = {}
+    const VALID_APPROVAL_STATUSES = ['DRAFTED', 'IN_PROGRESS', 'APPROVED', 'REJECTED', 'CANCELLED']
     const status = sp.get('status')
     if (status) {
       if (status.includes(',')) {
-        where.status = { in: status.split(',') }
+        const statuses = status.split(',').filter((s) => VALID_APPROVAL_STATUSES.includes(s))
+        if (statuses.length === 0) return errorResponse('유효하지 않은 상태값입니다.', 'VALIDATION_ERROR', 400)
+        where.status = { in: statuses }
       } else {
+        if (!VALID_APPROVAL_STATUSES.includes(status)) {
+          return errorResponse('유효하지 않은 상태값입니다.', 'VALIDATION_ERROR', 400)
+        }
         where.status = status
       }
     }

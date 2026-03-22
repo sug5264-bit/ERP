@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
       return errorResponse('유효하지 않은 알림 유형입니다.', 'INVALID_TYPE', 400)
     }
 
+    const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+    if (!targetUser) return errorResponse('대상 사용자를 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
     const notification = await prisma.notification.create({
       data: {
         userId,
