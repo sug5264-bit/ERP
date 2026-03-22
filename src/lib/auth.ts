@@ -2,7 +2,7 @@ import NextAuth from 'next-auth'
 import Credentials from 'next-auth/providers/credentials'
 import { compare } from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
-import { checkRateLimit, incrementRateLimit, resetRateLimit } from '@/lib/rate-limit'
+import { checkLoginRateLimit, recordLoginAttempt } from '@/lib/rate-limit'
 import { authConfig } from '@/lib/auth.config'
 import { logger } from '@/lib/logger'
 
@@ -14,11 +14,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       credentials: {
         username: { label: '아이디', type: 'text' },
         password: { label: '비밀번호', type: 'password' },
+        ipAddress: { label: 'IP', type: 'text' }, // 미들웨어에서 주입
       },
       async authorize(credentials) {
         try {
           const username = credentials?.username
           const password = credentials?.password
+          const ipAddress = String(credentials?.ipAddress || '0.0.0.0')
 
           if (!username || !password) {
             logger.warn('Login attempt with missing credentials')
@@ -28,41 +30,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const usernameStr = String(username)
           const passwordStr = String(password)
 
-          // Rate limiting: 15분 내 5회 실패 시 차단
-          const rateLimitKey = `login:${usernameStr}`
-          const rateCheck = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000)
+          // DB 기반 Rate limiting: 15분 내 5회 실패 시 차단 (서버리스 인스턴스 간 공유)
+          const rateCheck = await checkLoginRateLimit(usernameStr, ipAddress)
           if (!rateCheck.allowed) {
-            logger.warn('Login rate limit exceeded', { module: 'auth', action: 'login' })
+            logger.warn('Login rate limit exceeded', { module: 'auth', action: 'login', username: usernameStr })
             return null
           }
 
-          // Raw SQL로 조회 (Prisma 스키마와 DB 스키마 불일치 우회)
-          const users = await prisma.$queryRawUnsafe<
-            {
-              id: string
-              email: string | null
-              name: string
-              passwordHash: string
-              isActive: boolean
-              employeeId: string | null
-              accountType: string
-              shipperId: string | null
-            }[]
-          >(
-            'SELECT "id", "email", "name", "passwordHash", "isActive", "employeeId", "accountType", "shipperId" FROM "users" WHERE "username" = $1 LIMIT 1',
-            usernameStr
-          )
+          // Prisma ORM으로 사용자 조회 (스키마 동기화 완료 후 queryRawUnsafe 제거)
+          const user = await prisma.user.findUnique({
+            where: { username: usernameStr },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              passwordHash: true,
+              isActive: true,
+              employeeId: true,
+              accountType: true,
+              shipperId: true,
+            },
+          })
 
-          if (users.length === 0) {
-            incrementRateLimit(rateLimitKey)
+          if (!user) {
+            await recordLoginAttempt(usernameStr, ipAddress, false)
             logger.warn('Login failed: user not found', { module: 'auth', action: 'login' })
             return null
           }
 
-          const user = users[0]
-
           if (!user.isActive) {
-            incrementRateLimit(rateLimitKey)
+            await recordLoginAttempt(usernameStr, ipAddress, false)
             logger.warn('Login failed: user inactive', { module: 'auth', action: 'login', userId: user.id })
             return null
           }
@@ -70,52 +67,70 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const isPasswordValid = await compare(passwordStr, user.passwordHash)
 
           if (!isPasswordValid) {
-            incrementRateLimit(rateLimitKey)
+            await recordLoginAttempt(usernameStr, ipAddress, false)
             logger.warn('Login failed: invalid password', { module: 'auth', action: 'login', userId: user.id })
             return null
           }
 
-          // 로그인 성공 시 rate limit 초기화
-          resetRateLimit(rateLimitKey)
+          // 로그인 성공 기록 및 마지막 로그인 시각 갱신
+          await Promise.all([
+            recordLoginAttempt(usernameStr, ipAddress, true),
+            prisma.user.update({
+              where: { id: user.id },
+              data: { lastLoginAt: new Date() },
+            }),
+          ])
 
-          await prisma.$executeRawUnsafe('UPDATE "users" SET "lastLoginAt" = NOW() WHERE "id" = $1', user.id)
+          // 역할 + 권한 조회 (Prisma relations)
+          const userWithRoles = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: {
+              userRoles: {
+                select: {
+                  role: {
+                    select: {
+                      name: true,
+                      rolePermissions: {
+                        select: {
+                          permission: {
+                            select: { module: true, action: true },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          })
 
-          // 역할 조회
-          const roleRows = await prisma.$queryRawUnsafe<{ roleName: string }[]>(
-            `SELECT r."name" as "roleName" FROM "user_roles" ur JOIN "roles" r ON ur."roleId" = r."id" WHERE ur."userId" = $1`,
-            user.id
-          )
-          const roles = roleRows.map((r) => r.roleName)
+          const roles = userWithRoles?.userRoles.map((ur) => ur.role.name) ?? []
+          const permissions =
+            userWithRoles?.userRoles.flatMap((ur) =>
+              ur.role.rolePermissions.map((rp) => ({
+                module: rp.permission.module,
+                action: rp.permission.action,
+              }))
+            ) ?? []
 
-          // 권한 조회
-          const permRows = await prisma.$queryRawUnsafe<{ module: string; action: string }[]>(
-            `SELECT p."module", p."action" FROM "user_roles" ur
-             JOIN "role_permissions" rp ON ur."roleId" = rp."roleId"
-             JOIN "permissions" p ON rp."permissionId" = p."id"
-             WHERE ur."userId" = $1`,
-            user.id
-          )
-          const permissions = permRows.map((p) => ({ module: p.module, action: p.action }))
-
-          // 직원 정보 조회
+          // 직원 정보 조회 (Prisma relations)
           let employeeName: string | null = null
           let departmentName: string | null = null
           let positionName: string | null = null
+
           if (user.employeeId) {
-            const empRows = await prisma.$queryRawUnsafe<
-              { nameKo: string | null; deptName: string | null; posName: string | null }[]
-            >(
-              `SELECT e."nameKo", d."name" as "deptName", pos."name" as "posName"
-               FROM "employees" e
-               LEFT JOIN "departments" d ON e."departmentId" = d."id"
-               LEFT JOIN "positions" pos ON e."positionId" = pos."id"
-               WHERE e."id" = $1 LIMIT 1`,
-              user.employeeId
-            )
-            if (empRows.length > 0) {
-              employeeName = empRows[0].nameKo
-              departmentName = empRows[0].deptName
-              positionName = empRows[0].posName
+            const emp = await prisma.employee.findUnique({
+              where: { id: user.employeeId },
+              select: {
+                nameKo: true,
+                department: { select: { name: true } },
+                position: { select: { name: true } },
+              },
+            })
+            if (emp) {
+              employeeName = emp.nameKo
+              departmentName = emp.department?.name ?? null
+              positionName = emp.position?.name ?? null
             }
           }
 
