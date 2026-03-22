@@ -102,9 +102,23 @@ export async function GET(_req: NextRequest) {
 const passwordChangeRateMap = new Map<string, { count: number; resetAt: number }>()
 const PASSWORD_CHANGE_LIMIT = 5
 const PASSWORD_CHANGE_WINDOW = 60 * 60 * 1000 // 1시간
+const MAX_RATE_ENTRIES = 500
+let lastRateCleanup = Date.now()
 
 function checkPasswordChangeRate(userId: string): boolean {
   const now = Date.now()
+  // 5분마다 만료 엔트리 정리 (메모리 누수 방지)
+  if (now - lastRateCleanup > 5 * 60 * 1000) {
+    lastRateCleanup = now
+    for (const [key, val] of passwordChangeRateMap) {
+      if (val.resetAt < now) passwordChangeRateMap.delete(key)
+    }
+  }
+  // 최대 엔트리 수 제한
+  if (passwordChangeRateMap.size >= MAX_RATE_ENTRIES) {
+    const firstKey = passwordChangeRateMap.keys().next().value
+    if (firstKey) passwordChangeRateMap.delete(firstKey)
+  }
   const entry = passwordChangeRateMap.get(userId)
   if (!entry || entry.resetAt < now) {
     passwordChangeRateMap.set(userId, { count: 1, resetAt: now + PASSWORD_CHANGE_WINDOW })
