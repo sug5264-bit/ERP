@@ -48,13 +48,27 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { relatedTable }
     if (relatedId) where.relatedId = relatedId
 
-    const notes = await prisma.note.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: 500, // 과도한 데이터 반환 방지
-    })
+    // Pagination support
+    const page = Math.max(1, Number(sp.get('page')) || 1)
+    const pageSize = Math.min(500, Math.max(1, Number(sp.get('pageSize')) || 500))
+    const skip = (page - 1) * pageSize
 
-    return successResponse(notes)
+    const [notes, totalCount] = await Promise.all([
+      prisma.note.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: pageSize,
+        skip,
+      }),
+      prisma.note.count({ where }),
+    ])
+
+    return successResponse(notes, {
+      page,
+      pageSize,
+      totalCount,
+      totalPages: Math.ceil(totalCount / pageSize),
+    })
   } catch (error) {
     return handleApiError(error)
   }

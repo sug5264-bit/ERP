@@ -23,6 +23,13 @@ import {
   CornerDownRight,
 } from 'lucide-react'
 
+interface DeliveryReplyItem {
+  id: string
+  content: string
+  createdAt: string
+  attachments: { id: string; fileName: string; mimeType: string }[]
+}
+
 interface NoteItem {
   id: string
   content: string
@@ -31,6 +38,11 @@ interface NoteItem {
   createdAt: string
   replies: { id: string; content: string; createdAt: string; createdBy: string }[]
   attachments: { id: string; fileName: string; mimeType: string }[]
+  deliveryPost: {
+    id: string
+    status: string
+    replies: DeliveryReplyItem[]
+  } | null
 }
 
 const ACCEPTED_TYPES = '.pdf,.xlsx,.xls,.csv,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.bmp,.webp,.zip,.rar,.7z'
@@ -243,16 +255,37 @@ export default function ShipperPostsPage() {
 
                 <div className="text-muted-foreground text-xs">{formatDate(post.createdAt)}</div>
 
-                {/* 답글들 */}
-                {post.replies.length > 0 && (
+                {/* 출고 답글 (관리자 답변) */}
+                {post.deliveryPost && post.deliveryPost.replies.length > 0 && (
                   <div className="border-primary/20 ml-2 space-y-2 border-l-2 pl-3">
-                    {post.replies.map((reply) => (
+                    {post.deliveryPost.replies.map((reply) => (
                       <div key={reply.id} className="bg-muted/30 rounded-md p-3">
                         <div className="mb-1 flex items-center gap-1.5">
                           <CornerDownRight className="text-primary h-3 w-3" />
                           <span className="text-primary text-xs font-medium">관리자 답변</span>
                         </div>
                         <p className="text-sm break-all whitespace-pre-wrap">{reply.content}</p>
+                        {reply.attachments.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-2">
+                            {reply.attachments.map((att) => {
+                              const Icon = getFileIcon(att.mimeType)
+                              const typeBadge = getFileTypeBadge(att.mimeType, att.fileName)
+                              return (
+                                <button
+                                  key={att.id}
+                                  onClick={() => window.open(`/api/v1/attachments/${att.id}`, '_blank')}
+                                  className="bg-muted/50 hover:bg-muted flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs"
+                                >
+                                  <Icon className="h-3.5 w-3.5" />
+                                  <span className="max-w-[120px] truncate">{att.fileName}</span>
+                                  <span className={`rounded px-1 py-0.5 text-[9px] font-medium ${typeBadge.color}`}>
+                                    {typeBadge.label}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
                         <p className="text-muted-foreground mt-1 text-xs">{formatDate(reply.createdAt)}</p>
                       </div>
                     ))}
