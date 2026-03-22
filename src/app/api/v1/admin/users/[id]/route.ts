@@ -49,6 +49,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const validated = updateUserSchema.parse(body)
 
+    // 자기 자신을 비활성화하는 것을 방지
+    if (validated.isActive === false && id === authResult.session.user.id) {
+      return errorResponse('자기 자신을 비활성화할 수 없습니다.', 'SELF_DEACTIVATE', 400)
+    }
+
     // 비밀번호 해싱은 트랜잭션 밖에서 수행 (CPU-bound)
     let passwordHash: string | undefined
     if (validated.password) passwordHash = await hash(validated.password, 12)

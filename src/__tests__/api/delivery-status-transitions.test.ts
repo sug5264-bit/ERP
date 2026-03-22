@@ -350,7 +350,10 @@ describe('DELETE /api/v1/sales/deliveries/[id]', () => {
           updateMany: vi.fn(),
           findMany: vi.fn().mockResolvedValue([{ remainingQty: 10, deliveredQty: 0 }]),
         },
-        salesOrder: { update: vi.fn() },
+        salesOrder: {
+          findUnique: vi.fn().mockResolvedValue({ status: 'IN_PROGRESS' }),
+          update: vi.fn(),
+        },
         stockMovement: {
           findMany: vi.fn().mockResolvedValue([{ id: 'sm-1', sourceWarehouseId: 'wh-1' }]),
           deleteMany: vi.fn(),
@@ -371,5 +374,78 @@ describe('DELETE /api/v1/sales/deliveries/[id]', () => {
     const body = await resp.json()
     expect(resp.status).toBe(200)
     expect(body.data.id).toBe('dlv-1')
+  })
+
+  it('COMPLETED 발주의 납품 삭제 시 발주 상태 COMPLETED 유지 (상태 덮어쓰기 방지)', async () => {
+    setAuthenticated()
+    mockPrisma.delivery.findUnique.mockResolvedValue({
+      id: 'dlv-1',
+      status: 'PREPARING',
+      salesOrderId: 'order-completed',
+      details: [{ itemId: 'item-1', quantity: 5 }],
+    })
+    const mockSalesOrderUpdate = vi.fn()
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        salesOrderDetail: {
+          updateMany: vi.fn(),
+          findMany: vi.fn().mockResolvedValue([{ remainingQty: 10, deliveredQty: 0 }]),
+        },
+        salesOrder: {
+          findUnique: vi.fn().mockResolvedValue({ status: 'COMPLETED' }),
+          update: mockSalesOrderUpdate,
+        },
+        stockMovement: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        stockMovementDetail: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        stockBalance: { updateMany: vi.fn(), findFirst: vi.fn() },
+        qualityInspectionItem: { deleteMany: vi.fn() },
+        qualityInspection: { deleteMany: vi.fn() },
+        delivery: { delete: vi.fn() },
+      }
+      return fn(tx)
+    })
+
+    const resp = await DELETE(createReq('http://localhost/api/v1/sales/deliveries/dlv-1'), { params })
+    expect(resp.status).toBe(200)
+    // 발주 상태가 COMPLETED인 경우 update가 호출되지 않아야 함
+    expect(mockSalesOrderUpdate).not.toHaveBeenCalled()
+  })
+
+  it('IN_PROGRESS 발주의 납품 삭제 시 ORDERED로 복원', async () => {
+    setAuthenticated()
+    mockPrisma.delivery.findUnique.mockResolvedValue({
+      id: 'dlv-1',
+      status: 'PREPARING',
+      salesOrderId: 'order-in-progress',
+      details: [{ itemId: 'item-1', quantity: 5 }],
+    })
+    const mockSalesOrderUpdate = vi.fn()
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        salesOrderDetail: {
+          updateMany: vi.fn(),
+          findMany: vi.fn().mockResolvedValue([{ remainingQty: 10, deliveredQty: 0 }]),
+        },
+        salesOrder: {
+          findUnique: vi.fn().mockResolvedValue({ status: 'IN_PROGRESS' }),
+          update: mockSalesOrderUpdate,
+        },
+        stockMovement: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        stockMovementDetail: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        stockBalance: { updateMany: vi.fn(), findFirst: vi.fn() },
+        qualityInspectionItem: { deleteMany: vi.fn() },
+        qualityInspection: { deleteMany: vi.fn() },
+        delivery: { delete: vi.fn() },
+      }
+      return fn(tx)
+    })
+
+    const resp = await DELETE(createReq('http://localhost/api/v1/sales/deliveries/dlv-1'), { params })
+    expect(resp.status).toBe(200)
+    // IN_PROGRESS 발주는 상태 복원이 호출되어야 함
+    expect(mockSalesOrderUpdate).toHaveBeenCalledWith({
+      where: { id: 'order-in-progress' },
+      data: { status: 'ORDERED' },
+    })
   })
 })

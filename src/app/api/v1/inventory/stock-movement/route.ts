@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-helpers'
 import { createStockMovementSchema } from '@/lib/validations/inventory'
 import { generateDocumentNumber } from '@/lib/doc-number'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -172,7 +173,14 @@ export async function POST(request: NextRequest) {
               WHERE "itemId" = ${detail.itemId} AND "warehouseId" = ${data.targetWarehouseId} AND "zoneId" IS NULL
               LIMIT 1
               FOR UPDATE
-            `.catch(() => null)
+            `.catch((err) => {
+              logger.error('Stock balance lock query failed', {
+                itemId: detail.itemId,
+                warehouseId: data.targetWarehouseId,
+                error: String(err),
+              })
+              throw err
+            })
             const row = existing && existing.length > 0 ? existing[0] : null
             if (row) {
               const oldQty = row.quantity

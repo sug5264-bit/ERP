@@ -40,8 +40,15 @@ describe('generateDocumentNumber', () => {
   })
 
   it('5자리 초과 시퀀스 시 오버플로우 에러 발생', async () => {
-    mockFindUnique.mockResolvedValue({ lastSeq: 99999 })
+    // upsert 결과가 MAX_SEQ 초과인 경우 (race condition 방지: 조회→증가 사이 gap 없음)
+    mockUpsert.mockResolvedValue({ lastSeq: 100000 })
     await expect(generateDocumentNumber('SM', new Date(2024, 0, 1))).rejects.toThrow('문서번호 시퀀스 초과')
+  })
+
+  it('동시 요청으로 upsert 결과가 정확히 MAX_SEQ일 때는 정상 처리', async () => {
+    mockUpsert.mockResolvedValue({ lastSeq: 99999 })
+    const result = await generateDocumentNumber('SM', new Date(2024, 0, 1))
+    expect(result).toBe('SM-202401-99999')
   })
 
   it('date 미제공 시 현재 날짜 사용', async () => {

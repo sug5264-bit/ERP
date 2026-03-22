@@ -60,6 +60,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
     const validated = updateEmployeeSchema.parse(body)
 
+    const existing = await prisma.employee.findUnique({ where: { id } })
+    if (!existing) return errorResponse('사원을 찾을 수 없습니다.', 'NOT_FOUND', 404)
+
     const updateData: Record<string, unknown> = { ...validated }
     if (validated.joinDate !== undefined) {
       if (!validated.joinDate) return errorResponse('입사일은 필수 항목입니다.', 'VALIDATION_ERROR', 400)

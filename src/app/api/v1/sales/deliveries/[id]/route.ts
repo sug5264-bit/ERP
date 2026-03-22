@@ -223,16 +223,22 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
         where: { relatedDocType: 'DELIVERY', relatedDocId: id },
       })
 
-      // 5. 발주 상태 복원 (잔여 품목이 있으면 IN_PROGRESS, 없으면 ORDERED)
-      const remainingDetails = await tx.salesOrderDetail.findMany({
-        where: { salesOrderId: delivery.salesOrderId },
-        select: { remainingQty: true, deliveredQty: true },
-      })
-      const hasDelivered = remainingDetails.some((d) => Number(d.deliveredQty) > 0)
-      await tx.salesOrder.update({
+      // 5. 발주 상태 복원 (완료/취소된 발주는 상태 변경 금지)
+      const salesOrder = await tx.salesOrder.findUnique({
         where: { id: delivery.salesOrderId },
-        data: { status: hasDelivered ? 'IN_PROGRESS' : 'ORDERED' },
+        select: { status: true },
       })
+      if (salesOrder && salesOrder.status !== 'COMPLETED' && salesOrder.status !== 'CANCELLED') {
+        const remainingDetails = await tx.salesOrderDetail.findMany({
+          where: { salesOrderId: delivery.salesOrderId },
+          select: { remainingQty: true, deliveredQty: true },
+        })
+        const hasDelivered = remainingDetails.some((d) => Number(d.deliveredQty) > 0)
+        await tx.salesOrder.update({
+          where: { id: delivery.salesOrderId },
+          data: { status: hasDelivered ? 'IN_PROGRESS' : 'ORDERED' },
+        })
+      }
 
       // 6. 납품 삭제 (DeliveryDetail은 onDelete: Cascade로 자동 삭제)
       await tx.delivery.delete({ where: { id } })
