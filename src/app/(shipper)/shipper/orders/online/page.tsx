@@ -37,7 +37,6 @@ import {
   ShoppingCart,
   X,
   CornerDownRight,
-  Reply,
 } from 'lucide-react'
 import { ShipperLayoutShell } from '@/components/layout/shipper-layout-shell'
 

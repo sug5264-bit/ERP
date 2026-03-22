@@ -152,6 +152,45 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
         }
       }
 
+      // Cascade delete for ShipperOrderPost (화주사 발주글)
+      if (note.relatedTable === 'ShipperOrderPost') {
+        // Find mirrored ShipperDeliveryPost
+        const shipperDPs = await tx.note.findMany({
+          where: { relatedTable: 'ShipperDeliveryPost', relatedId: id },
+        })
+
+        for (const dp of shipperDPs) {
+          // Delete delivery replies + their attachments
+          const dpReplies = await tx.note.findMany({
+            where: { relatedTable: 'ShipperDeliveryReply', relatedId: dp.id },
+            select: { id: true },
+          })
+          const dpReplyIds = dpReplies.map((r) => r.id)
+          if (dpReplyIds.length > 0) {
+            await tx.attachment.deleteMany({
+              where: { relatedTable: 'ShipperDeliveryReplyPost', relatedId: { in: dpReplyIds } },
+            })
+          }
+          await tx.note.deleteMany({
+            where: { relatedTable: 'ShipperDeliveryReply', relatedId: dp.id },
+          })
+          // Delete delivery status
+          await tx.note.deleteMany({
+            where: { relatedTable: 'ShipperDeliveryPostStatus', relatedId: dp.id },
+          })
+        }
+
+        // Delete delivery posts
+        await tx.note.deleteMany({
+          where: { relatedTable: 'ShipperDeliveryPost', relatedId: id },
+        })
+
+        // Delete order attachments
+        await tx.attachment.deleteMany({
+          where: { relatedTable: 'ShipperOrderAttachment', relatedId: id },
+        })
+      }
+
       // Delete the note itself
       await tx.note.delete({ where: { id } })
     })
