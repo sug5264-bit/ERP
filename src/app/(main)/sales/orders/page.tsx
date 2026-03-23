@@ -71,7 +71,9 @@ export default function OrdersDashboardPage() {
   const { data: onlineOrdersData, isLoading: onlineOrdersLoading } = useQuery({
     queryKey: ['dashboard-online-orders', start, end],
     queryFn: () =>
-      api.get(`/sales/orders?pageSize=500&salesChannel=ONLINE&startDate=${start}&endDate=${end}`) as Promise<{ data: SalesOrder[] }>,
+      api.get(`/sales/orders?pageSize=500&salesChannel=ONLINE&startDate=${start}&endDate=${end}`) as Promise<{
+        data: SalesOrder[]
+      }>,
     staleTime: 2 * 60 * 1000,
   })
 
@@ -79,21 +81,21 @@ export default function OrdersDashboardPage() {
   const { data: offlineOrdersData, isLoading: offlineOrdersLoading } = useQuery({
     queryKey: ['dashboard-offline-orders', start, end],
     queryFn: () =>
-      api.get(`/sales/orders?pageSize=500&salesChannel=OFFLINE&startDate=${start}&endDate=${end}`) as Promise<{ data: SalesOrder[] }>,
+      api.get(`/sales/orders?pageSize=500&salesChannel=OFFLINE&startDate=${start}&endDate=${end}`) as Promise<{
+        data: SalesOrder[]
+      }>,
     staleTime: 2 * 60 * 1000,
   })
 
   // Fetch notes-based delivery data for online
   const { data: deliveryNotesData, isLoading: deliveryNotesLoading } = useQuery({
     queryKey: ['notes', 'DeliveryPost'],
-    queryFn: () =>
-      api.get('/notes?relatedTable=DeliveryPost') as Promise<{ data: NoteItem[] }>,
+    queryFn: () => api.get('/notes?relatedTable=DeliveryPost') as Promise<{ data: NoteItem[] }>,
   })
 
   const { data: statusNotesData } = useQuery({
     queryKey: ['notes', 'DeliveryPostStatus'],
-    queryFn: () =>
-      api.get('/notes?relatedTable=DeliveryPostStatus') as Promise<{ data: NoteItem[] }>,
+    queryFn: () => api.get('/notes?relatedTable=DeliveryPostStatus') as Promise<{ data: NoteItem[] }>,
   })
 
   // Online stats (notes-based)
@@ -166,9 +168,10 @@ export default function OrdersDashboardPage() {
   // Combined stats
   const combinedTotalOrders = onlineStats.totalOrders + offlineStats.totalOrders
   const combinedTotalRevenue = onlineStats.totalRevenue + offlineStats.totalRevenue
-  const combinedFulfillmentRate = combinedTotalOrders > 0
-    ? Math.round(((onlineStats.delivered + offlineStats.completed) / combinedTotalOrders) * 100)
-    : 0
+  const combinedFulfillmentRate =
+    combinedTotalOrders > 0
+      ? Math.round(((onlineStats.delivered + offlineStats.completed) / combinedTotalOrders) * 100)
+      : 0
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('ko-KR')
@@ -176,26 +179,17 @@ export default function OrdersDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="발주/출고관리"
-        description="온라인 및 오프라인 발주/출고 현황을 통합하여 조회합니다"
-      />
+      <PageHeader title="발주/출고관리" description="온라인 및 오프라인 발주/출고 현황을 통합하여 조회합니다" />
 
       {/* Month Selector */}
       <div className="flex items-center justify-center gap-4">
-        <button
-          onClick={handlePrevMonth}
-          className="hover:bg-muted rounded-lg border p-2 transition-colors"
-        >
+        <button onClick={handlePrevMonth} className="hover:bg-muted rounded-lg border p-2 transition-colors">
           <ChevronLeft className="h-4 w-4" />
         </button>
         <span className="min-w-[140px] text-center text-lg font-semibold tabular-nums">
           {year}년 {month}월
         </span>
-        <button
-          onClick={handleNextMonth}
-          className="hover:bg-muted rounded-lg border p-2 transition-colors"
-        >
+        <button onClick={handleNextMonth} className="hover:bg-muted rounded-lg border p-2 transition-colors">
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>

@@ -1,7 +1,13 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createDepartmentSchema } from '@/lib/validations/hr'
-import { successResponse, errorResponse, handleApiError, requirePermissionCheck, isErrorResponse } from '@/lib/api-helpers'
+import {
+  successResponse,
+  errorResponse,
+  handleApiError,
+  requirePermissionCheck,
+  isErrorResponse,
+} from '@/lib/api-helpers'
 
 export async function GET() {
   try {

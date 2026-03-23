@@ -14,7 +14,16 @@ const { mockAuth, mockPrisma, mockGenerateDocNo, mockEnsurePartner, mockEnsureIt
   mockPrisma: {
     quotation: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     quotationDetail: { deleteMany: vi.fn(), createMany: vi.fn(), findMany: vi.fn() },
-    salesOrder: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), count: vi.fn(), aggregate: vi.fn(), delete: vi.fn() },
+    salesOrder: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      count: vi.fn(),
+      aggregate: vi.fn(),
+      delete: vi.fn(),
+    },
     salesOrderDetail: { findMany: vi.fn(), updateMany: vi.fn(), groupBy: vi.fn() },
     delivery: { findMany: vi.fn(), create: vi.fn(), count: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     deliveryDetail: { findMany: vi.fn() },
@@ -23,7 +32,14 @@ const { mockAuth, mockPrisma, mockGenerateDocNo, mockEnsurePartner, mockEnsureIt
     stockBalance: { findMany: vi.fn(), updateMany: vi.fn(), groupBy: vi.fn(), update: vi.fn() },
     item: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
     partner: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
-    note: { findMany: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    note: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
     attachment: { deleteMany: vi.fn(), findMany: vi.fn() },
     employee: { findFirst: vi.fn() },
     salesReturn: { create: vi.fn(), findMany: vi.fn() },
@@ -46,7 +62,20 @@ vi.mock('@/lib/auto-sync', () => ({
 }))
 
 const validSession = {
-  user: { id: 'user-1', name: 'Test', email: 'test@test.com', roles: ['SYSTEM_ADMIN'], permissions: [{ module: 'sales', action: 'read' }, { module: 'sales', action: 'create' }, { module: 'sales', action: 'update' }, { module: 'sales', action: 'delete' }, { module: 'inventory', action: 'read' }, { module: 'inventory', action: 'create' }] },
+  user: {
+    id: 'user-1',
+    name: 'Test',
+    email: 'test@test.com',
+    roles: ['SYSTEM_ADMIN'],
+    permissions: [
+      { module: 'sales', action: 'read' },
+      { module: 'sales', action: 'create' },
+      { module: 'sales', action: 'update' },
+      { module: 'sales', action: 'delete' },
+      { module: 'inventory', action: 'read' },
+      { module: 'inventory', action: 'create' },
+    ],
+  },
 }
 
 beforeEach(() => {
@@ -71,9 +100,13 @@ describe('견적 → 발주 전환 (Quotation → Order)', () => {
 
       if (action === 'convert') {
         if (status === 'ORDERED') {
-          expect(() => { throw new Error('이미 발주 전환된 견적입니다.') }).toThrow()
+          expect(() => {
+            throw new Error('이미 발주 전환된 견적입니다.')
+          }).toThrow()
         } else if (status === 'CANCELLED') {
-          expect(() => { throw new Error('취소된 견적은 전환할 수 없습니다.') }).toThrow()
+          expect(() => {
+            throw new Error('취소된 견적은 전환할 수 없습니다.')
+          }).toThrow()
         } else {
           // DRAFT, SUBMITTED, LOST → 전환 가능
           expect(quotation.status).not.toBe('ORDERED')
@@ -86,7 +119,9 @@ describe('견적 → 발주 전환 (Quotation → Order)', () => {
       }
       if (action === 'cancel') {
         if (status === 'ORDERED') {
-          expect(() => { throw new Error('발주 전환된 견적은 취소할 수 없습니다.') }).toThrow()
+          expect(() => {
+            throw new Error('발주 전환된 견적은 취소할 수 없습니다.')
+          }).toThrow()
         }
       }
       if (action === 'delete') {
@@ -102,7 +137,9 @@ describe('견적 → 발주 전환 (Quotation → Order)', () => {
     mockPrisma.quotation.findUnique.mockResolvedValue(quotation)
 
     // 삭제 시 salesOrder.updateMany로 quotationId를 null로 변경해야 함
-    mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma))
+    mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) =>
+      fn(mockPrisma)
+    )
     mockPrisma.salesOrder.updateMany.mockResolvedValue({ count: 1 })
     mockPrisma.quotationDetail.deleteMany.mockResolvedValue({ count: 0 })
     mockPrisma.quotation.delete.mockResolvedValue(quotation)
@@ -158,29 +195,32 @@ describe('발주 → 출고 → 재고 연동 (Order → Delivery → Inventory)
     warehouses: (i % 3) + 1,
   }))
 
-  describe.each(stockScenarios.slice(0, 50))('주문수량=$orderQty, 현재고=$currentStock', ({ orderQty, currentStock, unitPrice, warehouses }) => {
-    it(`재고 충분 여부 검증 (창고${warehouses}개)`, () => {
-      const hasSufficientStock = currentStock >= orderQty
-      if (hasSufficientStock) {
-        expect(currentStock - orderQty).toBeGreaterThanOrEqual(0)
-      } else {
-        expect(currentStock - orderQty).toBeLessThan(0)
-      }
-    })
+  describe.each(stockScenarios.slice(0, 50))(
+    '주문수량=$orderQty, 현재고=$currentStock',
+    ({ orderQty, currentStock, unitPrice, warehouses }) => {
+      it(`재고 충분 여부 검증 (창고${warehouses}개)`, () => {
+        const hasSufficientStock = currentStock >= orderQty
+        if (hasSufficientStock) {
+          expect(currentStock - orderQty).toBeGreaterThanOrEqual(0)
+        } else {
+          expect(currentStock - orderQty).toBeLessThan(0)
+        }
+      })
 
-    it('출고 후 재고 차감량 정확성', () => {
-      if (currentStock >= orderQty) {
-        const remaining = currentStock - orderQty
-        expect(remaining).toBe(currentStock - orderQty)
-        expect(remaining).toBeGreaterThanOrEqual(0)
-      }
-    })
+      it('출고 후 재고 차감량 정확성', () => {
+        if (currentStock >= orderQty) {
+          const remaining = currentStock - orderQty
+          expect(remaining).toBe(currentStock - orderQty)
+          expect(remaining).toBeGreaterThanOrEqual(0)
+        }
+      })
 
-    it('출고 금액 계산 정확성', () => {
-      const amount = Math.round(orderQty * unitPrice)
-      expect(amount).toBe(orderQty * unitPrice)
-    })
-  })
+      it('출고 금액 계산 정확성', () => {
+        const amount = Math.round(orderQty * unitPrice)
+        expect(amount).toBe(orderQty * unitPrice)
+      })
+    }
+  )
 
   // 다중 창고 순차 차감 테스트
   describe('다중 창고 순차 차감', () => {
@@ -226,16 +266,19 @@ describe('발주 → 출고 → 재고 연동 (Order → Delivery → Inventory)
       })),
     }))
 
-    it.each(partialDeliveries.slice(0, 100))('총수량 $totalQty, 납품 횟수 ${deliveries.length}', ({ totalQty, deliveries }) => {
-      let delivered = 0
-      for (const d of deliveries) {
-        const deliverableQty = Math.min(d.qty, totalQty - delivered)
-        delivered += deliverableQty
+    it.each(partialDeliveries.slice(0, 100))(
+      '총수량 $totalQty, 납품 횟수 ${deliveries.length}',
+      ({ totalQty, deliveries }) => {
+        let delivered = 0
+        for (const d of deliveries) {
+          const deliverableQty = Math.min(d.qty, totalQty - delivered)
+          delivered += deliverableQty
+        }
+        const remaining = totalQty - delivered
+        expect(remaining).toBeGreaterThanOrEqual(0)
+        expect(delivered).toBeLessThanOrEqual(totalQty)
       }
-      const remaining = totalQty - delivered
-      expect(remaining).toBeGreaterThanOrEqual(0)
-      expect(delivered).toBeLessThanOrEqual(totalQty)
-    })
+    )
   })
 
   // 발주 상태 자동 전환
@@ -247,14 +290,17 @@ describe('발주 → 출고 → 재고 연동 (Order → Delivery → Inventory)
       { delivered: 0, total: 0, expectedStatus: 'COMPLETED', desc: '수량0' },
     ]
 
-    it.each(statusTransitions)('$desc: 납품 $delivered/$total → $expectedStatus', ({ delivered, total, expectedStatus }) => {
-      const remaining = total - delivered
-      let status: string
-      if (delivered === 0 && total > 0) status = 'ORDERED'
-      else if (remaining > 0) status = 'IN_PROGRESS'
-      else status = 'COMPLETED'
-      expect(status).toBe(expectedStatus)
-    })
+    it.each(statusTransitions)(
+      '$desc: 납품 $delivered/$total → $expectedStatus',
+      ({ delivered, total, expectedStatus }) => {
+        const remaining = total - delivered
+        let status: string
+        if (delivered === 0 && total > 0) status = 'ORDERED'
+        else if (remaining > 0) status = 'IN_PROGRESS'
+        else status = 'COMPLETED'
+        expect(status).toBe(expectedStatus)
+      }
+    )
   })
 })
 
@@ -376,7 +422,7 @@ describe('매출현황 연동', () => {
     const months = Array.from({ length: 12 }, (_, i) => i + 1)
     const years = [2024, 2025, 2026]
 
-    it.each(years.flatMap(y => months.map(m => ({ year: y, month: m }))))(
+    it.each(years.flatMap((y) => months.map((m) => ({ year: y, month: m }))))(
       '$year년 $month월 기간 계산',
       ({ year, month }) => {
         const startDate = new Date(year, month - 1, 1)
@@ -398,35 +444,36 @@ describe('재고관리 연동', () => {
     const movementTypes = ['INBOUND', 'OUTBOUND', 'TRANSFER', 'ADJUSTMENT'] as const
     const quantities = Array.from({ length: 50 }, (_, i) => (i + 1) * 10)
 
-    it.each(
-      movementTypes.flatMap(type => quantities.slice(0, 25).map(qty => ({ type, qty })))
-    )('$type $qty개', ({ type, qty }) => {
-      const initialStock = 100
-      let finalStock: number
+    it.each(movementTypes.flatMap((type) => quantities.slice(0, 25).map((qty) => ({ type, qty }))))(
+      '$type $qty개',
+      ({ type, qty }) => {
+        const initialStock = 100
+        let finalStock: number
 
-      switch (type) {
-        case 'INBOUND':
-          finalStock = initialStock + qty
-          expect(finalStock).toBeGreaterThan(initialStock)
-          break
-        case 'OUTBOUND':
-          finalStock = initialStock - qty
-          if (qty <= initialStock) {
-            expect(finalStock).toBeGreaterThanOrEqual(0)
-          } else {
-            expect(finalStock).toBeLessThan(0)
-          }
-          break
-        case 'TRANSFER':
-          finalStock = initialStock // 총량 변화 없음
-          expect(finalStock).toBe(initialStock)
-          break
-        case 'ADJUSTMENT':
-          finalStock = qty // 조정값으로 설정
-          expect(finalStock).toBe(qty)
-          break
+        switch (type) {
+          case 'INBOUND':
+            finalStock = initialStock + qty
+            expect(finalStock).toBeGreaterThan(initialStock)
+            break
+          case 'OUTBOUND':
+            finalStock = initialStock - qty
+            if (qty <= initialStock) {
+              expect(finalStock).toBeGreaterThanOrEqual(0)
+            } else {
+              expect(finalStock).toBeLessThan(0)
+            }
+            break
+          case 'TRANSFER':
+            finalStock = initialStock // 총량 변화 없음
+            expect(finalStock).toBe(initialStock)
+            break
+          case 'ADJUSTMENT':
+            finalStock = qty // 조정값으로 설정
+            expect(finalStock).toBe(qty)
+            break
+        }
       }
-    })
+    )
   })
 
   // 안전재고 알림 기준
@@ -485,16 +532,13 @@ describe('구매 → 입고 → 재고 연동', () => {
       unitCost: ((i % 20) + 1) * 500,
     }))
 
-    it.each(receivingScenarios)(
-      '발주 $orderQty개, 입고 $receivedQty개',
-      ({ orderQty, receivedQty }) => {
-        const remaining = orderQty - receivedQty
-        expect(remaining).toBe(orderQty - receivedQty)
-        if (receivedQty <= orderQty) {
-          expect(remaining).toBeGreaterThanOrEqual(0)
-        }
+    it.each(receivingScenarios)('발주 $orderQty개, 입고 $receivedQty개', ({ orderQty, receivedQty }) => {
+      const remaining = orderQty - receivedQty
+      expect(remaining).toBe(orderQty - receivedQty)
+      if (receivedQty <= orderQty) {
+        expect(remaining).toBeGreaterThanOrEqual(0)
       }
-    )
+    })
   })
 })
 
@@ -557,34 +601,30 @@ describe('필터링 및 검색 연동', () => {
     const channels = ['all', 'ONLINE', 'OFFLINE'] as const
     const contentPrefixes = ['[온라인]', '[오프라인]', ''] as const
 
-    it.each(
-      channels.flatMap(ch => contentPrefixes.map(prefix => ({ channel: ch, prefix })))
-    )('채널=$channel, 접두사=$prefix', ({ channel, prefix }) => {
-      let matches = true
-      if (channel !== 'all') {
-        const expectedLabel = channel === 'ONLINE' ? '온라인' : '오프라인'
-        const channelMatch = prefix.match(/^\[(온라인|오프라인)\]/)
-        if (channelMatch) {
-          matches = channelMatch[1] === expectedLabel
-        } else {
-          matches = false
+    it.each(channels.flatMap((ch) => contentPrefixes.map((prefix) => ({ channel: ch, prefix }))))(
+      '채널=$channel, 접두사=$prefix',
+      ({ channel, prefix }) => {
+        let matches = true
+        if (channel !== 'all') {
+          const expectedLabel = channel === 'ONLINE' ? '온라인' : '오프라인'
+          const channelMatch = prefix.match(/^\[(온라인|오프라인)\]/)
+          if (channelMatch) {
+            matches = channelMatch[1] === expectedLabel
+          } else {
+            matches = false
+          }
         }
+        expect(typeof matches).toBe('boolean')
       }
-      expect(typeof matches).toBe('boolean')
-    })
+    )
   })
 
   // 검색 키워드
   describe('검색 키워드 매칭', () => {
     const keywords = ['발주', '온라인', '거래처', 'SO-', '품목A', '12345', '', '   ']
-    const contents = [
-      '[온라인][발주]\n품목A 10개',
-      '[오프라인]\n거래처B 납품',
-      'SO-2026-001 발주 완료',
-      '일반 게시글',
-    ]
+    const contents = ['[온라인][발주]\n품목A 10개', '[오프라인]\n거래처B 납품', 'SO-2026-001 발주 완료', '일반 게시글']
 
-    it.each(keywords.flatMap(k => contents.map(c => ({ keyword: k, content: c }))))(
+    it.each(keywords.flatMap((k) => contents.map((c) => ({ keyword: k, content: c }))))(
       '키워드="$keyword" vs 내용',
       ({ keyword, content }) => {
         const trimmed = keyword.trim().toLowerCase()
@@ -648,7 +688,7 @@ describe('문서 번호 생성', () => {
     return `2026-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   })
 
-  it.each(docTypes.flatMap(t => dates.slice(0, 50).map(d => ({ type: t, date: d }))))(
+  it.each(docTypes.flatMap((t) => dates.slice(0, 50).map((d) => ({ type: t, date: d }))))(
     '$type-$date',
     ({ type, date }) => {
       const d = new Date(date)
@@ -667,19 +707,22 @@ describe('권한/인증 연동', () => {
   const actions = ['read', 'create', 'update', 'delete'] as const
   const roles = ['SYSTEM_ADMIN', '관리자', '영업팀', '구매팀', '생산팀', '일반'] as const
 
-  it.each(
-    modules.flatMap(m => actions.flatMap(a => roles.map(r => ({ module: m, action: a, role: r }))))
-  )('$role → $module.$action', ({ module, action, role }) => {
-    const isAdmin = role === 'SYSTEM_ADMIN' || role === '관리자'
-    const hasAccess = isAdmin || (role === '영업팀' && module === 'sales') ||
-      (role === '구매팀' && module === 'purchasing') ||
-      (role === '생산팀' && module === 'production')
+  it.each(modules.flatMap((m) => actions.flatMap((a) => roles.map((r) => ({ module: m, action: a, role: r })))))(
+    '$role → $module.$action',
+    ({ module, action, role }) => {
+      const isAdmin = role === 'SYSTEM_ADMIN' || role === '관리자'
+      const hasAccess =
+        isAdmin ||
+        (role === '영업팀' && module === 'sales') ||
+        (role === '구매팀' && module === 'purchasing') ||
+        (role === '생산팀' && module === 'production')
 
-    expect(typeof hasAccess).toBe('boolean')
-    if (isAdmin) {
-      expect(hasAccess).toBe(true)
+      expect(typeof hasAccess).toBe('boolean')
+      if (isAdmin) {
+        expect(hasAccess).toBe(true)
+      }
     }
-  })
+  )
 })
 
 // ═══════════════════════════════════════════════════════════════
@@ -734,14 +777,20 @@ describe('대규모 데이터 정합성', () => {
 
 describe('첨부파일 연동', () => {
   const mimeTypes = [
-    'application/pdf', 'image/png', 'image/jpeg', 'image/gif',
-    'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/plain', 'application/zip',
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+    'application/zip',
   ]
   const fileSizes = [0, 1024, 1024 * 1024, 10 * 1024 * 1024, 50 * 1024 * 1024]
 
-  it.each(mimeTypes.flatMap(m => fileSizes.map(s => ({ mimeType: m, size: s }))))(
+  it.each(mimeTypes.flatMap((m) => fileSizes.map((s) => ({ mimeType: m, size: s }))))(
     '$mimeType, $size bytes',
     ({ mimeType, size }) => {
       const isImage = mimeType.startsWith('image/')
@@ -771,23 +820,23 @@ describe('온라인/오프라인 채널 분리', () => {
     }))
 
     it('온라인 페이지에서 OFFLINE 주문 필터링', () => {
-      const onlineOnly = orders.filter(o => o.salesChannel === 'ONLINE')
-      const offlineOnly = orders.filter(o => o.salesChannel === 'OFFLINE')
+      const onlineOnly = orders.filter((o) => o.salesChannel === 'ONLINE')
+      const offlineOnly = orders.filter((o) => o.salesChannel === 'OFFLINE')
 
       expect(onlineOnly.length + offlineOnly.length).toBe(orders.length)
-      expect(onlineOnly.every(o => o.salesChannel === 'ONLINE')).toBe(true)
-      expect(offlineOnly.every(o => o.salesChannel === 'OFFLINE')).toBe(true)
+      expect(onlineOnly.every((o) => o.salesChannel === 'ONLINE')).toBe(true)
+      expect(offlineOnly.every((o) => o.salesChannel === 'OFFLINE')).toBe(true)
     })
 
     it('오프라인 페이지에서 ONLINE 주문 필터링', () => {
-      const offlineOnly = orders.filter(o => o.salesChannel === 'OFFLINE')
-      expect(offlineOnly.every(o => o.salesChannel === 'OFFLINE')).toBe(true)
+      const offlineOnly = orders.filter((o) => o.salesChannel === 'OFFLINE')
+      expect(offlineOnly.every((o) => o.salesChannel === 'OFFLINE')).toBe(true)
     })
 
     it('매출현황은 양쪽 채널 모두 포함', () => {
       const totalAmount = orders.reduce((s, o) => s + o.totalAmount, 0)
-      const onlineAmount = orders.filter(o => o.salesChannel === 'ONLINE').reduce((s, o) => s + o.totalAmount, 0)
-      const offlineAmount = orders.filter(o => o.salesChannel === 'OFFLINE').reduce((s, o) => s + o.totalAmount, 0)
+      const onlineAmount = orders.filter((o) => o.salesChannel === 'ONLINE').reduce((s, o) => s + o.totalAmount, 0)
+      const offlineAmount = orders.filter((o) => o.salesChannel === 'OFFLINE').reduce((s, o) => s + o.totalAmount, 0)
 
       expect(onlineAmount + offlineAmount).toBe(totalAmount)
     })
@@ -883,7 +932,9 @@ describe('품질관리 ↔ 출고 연동', () => {
   const defectRates = Array.from({ length: 20 }, (_, i) => i * 5)
 
   it.each(
-    grades.flatMap(g => judgements.flatMap(j => defectRates.slice(0, 5).map(d => ({ grade: g, judgement: j, defectRate: d }))))
+    grades.flatMap((g) =>
+      judgements.flatMap((j) => defectRates.slice(0, 5).map((d) => ({ grade: g, judgement: j, defectRate: d })))
+    )
   )('등급=$grade 판정=$judgement 불량률=$defectRate%', ({ grade, judgement, defectRate }) => {
     const canShip = judgement === 'PASS' || (judgement === 'CONDITIONAL' && defectRate < 10)
     expect(typeof canShip).toBe('boolean')
@@ -925,7 +976,7 @@ describe('대시보드 KPI 데이터 정합성', () => {
       deliveryPending: i % 15,
       totalItems: (i % 50) + 10,
       monthlySales: (i + 1) * 100000,
-      prevMonthSales: ((i + 1) * 100000) * (0.8 + (i % 5) * 0.1),
+      prevMonthSales: (i + 1) * 100000 * (0.8 + (i % 5) * 0.1),
     }))
 
     it.each(kpiScenarios)(
@@ -955,7 +1006,7 @@ describe('엣지 케이스 / 경계값', () => {
     ]
 
     it.each(emptyScenarios)('$name', ({ expected }) => {
-      Object.values(expected).forEach(v => {
+      Object.values(expected).forEach((v) => {
         expect(v).toBe(0)
       })
     })

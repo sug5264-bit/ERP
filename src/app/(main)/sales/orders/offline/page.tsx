@@ -121,21 +121,21 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 }
 
 const EXCEL_KEY_MAP: Record<string, string> = {
-  '거래처코드': 'partnerCode',
-  '거래처명': 'partnerName',
-  '사업자번호': 'bizNo',
-  '품목코드': 'itemCode',
-  '품목명': 'itemName',
-  '규격': 'specification',
-  '단위': 'unit',
-  '수량': 'quantity',
-  '단가': 'unitPrice',
-  '비고': 'remark',
-  '발주일': 'orderDate',
-  '납기일': 'deliveryDate',
-  '부가세': 'vatType',
-  '바코드': 'barcode',
-  '발주그룹': 'orderGroupNo',
+  거래처코드: 'partnerCode',
+  거래처명: 'partnerName',
+  사업자번호: 'bizNo',
+  품목코드: 'itemCode',
+  품목명: 'itemName',
+  규격: 'specification',
+  단위: 'unit',
+  수량: 'quantity',
+  단가: 'unitPrice',
+  비고: 'remark',
+  발주일: 'orderDate',
+  납기일: 'deliveryDate',
+  부가세: 'vatType',
+  바코드: 'barcode',
+  발주그룹: 'orderGroupNo',
 }
 
 export default function OfflineOrdersPage() {
@@ -195,8 +195,7 @@ export default function OfflineOrdersPage() {
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ['sales-orders-offline', monthStart, monthEnd, searchKeyword],
-    queryFn: () =>
-      api.get(`/sales/orders?pageSize=500${dateParams}`) as Promise<{ data: SalesOrder[] }>,
+    queryFn: () => api.get(`/sales/orders?pageSize=500${dateParams}`) as Promise<{ data: SalesOrder[] }>,
   })
   const allOrders = ordersData?.data || []
   const orders = useMemo(() => {
@@ -208,7 +207,17 @@ export default function OfflineOrdersPage() {
   // Fetch full order details for detail/edit views
   const { data: detailData } = useQuery({
     queryKey: ['sales-order-detail', detailOrder?.id || editOrder?.id],
-    queryFn: () => api.get(`/sales/orders/${detailOrder?.id || editOrder?.id}`) as Promise<{ data: SalesOrder & { deliveries?: { id: string; deliveryNo: string; deliveryDate: string; details: { itemId: string; quantity: number; item?: Item }[] }[] } }>,
+    queryFn: () =>
+      api.get(`/sales/orders/${detailOrder?.id || editOrder?.id}`) as Promise<{
+        data: SalesOrder & {
+          deliveries?: {
+            id: string
+            deliveryNo: string
+            deliveryDate: string
+            details: { itemId: string; quantity: number; item?: Item }[]
+          }[]
+        }
+      }>,
     enabled: !!(detailOrder?.id || editOrder?.id),
   })
 
@@ -230,9 +239,14 @@ export default function OfflineOrdersPage() {
   const filteredPartners = useMemo(() => {
     if (!partnerSearch) return partners.slice(0, 20)
     const q = partnerSearch.toLowerCase()
-    return partners.filter(
-      (p) => p.partnerName.toLowerCase().includes(q) || p.partnerCode.toLowerCase().includes(q) || (p.bizNo && p.bizNo.includes(q))
-    ).slice(0, 20)
+    return partners
+      .filter(
+        (p) =>
+          p.partnerName.toLowerCase().includes(q) ||
+          p.partnerCode.toLowerCase().includes(q) ||
+          (p.bizNo && p.bizNo.includes(q))
+      )
+      .slice(0, 20)
   }, [partners, partnerSearch])
 
   // Stats (always based on allOrders, not filtered view)
@@ -248,12 +262,15 @@ export default function OfflineOrdersPage() {
   }, [allOrders])
 
   // Tax calculation helper
-  const calcTax = useCallback((supplyAmount: number, itemId: string, isVatIncluded: boolean): number => {
-    if (!isVatIncluded) return 0
-    const item = items.find((i) => i.id === itemId)
-    const taxType = item?.taxType || 'TAXABLE'
-    return taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
-  }, [items])
+  const calcTax = useCallback(
+    (supplyAmount: number, itemId: string, isVatIncluded: boolean): number => {
+      if (!isVatIncluded) return 0
+      const item = items.find((i) => i.id === itemId)
+      const taxType = item?.taxType || 'TAXABLE'
+      return taxType === 'TAXABLE' ? Math.round(supplyAmount * 0.1) : 0
+    },
+    [items]
+  )
 
   // Create order mutation
   const createMutation = useMutation({
@@ -326,7 +343,9 @@ export default function OfflineOrdersPage() {
       // Group by orderGroupNo, or by orderDate+partner if no group specified
       const grouped = new Map<string, Record<string, unknown>[]>()
       for (const row of rows) {
-        const groupKey = row.orderGroupNo ? String(row.orderGroupNo) : `${row.orderDate || getLocalDateString()}|${row.partnerCode || row.partnerName || 'none'}`
+        const groupKey = row.orderGroupNo
+          ? String(row.orderGroupNo)
+          : `${row.orderDate || getLocalDateString()}|${row.partnerCode || row.partnerName || 'none'}`
         const key = groupKey
         if (!grouped.has(key)) grouped.set(key, [])
         grouped.get(key)!.push(row)
@@ -448,7 +467,10 @@ export default function OfflineOrdersPage() {
       const detail = { ...updated[idx], [field]: value }
       if (field === 'itemId' && typeof value === 'string') {
         const item = items.find((i) => i.id === value)
-        if (item) { detail.itemName = item.itemName; detail.unitPrice = Number(item.standardPrice) }
+        if (item) {
+          detail.itemName = item.itemName
+          detail.unitPrice = Number(item.standardPrice)
+        }
       }
       detail.supplyAmount = Math.round(detail.quantity * detail.unitPrice)
       detail.taxAmount = calcTax(detail.supplyAmount, detail.itemId, editVatIncluded)
@@ -477,18 +499,24 @@ export default function OfflineOrdersPage() {
     })
   }
 
-  const recalcAllDetails = useCallback((isVat: boolean) => {
-    setOrderDetails((prev) =>
-      prev.map((d) => {
-        const supply = Math.round(d.quantity * d.unitPrice)
-        const tax = isVat ? calcTax(supply, d.itemId, true) : 0
-        return { ...d, supplyAmount: supply, taxAmount: tax, amount: supply + tax }
-      })
-    )
-  }, [calcTax])
+  const recalcAllDetails = useCallback(
+    (isVat: boolean) => {
+      setOrderDetails((prev) =>
+        prev.map((d) => {
+          const supply = Math.round(d.quantity * d.unitPrice)
+          const tax = isVat ? calcTax(supply, d.itemId, true) : 0
+          return { ...d, supplyAmount: supply, taxAmount: tax, amount: supply + tax }
+        })
+      )
+    },
+    [calcTax]
+  )
 
   const addDetail = () => {
-    setOrderDetails((prev) => [...prev, { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 }])
+    setOrderDetails((prev) => [
+      ...prev,
+      { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 },
+    ])
   }
 
   const removeDetail = (idx: number) => {
@@ -557,7 +585,10 @@ export default function OfflineOrdersPage() {
   // Bulk download handlers
   const handleBulkExcelDownload = async () => {
     const selected = orders.filter((o) => selectedOrders.has(o.id))
-    if (selected.length === 0) { toast.error('다운로드할 발주를 선택하세요.'); return }
+    if (selected.length === 0) {
+      toast.error('다운로드할 발주를 선택하세요.')
+      return
+    }
     await exportToExcel({
       fileName: `오프라인_발주목록_${getLocalDateString()}`,
       title: '오프라인 발주 목록',
@@ -578,7 +609,10 @@ export default function OfflineOrdersPage() {
 
   const handleBulkPdfDownload = async () => {
     const selected = orders.filter((o) => selectedOrders.has(o.id))
-    if (selected.length === 0) { toast.error('다운로드할 발주를 선택하세요.'); return }
+    if (selected.length === 0) {
+      toast.error('다운로드할 발주를 선택하세요.')
+      return
+    }
 
     // Dynamically import and generate PDFs
     const { generateTransactionStatementBlob } = await import('@/lib/export/transaction-statement-pdf')
@@ -590,9 +624,11 @@ export default function OfflineOrdersPage() {
       let fullOrder = order
       if (!order.details || order.details.length === 0) {
         try {
-          const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+          const res = (await api.get(`/sales/orders/${order.id}`)) as { data: SalesOrder }
           fullOrder = res.data
-        } catch { /* use what we have */ }
+        } catch {
+          /* use what we have */
+        }
       }
       const blob = await generateTransactionStatementBlob({
         orderNo: fullOrder.orderNo,
@@ -639,9 +675,11 @@ export default function OfflineOrdersPage() {
     let fullOrder = order
     if (!order.details || order.details.length === 0) {
       try {
-        const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+        const res = (await api.get(`/sales/orders/${order.id}`)) as { data: SalesOrder }
         fullOrder = res.data
-      } catch { /* use what we have */ }
+      } catch {
+        /* use what we have */
+      }
     }
     const { generateTransactionStatement } = await import('@/lib/export/transaction-statement-pdf')
     await generateTransactionStatement({
@@ -691,12 +729,16 @@ export default function OfflineOrdersPage() {
 
   // Month navigation
   const prevMonth = () => {
-    if (kpiMonth === 1) { setKpiYear(kpiYear - 1); setKpiMonth(12) }
-    else setKpiMonth(kpiMonth - 1)
+    if (kpiMonth === 1) {
+      setKpiYear(kpiYear - 1)
+      setKpiMonth(12)
+    } else setKpiMonth(kpiMonth - 1)
   }
   const nextMonth = () => {
-    if (kpiMonth === 12) { setKpiYear(kpiYear + 1); setKpiMonth(1) }
-    else setKpiMonth(kpiMonth + 1)
+    if (kpiMonth === 12) {
+      setKpiYear(kpiYear + 1)
+      setKpiMonth(1)
+    } else setKpiMonth(kpiMonth + 1)
   }
 
   const pipelineSteps = [
@@ -706,17 +748,26 @@ export default function OfflineOrdersPage() {
   ]
 
   const colorMap: Record<string, { bg: string; text: string; ring: string }> = {
-    blue: { bg: 'bg-blue-50 dark:bg-blue-950', text: 'text-blue-600 dark:text-blue-400', ring: 'ring-blue-200 dark:ring-blue-800' },
-    amber: { bg: 'bg-amber-50 dark:bg-amber-950', text: 'text-amber-600 dark:text-amber-400', ring: 'ring-amber-200 dark:ring-amber-800' },
-    emerald: { bg: 'bg-emerald-50 dark:bg-emerald-950', text: 'text-emerald-600 dark:text-emerald-400', ring: 'ring-emerald-200 dark:ring-emerald-800' },
+    blue: {
+      bg: 'bg-blue-50 dark:bg-blue-950',
+      text: 'text-blue-600 dark:text-blue-400',
+      ring: 'ring-blue-200 dark:ring-blue-800',
+    },
+    amber: {
+      bg: 'bg-amber-50 dark:bg-amber-950',
+      text: 'text-amber-600 dark:text-amber-400',
+      ring: 'ring-amber-200 dark:ring-amber-800',
+    },
+    emerald: {
+      bg: 'bg-emerald-50 dark:bg-emerald-950',
+      text: 'text-emerald-600 dark:text-emerald-400',
+      ring: 'ring-emerald-200 dark:ring-emerald-800',
+    },
   }
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="발주/출고관리(오프라인)"
-        description="오프라인 거래처 발주 등록 및 출고/재고 연동 관리"
-      />
+      <PageHeader title="발주/출고관리(오프라인)" description="오프라인 거래처 발주 등록 및 출고/재고 연동 관리" />
 
       {/* Month selector + toolbar */}
       <div className="flex flex-wrap items-center gap-2">
@@ -734,10 +785,14 @@ export default function OfflineOrdersPage() {
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="mr-1.5 h-4 w-4" /> 발주 등록</Button>
+            <Button size="sm">
+              <Plus className="mr-1.5 h-4 w-4" /> 발주 등록
+            </Button>
           </DialogTrigger>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-            <DialogHeader><DialogTitle>오프라인 발주 등록</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>오프라인 발주 등록</DialogTitle>
+            </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -759,12 +814,18 @@ export default function OfflineOrdersPage() {
                     className="pl-8"
                     placeholder="거래처명, 코드, 사업자번호로 검색..."
                     value={partnerSearch}
-                    onChange={(e) => { setPartnerSearch(e.target.value); setPartnerId('') }}
+                    onChange={(e) => {
+                      setPartnerSearch(e.target.value)
+                      setPartnerId('')
+                    }}
                   />
                   {partnerId && (
                     <button
                       className="absolute top-1/2 right-2 -translate-y-1/2"
-                      onClick={() => { setPartnerId(''); setPartnerSearch('') }}
+                      onClick={() => {
+                        setPartnerId('')
+                        setPartnerSearch('')
+                      }}
                     >
                       <X className="text-muted-foreground h-3.5 w-3.5" />
                     </button>
@@ -776,7 +837,10 @@ export default function OfflineOrdersPage() {
                       <button
                         key={p.id}
                         className="hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
-                        onClick={() => { setPartnerId(p.id); setPartnerSearch(p.partnerName) }}
+                        onClick={() => {
+                          setPartnerId(p.id)
+                          setPartnerSearch(p.partnerName)
+                        }}
                       >
                         <span className="font-medium">{p.partnerName}</span>
                         <span className="text-muted-foreground text-xs">({p.partnerCode})</span>
@@ -798,13 +862,19 @@ export default function OfflineOrdersPage() {
                 <div className="flex gap-1 rounded-md border p-0.5">
                   <button
                     className={`rounded px-3 py-1 text-xs font-medium transition-colors ${vatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                    onClick={() => { setVatIncluded(true); recalcAllDetails(true) }}
+                    onClick={() => {
+                      setVatIncluded(true)
+                      recalcAllDetails(true)
+                    }}
                   >
                     부가세 포함
                   </button>
                   <button
                     className={`rounded px-3 py-1 text-xs font-medium transition-colors ${!vatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                    onClick={() => { setVatIncluded(false); recalcAllDetails(false) }}
+                    onClick={() => {
+                      setVatIncluded(false)
+                      recalcAllDetails(false)
+                    }}
                   >
                     부가세 별도
                   </button>
@@ -813,7 +883,12 @@ export default function OfflineOrdersPage() {
 
               <div className="space-y-1">
                 <label className="text-muted-foreground text-xs font-medium">비고</label>
-                <Textarea placeholder="비고 사항..." value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+                <Textarea
+                  placeholder="비고 사항..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                />
               </div>
 
               {/* Order details */}
@@ -830,7 +905,9 @@ export default function OfflineOrdersPage() {
                       <div className="min-w-0 flex-1 space-y-1">
                         <label className="text-muted-foreground text-[10px]">품목</label>
                         <Select value={detail.itemId} onValueChange={(v) => updateDetail(idx, 'itemId', v)}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="품목 선택" />
+                          </SelectTrigger>
                           <SelectContent>
                             {items.map((item) => (
                               <SelectItem key={item.id} value={item.id}>
@@ -842,28 +919,52 @@ export default function OfflineOrdersPage() {
                       </div>
                       <div className="w-20 space-y-1">
                         <label className="text-muted-foreground text-[10px]">수량</label>
-                        <Input type="number" min={1} className="h-8 text-xs" value={detail.quantity} onChange={(e) => updateDetail(idx, 'quantity', parseInt(e.target.value) || 0)} />
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-8 text-xs"
+                          value={detail.quantity}
+                          onChange={(e) => updateDetail(idx, 'quantity', parseInt(e.target.value) || 0)}
+                        />
                       </div>
                       <div className="w-24 space-y-1">
                         <label className="text-muted-foreground text-[10px]">단가</label>
-                        <Input type="number" min={0} className="h-8 text-xs" value={detail.unitPrice} onChange={(e) => updateDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)} />
+                        <Input
+                          type="number"
+                          min={0}
+                          className="h-8 text-xs"
+                          value={detail.unitPrice}
+                          onChange={(e) => updateDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)}
+                        />
                       </div>
                       <div className="w-24 space-y-1">
                         <label className="text-muted-foreground text-[10px]">공급가액</label>
-                        <div className="flex h-8 items-center text-xs tabular-nums">{detail.supplyAmount.toLocaleString()}</div>
+                        <div className="flex h-8 items-center text-xs tabular-nums">
+                          {detail.supplyAmount.toLocaleString()}
+                        </div>
                       </div>
                       {vatIncluded && (
                         <div className="w-20 space-y-1">
                           <label className="text-muted-foreground text-[10px]">세액</label>
-                          <div className="flex h-8 items-center text-xs tabular-nums">{detail.taxAmount.toLocaleString()}</div>
+                          <div className="flex h-8 items-center text-xs tabular-nums">
+                            {detail.taxAmount.toLocaleString()}
+                          </div>
                         </div>
                       )}
                       <div className="w-24 space-y-1">
                         <label className="text-muted-foreground text-[10px]">합계</label>
-                        <div className="flex h-8 items-center text-xs font-medium tabular-nums">{detail.amount.toLocaleString()}</div>
+                        <div className="flex h-8 items-center text-xs font-medium tabular-nums">
+                          {detail.amount.toLocaleString()}
+                        </div>
                       </div>
                       {orderDetails.length > 1 && (
-                        <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => removeDetail(idx)}>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive h-8 w-8"
+                          onClick={() => removeDetail(idx)}
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -871,8 +972,14 @@ export default function OfflineOrdersPage() {
                   ))}
                 </div>
                 <div className="flex justify-end gap-4 text-sm">
-                  <span className="text-muted-foreground">공급가액: <strong className="text-foreground">{totalSupply.toLocaleString()}</strong></span>
-                  {vatIncluded && <span className="text-muted-foreground">세액: <strong className="text-foreground">{totalTax.toLocaleString()}</strong></span>}
+                  <span className="text-muted-foreground">
+                    공급가액: <strong className="text-foreground">{totalSupply.toLocaleString()}</strong>
+                  </span>
+                  {vatIncluded && (
+                    <span className="text-muted-foreground">
+                      세액: <strong className="text-foreground">{totalTax.toLocaleString()}</strong>
+                    </span>
+                  )}
                   <span className="font-bold">합계: {totalAmount.toLocaleString()}원</span>
                 </div>
               </div>
@@ -913,7 +1020,12 @@ export default function OfflineOrdersPage() {
 
         <div className="relative min-w-[140px] flex-1 sm:max-w-xs">
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <Input className="pl-9" placeholder="발주번호, 거래처 검색..." value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} />
+          <Input
+            className="pl-9"
+            placeholder="발주번호, 거래처 검색..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+          />
         </div>
       </div>
 
@@ -927,7 +1039,12 @@ export default function OfflineOrdersPage() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs">이행률</span>
-              <Badge variant={stats.fulfillmentRate >= 80 ? 'default' : stats.fulfillmentRate >= 50 ? 'secondary' : 'outline'} className="tabular-nums text-xs">
+              <Badge
+                variant={
+                  stats.fulfillmentRate >= 80 ? 'default' : stats.fulfillmentRate >= 50 ? 'secondary' : 'outline'
+                }
+                className="text-xs tabular-nums"
+              >
                 {isLoading ? '...' : `${stats.fulfillmentRate}%`}
               </Badge>
             </div>
@@ -939,11 +1056,15 @@ export default function OfflineOrdersPage() {
               return (
                 <div key={step.label} className="flex min-w-0 flex-1 items-center">
                   <div className="flex min-w-[72px] flex-1 flex-col items-center gap-1.5 rounded-lg py-2 sm:min-w-[96px]">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 sm:h-10 sm:w-10 ${colors.bg} ${colors.ring}`}>
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-full ring-2 sm:h-10 sm:w-10 ${colors.bg} ${colors.ring}`}
+                    >
                       <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${colors.text}`} />
                     </div>
                     <div className="text-center">
-                      <p className="text-muted-foreground text-[10px] font-medium leading-tight sm:text-xs">{step.label}</p>
+                      <p className="text-muted-foreground text-[10px] leading-tight font-medium sm:text-xs">
+                        {step.label}
+                      </p>
                       <p className="mt-0.5 text-sm font-bold tabular-nums sm:text-base">
                         {isLoading ? '-' : step.count}
                         <span className="text-muted-foreground text-[10px] font-normal">건</span>
@@ -1019,11 +1140,15 @@ export default function OfflineOrdersPage() {
             <CardTitle className="flex items-center gap-2 text-sm">
               <Package className="h-4 w-4" />
               오프라인 발주 목록
-              <Badge variant="secondary" className="text-[10px]">{orders.length}건</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                {orders.length}건
+              </Badge>
             </CardTitle>
             {selectedOrders.size > 0 && (
               <div className="flex items-center gap-1">
-                <Badge variant="outline" className="text-xs">{selectedOrders.size}건 선택</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {selectedOrders.size}건 선택
+                </Badge>
                 <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={handleBulkExcelDownload}>
                   <Download className="h-3 w-3" /> 엑셀
                 </Button>
@@ -1059,19 +1184,20 @@ export default function OfflineOrdersPage() {
                 <div key={order.id} className="rounded-lg border p-3 transition-shadow hover:shadow-sm">
                   <div className="flex items-start gap-3">
                     <div className="flex pt-0.5">
-                      <Checkbox
-                        checked={selectedOrders.has(order.id)}
-                        onCheckedChange={() => toggleSelect(order.id)}
-                      />
+                      <Checkbox checked={selectedOrders.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="mb-1 flex flex-wrap items-center gap-2">
                         <span className="text-xs font-medium">{order.orderNo}</span>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}
+                        >
                           {statusInfo.label}
                         </span>
                         {order.partner && (
-                          <Badge variant="outline" className="text-[10px]">{order.partner.partnerName}</Badge>
+                          <Badge variant="outline" className="text-[10px]">
+                            {order.partner.partnerName}
+                          </Badge>
                         )}
                         <Badge variant="secondary" className="text-[10px]">
                           {order.vatIncluded !== false ? '부가세포함' : '부가세별도'}
@@ -1085,24 +1211,52 @@ export default function OfflineOrdersPage() {
                       {order.description && <p className="text-muted-foreground mt-1 text-xs">{order.description}</p>}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="상세보기" onClick={() => setDetailOrder(order)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="상세보기"
+                        onClick={() => setDetailOrder(order)}
+                      >
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
                       {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
-                        <Button variant="ghost" size="icon" className="h-7 w-7" title="수정" onClick={() => openEditDialog(order)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="수정"
+                          onClick={() => openEditDialog(order)}
+                        >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-7 w-7" title="거래명세서 다운로드" onClick={() => handleSinglePdfDownload(order)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="거래명세서 다운로드"
+                        onClick={() => handleSinglePdfDownload(order)}
+                      >
                         <FileText className="h-3.5 w-3.5" />
                       </Button>
                       {hasRemaining && order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
-                        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs" onClick={() => openDeliveryDialog(order.id)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => openDeliveryDialog(order.id)}
+                        >
                           <Truck className="h-3 w-3" /> 출고
                         </Button>
                       )}
                       {order.status !== 'CANCELLED' && (
-                        <Button variant="ghost" size="icon" className="text-destructive h-7 w-7" onClick={() => setDeleteTarget(order.id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive h-7 w-7"
+                          onClick={() => setDeleteTarget(order.id)}
+                        >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
@@ -1124,9 +1278,13 @@ export default function OfflineOrdersPage() {
           <div className="space-y-3">
             {excelErrors.length > 0 && (
               <div className="rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950">
-                <p className="mb-1 text-xs font-medium text-red-800 dark:text-red-300">오류 항목 ({excelErrors.length}건)</p>
+                <p className="mb-1 text-xs font-medium text-red-800 dark:text-red-300">
+                  오류 항목 ({excelErrors.length}건)
+                </p>
                 <div className="max-h-24 overflow-y-auto text-xs text-red-600 dark:text-red-400">
-                  {excelErrors.map((err, i) => <p key={i}>{err}</p>)}
+                  {excelErrors.map((err, i) => (
+                    <p key={i}>{err}</p>
+                  ))}
                 </div>
               </div>
             )}
@@ -1152,26 +1310,47 @@ export default function OfflineOrdersPage() {
                         <td className="px-2 py-1">{String(row.partnerName || row.partnerCode || '-')}</td>
                         <td className="px-2 py-1">{String(row.itemName || row.itemCode || '-')}</td>
                         <td className="px-2 py-1 text-right tabular-nums">{String(row.quantity || '-')}</td>
-                        <td className="px-2 py-1 text-right tabular-nums">{Number(row.unitPrice || 0).toLocaleString()}</td>
+                        <td className="px-2 py-1 text-right tabular-nums">
+                          {Number(row.unitPrice || 0).toLocaleString()}
+                        </td>
                         <td className="px-2 py-1">{String(row.orderDate || '-')}</td>
                         <td className="px-2 py-1">{String(row.vatType || '포함')}</td>
                       </tr>
                     ))}
-                    {(excelPreview.length > 50) && (
-                      <tr className="border-t"><td colSpan={6} className="text-muted-foreground px-2 py-1 text-center">... 외 {excelPreview.length - 50}건</td></tr>
+                    {excelPreview.length > 50 && (
+                      <tr className="border-t">
+                        <td colSpan={6} className="text-muted-foreground px-2 py-1 text-center">
+                          ... 외 {excelPreview.length - 50}건
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
               </div>
             )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => { setExcelDialogOpen(false); setExcelPreview(null) }}>취소</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setExcelDialogOpen(false)
+                  setExcelPreview(null)
+                }}
+              >
+                취소
+              </Button>
               <Button
                 size="sm"
                 onClick={() => excelPreview && excelImportMutation.mutate(excelPreview)}
                 disabled={excelImportMutation.isPending || excelErrors.length > 0}
               >
-                {excelImportMutation.isPending ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> 등록 중...</> : `${excelPreview?.length || 0}건 등록`}
+                {excelImportMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> 등록 중...
+                  </>
+                ) : (
+                  `${excelPreview?.length || 0}건 등록`
+                )}
               </Button>
             </div>
           </div>
@@ -1181,33 +1360,40 @@ export default function OfflineOrdersPage() {
       {/* Delivery Dialog */}
       <Dialog open={deliveryDialogOpen} onOpenChange={setDeliveryDialogOpen}>
         <DialogContent className="max-w-sm sm:max-w-md">
-          <DialogHeader><DialogTitle>출고 처리</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>출고 처리</DialogTitle>
+          </DialogHeader>
           <div className="space-y-3">
-            <p className="text-muted-foreground text-xs">잔여 수량 전체를 출고합니다. 재고가 자동으로 차감되며 매출에 반영됩니다.</p>
+            <p className="text-muted-foreground text-xs">
+              잔여 수량 전체를 출고합니다. 재고가 자동으로 차감되며 매출에 반영됩니다.
+            </p>
             <div className="space-y-1">
               <label className="text-muted-foreground text-xs font-medium">출고일 *</label>
               <Input type="date" value={deliveryFormDate} onChange={(e) => setDeliveryFormDate(e.target.value)} />
             </div>
-            {deliveryOrderId && (() => {
-              const order = orders.find((o) => o.id === deliveryOrderId)
-              if (!order?.details) return null
-              const remaining = order.details.filter((d) => Number(d.remainingQty) > 0)
-              return (
-                <div className="space-y-1">
-                  <label className="text-muted-foreground text-xs font-medium">출고 품목</label>
-                  <div className="max-h-40 space-y-1 overflow-y-auto rounded border p-2">
-                    {remaining.map((d) => (
-                      <div key={d.id} className="flex justify-between text-xs">
-                        <span>{d.item?.itemName || d.itemId}</span>
-                        <span className="tabular-nums">{Number(d.remainingQty)}개</span>
-                      </div>
-                    ))}
+            {deliveryOrderId &&
+              (() => {
+                const order = orders.find((o) => o.id === deliveryOrderId)
+                if (!order?.details) return null
+                const remaining = order.details.filter((d) => Number(d.remainingQty) > 0)
+                return (
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground text-xs font-medium">출고 품목</label>
+                    <div className="max-h-40 space-y-1 overflow-y-auto rounded border p-2">
+                      {remaining.map((d) => (
+                        <div key={d.id} className="flex justify-between text-xs">
+                          <span>{d.item?.itemName || d.itemId}</span>
+                          <span className="tabular-nums">{Number(d.remainingQty)}개</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )
-            })()}
+                )
+              })()}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setDeliveryDialogOpen(false)}>취소</Button>
+              <Button variant="ghost" size="sm" onClick={() => setDeliveryDialogOpen(false)}>
+                취소
+              </Button>
               <Button size="sm" onClick={() => deliveryMutation.mutate()} disabled={deliveryMutation.isPending}>
                 <Truck className="mr-1 h-3.5 w-3.5" />
                 {deliveryMutation.isPending ? '처리 중...' : '출고 처리'}
@@ -1220,7 +1406,9 @@ export default function OfflineOrdersPage() {
       {/* Edit Dialog */}
       <Dialog open={!!editOrder} onOpenChange={(v) => !v && setEditOrder(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader><DialogTitle>발주 수정</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>발주 수정</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -1236,10 +1424,14 @@ export default function OfflineOrdersPage() {
             <div className="space-y-1">
               <label className="text-muted-foreground text-xs font-medium">거래처</label>
               <Select value={editPartnerId} onValueChange={setEditPartnerId}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="거래처 선택" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue placeholder="거래처 선택" />
+                </SelectTrigger>
                 <SelectContent>
                   {partners.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.partnerName} ({p.partnerCode})</SelectItem>
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.partnerName} ({p.partnerCode})
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1250,13 +1442,24 @@ export default function OfflineOrdersPage() {
               <div className="flex gap-1 rounded-md border p-0.5">
                 <button
                   className={`rounded px-3 py-1 text-xs font-medium transition-colors ${editVatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                  onClick={() => { setEditVatIncluded(true); setEditDetails((prev) => prev.map((d) => { const tax = calcTax(d.supplyAmount, d.itemId, true); return { ...d, taxAmount: tax, amount: d.supplyAmount + tax } })) }}
+                  onClick={() => {
+                    setEditVatIncluded(true)
+                    setEditDetails((prev) =>
+                      prev.map((d) => {
+                        const tax = calcTax(d.supplyAmount, d.itemId, true)
+                        return { ...d, taxAmount: tax, amount: d.supplyAmount + tax }
+                      })
+                    )
+                  }}
                 >
                   부가세 포함
                 </button>
                 <button
                   className={`rounded px-3 py-1 text-xs font-medium transition-colors ${!editVatIncluded ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-                  onClick={() => { setEditVatIncluded(false); setEditDetails((prev) => prev.map((d) => ({ ...d, taxAmount: 0, amount: d.supplyAmount }))) }}
+                  onClick={() => {
+                    setEditVatIncluded(false)
+                    setEditDetails((prev) => prev.map((d) => ({ ...d, taxAmount: 0, amount: d.supplyAmount })))
+                  }}
                 >
                   부가세 별도
                 </button>
@@ -1265,13 +1468,28 @@ export default function OfflineOrdersPage() {
 
             <div className="space-y-1">
               <label className="text-muted-foreground text-xs font-medium">비고</label>
-              <Textarea placeholder="비고 사항..." value={editDescription} onChange={(e) => setEditDescription(e.target.value)} rows={2} />
+              <Textarea
+                placeholder="비고 사항..."
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={2}
+              />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">품목 목록 *</label>
-                <Button type="button" variant="outline" size="sm" onClick={() => setEditDetails((prev) => [...prev, { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 }])}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setEditDetails((prev) => [
+                      ...prev,
+                      { itemId: '', itemName: '', quantity: 1, unitPrice: 0, supplyAmount: 0, taxAmount: 0, amount: 0 },
+                    ])
+                  }
+                >
                   <Plus className="mr-1 h-3 w-3" /> 품목 추가
                 </Button>
               </div>
@@ -1281,38 +1499,66 @@ export default function OfflineOrdersPage() {
                     <div className="min-w-0 flex-1 space-y-1">
                       <label className="text-muted-foreground text-[10px]">품목</label>
                       <Select value={detail.itemId} onValueChange={(v) => updateEditDetail(idx, 'itemId', v)}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="품목 선택" /></SelectTrigger>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="품목 선택" />
+                        </SelectTrigger>
                         <SelectContent>
                           {items.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>{item.itemName} ({item.itemCode})</SelectItem>
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.itemName} ({item.itemCode})
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="w-20 space-y-1">
                       <label className="text-muted-foreground text-[10px]">수량</label>
-                      <Input type="number" min={1} className="h-8 text-xs" value={detail.quantity} onChange={(e) => updateEditDetail(idx, 'quantity', parseInt(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        min={1}
+                        className="h-8 text-xs"
+                        value={detail.quantity}
+                        onChange={(e) => updateEditDetail(idx, 'quantity', parseInt(e.target.value) || 0)}
+                      />
                     </div>
                     <div className="w-24 space-y-1">
                       <label className="text-muted-foreground text-[10px]">단가</label>
-                      <Input type="number" min={0} className="h-8 text-xs" value={detail.unitPrice} onChange={(e) => updateEditDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)} />
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-8 text-xs"
+                        value={detail.unitPrice}
+                        onChange={(e) => updateEditDetail(idx, 'unitPrice', parseInt(e.target.value) || 0)}
+                      />
                     </div>
                     <div className="w-24 space-y-1">
                       <label className="text-muted-foreground text-[10px]">공급가액</label>
-                      <div className="flex h-8 items-center text-xs tabular-nums">{detail.supplyAmount.toLocaleString()}</div>
+                      <div className="flex h-8 items-center text-xs tabular-nums">
+                        {detail.supplyAmount.toLocaleString()}
+                      </div>
                     </div>
                     {editVatIncluded && (
                       <div className="w-20 space-y-1">
                         <label className="text-muted-foreground text-[10px]">세액</label>
-                        <div className="flex h-8 items-center text-xs tabular-nums">{detail.taxAmount.toLocaleString()}</div>
+                        <div className="flex h-8 items-center text-xs tabular-nums">
+                          {detail.taxAmount.toLocaleString()}
+                        </div>
                       </div>
                     )}
                     <div className="w-24 space-y-1">
                       <label className="text-muted-foreground text-[10px]">합계</label>
-                      <div className="flex h-8 items-center text-xs font-medium tabular-nums">{detail.amount.toLocaleString()}</div>
+                      <div className="flex h-8 items-center text-xs font-medium tabular-nums">
+                        {detail.amount.toLocaleString()}
+                      </div>
                     </div>
                     {editDetails.length > 1 && (
-                      <Button type="button" variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => setEditDetails((prev) => prev.filter((_, i) => i !== idx))}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive h-8 w-8"
+                        onClick={() => setEditDetails((prev) => prev.filter((_, i) => i !== idx))}
+                      >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
@@ -1320,14 +1566,30 @@ export default function OfflineOrdersPage() {
                 ))}
               </div>
               <div className="flex justify-end gap-4 text-sm">
-                <span className="text-muted-foreground">공급가액: <strong className="text-foreground">{editDetails.reduce((s, d) => s + d.supplyAmount, 0).toLocaleString()}</strong></span>
-                {editVatIncluded && <span className="text-muted-foreground">세액: <strong className="text-foreground">{editDetails.reduce((s, d) => s + d.taxAmount, 0).toLocaleString()}</strong></span>}
-                <span className="font-bold">합계: {editDetails.reduce((s, d) => s + d.amount, 0).toLocaleString()}원</span>
+                <span className="text-muted-foreground">
+                  공급가액:{' '}
+                  <strong className="text-foreground">
+                    {editDetails.reduce((s, d) => s + d.supplyAmount, 0).toLocaleString()}
+                  </strong>
+                </span>
+                {editVatIncluded && (
+                  <span className="text-muted-foreground">
+                    세액:{' '}
+                    <strong className="text-foreground">
+                      {editDetails.reduce((s, d) => s + d.taxAmount, 0).toLocaleString()}
+                    </strong>
+                  </span>
+                )}
+                <span className="font-bold">
+                  합계: {editDetails.reduce((s, d) => s + d.amount, 0).toLocaleString()}원
+                </span>
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setEditOrder(null)}>취소</Button>
+              <Button variant="ghost" size="sm" onClick={() => setEditOrder(null)}>
+                취소
+              </Button>
               <Button onClick={() => editMutation.mutate()} disabled={editMutation.isPending} size="sm">
                 {editMutation.isPending ? '수정 중...' : '발주 수정'}
               </Button>
@@ -1339,91 +1601,138 @@ export default function OfflineOrdersPage() {
       {/* Detail View Dialog */}
       <Dialog open={!!detailOrder} onOpenChange={(v) => !v && setDetailOrder(null)}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader><DialogTitle>발주 상세</DialogTitle></DialogHeader>
-          {detailOrder && (() => {
-            const fullOrder = (detailData?.data as SalesOrder & { deliveries?: { id: string; deliveryNo: string; deliveryDate: string; details: { itemId: string; quantity: number; item?: Item }[] }[] }) || detailOrder
-            const statusInfo = STATUS_MAP[fullOrder.status] || STATUS_MAP.ORDERED
-            return (
-              <div className="space-y-4">
-                {/* Order info */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border p-3">
-                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">발주번호</span><span className="font-medium">{fullOrder.orderNo}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">상태</span><span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>{statusInfo.label}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">발주일</span><span>{formatDate(fullOrder.orderDate)}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">거래처</span><span>{fullOrder.partner?.partnerName || '-'}</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">공급가액</span><span className="tabular-nums">{Number(fullOrder.totalSupply).toLocaleString()}원</span></div>
-                  <div className="flex justify-between text-xs"><span className="text-muted-foreground">세액</span><span className="tabular-nums">{Number(fullOrder.totalTax).toLocaleString()}원</span></div>
-                  <div className="col-span-2 flex justify-between text-xs"><span className="text-muted-foreground">합계금액</span><span className="font-bold tabular-nums">{Number(fullOrder.totalAmount).toLocaleString()}원</span></div>
-                  {fullOrder.description && <div className="col-span-2 flex justify-between text-xs"><span className="text-muted-foreground">비고</span><span>{fullOrder.description}</span></div>}
-                </div>
-
-                {/* Order items */}
-                <div>
-                  <h4 className="mb-2 text-xs font-medium">품목 내역</h4>
-                  <div className="overflow-auto rounded-md border">
-                    <table className="w-full text-xs">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="px-2 py-1.5 text-left font-medium">품목</th>
-                          <th className="px-2 py-1.5 text-right font-medium">수량</th>
-                          <th className="px-2 py-1.5 text-right font-medium">단가</th>
-                          <th className="px-2 py-1.5 text-right font-medium">금액</th>
-                          <th className="px-2 py-1.5 text-right font-medium">잔여</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(fullOrder.details || []).map((d, i) => (
-                          <tr key={i} className="border-t">
-                            <td className="px-2 py-1">{d.item?.itemName || d.itemId}</td>
-                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.quantity)}</td>
-                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.unitPrice).toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.totalAmount).toLocaleString()}</td>
-                            <td className="px-2 py-1 text-right tabular-nums">{Number(d.remainingQty)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+          <DialogHeader>
+            <DialogTitle>발주 상세</DialogTitle>
+          </DialogHeader>
+          {detailOrder &&
+            (() => {
+              const fullOrder =
+                (detailData?.data as SalesOrder & {
+                  deliveries?: {
+                    id: string
+                    deliveryNo: string
+                    deliveryDate: string
+                    details: { itemId: string; quantity: number; item?: Item }[]
+                  }[]
+                }) || detailOrder
+              const statusInfo = STATUS_MAP[fullOrder.status] || STATUS_MAP.ORDERED
+              return (
+                <div className="space-y-4">
+                  {/* Order info */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 rounded-lg border p-3">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">발주번호</span>
+                      <span className="font-medium">{fullOrder.orderNo}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">상태</span>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}
+                      >
+                        {statusInfo.label}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">발주일</span>
+                      <span>{formatDate(fullOrder.orderDate)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">거래처</span>
+                      <span>{fullOrder.partner?.partnerName || '-'}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">공급가액</span>
+                      <span className="tabular-nums">{Number(fullOrder.totalSupply).toLocaleString()}원</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">세액</span>
+                      <span className="tabular-nums">{Number(fullOrder.totalTax).toLocaleString()}원</span>
+                    </div>
+                    <div className="col-span-2 flex justify-between text-xs">
+                      <span className="text-muted-foreground">합계금액</span>
+                      <span className="font-bold tabular-nums">{Number(fullOrder.totalAmount).toLocaleString()}원</span>
+                    </div>
+                    {fullOrder.description && (
+                      <div className="col-span-2 flex justify-between text-xs">
+                        <span className="text-muted-foreground">비고</span>
+                        <span>{fullOrder.description}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Delivery history */}
-                {fullOrder.deliveries && fullOrder.deliveries.length > 0 && (
+                  {/* Order items */}
                   <div>
-                    <h4 className="mb-2 text-xs font-medium">출고 이력 ({fullOrder.deliveries.length}건)</h4>
-                    <div className="space-y-2">
-                      {fullOrder.deliveries.map((del) => (
-                        <div key={del.id} className="rounded-md border p-2">
-                          <div className="mb-1 flex items-center gap-2">
-                            <Truck className="h-3.5 w-3.5 text-emerald-600" />
-                            <span className="text-xs font-medium">{del.deliveryNo}</span>
-                            <span className="text-muted-foreground text-xs">{formatDate(del.deliveryDate)}</span>
-                          </div>
-                          <div className="ml-5 space-y-0.5">
-                            {del.details?.map((dd, idx) => (
-                              <div key={idx} className="text-muted-foreground flex justify-between text-[11px]">
-                                <span>{dd.item?.itemName || dd.itemId}</span>
-                                <span className="tabular-nums">{Number(dd.quantity)}개</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
+                    <h4 className="mb-2 text-xs font-medium">품목 내역</h4>
+                    <div className="overflow-auto rounded-md border">
+                      <table className="w-full text-xs">
+                        <thead className="bg-muted">
+                          <tr>
+                            <th className="px-2 py-1.5 text-left font-medium">품목</th>
+                            <th className="px-2 py-1.5 text-right font-medium">수량</th>
+                            <th className="px-2 py-1.5 text-right font-medium">단가</th>
+                            <th className="px-2 py-1.5 text-right font-medium">금액</th>
+                            <th className="px-2 py-1.5 text-right font-medium">잔여</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(fullOrder.details || []).map((d, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="px-2 py-1">{d.item?.itemName || d.itemId}</td>
+                              <td className="px-2 py-1 text-right tabular-nums">{Number(d.quantity)}</td>
+                              <td className="px-2 py-1 text-right tabular-nums">
+                                {Number(d.unitPrice).toLocaleString()}
+                              </td>
+                              <td className="px-2 py-1 text-right tabular-nums">
+                                {Number(d.totalAmount).toLocaleString()}
+                              </td>
+                              <td className="px-2 py-1 text-right tabular-nums">{Number(d.remainingQty)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                )}
-                {(!fullOrder.deliveries || fullOrder.deliveries.length === 0) && (
-                  <div className="text-muted-foreground py-4 text-center text-xs">출고 이력이 없습니다.</div>
-                )}
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="ghost" size="sm" onClick={() => setDetailOrder(null)}>닫기</Button>
-                  <Button variant="outline" size="sm" onClick={() => handleSinglePdfDownload(fullOrder)}>
-                    <FileText className="mr-1 h-3.5 w-3.5" /> 거래명세서
-                  </Button>
+                  {/* Delivery history */}
+                  {fullOrder.deliveries && fullOrder.deliveries.length > 0 && (
+                    <div>
+                      <h4 className="mb-2 text-xs font-medium">출고 이력 ({fullOrder.deliveries.length}건)</h4>
+                      <div className="space-y-2">
+                        {fullOrder.deliveries.map((del) => (
+                          <div key={del.id} className="rounded-md border p-2">
+                            <div className="mb-1 flex items-center gap-2">
+                              <Truck className="h-3.5 w-3.5 text-emerald-600" />
+                              <span className="text-xs font-medium">{del.deliveryNo}</span>
+                              <span className="text-muted-foreground text-xs">{formatDate(del.deliveryDate)}</span>
+                            </div>
+                            <div className="ml-5 space-y-0.5">
+                              {del.details?.map((dd, idx) => (
+                                <div key={idx} className="text-muted-foreground flex justify-between text-[11px]">
+                                  <span>{dd.item?.itemName || dd.itemId}</span>
+                                  <span className="tabular-nums">{Number(dd.quantity)}개</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {(!fullOrder.deliveries || fullOrder.deliveries.length === 0) && (
+                    <div className="text-muted-foreground py-4 text-center text-xs">출고 이력이 없습니다.</div>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setDetailOrder(null)}>
+                      닫기
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleSinglePdfDownload(fullOrder)}>
+                      <FileText className="mr-1 h-3.5 w-3.5" /> 거래명세서
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )
-          })()}
+              )
+            })()}
         </DialogContent>
       </Dialog>
 
@@ -1432,7 +1741,9 @@ export default function OfflineOrdersPage() {
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="발주 삭제"
         description="이 발주를 삭제하시겠습니까? 완료된 발주는 재고가 복원됩니다."
-        onConfirm={() => { if (deleteTarget) deleteMutation.mutate(deleteTarget) }}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget)
+        }}
         variant="destructive"
       />
     </div>

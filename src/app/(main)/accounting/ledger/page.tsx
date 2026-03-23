@@ -85,14 +85,19 @@ export default function LedgerPage() {
     const detailExportColumns: ExportColumn[] = [
       { header: '전표번호', accessor: (r) => r.voucher.voucherNo },
       { header: '일자', accessor: (r) => formatDate(r.voucher.voucherDate) },
-      { header: '차변', accessor: (r) => Number(r.debitAmount) > 0 ? formatCurrency(r.debitAmount) : '-' },
-      { header: '대변', accessor: (r) => Number(r.creditAmount) > 0 ? formatCurrency(r.creditAmount) : '-' },
+      { header: '차변', accessor: (r) => (Number(r.debitAmount) > 0 ? formatCurrency(r.debitAmount) : '-') },
+      { header: '대변', accessor: (r) => (Number(r.creditAmount) > 0 ? formatCurrency(r.creditAmount) : '-') },
       { header: '거래처', accessor: (r) => r.partner?.partnerName || '-' },
       { header: '적요', accessor: (r) => r.description || r.voucher.description || '-' },
     ]
 
     const handleDetailExport = (type: 'excel' | 'pdf') => {
-      const cfg = { fileName: `총계정원장_${account?.code}`, title: `총계정원장 상세 - ${account?.code} ${account?.nameKo}`, columns: detailExportColumns, data: details }
+      const cfg = {
+        fileName: `총계정원장_${account?.code}`,
+        title: `총계정원장 상세 - ${account?.code} ${account?.nameKo}`,
+        columns: detailExportColumns,
+        data: details,
+      }
       if (type === 'excel') exportToExcel(cfg)
       else exportToPDF(cfg)
       toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)

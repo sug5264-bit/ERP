@@ -308,7 +308,12 @@ export default function NettingPage() {
   ]
 
   const handleNettingExport = (type: 'excel' | 'pdf') => {
-    const cfg = { fileName: `상계내역_${year}년${month}월`, title: `상계내역 (${year}년 ${month}월)`, columns: nettingExportColumns, data: rows }
+    const cfg = {
+      fileName: `상계내역_${year}년${month}월`,
+      title: `상계내역 (${year}년 ${month}월)`,
+      columns: nettingExportColumns,
+      data: rows,
+    }
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)

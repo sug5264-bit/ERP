@@ -152,7 +152,10 @@ describe('POST /api/v1/sales/deliveries/[id]/quality-inspection', () => {
       const tx = {
         qualityInspection: { create: vi.fn().mockResolvedValue(mockInspection) },
         delivery: { update: vi.fn() },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
       }
       return fn(tx)
     })
@@ -179,7 +182,10 @@ describe('POST /api/v1/sales/deliveries/[id]/quality-inspection', () => {
           }),
         },
         delivery: { update: vi.fn() },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 2 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 2 }),
+        },
       }
       return fn(tx)
     })
@@ -286,7 +292,10 @@ describe('POST /api/v1/accounting/tax-invoice', () => {
             return mockInvoice
           }),
         },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
       }
       return fn(tx)
     })

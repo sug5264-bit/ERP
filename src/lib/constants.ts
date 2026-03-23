@@ -4,13 +4,13 @@ export const COMPANY_NAME = '(주)웰그린'
 // SAP 모듈 기준 라벨 (식품 유통사 맞춤)
 export const MODULE_LABELS: Record<string, string> = {
   dashboard: '대시보드',
-  sales: '영업관리',        // SAP SD
-  purchasing: '구매관리',    // SAP MM
-  production: '생산관리',    // SAP PP
-  inventory: '재고관리',     // SAP WM
-  quality: '품질관리',       // SAP QM
-  accounting: '회계관리',    // SAP FI
-  hr: '인사관리',           // SAP HR
+  sales: '영업관리', // SAP SD
+  purchasing: '구매관리', // SAP MM
+  production: '생산관리', // SAP PP
+  inventory: '재고관리', // SAP WM
+  quality: '품질관리', // SAP QM
+  accounting: '회계관리', // SAP FI
+  hr: '인사관리', // SAP HR
   closing: '정산관리',
   approval: '전자결재',
   board: '게시판',

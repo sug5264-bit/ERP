@@ -47,16 +47,16 @@ export function MainLayoutShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar - 다크 그린 테마 */}
       <aside
         className={cn(
-          'bg-sidebar fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r border-sidebar-border shadow-xl transition-transform duration-200 will-change-transform motion-reduce:duration-0 lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none lg:duration-0',
+          'bg-sidebar border-sidebar-border fixed inset-y-0 left-0 z-50 w-[280px] max-w-[85vw] border-r shadow-xl transition-transform duration-200 will-change-transform motion-reduce:duration-0 lg:static lg:z-auto lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-none lg:duration-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         role="navigation"
         aria-label="사이드바 메뉴"
       >
-        <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <div className="border-sidebar-border flex h-14 items-center border-b px-4">
           <div className="flex items-center gap-2.5">
             <div className="bg-sidebar-primary flex h-8 w-8 items-center justify-center rounded-lg">
-              <Leaf className="h-4.5 w-4.5 text-sidebar-primary-foreground" />
+              <Leaf className="text-sidebar-primary-foreground h-4.5 w-4.5" />
             </div>
             <div className="flex flex-col">
               <span className="text-sidebar-foreground text-sm font-bold tracking-tight">웰그린</span>

@@ -4,7 +4,11 @@ import { hash } from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
-const DEFAULT_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || 'admin1234'
+function getDefaultPassword(): string {
+  const pw = process.env.ADMIN_DEFAULT_PASSWORD
+  if (!pw) throw new Error('ADMIN_DEFAULT_PASSWORD 환경변수가 설정되지 않았습니다.')
+  return pw
+}
 
 export async function GET(req: Request) {
   return initAdmin(req)
@@ -226,7 +230,7 @@ async function initAdmin(req: Request) {
 
     if (users.length === 0) {
       logs.push('admin 사용자 없음 - 새로 생성')
-      const newHash = await hash(DEFAULT_PASSWORD, 12)
+      const newHash = await hash(getDefaultPassword(), 12)
       const newUser = await prisma.$queryRawUnsafe<{ id: string }[]>(
         `INSERT INTO "users" ("id", "username", "email", "passwordHash", "name", "isActive", "createdAt", "updatedAt")
          VALUES (gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW())
@@ -241,7 +245,7 @@ async function initAdmin(req: Request) {
     } else {
       adminUserId = users[0].id
       // 비밀번호 리셋 + 활성화
-      const newHash = await hash(DEFAULT_PASSWORD, 12)
+      const newHash = await hash(getDefaultPassword(), 12)
       await prisma.$executeRawUnsafe(
         'UPDATE "users" SET "passwordHash" = $1, "isActive" = true WHERE "id" = $2',
         newHash,

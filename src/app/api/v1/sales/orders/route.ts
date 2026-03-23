@@ -114,13 +114,16 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       // 거래처 자동 생성/확인
-      const partnerId = await ensurePartnerExists({
-        partnerId: data.partnerId,
-        partnerName: data.partnerName,
-        partnerCode: data.partnerCode,
-        bizNo: data.bizNo,
-        partnerType: 'SALES',
-      }, tx)
+      const partnerId = await ensurePartnerExists(
+        {
+          partnerId: data.partnerId,
+          partnerName: data.partnerName,
+          partnerCode: data.partnerCode,
+          bizNo: data.bizNo,
+          partnerType: 'SALES',
+        },
+        tx
+      )
       if (partnerId && !data.partnerId && data.partnerName) {
         autoCreated.push(`거래처 "${data.partnerName}" 자동 생성`)
       }
@@ -128,15 +131,18 @@ export async function POST(request: NextRequest) {
       // 품목 자동 생성/확인 및 ID 해소
       const resolvedDetails = []
       for (const d of data.details) {
-        const itemId = await ensureItemExists({
-          itemId: d.itemId,
-          itemCode: d.itemCode,
-          itemName: d.itemName,
-          specification: d.specification,
-          unit: d.unit,
-          standardPrice: d.unitPrice,
-          barcode: d.barcode,
-        }, tx)
+        const itemId = await ensureItemExists(
+          {
+            itemId: d.itemId,
+            itemCode: d.itemCode,
+            itemName: d.itemName,
+            specification: d.specification,
+            unit: d.unit,
+            standardPrice: d.unitPrice,
+            barcode: d.barcode,
+          },
+          tx
+        )
         if (!d.itemId && d.itemName) {
           autoCreated.push(`품목 "${d.itemName}" 자동 생성`)
         }

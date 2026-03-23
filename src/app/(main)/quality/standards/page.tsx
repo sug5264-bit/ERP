@@ -232,9 +232,9 @@ export default function QualityStandardsPage() {
     { header: '카테고리', accessor: (r) => r.category || '-' },
     { header: '검사방법', accessor: (r) => r.testMethod || '-' },
     { header: '규격', accessor: (r) => r.specification || '-' },
-    { header: '최소값', accessor: (r) => r.minValue != null ? String(r.minValue) : '-' },
-    { header: '최대값', accessor: (r) => r.maxValue != null ? String(r.maxValue) : '-' },
-    { header: '필수', accessor: (r) => r.isRequired ? '필수' : '선택' },
+    { header: '최소값', accessor: (r) => (r.minValue != null ? String(r.minValue) : '-') },
+    { header: '최대값', accessor: (r) => (r.maxValue != null ? String(r.maxValue) : '-') },
+    { header: '필수', accessor: (r) => (r.isRequired ? '필수' : '선택') },
   ]
 
   const handleExport = (type: 'excel' | 'pdf') => {

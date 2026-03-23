@@ -73,9 +73,7 @@ function checkApiRateLimit(key: string): boolean {
 }
 
 // 긴 prefix부터 매칭하도록 정렬 (캐시)
-const sortedRouteEntries = Object.entries(ROUTE_MODULE_MAP).sort(
-  (a, b) => b[0].length - a[0].length
-)
+const sortedRouteEntries = Object.entries(ROUTE_MODULE_MAP).sort((a, b) => b[0].length - a[0].length)
 
 function getRequiredModule(pathname: string): string | null {
   for (const [prefix, module] of sortedRouteEntries) {
@@ -111,11 +109,7 @@ export default auth((req) => {
   }
 
   // 정적 파일, _next 등 스킵
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.')
-  ) {
+  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon') || pathname.includes('.')) {
     return NextResponse.next()
   }
 
@@ -172,7 +166,9 @@ export default auth((req) => {
   // 권한 기반 접근 제어 (RBAC)
   const requiredModule = getRequiredModule(pathname)
   if (requiredModule) {
-    const user = req.auth.user as { permissions?: Array<{ module: string; action: string }>; roles?: string[] } | undefined
+    const user = req.auth.user as
+      | { permissions?: Array<{ module: string; action: string }>; roles?: string[] }
+      | undefined
     const permissions = user?.permissions || []
     const roles = user?.roles || []
     const action = METHOD_ACTION_MAP[method] || 'read'

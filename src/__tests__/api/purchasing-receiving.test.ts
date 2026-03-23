@@ -170,7 +170,10 @@ describe('POST /api/v1/purchasing/receiving', () => {
         },
         receiving: { create: vi.fn() },
         purchaseOrder: { update: vi.fn() },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
       }
       return fn(tx)
     })
@@ -198,7 +201,10 @@ describe('POST /api/v1/purchasing/receiving', () => {
         },
         receiving: { create: vi.fn() },
         purchaseOrder: { update: vi.fn() },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
       }
       return fn(tx)
     })
@@ -239,7 +245,10 @@ describe('POST /api/v1/purchasing/receiving', () => {
         },
         receiving: { create: vi.fn().mockResolvedValue(mockReceiving) },
         purchaseOrder: { update: mockPOUpdate },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 1 }),
+        },
       }
       return fn(tx)
     })
@@ -279,7 +288,10 @@ describe('POST /api/v1/purchasing/receiving', () => {
           }),
         },
         purchaseOrder: { update: mockPOUpdate },
-        documentSequence: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ lastSeq: 2 }) },
+        documentSequence: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          upsert: vi.fn().mockResolvedValue({ lastSeq: 2 }),
+        },
       }
       return fn(tx)
     })

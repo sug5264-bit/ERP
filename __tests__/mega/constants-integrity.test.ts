@@ -79,20 +79,31 @@ describe('라벨맵 무결성 검증', () => {
 
 const MODULES = Object.keys(MODULE_LABELS)
 const ACTIONS = Object.keys(ACTION_LABELS)
-const ROLES = ['SYSTEM_ADMIN', '관리자', '영업팀', '구매팀', '재고팀', '인사팀', '회계팀', '품질팀', '생산팀', '일반직원']
+const ROLES = [
+  'SYSTEM_ADMIN',
+  '관리자',
+  '영업팀',
+  '구매팀',
+  '재고팀',
+  '인사팀',
+  '회계팀',
+  '품질팀',
+  '생산팀',
+  '일반직원',
+]
 
 // 역할별 기본 권한 매트릭스
 const ROLE_PERMISSIONS: Record<string, { modules: string[]; actions: string[] }> = {
   SYSTEM_ADMIN: { modules: MODULES, actions: ACTIONS },
-  '관리자': { modules: MODULES, actions: ACTIONS },
-  '영업팀': { modules: ['dashboard', 'sales'], actions: ['read', 'create', 'update'] },
-  '구매팀': { modules: ['dashboard', 'purchasing'], actions: ['read', 'create', 'update'] },
-  '재고팀': { modules: ['dashboard', 'inventory'], actions: ['read', 'create', 'update'] },
-  '인사팀': { modules: ['dashboard', 'hr'], actions: ['read', 'create', 'update'] },
-  '회계팀': { modules: ['dashboard', 'accounting', 'closing'], actions: ['read', 'create', 'update'] },
-  '품질팀': { modules: ['dashboard', 'quality'], actions: ['read', 'create', 'update'] },
-  '생산팀': { modules: ['dashboard', 'production'], actions: ['read', 'create', 'update'] },
-  '일반직원': { modules: ['dashboard'], actions: ['read'] },
+  관리자: { modules: MODULES, actions: ACTIONS },
+  영업팀: { modules: ['dashboard', 'sales'], actions: ['read', 'create', 'update'] },
+  구매팀: { modules: ['dashboard', 'purchasing'], actions: ['read', 'create', 'update'] },
+  재고팀: { modules: ['dashboard', 'inventory'], actions: ['read', 'create', 'update'] },
+  인사팀: { modules: ['dashboard', 'hr'], actions: ['read', 'create', 'update'] },
+  회계팀: { modules: ['dashboard', 'accounting', 'closing'], actions: ['read', 'create', 'update'] },
+  품질팀: { modules: ['dashboard', 'quality'], actions: ['read', 'create', 'update'] },
+  생산팀: { modules: ['dashboard', 'production'], actions: ['read', 'create', 'update'] },
+  일반직원: { modules: ['dashboard'], actions: ['read'] },
 }
 
 describe('RBAC 권한 매트릭스', () => {
@@ -123,8 +134,12 @@ describe('RBAC 권한 매트릭스', () => {
         const combinedModules = new Set([...(perms1?.modules || []), ...(perms2?.modules || [])])
         const combinedActions = new Set([...(perms1?.actions || []), ...(perms2?.actions || [])])
         // 다중 역할은 합집합
-        expect(combinedModules.size).toBeGreaterThanOrEqual(Math.max(perms1?.modules.length || 0, perms2?.modules.length || 0))
-        expect(combinedActions.size).toBeGreaterThanOrEqual(Math.max(perms1?.actions.length || 0, perms2?.actions.length || 0))
+        expect(combinedModules.size).toBeGreaterThanOrEqual(
+          Math.max(perms1?.modules.length || 0, perms2?.modules.length || 0)
+        )
+        expect(combinedActions.size).toBeGreaterThanOrEqual(
+          Math.max(perms1?.actions.length || 0, perms2?.actions.length || 0)
+        )
       })
     }
   }

@@ -40,7 +40,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const item = await prisma.item.update({ where: { id }, data })
 
     writeAuditLog({ action: 'UPDATE', tableName: 'Item', recordId: id, ipAddress: getClientIp(request) }).catch(
-      (err) => { logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) }) }
+      (err) => {
+        logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) })
+      }
     )
 
     return successResponse(item)
@@ -78,7 +80,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       await tx.item.delete({ where: { id } })
     })
     writeAuditLog({ action: 'DELETE', tableName: 'Item', recordId: id, ipAddress: getClientIp(request) }).catch(
-      (err) => { logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) }) }
+      (err) => {
+        logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) })
+      }
     )
 
     return successResponse({ deleted: true })

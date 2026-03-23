@@ -107,7 +107,9 @@ async function main() {
       await prisma.$executeRawUnsafe(`ALTER TABLE "sales_orders" ALTER COLUMN "partnerId" DROP NOT NULL`)
       changeCount++
     }
-  } catch { /* column may not exist yet */ }
+  } catch {
+    /* column may not exist yet */
+  }
 
   // ── purchase_orders: 누락 컬럼 ──
   const purchaseOrderColumns = [
@@ -136,7 +138,9 @@ async function main() {
         "updatedAt" TIMESTAMP(3) NOT NULL
       )
     `)
-    await prisma.$executeRawUnsafe(`CREATE INDEX "notes_relatedTable_relatedId_idx" ON "notes"("relatedTable", "relatedId")`)
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX "notes_relatedTable_relatedId_idx" ON "notes"("relatedTable", "relatedId")`
+    )
     changeCount++
   }
 
@@ -260,9 +264,15 @@ async function main() {
 
   // ── OemContractStatus enum ──
   try {
-    await prisma.$executeRawUnsafe(`DO $$ BEGIN CREATE TYPE "OemContractStatus" AS ENUM ('DRAFT','ACTIVE','SUSPENDED','TERMINATED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`)
-    await prisma.$executeRawUnsafe(`DO $$ BEGIN CREATE TYPE "ProductionPlanStatus" AS ENUM ('PLANNED','IN_PROGRESS','COMPLETED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`)
-  } catch { /* enums may already exist */ }
+    await prisma.$executeRawUnsafe(
+      `DO $$ BEGIN CREATE TYPE "OemContractStatus" AS ENUM ('DRAFT','ACTIVE','SUSPENDED','TERMINATED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`
+    )
+    await prisma.$executeRawUnsafe(
+      `DO $$ BEGIN CREATE TYPE "ProductionPlanStatus" AS ENUM ('PLANNED','IN_PROGRESS','COMPLETED','CANCELLED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$`
+    )
+  } catch {
+    /* enums may already exist */
+  }
 
   // ── shipper_companies 테이블 ──
   if (!(await tableExists('shipper_companies'))) {
@@ -471,8 +481,12 @@ async function main() {
         "amount" DECIMAL(15,2) NOT NULL
       )
     `)
-    await prisma.$executeRawUnsafe(`CREATE INDEX "sales_revenue_details_revenueId_idx" ON "sales_revenue_details"("revenueId")`)
-    await prisma.$executeRawUnsafe(`CREATE INDEX "sales_revenue_details_itemId_idx" ON "sales_revenue_details"("itemId")`)
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX "sales_revenue_details_revenueId_idx" ON "sales_revenue_details"("revenueId")`
+    )
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX "sales_revenue_details_itemId_idx" ON "sales_revenue_details"("itemId")`
+    )
     changeCount++
   }
 
@@ -586,7 +600,9 @@ async function main() {
       )
     `)
     await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_inventory_shipperId_idx" ON "shipper_inventory"("shipperId")`)
-    await prisma.$executeRawUnsafe(`CREATE INDEX "shipper_inventory_shipperItemId_idx" ON "shipper_inventory"("shipperItemId")`)
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX "shipper_inventory_shipperItemId_idx" ON "shipper_inventory"("shipperItemId")`
+    )
     changeCount++
   }
 

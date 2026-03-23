@@ -144,7 +144,13 @@ export default function VouchersPage() {
         getDefaultCompanyInfo(),
       ])
       const detail = (res.data || res) as Record<string, unknown>
-      const vDetails = (detail.details || []) as { lineNo: number; accountSubject?: { nameKo: string; code: string }; debitAmount: number; creditAmount: number; description?: string }[]
+      const vDetails = (detail.details || []) as {
+        lineNo: number
+        accountSubject?: { nameKo: string; code: string }
+        debitAmount: number
+        creditAmount: number
+        description?: string
+      }[]
       const pdfData: VoucherPDFData = {
         voucherNo: v.voucherNo,
         voucherDate: formatDate(v.voucherDate),

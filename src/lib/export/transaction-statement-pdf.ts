@@ -102,8 +102,26 @@ async function buildTransactionStatementPdf(order: TransactionStatementData) {
   // 헤더 행
   const infoHead = [
     [
-      { content: '공급받는자 (인수자)', colSpan: 2, styles: { halign: 'center' as const, fillColor: PDF_COLORS.HEADER_FILL, textColor: PDF_COLORS.HEADER_TEXT, fontStyle: 'bold' as const } },
-      { content: '공급자 (공급)', colSpan: 2, styles: { halign: 'center' as const, fillColor: PDF_COLORS.HEADER_FILL, textColor: PDF_COLORS.HEADER_TEXT, fontStyle: 'bold' as const } },
+      {
+        content: '공급받는자 (인수자)',
+        colSpan: 2,
+        styles: {
+          halign: 'center' as const,
+          fillColor: PDF_COLORS.HEADER_FILL,
+          textColor: PDF_COLORS.HEADER_TEXT,
+          fontStyle: 'bold' as const,
+        },
+      },
+      {
+        content: '공급자 (공급)',
+        colSpan: 2,
+        styles: {
+          halign: 'center' as const,
+          fillColor: PDF_COLORS.HEADER_FILL,
+          textColor: PDF_COLORS.HEADER_TEXT,
+          fontStyle: 'bold' as const,
+        },
+      },
     ],
   ]
 
@@ -211,7 +229,10 @@ async function buildTransactionStatementPdf(order: TransactionStatementData) {
         { content: '합  계', colSpan: 2, styles: { ...labelColumnStyle, fontSize: 9 } },
         { content: `공급가액: ${fmtNumber(order.totalSupply)}`, styles: { halign: 'right' as const } },
         { content: `세액: ${fmtNumber(order.totalTax)}`, styles: { halign: 'right' as const } },
-        { content: `총액: ${fmtNumber(order.totalAmount)}`, styles: { halign: 'right' as const, fontStyle: 'bold' as const } },
+        {
+          content: `총액: ${fmtNumber(order.totalAmount)}`,
+          styles: { halign: 'right' as const, fontStyle: 'bold' as const },
+        },
       ],
     ],
     theme: 'grid',

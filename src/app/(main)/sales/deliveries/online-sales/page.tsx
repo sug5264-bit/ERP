@@ -802,7 +802,12 @@ export default function OnlineSalesPage() {
               <span className="text-destructive">*</span> 표시는 필수 입력 항목입니다
             </DialogDescription>
           </DialogHeader>
-          <RevenueForm onSubmit={handleCreate} isPending={createMutation.isPending} submitLabel="매출 등록" {...revenueFormProps} />
+          <RevenueForm
+            onSubmit={handleCreate}
+            isPending={createMutation.isPending}
+            submitLabel="매출 등록"
+            {...revenueFormProps}
+          />
         </DialogContent>
       </Dialog>
 

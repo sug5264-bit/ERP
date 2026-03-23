@@ -30,9 +30,7 @@ const prisma = new PrismaClient({
 async function checkSeedDataExists() {
   try {
     // admin 사용자가 존재하는지 확인
-    const users = await prisma.$queryRawUnsafe(
-      `SELECT COUNT(*)::int as count FROM "users" WHERE "username" = 'admin'`
-    )
+    const users = await prisma.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM "users" WHERE "username" = 'admin'`)
     if (users[0]?.count > 0) return true
 
     return false
@@ -94,41 +92,83 @@ async function applyPermissions() {
   // 사이드바 메뉴와 완전히 일치하는 권한 모듈 목록
   const modules = [
     // 영업관리
-    'sales', 'sales.orders', 'sales.summary', 'sales.partners',
-    'sales.quotations', 'sales.deliveries', 'sales.returns', 'sales.pricing',
+    'sales',
+    'sales.orders',
+    'sales.summary',
+    'sales.partners',
+    'sales.quotations',
+    'sales.deliveries',
+    'sales.returns',
+    'sales.pricing',
     'sales.3pl',
     // 구매관리
-    'purchasing', 'purchasing.orders', 'purchasing.receiving',
-    'purchasing.suppliers', 'purchasing.summary',
+    'purchasing',
+    'purchasing.orders',
+    'purchasing.receiving',
+    'purchasing.suppliers',
+    'purchasing.summary',
     // 생산관리
-    'production', 'production.oem', 'production.bom',
-    'production.plan', 'production.result',
+    'production',
+    'production.oem',
+    'production.bom',
+    'production.plan',
+    'production.result',
     // 재고관리
-    'inventory', 'inventory.items', 'inventory.stock',
-    'inventory.status', 'inventory.warehouses',
-    'inventory.expiry', 'inventory.lot',
+    'inventory',
+    'inventory.items',
+    'inventory.stock',
+    'inventory.status',
+    'inventory.warehouses',
+    'inventory.expiry',
+    'inventory.lot',
     // 품질관리
-    'quality', 'quality.incoming', 'quality.outgoing', 'quality.standards',
+    'quality',
+    'quality.incoming',
+    'quality.outgoing',
+    'quality.standards',
     // 정산관리
-    'closing', 'closing.sales', 'closing.purchase',
-    'closing.netting', 'closing.payments',
+    'closing',
+    'closing.sales',
+    'closing.purchase',
+    'closing.netting',
+    'closing.payments',
     // 회계관리
-    'accounting', 'accounting.vouchers', 'accounting.journal',
-    'accounting.ledger', 'accounting.financial',
-    'accounting.tax', 'accounting.budget',
+    'accounting',
+    'accounting.vouchers',
+    'accounting.journal',
+    'accounting.ledger',
+    'accounting.financial',
+    'accounting.tax',
+    'accounting.budget',
     // 인사관리
-    'hr', 'hr.employees', 'hr.organization', 'hr.attendance',
-    'hr.leave', 'hr.payroll', 'hr.recruitment',
+    'hr',
+    'hr.employees',
+    'hr.organization',
+    'hr.attendance',
+    'hr.leave',
+    'hr.payroll',
+    'hr.recruitment',
     // 프로젝트
     'projects',
     // 전자결재
-    'approval', 'approval.draft', 'approval.pending',
-    'approval.completed', 'approval.rejected',
+    'approval',
+    'approval.draft',
+    'approval.pending',
+    'approval.completed',
+    'approval.rejected',
     // 게시판
-    'board', 'board.notices', 'board.general', 'board.messages',
+    'board',
+    'board.notices',
+    'board.general',
+    'board.messages',
     // 시스템관리
-    'admin', 'admin.users', 'admin.roles', 'admin.codes',
-    'admin.logs', 'admin.company', 'admin.settings',
+    'admin',
+    'admin.users',
+    'admin.roles',
+    'admin.codes',
+    'admin.logs',
+    'admin.company',
+    'admin.settings',
   ]
   const actions = ['read', 'create', 'update', 'delete', 'export', 'import', 'approve']
 
@@ -148,17 +188,19 @@ async function applyPermissions() {
           `INSERT INTO "permissions" ("id", "module", "action", "description")
            VALUES (gen_random_uuid()::text, $1, $2, $3)
            ON CONFLICT ("module", "action") DO NOTHING`,
-          mod, action, `${mod} ${action}`
+          mod,
+          action,
+          `${mod} ${action}`
         )
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
   }
 
   // 관리자 역할에 모든 권한 할당
   try {
-    const adminRole = await prisma.$queryRawUnsafe(
-      `SELECT "id" FROM "roles" WHERE "name" = '관리자' LIMIT 1`
-    )
+    const adminRole = await prisma.$queryRawUnsafe(`SELECT "id" FROM "roles" WHERE "name" = '관리자' LIMIT 1`)
     if (adminRole.length > 0) {
       const roleId = adminRole[0].id
       await prisma.$executeRawUnsafe(
@@ -176,16 +218,28 @@ async function applyPermissions() {
 
   // 부서장 역할 권한
   try {
-    const managerRole = await prisma.$queryRawUnsafe(
-      `SELECT "id" FROM "roles" WHERE "name" = '부서장' LIMIT 1`
-    )
+    const managerRole = await prisma.$queryRawUnsafe(`SELECT "id" FROM "roles" WHERE "name" = '부서장' LIMIT 1`)
     if (managerRole.length > 0) {
       const roleId = managerRole[0].id
       const managerModules = [
-        'inventory', 'sales', 'closing', 'closing.sales', 'closing.purchase',
-        'closing.netting', 'closing.payments', 'projects', 'hr.leave',
-        'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
-        'board', 'board.notices', 'board.general', 'board.messages',
+        'inventory',
+        'sales',
+        'closing',
+        'closing.sales',
+        'closing.purchase',
+        'closing.netting',
+        'closing.payments',
+        'projects',
+        'hr.leave',
+        'approval',
+        'approval.draft',
+        'approval.pending',
+        'approval.completed',
+        'approval.rejected',
+        'board',
+        'board.notices',
+        'board.general',
+        'board.messages',
       ]
       for (const mod of managerModules) {
         for (const action of actions) {
@@ -194,25 +248,37 @@ async function applyPermissions() {
               `INSERT INTO "role_permissions" ("roleId", "permissionId")
                SELECT $1, p."id" FROM "permissions" p WHERE p."module" = $2 AND p."action" = $3
                ON CONFLICT ("roleId", "permissionId") DO NOTHING`,
-              roleId, mod, action
+              roleId,
+              mod,
+              action
             )
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 
   // 일반사용자 역할 권한
   try {
-    const userRole = await prisma.$queryRawUnsafe(
-      `SELECT "id" FROM "roles" WHERE "name" = '일반사용자' LIMIT 1`
-    )
+    const userRole = await prisma.$queryRawUnsafe(`SELECT "id" FROM "roles" WHERE "name" = '일반사용자' LIMIT 1`)
     if (userRole.length > 0) {
       const roleId = userRole[0].id
       const userModules = [
-        'board', 'board.notices', 'board.general', 'board.messages',
-        'approval', 'approval.draft', 'approval.pending', 'approval.completed', 'approval.rejected',
-        'projects', 'hr.leave',
+        'board',
+        'board.notices',
+        'board.general',
+        'board.messages',
+        'approval',
+        'approval.draft',
+        'approval.pending',
+        'approval.completed',
+        'approval.rejected',
+        'projects',
+        'hr.leave',
       ]
       for (const mod of userModules) {
         for (const action of ['read', 'create']) {
@@ -221,13 +287,19 @@ async function applyPermissions() {
               `INSERT INTO "role_permissions" ("roleId", "permissionId")
                SELECT $1, p."id" FROM "permissions" p WHERE p."module" = $2 AND p."action" = $3
                ON CONFLICT ("roleId", "permissionId") DO NOTHING`,
-              roleId, mod, action
+              roleId,
+              mod,
+              action
             )
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 /** admin 비밀번호를 항상 올바른 값으로 리셋 */
@@ -237,10 +309,7 @@ async function ensureAdminPassword() {
     const userHash = await hash('user1234', 10)
 
     // admin 비밀번호 리셋
-    await prisma.$executeRawUnsafe(
-      `UPDATE "users" SET "passwordHash" = $1 WHERE "username" = 'admin'`,
-      adminHash
-    )
+    await prisma.$executeRawUnsafe(`UPDATE "users" SET "passwordHash" = $1 WHERE "username" = 'admin'`, adminHash)
 
     // 일반 사용자 비밀번호도 리셋
     await prisma.$executeRawUnsafe(

@@ -17,8 +17,22 @@ import {
 
 describe('formatCurrency 대규모 경계값', () => {
   // 정수 범위
-  const integers = [0, 1, -1, 100, -100, 1000, 10000, 100000, 1000000, 10000000,
-    999999999, -999999999, Number.MAX_SAFE_INTEGER, Number.MIN_SAFE_INTEGER]
+  const integers = [
+    0,
+    1,
+    -1,
+    100,
+    -100,
+    1000,
+    10000,
+    100000,
+    1000000,
+    10000000,
+    999999999,
+    -999999999,
+    Number.MAX_SAFE_INTEGER,
+    Number.MIN_SAFE_INTEGER,
+  ]
 
   for (const num of integers) {
     it(`정수 ${num}`, () => {
@@ -133,10 +147,18 @@ describe('formatDate 대규모 경계값', () => {
 
   // 엣지 케이스
   const edgeDates = [
-    null, undefined, '', 'invalid', 'not-a-date',
-    '2026-00-01', '2026-13-01', '2026-01-32',
-    '0000-01-01', '9999-12-31',
-    '2026-01-01T00:00:00Z', '2026-06-15T23:59:59.999Z',
+    null,
+    undefined,
+    '',
+    'invalid',
+    'not-a-date',
+    '2026-00-01',
+    '2026-13-01',
+    '2026-01-32',
+    '0000-01-01',
+    '9999-12-31',
+    '2026-01-01T00:00:00Z',
+    '2026-06-15T23:59:59.999Z',
   ]
   for (const d of edgeDates) {
     it(`엣지: ${JSON.stringify(d)}`, () => {
@@ -147,8 +169,11 @@ describe('formatDate 대규모 경계값', () => {
 
   // ISO 8601 다양한 포맷
   const isoFormats = [
-    '2026-03-14', '2026-03-14T09:30:00', '2026-03-14T09:30:00Z',
-    '2026-03-14T09:30:00+09:00', '2026-03-14T09:30:00.000Z',
+    '2026-03-14',
+    '2026-03-14T09:30:00',
+    '2026-03-14T09:30:00Z',
+    '2026-03-14T09:30:00+09:00',
+    '2026-03-14T09:30:00.000Z',
   ]
   for (const iso of isoFormats) {
     it(`ISO: ${iso}`, () => {
@@ -292,11 +317,7 @@ describe('getLocalDateString', () => {
 describe('formatDistanceToNow 대규모 테스트', () => {
   const now = Date.now()
   // 다양한 시간 차이
-  const offsets = [
-    -1000, -60000, -3600000, -86400000, -604800000,
-    -2592000000, -31536000000,
-    1000, 60000, 3600000,
-  ]
+  const offsets = [-1000, -60000, -3600000, -86400000, -604800000, -2592000000, -31536000000, 1000, 60000, 3600000]
 
   for (const offset of offsets) {
     it(`offset ${offset}ms`, () => {
