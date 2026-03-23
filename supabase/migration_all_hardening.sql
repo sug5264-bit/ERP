@@ -225,10 +225,14 @@ BEGIN
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl.tablename);
-    EXECUTE format(
-      'CREATE POLICY IF NOT EXISTS "service_role_all" ON %I FOR ALL TO service_role USING (true) WITH CHECK (true)',
-      tbl.tablename
-    );
+    -- CREATE POLICY는 IF NOT EXISTS를 지원하지 않으므로 EXCEPTION 처리
+    BEGIN
+      EXECUTE format(
+        'CREATE POLICY "service_role_all" ON %I FOR ALL TO service_role USING (true) WITH CHECK (true)',
+        tbl.tablename
+      );
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
   END LOOP;
 END $$;
 
