@@ -40,7 +40,12 @@ interface CompanyRow {
 type UploadField = 'logoPath' | 'sealPath' | 'bizCertPath' | 'bankCopyPath'
 
 const FILE_FIELDS: { field: UploadField; label: string; accept: string; icon: typeof Image }[] = [
-  { field: 'logoPath', label: '회사 로고', accept: 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml', icon: Building2 },
+  {
+    field: 'logoPath',
+    label: '회사 로고',
+    accept: 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml',
+    icon: Building2,
+  },
   { field: 'sealPath', label: '법인 인감', accept: 'image/png,image/jpeg,image/gif,image/webp', icon: Image },
   { field: 'bizCertPath', label: '사업자등록증', accept: 'image/png,image/jpeg,application/pdf', icon: FileText },
   { field: 'bankCopyPath', label: '통장사본', accept: 'image/png,image/jpeg,application/pdf', icon: FileText },
@@ -70,28 +75,31 @@ function FileUploadCard({
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
 
-  const handleUpload = useCallback(async (file: File) => {
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('field', field)
-      const res = await fetch(`/api/v1/admin/company/${companyId}/upload`, {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err?.error?.message || '업로드 실패')
+  const handleUpload = useCallback(
+    async (file: File) => {
+      setUploading(true)
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('field', field)
+        const res = await fetch(`/api/v1/admin/company/${companyId}/upload`, {
+          method: 'POST',
+          body: formData,
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err?.error?.message || '업로드 실패')
+        }
+        toast.success(`${label} 업로드 완료`)
+        onUploaded()
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '업로드 실패')
+      } finally {
+        setUploading(false)
       }
-      toast.success(`${label} 업로드 완료`)
-      onUploaded()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '업로드 실패')
-    } finally {
-      setUploading(false)
-    }
-  }, [companyId, field, label, onUploaded])
+    },
+    [companyId, field, label, onUploaded]
+  )
 
   const handleDelete = useCallback(async () => {
     try {
@@ -123,11 +131,7 @@ function FileUploadCard({
             {isImage && !isPdf ? (
               <div className="flex h-24 items-center justify-center overflow-hidden rounded border bg-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getFileUrl(currentPath)}
-                  alt={label}
-                  className="max-h-full max-w-full object-contain"
-                />
+                <img src={getFileUrl(currentPath)} alt={label} className="max-h-full max-w-full object-contain" />
               </div>
             ) : (
               <div className="flex h-24 items-center justify-center rounded border bg-white">
@@ -170,9 +174,7 @@ function FileUploadCard({
             className="border-muted-foreground/30 hover:border-primary hover:bg-muted/50 flex h-24 w-full flex-col items-center justify-center gap-1 rounded border-2 border-dashed transition-colors"
           >
             <Upload className="text-muted-foreground h-5 w-5" />
-            <span className="text-muted-foreground text-xs">
-              {uploading ? '업로드 중...' : '클릭하여 업로드'}
-            </span>
+            <span className="text-muted-foreground text-xs">{uploading ? '업로드 중...' : '클릭하여 업로드'}</span>
           </button>
         )}
         <input
@@ -361,11 +363,14 @@ export default function CompanyManagementPage() {
     queryClient.invalidateQueries({ queryKey: ['admin-companies'] })
     // Refresh fileTarget data
     if (fileTarget) {
-      api.get('/admin/company').then((res: unknown) => {
-        const data = (res as { data?: CompanyRow[] }).data || []
-        const updated = data.find((c) => c.id === fileTarget.id)
-        if (updated) setFileTarget(updated)
-      }).catch(() => {})
+      api
+        .get('/admin/company')
+        .then((res: unknown) => {
+          const data = (res as { data?: CompanyRow[] }).data || []
+          const updated = data.find((c) => c.id === fileTarget.id)
+          if (updated) setFileTarget(updated)
+        })
+        .catch(() => {})
     }
   }, [queryClient, fileTarget])
 

@@ -34,53 +34,56 @@ export default function AdminSettingsPage() {
 
   const fonts = fontsData?.data || []
 
-  const handleUpload = useCallback(async (file: File) => {
-    setUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/v1/admin/fonts', {
-        method: 'POST',
-        body: formData,
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err?.error?.message || '업로드 실패')
+  const handleUpload = useCallback(
+    async (file: File) => {
+      setUploading(true)
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+        const res = await fetch('/api/v1/admin/fonts', {
+          method: 'POST',
+          body: formData,
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err?.error?.message || '업로드 실패')
+        }
+        toast.success('폰트가 업로드되었습니다.')
+        queryClient.invalidateQueries({ queryKey: ['admin-fonts'] })
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '업로드 실패')
+      } finally {
+        setUploading(false)
       }
-      toast.success('폰트가 업로드되었습니다.')
-      queryClient.invalidateQueries({ queryKey: ['admin-fonts'] })
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '업로드 실패')
-    } finally {
-      setUploading(false)
-    }
-  }, [queryClient])
+    },
+    [queryClient]
+  )
 
-  const handleDelete = useCallback(async (name: string) => {
-    if (!confirm(`[${name}] 폰트를 삭제하시겠습니까?`)) return
-    try {
-      const res = await fetch(`/api/v1/admin/fonts?name=${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err?.error?.message || '삭제 실패')
+  const handleDelete = useCallback(
+    async (name: string) => {
+      if (!confirm(`[${name}] 폰트를 삭제하시겠습니까?`)) return
+      try {
+        const res = await fetch(`/api/v1/admin/fonts?name=${encodeURIComponent(name)}`, {
+          method: 'DELETE',
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err?.error?.message || '삭제 실패')
+        }
+        toast.success('폰트가 삭제되었습니다.')
+        queryClient.invalidateQueries({ queryKey: ['admin-fonts'] })
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : '삭제 실패')
       }
-      toast.success('폰트가 삭제되었습니다.')
-      queryClient.invalidateQueries({ queryKey: ['admin-fonts'] })
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : '삭제 실패')
-    }
-  }, [queryClient])
+    },
+    [queryClient]
+  )
 
   const hasPretendard = fonts.some((f) => f.name.toLowerCase().includes('pretendard'))
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="시스템 설정"
-        description="PDF 출력용 한글 폰트 관리 및 시스템 설정을 관리합니다."
-      />
+      <PageHeader title="시스템 설정" description="PDF 출력용 한글 폰트 관리 및 시스템 설정을 관리합니다." />
 
       {/* 폰트 관리 */}
       <Card>
@@ -90,11 +93,7 @@ export default function AdminSettingsPage() {
               <FileType className="h-5 w-5" />
               PDF 한글 폰트 관리
             </CardTitle>
-            <Button
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
+            <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
               <Upload className="mr-1.5 h-4 w-4" />
               {uploading ? '업로드 중...' : '폰트 업로드'}
             </Button>
@@ -124,10 +123,7 @@ export default function AdminSettingsPage() {
           {fonts.length > 0 && (
             <div className="space-y-2">
               {fonts.map((font) => (
-                <div
-                  key={font.name}
-                  className="flex items-center justify-between rounded-lg border p-3"
-                >
+                <div key={font.name} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
                     <FileType className="text-muted-foreground h-5 w-5" />
                     <div>
@@ -135,7 +131,9 @@ export default function AdminSettingsPage() {
                       <p className="text-muted-foreground text-xs">
                         {formatFileSize(font.size)}
                         {font.name.toLowerCase().includes('pretendard') && (
-                          <Badge variant="secondary" className="ml-2 text-[10px]">추천</Badge>
+                          <Badge variant="secondary" className="ml-2 text-[10px]">
+                            추천
+                          </Badge>
                         )}
                       </p>
                     </div>
@@ -154,9 +152,7 @@ export default function AdminSettingsPage() {
             </div>
           )}
 
-          {isLoading && (
-            <p className="text-muted-foreground text-center text-sm">로딩 중...</p>
-          )}
+          {isLoading && <p className="text-muted-foreground text-center text-sm">로딩 중...</p>}
         </CardContent>
       </Card>
 

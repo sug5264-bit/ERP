@@ -308,57 +308,60 @@ export default function RolesPage() {
     },
   ]
 
-  const permissionMatrix = useMemo(() => (
-    <div className="max-h-[50vh] overflow-auto rounded-md border">
-      <table className="w-full text-sm">
-        <thead className="bg-muted sticky top-0">
-          <tr>
-            <th className="px-3 py-2 text-left font-medium">모듈</th>
-            {allActions.map((action) => (
-              <th key={action} className="px-3 py-2 text-center font-medium whitespace-nowrap">
-                {ACTION_LABELS[action] || action}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {modulePermissions.map((group) => {
-            const isParent = !group.module.includes('.')
-            return (
-              <tr key={group.module} className={isParent ? 'bg-muted/30 border-t' : 'hover:bg-muted/20'}>
-                <td className="px-3 py-1.5">
-                  <button
-                    type="button"
-                    className="text-left hover:underline"
-                    onClick={() => toggleModuleAll(group.actions)}
-                  >
-                    {MODULE_LABELS[group.module] || group.module}
-                  </button>
-                </td>
-                {allActions.map((action) => {
-                  const perm = group.actions.find((a) => a.action === action)
-                  if (!perm)
+  const permissionMatrix = useMemo(
+    () => (
+      <div className="max-h-[50vh] overflow-auto rounded-md border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted sticky top-0">
+            <tr>
+              <th className="px-3 py-2 text-left font-medium">모듈</th>
+              {allActions.map((action) => (
+                <th key={action} className="px-3 py-2 text-center font-medium whitespace-nowrap">
+                  {ACTION_LABELS[action] || action}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {modulePermissions.map((group) => {
+              const isParent = !group.module.includes('.')
+              return (
+                <tr key={group.module} className={isParent ? 'bg-muted/30 border-t' : 'hover:bg-muted/20'}>
+                  <td className="px-3 py-1.5">
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      onClick={() => toggleModuleAll(group.actions)}
+                    >
+                      {MODULE_LABELS[group.module] || group.module}
+                    </button>
+                  </td>
+                  {allActions.map((action) => {
+                    const perm = group.actions.find((a) => a.action === action)
+                    if (!perm)
+                      return (
+                        <td key={action} className="px-3 py-1.5 text-center">
+                          -
+                        </td>
+                      )
                     return (
                       <td key={action} className="px-3 py-1.5 text-center">
-                        -
+                        <Checkbox
+                          checked={formPermissionIds.has(perm.permId)}
+                          onCheckedChange={() => togglePermission(perm.permId)}
+                        />
                       </td>
                     )
-                  return (
-                    <td key={action} className="px-3 py-1.5 text-center">
-                      <Checkbox
-                        checked={formPermissionIds.has(perm.permId)}
-                        onCheckedChange={() => togglePermission(perm.permId)}
-                      />
-                    </td>
-                  )
-                })}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </div>
-  ), [allActions, modulePermissions, formPermissionIds, toggleModuleAll, togglePermission])
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    ),
+    [allActions, modulePermissions, formPermissionIds, toggleModuleAll, togglePermission]
+  )
 
   return (
     <div className="space-y-6">

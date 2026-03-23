@@ -280,7 +280,9 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
 
     writeAuditLog({ action: 'DELETE', tableName: 'SalesOrder', recordId: id, ipAddress: getClientIp(request) }).catch(
-      (err) => { logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) }) }
+      (err) => {
+        logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) })
+      }
     )
 
     return successResponse({ message: '발주가 삭제되었습니다.' })

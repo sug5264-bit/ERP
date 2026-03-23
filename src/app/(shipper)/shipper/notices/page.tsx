@@ -33,31 +33,42 @@ export default function ShipperNoticesPage() {
 
         {isLoading ? (
           <div className="space-y-2">
-            {[1,2,3].map(i => <Card key={i}><CardContent className="p-4"><div className="skeleton-shimmer h-6 w-48 mb-2" /><div className="skeleton-shimmer h-4 w-32" /></CardContent></Card>)}
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <div className="skeleton-shimmer mb-2 h-6 w-48" />
+                  <div className="skeleton-shimmer h-4 w-32" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : notices.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="bg-muted rounded-full p-4"><Bell className="text-muted-foreground h-8 w-8" /></div>
+              <div className="bg-muted rounded-full p-4">
+                <Bell className="text-muted-foreground h-8 w-8" />
+              </div>
               <p className="text-muted-foreground mt-4 text-sm">공지사항이 없습니다</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-2">
-            {notices.map(n => (
+            {notices.map((n) => (
               <Card key={n.id} className="hover:bg-muted/30 cursor-pointer transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        {n.isPinned && <Badge variant="destructive" className="text-[10px]">필독</Badge>}
+                        {n.isPinned && (
+                          <Badge variant="destructive" className="text-[10px]">
+                            필독
+                          </Badge>
+                        )}
                         <h3 className="truncate font-medium">{n.title}</h3>
                       </div>
                       <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{n.content}</p>
                     </div>
-                    <div className="text-muted-foreground shrink-0 text-xs">
-                      {formatDate(n.createdAt)}
-                    </div>
+                    <div className="text-muted-foreground shrink-0 text-xs">{formatDate(n.createdAt)}</div>
                   </div>
                 </CardContent>
               </Card>

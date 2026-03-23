@@ -136,7 +136,7 @@ describe('금액 계산 정합성', () => {
   for (let basePrice = 10000; basePrice <= 100000; basePrice += 10000) {
     for (let discountRate = 0; discountRate <= 50; discountRate += 5) {
       it(`기본가 ${basePrice} × 할인 ${discountRate}%`, () => {
-        const discount = Math.round(basePrice * discountRate / 100)
+        const discount = Math.round((basePrice * discountRate) / 100)
         const finalPrice = basePrice - discount
         expect(finalPrice).toBeGreaterThanOrEqual(0)
         expect(finalPrice).toBeLessThanOrEqual(basePrice)
@@ -328,7 +328,7 @@ describe('세금계산서 금액 검증', () => {
         let totalSupply = 0
         let totalTax = 0
         for (let i = 0; i < itemCount; i++) {
-          const supply = Math.round(baseAmount * (i + 1) / itemCount)
+          const supply = Math.round((baseAmount * (i + 1)) / itemCount)
           const tax = Math.round(supply * 0.1)
           totalSupply += supply
           totalTax += tax

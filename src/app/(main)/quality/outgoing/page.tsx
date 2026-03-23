@@ -108,7 +108,7 @@ export default function OutgoingInspectionPage() {
     { header: '품목명', accessor: 'itemName' },
     { header: '시료수', accessor: (r) => Number(r.sampleCount) },
     { header: '불량수', accessor: (r) => Number(r.defectCount) },
-    { header: '불량률', accessor: (r) => r.defectRate != null ? `${r.defectRate.toFixed(1)}%` : '-' },
+    { header: '불량률', accessor: (r) => (r.defectRate != null ? `${r.defectRate.toFixed(1)}%` : '-') },
     { header: '판정', accessor: (r) => INSPECTION_JUDGEMENT_LABELS[r.judgement] || r.judgement },
   ]
 

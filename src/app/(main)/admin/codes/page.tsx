@@ -77,9 +77,7 @@ export default function CodesPage() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-codes', selectedGroup],
     queryFn: () =>
-      api.get(
-        `/admin/codes${selectedGroup && selectedGroup !== 'all' ? `?groupCode=${selectedGroup}` : ''}`
-      ),
+      api.get(`/admin/codes${selectedGroup && selectedGroup !== 'all' ? `?groupCode=${selectedGroup}` : ''}`),
   })
 
   const createMutation = useMutation({

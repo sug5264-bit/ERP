@@ -24,20 +24,21 @@ export async function GET(request: NextRequest) {
     }
 
     // 모든 독립 쿼리를 병렬 실행
-    const [onlineOrders, offlineOrders, monthlyAggs, topItemAggs, onlineRevenue, offlineRevenue, revenueMonthlyAggs] = await Promise.all([
-      // Channel summary (수주 기반)
-      prisma.salesOrder.aggregate({
-        where: { ...where, salesChannel: 'ONLINE' },
-        _count: true,
-        _sum: { totalAmount: true, totalSupply: true, totalTax: true },
-      }),
-      prisma.salesOrder.aggregate({
-        where: { ...where, salesChannel: 'OFFLINE' },
-        _count: true,
-        _sum: { totalAmount: true, totalSupply: true, totalTax: true },
-      }),
-      // Monthly breakdown: DB-level aggregation (unbounded row fetch 제거)
-      prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
+    const [onlineOrders, offlineOrders, monthlyAggs, topItemAggs, onlineRevenue, offlineRevenue, revenueMonthlyAggs] =
+      await Promise.all([
+        // Channel summary (수주 기반)
+        prisma.salesOrder.aggregate({
+          where: { ...where, salesChannel: 'ONLINE' },
+          _count: true,
+          _sum: { totalAmount: true, totalSupply: true, totalTax: true },
+        }),
+        prisma.salesOrder.aggregate({
+          where: { ...where, salesChannel: 'OFFLINE' },
+          _count: true,
+          _sum: { totalAmount: true, totalSupply: true, totalTax: true },
+        }),
+        // Monthly breakdown: DB-level aggregation (unbounded row fetch 제거)
+        prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
         SELECT to_char("orderDate", 'YYYY-MM') as month,
                "salesChannel" as channel,
                SUM("totalAmount")::float as total
@@ -47,27 +48,27 @@ export async function GET(request: NextRequest) {
         GROUP BY to_char("orderDate", 'YYYY-MM'), "salesChannel"
         ORDER BY month
       `,
-      // Top items: DB에서 집계 (unbounded findMany 제거)
-      prisma.salesOrderDetail.groupBy({
-        by: ['itemId'],
-        where: { salesOrder: { ...where } },
-        _sum: { totalAmount: true, quantity: true },
-        orderBy: { _sum: { totalAmount: 'desc' } },
-        take: 10,
-      }),
-      // 매출수기등록 (OnlineSalesRevenue) 채널별 합산
-      prisma.onlineSalesRevenue.aggregate({
-        where: { ...revenueWhere, salesType: 'ONLINE' },
-        _count: true,
-        _sum: { totalSales: true, totalFee: true, netRevenue: true },
-      }),
-      prisma.onlineSalesRevenue.aggregate({
-        where: { ...revenueWhere, salesType: 'OFFLINE' },
-        _count: true,
-        _sum: { totalSales: true, totalFee: true, netRevenue: true },
-      }),
-      // 매출수기등록 월별 집계
-      prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
+        // Top items: DB에서 집계 (unbounded findMany 제거)
+        prisma.salesOrderDetail.groupBy({
+          by: ['itemId'],
+          where: { salesOrder: { ...where } },
+          _sum: { totalAmount: true, quantity: true },
+          orderBy: { _sum: { totalAmount: 'desc' } },
+          take: 10,
+        }),
+        // 매출수기등록 (OnlineSalesRevenue) 채널별 합산
+        prisma.onlineSalesRevenue.aggregate({
+          where: { ...revenueWhere, salesType: 'ONLINE' },
+          _count: true,
+          _sum: { totalSales: true, totalFee: true, netRevenue: true },
+        }),
+        prisma.onlineSalesRevenue.aggregate({
+          where: { ...revenueWhere, salesType: 'OFFLINE' },
+          _count: true,
+          _sum: { totalSales: true, totalFee: true, netRevenue: true },
+        }),
+        // 매출수기등록 월별 집계
+        prisma.$queryRaw<{ month: string; channel: string; total: number }[]>`
         SELECT to_char("revenueDate", 'YYYY-MM') as month,
                "salesType" as channel,
                SUM("totalSales")::float as total
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
         GROUP BY to_char("revenueDate", 'YYYY-MM'), "salesType"
         ORDER BY month
       `,
-    ])
+      ])
 
     // Monthly breakdown 처리 (수주 + 매출수기등록 합산)
     const monthlyMap = new Map<string, { online: number; offline: number; total: number }>()
@@ -154,8 +155,18 @@ export async function GET(request: NextRequest) {
           totalAmount: onlineOrderAmount + offlineOrderAmount + onlineRevenueAmount + offlineRevenueAmount,
         },
         revenue: {
-          online: { count: onlineRevenue._count, totalSales: onlineRevenueAmount, totalFee: Number(onlineRevenue._sum.totalFee || 0), netRevenue: Number(onlineRevenue._sum.netRevenue || 0) },
-          offline: { count: offlineRevenue._count, totalSales: offlineRevenueAmount, totalFee: Number(offlineRevenue._sum.totalFee || 0), netRevenue: Number(offlineRevenue._sum.netRevenue || 0) },
+          online: {
+            count: onlineRevenue._count,
+            totalSales: onlineRevenueAmount,
+            totalFee: Number(onlineRevenue._sum.totalFee || 0),
+            netRevenue: Number(onlineRevenue._sum.netRevenue || 0),
+          },
+          offline: {
+            count: offlineRevenue._count,
+            totalSales: offlineRevenueAmount,
+            totalFee: Number(offlineRevenue._sum.totalFee || 0),
+            netRevenue: Number(offlineRevenue._sum.netRevenue || 0),
+          },
         },
         monthly,
         topItems,

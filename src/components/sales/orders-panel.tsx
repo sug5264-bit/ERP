@@ -444,7 +444,9 @@ export function OrdersPanel() {
                         if (deliveryStatus) {
                           const statusInfo = DELIVERY_STATUS_MAP[deliveryStatus] || DELIVERY_STATUS_MAP.PREPARING
                           return (
-                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${statusInfo.color}`}
+                            >
                               {statusInfo.label}
                             </span>
                           )

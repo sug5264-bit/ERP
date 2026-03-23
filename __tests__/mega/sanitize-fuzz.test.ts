@@ -41,7 +41,7 @@ const SQL_INJECTION_PAYLOADS = [
   "' OR '1'='1",
   "'; DROP TABLE users;--",
   "' UNION SELECT * FROM users--",
-  "1; DELETE FROM attachments--",
+  '1; DELETE FROM attachments--',
   "admin'--",
   "' OR 1=1--",
   "'; EXEC xp_cmdshell('dir');--",
@@ -51,7 +51,7 @@ const SQL_INJECTION_PAYLOADS = [
   "1 WAITFOR DELAY '0:0:5'--",
   "'; SELECT CASE WHEN (1=1) THEN 1 ELSE 0 END--",
   "BENCHMARK(5000000,SHA1('test'))",
-  "1 AND (SELECT * FROM (SELECT(SLEEP(5))))",
+  '1 AND (SELECT * FROM (SELECT(SLEEP(5))))',
   "admin' AND '1'='1",
 ]
 
@@ -81,7 +81,7 @@ const UNICODE_ATTACKS = [
   '\u200B\u200C\u200D',
   '＜script＞alert(1)＜/script＞', // fullwidth
   '\u0001\u0002\u0003\u0004\u0005',
-  String.fromCharCode(0x7F), // DEL
+  String.fromCharCode(0x7f), // DEL
   '\uD800', // lone surrogate
   '가나다라마바사아자차카타파하',
   '🎉🔥💯🚀',
@@ -176,13 +176,17 @@ describe('escapeHtml 대규모 퍼즈 테스트', () => {
 describe('sanitizeString 대규모 퍼즈 테스트', () => {
   // Null byte 제거 확인
   const nullByteVariants = [
-    '\0', '\x00', '\u0000',
-    'hello\0world', '\0\0\0', 'test\x00',
+    '\0',
+    '\x00',
+    '\u0000',
+    'hello\0world',
+    '\0\0\0',
+    'test\x00',
     ...Array.from({ length: 100 }, (_, i) => String.fromCharCode(i)),
   ]
 
   for (const input of nullByteVariants) {
-    it(`null/제어문자 제거: charCode ${[...input].map(c => c.charCodeAt(0)).join(',')}`, () => {
+    it(`null/제어문자 제거: charCode ${[...input].map((c) => c.charCodeAt(0)).join(',')}`, () => {
       const result = sanitizeString(input)
       expect(result).not.toContain('\0')
       expect(result).not.toContain('\x7F')
@@ -295,9 +299,30 @@ describe('sanitizeFileName 대규모 퍼즈 테스트', () => {
   }
 
   // OS 예약 파일명
-  const reservedNames = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5',
-    'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5',
-    'LPT6', 'LPT7', 'LPT8', 'LPT9']
+  const reservedNames = [
+    'CON',
+    'PRN',
+    'AUX',
+    'NUL',
+    'COM1',
+    'COM2',
+    'COM3',
+    'COM4',
+    'COM5',
+    'COM6',
+    'COM7',
+    'COM8',
+    'COM9',
+    'LPT1',
+    'LPT2',
+    'LPT3',
+    'LPT4',
+    'LPT5',
+    'LPT6',
+    'LPT7',
+    'LPT8',
+    'LPT9',
+  ]
 
   for (const name of reservedNames) {
     it(`예약명 차단: ${name}`, () => {
@@ -364,8 +389,8 @@ describe('sanitizeFileName 대규모 퍼즈 테스트', () => {
     })
   }
   it('DEL (0x7F) 제거', () => {
-    const result = sanitizeFileName(`test${String.fromCharCode(0x7F)}file.txt`)
-    expect(result).not.toContain(String.fromCharCode(0x7F))
+    const result = sanitizeFileName(`test${String.fromCharCode(0x7f)}file.txt`)
+    expect(result).not.toContain(String.fromCharCode(0x7f))
   })
 })
 

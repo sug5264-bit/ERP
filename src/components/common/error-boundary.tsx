@@ -29,11 +29,11 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-status-danger-muted flex h-16 w-16 items-center justify-center rounded-full mb-4">
-            <AlertTriangle className="h-8 w-8 text-status-danger" />
+          <div className="bg-status-danger-muted mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+            <AlertTriangle className="text-status-danger h-8 w-8" />
           </div>
           <h3 className="text-lg font-medium">오류가 발생했습니다</h3>
-          <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+          <p className="text-muted-foreground mt-1 max-w-sm text-sm">
             {this.state.error?.message || '페이지를 불러오는 중 문제가 발생했습니다.'}
           </p>
           <Button

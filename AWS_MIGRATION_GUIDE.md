@@ -9,14 +9,14 @@
 
 시작하기 전에 아래 항목을 준비해주세요:
 
-| 항목 | 설명 | 비용 |
-|------|------|------|
-| 새 GitHub 계정 | https://github.com 에서 회원가입 | 무료 |
-| AWS 계정 | https://aws.amazon.com 에서 회원가입 | 프리 티어 12개월 무료 |
-| 신용카드 | AWS 가입 시 필요 (프리 티어 내 무료) | - |
-| Git 설치 | 로컬 PC에 Git 설치 | 무료 |
-| Node.js 20 | https://nodejs.org 에서 LTS 버전 설치 | 무료 |
-| PostgreSQL 클라이언트 | DB 마이그레이션 시 필요 (선택) | 무료 |
+| 항목                  | 설명                                  | 비용                  |
+| --------------------- | ------------------------------------- | --------------------- |
+| 새 GitHub 계정        | https://github.com 에서 회원가입      | 무료                  |
+| AWS 계정              | https://aws.amazon.com 에서 회원가입  | 프리 티어 12개월 무료 |
+| 신용카드              | AWS 가입 시 필요 (프리 티어 내 무료)  | -                     |
+| Git 설치              | 로컬 PC에 Git 설치                    | 무료                  |
+| Node.js 20            | https://nodejs.org 에서 LTS 버전 설치 | 무료                  |
+| PostgreSQL 클라이언트 | DB 마이그레이션 시 필요 (선택)        | 무료                  |
 
 ---
 
@@ -86,6 +86,7 @@ git remote remove old-origin
 ### 문제가 발생했을 때
 
 **"Authentication failed" 오류:**
+
 ```bash
 # GitHub에서 2021년부터 비밀번호 대신 Personal Access Token이 필요합니다.
 # 1. GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
@@ -95,6 +96,7 @@ git remote remove old-origin
 ```
 
 **"Repository not empty" 오류:**
+
 ```bash
 # Step 1-2에서 README 등을 체크한 경우 발생합니다.
 # 저장소를 삭제하고 다시 만들거나, 아래 명령어로 강제 Push:
@@ -122,6 +124,7 @@ git push -u origin --all --force
 7. 지원 플랜: **"기본 지원 - 무료"** 선택
 
 > AWS 프리 티어 (12개월 무료):
+>
 > - RDS: db.t3.micro 750시간/월
 > - Amplify: 빌드 1000분/월, 호스팅 15GB/월
 
@@ -148,6 +151,7 @@ git push -u origin --all --force
 아래 항목들을 순서대로 선택합니다:
 
 **엔진 옵션:**
+
 ```
 데이터베이스 생성 방식: "표준 생성" 선택
 엔진 유형:            "PostgreSQL" 선택
@@ -155,6 +159,7 @@ git push -u origin --all --force
 ```
 
 **템플릿:**
+
 ```
 "프리 티어" 선택 (개발/테스트용, 무료)
 ```
@@ -162,6 +167,7 @@ git push -u origin --all --force
 > 프로덕션 환경에서는 "프로덕션"을 선택하세요 (유료).
 
 **설정:**
+
 ```
 DB 인스턴스 식별자:  erp-database
 마스터 사용자 이름:   erp_admin
@@ -172,11 +178,13 @@ DB 인스턴스 식별자:  erp-database
 > 비밀번호를 꼭 메모해두세요! 나중에 다시 확인할 수 없습니다.
 
 **인스턴스 구성:**
+
 ```
 DB 인스턴스 클래스:  db.t3.micro (프리 티어)
 ```
 
 **스토리지:**
+
 ```
 스토리지 유형:       범용 SSD (gp3)
 할당된 스토리지:     20 GiB (프리 티어 최대)
@@ -184,6 +192,7 @@ DB 인스턴스 클래스:  db.t3.micro (프리 티어)
 ```
 
 **연결:**
+
 ```
 컴퓨팅 리소스:               "EC2 컴퓨팅 리소스에 연결 안 함" 선택
 네트워크 유형:               IPv4
@@ -196,11 +205,13 @@ VPC 보안 그룹:               "새로 생성" 선택
 ```
 
 **데이터베이스 인증:**
+
 ```
 "암호 인증" 선택
 ```
 
 **추가 구성 (하단 펼치기):**
+
 ```
 초기 데이터베이스 이름:  erp_database    ← 반드시 입력!
 자동 백업:              활성화 (기본값)
@@ -365,17 +376,18 @@ pg_restore --host=[RDS_엔드포인트] --port=5432 --username=erp_admin --dbnam
 2. **"변수 관리"** 클릭
 3. 아래 5개 변수를 하나씩 추가:
 
-| 변수 이름 | 값 | 설명 |
-|-----------|-----|------|
-| `DATABASE_URL` | `postgresql://erp_admin:[비밀번호]@[RDS엔드포인트]:5432/erp_database?sslmode=require` | RDS 연결 URL |
-| `DIRECT_URL` | `postgresql://erp_admin:[비밀번호]@[RDS엔드포인트]:5432/erp_database?sslmode=require` | RDS 직접 연결 URL (위와 동일) |
-| `AUTH_SECRET` | (아래 참고) | NextAuth 암호화 키 |
-| `AUTH_URL` | `https://[앱ID].amplifyapp.com` | 앱 URL |
-| `NEXTAUTH_URL` | `https://[앱ID].amplifyapp.com` | 앱 URL (위와 동일) |
+| 변수 이름      | 값                                                                                    | 설명                          |
+| -------------- | ------------------------------------------------------------------------------------- | ----------------------------- |
+| `DATABASE_URL` | `postgresql://erp_admin:[비밀번호]@[RDS엔드포인트]:5432/erp_database?sslmode=require` | RDS 연결 URL                  |
+| `DIRECT_URL`   | `postgresql://erp_admin:[비밀번호]@[RDS엔드포인트]:5432/erp_database?sslmode=require` | RDS 직접 연결 URL (위와 동일) |
+| `AUTH_SECRET`  | (아래 참고)                                                                           | NextAuth 암호화 키            |
+| `AUTH_URL`     | `https://[앱ID].amplifyapp.com`                                                       | 앱 URL                        |
+| `NEXTAUTH_URL` | `https://[앱ID].amplifyapp.com`                                                       | 앱 URL (위와 동일)            |
 
 **AUTH_SECRET 생성 방법:**
 
 터미널에서 아래 명령어를 실행하면 랜덤 키가 생성됩니다:
+
 ```bash
 openssl rand -base64 32
 # 출력 예시: K7gN3xP2mQ8vR5tY1wB4nJ6hC9eF0dA3sL8kU2iM7oX=
@@ -385,6 +397,7 @@ openssl rand -base64 32
 > `openssl`이 없으면 아무 긴 랜덤 문자열을 사용해도 됩니다 (32자 이상 권장).
 
 **AUTH_URL / NEXTAUTH_URL 값:**
+
 - 처음에는 Amplify가 제공하는 기본 URL을 사용합니다
 - 앱 배포 후 Amplify 콘솔에서 확인 가능 (예: `https://main.d1abc2def3.amplifyapp.com`)
 - 처음에 임시값을 넣고, 첫 배포 후 실제 URL로 수정해도 됩니다
@@ -418,17 +431,21 @@ openssl rand -base64 32
 ### 빌드 실패 시 확인사항
 
 **"Prisma Client 에러":**
+
 - 환경 변수 `DATABASE_URL`이 올바른지 확인
 - RDS 보안 그룹에서 5432 포트가 열려있는지 확인
 
 **"Module not found" 에러:**
+
 - Amplify 빌드 로그에서 어떤 모듈이 없는지 확인
 - `package.json`에 해당 패키지가 있는지 확인
 
 **"AUTH_SECRET" 에러:**
+
 - 환경 변수에 `AUTH_SECRET`이 설정되어 있는지 확인
 
 **빌드 로그 확인 방법:**
+
 1. Amplify 콘솔 → 앱 선택 → 배포 항목 클릭
 2. "빌드" 단계 클릭 → 하단에 로그가 표시됨
 
@@ -465,6 +482,7 @@ git push origin main
 ## GitHub Actions CI도 동시에 실행
 
 `.github/workflows/ci.yml` 파일 덕분에:
+
 - Pull Request를 만들면 자동으로 **lint + build 테스트**가 실행됩니다
 - main 브랜치에 Push하면 CI 테스트 + Amplify 배포가 동시에 진행됩니다
 
@@ -477,13 +495,13 @@ GitHub Actions가 정상 작동하려면 GitHub에도 환경 변수(Secrets)를 
 3. **"New repository secret"** 클릭
 4. 아래 값들을 하나씩 추가:
 
-| Name | Value |
-|------|-------|
-| `DATABASE_URL` | RDS 연결 URL |
-| `DIRECT_URL` | RDS 연결 URL |
-| `AUTH_SECRET` | 생성한 시크릿 키 |
-| `AUTH_URL` | Amplify 앱 URL |
-| `NEXTAUTH_URL` | Amplify 앱 URL |
+| Name           | Value            |
+| -------------- | ---------------- |
+| `DATABASE_URL` | RDS 연결 URL     |
+| `DIRECT_URL`   | RDS 연결 URL     |
+| `AUTH_SECRET`  | 생성한 시크릿 키 |
+| `AUTH_URL`     | Amplify 앱 URL   |
+| `NEXTAUTH_URL` | Amplify 앱 URL   |
 
 ---
 
@@ -545,6 +563,7 @@ Amplify에서 제공하는 CNAME 값을 DNS에 등록합니다.
 **Route 53 사용 시:** Amplify가 자동으로 설정해줍니다.
 
 **외부 DNS (가비아, Cloudflare 등) 사용 시:**
+
 ```
 타입:  CNAME
 이름:  erp (또는 원하는 서브도메인)
@@ -599,12 +618,12 @@ PART 7: (선택) 커스텀 도메인
 
 ## 프리 티어 (12개월 무료)
 
-| 서비스 | 프리 티어 한도 | 초과 시 예상 비용 |
-|--------|--------------|-----------------|
-| RDS (db.t3.micro) | 750시간/월 | ~$15/월 |
-| RDS 스토리지 | 20GB | $0.131/GB/월 |
-| Amplify 빌드 | 1,000분/월 | $0.01/분 |
-| Amplify 호스팅 | 15GB 전송/월 | $0.15/GB |
+| 서비스            | 프리 티어 한도 | 초과 시 예상 비용 |
+| ----------------- | -------------- | ----------------- |
+| RDS (db.t3.micro) | 750시간/월     | ~$15/월           |
+| RDS 스토리지      | 20GB           | $0.131/GB/월      |
+| Amplify 빌드      | 1,000분/월     | $0.01/분          |
+| Amplify 호스팅    | 15GB 전송/월   | $0.15/GB          |
 
 > 프리 티어 12개월이 지나면 RDS 비용이 발생합니다.
 > 사용하지 않을 때는 RDS 인스턴스를 "중지"하면 비용을 절약할 수 있습니다.
@@ -614,15 +633,15 @@ PART 7: (선택) 커스텀 도메인
 
 # 참고: 주요 변경 사항 요약
 
-| 항목 | 이전 (Vercel) | 이후 (AWS) |
-|------|-------------|-----------|
-| 호스팅 | Vercel | AWS Amplify |
-| 리전 | icn1 (서울) | ap-northeast-2 (서울) |
-| DB | Neon PostgreSQL | AWS RDS PostgreSQL |
-| CI/CD | Vercel Git 연동 | Amplify Git 연동 + GitHub Actions |
-| SSL | Vercel 자동 | Amplify 자동 |
-| CDN | Vercel Edge | CloudFront (Amplify 내장) |
-| 비용 | Vercel 요금 | AWS 프리 티어 (12개월 무료) |
+| 항목   | 이전 (Vercel)   | 이후 (AWS)                        |
+| ------ | --------------- | --------------------------------- |
+| 호스팅 | Vercel          | AWS Amplify                       |
+| 리전   | icn1 (서울)     | ap-northeast-2 (서울)             |
+| DB     | Neon PostgreSQL | AWS RDS PostgreSQL                |
+| CI/CD  | Vercel Git 연동 | Amplify Git 연동 + GitHub Actions |
+| SSL    | Vercel 자동     | Amplify 자동                      |
+| CDN    | Vercel Edge     | CloudFront (Amplify 내장)         |
+| 비용   | Vercel 요금     | AWS 프리 티어 (12개월 무료)       |
 
 ---
 

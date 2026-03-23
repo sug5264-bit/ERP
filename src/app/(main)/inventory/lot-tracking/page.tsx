@@ -51,7 +51,7 @@ const columns: ColumnDef<LotMovement>[] = [
   {
     accessorKey: 'quantity',
     header: '수량',
-    cell: ({ row }) => <span className="tabular-nums font-medium">{row.original.quantity?.toLocaleString()}</span>,
+    cell: ({ row }) => <span className="font-medium tabular-nums">{row.original.quantity?.toLocaleString()}</span>,
   },
   {
     accessorKey: 'fromWarehouse',
@@ -87,7 +87,12 @@ export default function LotTrackingPage() {
   ]
 
   const handleExport = (type: 'excel' | 'pdf') => {
-    const cfg = { fileName: `LOT추적_${searchLotNo}`, title: `LOT추적 이력 (${searchLotNo})`, columns: exportColumns, data: items }
+    const cfg = {
+      fileName: `LOT추적_${searchLotNo}`,
+      title: `LOT추적 이력 (${searchLotNo})`,
+      columns: exportColumns,
+      data: items,
+    }
     if (type === 'excel') exportToExcel(cfg)
     else exportToPDF(cfg)
     toast.success(`${type === 'excel' ? 'Excel' : 'PDF'} 파일이 다운로드되었습니다.`)
@@ -107,10 +112,7 @@ export default function LotTrackingPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader
-        title="LOT추적"
-        description="제품의 LOT 번호를 기반으로 입출고 이력을 추적합니다"
-      />
+      <PageHeader title="LOT추적" description="제품의 LOT 번호를 기반으로 입출고 이력을 추적합니다" />
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">

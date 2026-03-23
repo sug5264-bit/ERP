@@ -13,11 +13,7 @@ import {
   createStockMovementSchema,
   createPartnerSchema,
 } from '@/lib/validations/inventory'
-import {
-  createVoucherSchema,
-  createTaxInvoiceSchema,
-  createBudgetSchema,
-} from '@/lib/validations/accounting'
+import { createVoucherSchema, createTaxInvoiceSchema, createBudgetSchema } from '@/lib/validations/accounting'
 import {
   createEmployeeSchema,
   createDepartmentSchema,

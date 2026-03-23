@@ -122,7 +122,8 @@ export default function PayrollPage() {
       let companyInfo: PayrollSlipPDFData['company'] = { name: COMPANY_NAME }
       try {
         const companyRes = (await api.get('/admin/company')) as { data: Record<string, string>[] }
-        const defaultCompany = companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
+        const defaultCompany =
+          companyRes.data?.find((c: Record<string, unknown>) => c.isDefault) || companyRes.data?.[0]
         if (defaultCompany) {
           companyInfo = {
             name: defaultCompany.companyName || companyInfo.name,
@@ -132,7 +133,9 @@ export default function PayrollPage() {
             bizNo: defaultCompany.bizNo,
           }
         }
-      } catch { /* use default */ }
+      } catch {
+        /* use default */
+      }
 
       const pdfData: PayrollSlipPDFData = {
         payPeriod: String(selectedPayroll?.payPeriod || ''),

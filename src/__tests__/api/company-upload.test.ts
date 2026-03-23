@@ -17,7 +17,9 @@ const { mockAuth, mockPrisma, mockUploadFile, mockDownloadFile, mockDeleteFile }
       update: vi.fn(),
     },
   },
-  mockUploadFile: vi.fn().mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/company/file.png'),
+  mockUploadFile: vi
+    .fn()
+    .mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/company/file.png'),
   mockDownloadFile: vi.fn(),
   mockDeleteFile: vi.fn().mockResolvedValue(undefined),
 }))

@@ -140,9 +140,7 @@ describe('POST /api/v1/attachments', () => {
     const ext = fileName.includes('.') ? (fileName.split('.').pop() || '').toLowerCase() : ''
     const magicBytes = MAGIC_BYTE_MAP[ext]
     // 매직 바이트가 있는 확장자면 올바른 헤더 포함
-    const content = magicBytes
-      ? new Blob([magicBytes, new TextEncoder().encode(fileContent)])
-      : new Blob([fileContent])
+    const content = magicBytes ? new Blob([magicBytes, new TextEncoder().encode(fileContent)]) : new Blob([fileContent])
     const file = new File([content], fileName, { type: 'application/octet-stream' })
     if (fileSize) {
       Object.defineProperty(file, 'size', { value: fileSize })
@@ -215,7 +213,9 @@ describe('POST /api/v1/attachments', () => {
 
   it('정상 업로드: PDF', async () => {
     setAuthenticated()
-    mockUploadFile.mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.pdf')
+    mockUploadFile.mockResolvedValue(
+      'https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.pdf'
+    )
     mockPrisma.attachment.create.mockResolvedValue({
       id: 'att-new',
       fileName: 'test.pdf',
@@ -233,7 +233,9 @@ describe('POST /api/v1/attachments', () => {
   it('정상 업로드: 허용된 확장자 (xlsx, png, jpg, csv)', async () => {
     setAuthenticated()
     for (const ext of ['xlsx', 'png', 'jpg', 'csv']) {
-      mockUploadFile.mockResolvedValue(`https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.${ext}`)
+      mockUploadFile.mockResolvedValue(
+        `https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.${ext}`
+      )
       mockPrisma.attachment.create.mockResolvedValue({ id: `att-${ext}`, fileName: `file.${ext}` })
       const resp = await UploadAttachment(createUploadReq('content', `file.${ext}`, 'Item', 'item-1'))
       expect(resp.status).toBe(200)
@@ -244,7 +246,9 @@ describe('POST /api/v1/attachments', () => {
     setAuthenticated()
     const tables = ['SalesOrder', 'Quotation', 'Delivery', 'Partner', 'Item', 'Voucher', 'Employee', 'Project']
     for (const table of tables) {
-      mockUploadFile.mockResolvedValue('https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.pdf')
+      mockUploadFile.mockResolvedValue(
+        'https://project.supabase.co/storage/v1/object/public/uploads/attachments/uuid.pdf'
+      )
       mockPrisma.attachment.create.mockResolvedValue({ id: 'att-1', fileName: 'test.pdf' })
       const resp = await UploadAttachment(createUploadReq('data', 'doc.pdf', table, 'id-1'))
       expect(resp.status).toBe(200)

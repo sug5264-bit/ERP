@@ -135,14 +135,32 @@ export default function TaxInvoicePage() {
 
   const handleInvoicePDF = async (inv: TaxInvoiceRow) => {
     try {
-      const res = await api.get(`/accounting/tax-invoice/${inv.id}`) as Record<string, unknown>
+      const res = (await api.get(`/accounting/tax-invoice/${inv.id}`)) as Record<string, unknown>
       const detail = (res.data || res) as Record<string, unknown>
-      const invoiceItems = (detail.items || []) as { itemDate: string; itemName: string; specification?: string; qty: number; unitPrice: number; supplyAmount: number; taxAmount: number }[]
+      const invoiceItems = (detail.items || []) as {
+        itemDate: string
+        itemName: string
+        specification?: string
+        qty: number
+        unitPrice: number
+        supplyAmount: number
+        taxAmount: number
+      }[]
       const pdfData: TaxInvoicePDFData = {
         invoiceNo: inv.invoiceNo,
         invoiceDate: formatDate(inv.issueDate),
-        supplier: { name: inv.supplierName, bizNo: inv.supplierBizNo, ceo: (detail.supplierCeo as string) || '', address: (detail.supplierAddress as string) || '' },
-        buyer: { name: inv.buyerName, bizNo: inv.buyerBizNo, ceo: (detail.buyerCeo as string) || '', address: (detail.buyerAddress as string) || '' },
+        supplier: {
+          name: inv.supplierName,
+          bizNo: inv.supplierBizNo,
+          ceo: (detail.supplierCeo as string) || '',
+          address: (detail.supplierAddress as string) || '',
+        },
+        buyer: {
+          name: inv.buyerName,
+          bizNo: inv.buyerBizNo,
+          ceo: (detail.buyerCeo as string) || '',
+          address: (detail.buyerAddress as string) || '',
+        },
         items: invoiceItems.map((item) => {
           const d = item.itemDate ? new Date(item.itemDate) : null
           const isValidDate = d && !isNaN(d.getTime())

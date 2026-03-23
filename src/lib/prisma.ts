@@ -97,9 +97,7 @@ export async function withRetry<T>(fn: () => Promise<T>, maxRetries = 2): Promis
       return await fn()
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      const isTransient =
-        message.includes('Circuit breaker') ||
-        message.includes('Unable to establish connection')
+      const isTransient = message.includes('Circuit breaker') || message.includes('Unable to establish connection')
 
       if (!isTransient || attempt > maxRetries) {
         throw error

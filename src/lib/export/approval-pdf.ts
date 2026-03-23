@@ -80,7 +80,18 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   const stampW = 22
   const stampHeaderH = 7
   const stampBodyH = 18
-  const steps = doc.steps.length > 0 ? doc.steps : [{ stepOrder: 1, approver: { nameKo: '', position: null, department: null }, status: 'PENDING', comment: null, actionDate: null }]
+  const steps =
+    doc.steps.length > 0
+      ? doc.steps
+      : [
+          {
+            stepOrder: 1,
+            approver: { nameKo: '', position: null, department: null },
+            status: 'PENDING',
+            comment: null,
+            actionDate: null,
+          },
+        ]
   const stampLabels = ['기 안', ...steps.map((s) => s.approver.position?.name || `결재${s.stepOrder}`)]
   const stampTotalW = stampW * stampLabels.length
   const stampStartX = pageWidth - M - stampTotalW
@@ -119,7 +130,9 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
         pdf.text(statusText, sx + stampW / 2, y + stampHeaderH + 12, { align: 'center' })
         if (step.actionDate) {
           pdf.setFontSize(5)
-          pdf.text(new Date(step.actionDate).toLocaleDateString('ko-KR'), sx + stampW / 2, y + stampHeaderH + 15.5, { align: 'center' })
+          pdf.text(new Date(step.actionDate).toLocaleDateString('ko-KR'), sx + stampW / 2, y + stampHeaderH + 15.5, {
+            align: 'center',
+          })
         }
         pdf.setTextColor(0, 0, 0)
       }
@@ -267,16 +280,31 @@ export async function exportApprovalPdf(doc: ApprovalDocExport) {
   // 추가 정보
   if (content && !content.body) {
     const extraRows: string[][] = []
-    if (content.amount && doc.docType !== 'EXPENDITURE' && doc.docType !== 'BUSINESS_TRIP' && doc.docType !== 'PURCHASE') {
+    if (
+      content.amount &&
+      doc.docType !== 'EXPENDITURE' &&
+      doc.docType !== 'BUSINESS_TRIP' &&
+      doc.docType !== 'PURCHASE'
+    ) {
       extraRows.push(['금    액', String(content.amount)])
     }
-    if (content.period && doc.docType !== 'EXPENDITURE' && doc.docType !== 'BUSINESS_TRIP' && doc.docType !== 'PURCHASE') {
+    if (
+      content.period &&
+      doc.docType !== 'EXPENDITURE' &&
+      doc.docType !== 'BUSINESS_TRIP' &&
+      doc.docType !== 'PURCHASE'
+    ) {
       extraRows.push(['기    간', String(content.period)])
     }
     if (content.destination && doc.docType !== 'BUSINESS_TRIP') {
       extraRows.push(['목 적 지', String(content.destination)])
     }
-    if (content.purpose && doc.docType !== 'EXPENDITURE' && doc.docType !== 'BUSINESS_TRIP' && doc.docType !== 'PURCHASE') {
+    if (
+      content.purpose &&
+      doc.docType !== 'EXPENDITURE' &&
+      doc.docType !== 'BUSINESS_TRIP' &&
+      doc.docType !== 'PURCHASE'
+    ) {
       extraRows.push(['목    적', String(content.purpose)])
     }
 

@@ -61,7 +61,9 @@ export async function getDefaultCompanyInfo(): Promise<CompanyInfo> {
       cacheTimestamp = now
       return cachedCompanyInfo
     }
-  } catch { /* use fallback */ }
+  } catch {
+    /* use fallback */
+  }
 
   return { name: '(주)웰그린' }
 }

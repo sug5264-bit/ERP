@@ -25,11 +25,7 @@ export const SHORTCUT_LIST = [
  * - 메인 레이아웃에서 한 번 등록
  * - input/textarea 포커스 시 무시
  */
-export function useKeyboardShortcuts(
-  onToggleHelp?: () => void,
-  onNew?: () => void,
-  onSave?: () => void,
-) {
+export function useKeyboardShortcuts(onToggleHelp?: () => void, onNew?: () => void, onSave?: () => void) {
   const router = useRouter()
 
   const handleKeyDown = useCallback(

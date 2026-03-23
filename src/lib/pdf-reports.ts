@@ -72,17 +72,13 @@ type CellOpts = {
   borderWidth?: number
 }
 
-function makeCell(
-  doc: InstanceType<typeof import('jspdf').jsPDF>,
-  fontName: string,
-  defaultFontSize: number
-) {
+function makeCell(doc: InstanceType<typeof import('jspdf').jsPDF>, fontName: string, defaultFontSize: number) {
   return (x: number, y: number, w: number, h: number, text: string, opts?: CellOpts) => {
     const f = opts?.fontSize ?? defaultFontSize
     doc.setDrawColor(0, 0, 0)
     doc.setLineWidth(opts?.borderWidth ?? 0.2)
     if (opts?.fill || opts?.fillColor) {
-      const fc = opts?.fillColor ?? [235, 235, 235] as [number, number, number]
+      const fc = opts?.fillColor ?? ([235, 235, 235] as [number, number, number])
       doc.setFillColor(fc[0], fc[1], fc[2])
       doc.rect(x, y, w, h, 'FD')
     } else {
@@ -324,8 +320,14 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
   const amountKo = numberToKorean(Math.floor(data.totalAmount))
   const rh = 8
   cell(PAGE_MARGIN, y, 28, rh, '합 계 금 액', { align: 'center', fill: true, fontSize: 9 })
-  cell(PAGE_MARGIN + 28, y, pageWidth - 2 * PAGE_MARGIN - 28, rh,
-    `일금  ${amountKo}원정  (₩${fmtNumber(data.totalAmount)})`, { fontSize: 10 })
+  cell(
+    PAGE_MARGIN + 28,
+    y,
+    pageWidth - 2 * PAGE_MARGIN - 28,
+    rh,
+    `일금  ${amountKo}원정  (₩${fmtNumber(data.totalAmount)})`,
+    { fontSize: 10 }
+  )
   y += rh + 2
 
   // --- 아래와 같이 견적합니다 ---
@@ -340,8 +342,20 @@ export async function generateQuotationPDF(data: QuotationPDFData) {
   const irh = 6.5
 
   // 공급자
-  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
-  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '공 급 받 는 자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
+  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
+  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '공 급 받 는 자', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
   y += 7
 
   const companyRows = [
@@ -465,7 +479,12 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   cell(M + 12 + labelW1 + bizNoCellW * 2, y, bizNoCellW, rh, sBizNo.substring(5, 10), { align: 'center' })
 
   // 공급받는자 헤더
-  cell(M + halfW, y, 12, rh * 5, '공\n급\n받\n는\n자', { align: 'center', fill: true, fillColor: [220, 230, 255], fontSize: 6 })
+  cell(M + halfW, y, 12, rh * 5, '공\n급\n받\n는\n자', {
+    align: 'center',
+    fill: true,
+    fillColor: [220, 230, 255],
+    fontSize: 6,
+  })
   cell(M + halfW + 12, y, labelW1, rh, '등록번호', { align: 'center', fill: true, fontSize: 6.5 })
   const bBizNo = (data.buyer.bizNo || '').replace(/-/g, '').padEnd(10, ' ')
   cell(M + halfW + 12 + labelW1, y, bizNoCellW, rh, bBizNo.substring(0, 3), { align: 'center' })
@@ -478,12 +497,30 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   cell(M + 12, y, subLabelW, rh, '상 호', { align: 'center', fill: true, fontSize: 6.5 })
   cell(M + 12 + subLabelW, y, nameValW / 2, rh, data.supplier.name, { fontSize: 7 })
   cell(M + 12 + subLabelW + nameValW / 2, y, subLabelW, rh, '성 명', { align: 'center', fill: true, fontSize: 6.5 })
-  cell(M + 12 + subLabelW * 2 + nameValW / 2, y, halfW - 12 - subLabelW * 2 - nameValW / 2, rh, `${data.supplier.ceo}  (인)`, { fontSize: 7 })
+  cell(
+    M + 12 + subLabelW * 2 + nameValW / 2,
+    y,
+    halfW - 12 - subLabelW * 2 - nameValW / 2,
+    rh,
+    `${data.supplier.ceo}  (인)`,
+    { fontSize: 7 }
+  )
 
   cell(M + halfW + 12, y, subLabelW, rh, '상 호', { align: 'center', fill: true, fontSize: 6.5 })
   cell(M + halfW + 12 + subLabelW, y, nameValW / 2, rh, data.buyer.name, { fontSize: 7 })
-  cell(M + halfW + 12 + subLabelW + nameValW / 2, y, subLabelW, rh, '성 명', { align: 'center', fill: true, fontSize: 6.5 })
-  cell(M + halfW + 12 + subLabelW * 2 + nameValW / 2, y, halfW - 12 - subLabelW * 2 - nameValW / 2, rh, data.buyer.ceo, { fontSize: 7 })
+  cell(M + halfW + 12 + subLabelW + nameValW / 2, y, subLabelW, rh, '성 명', {
+    align: 'center',
+    fill: true,
+    fontSize: 6.5,
+  })
+  cell(
+    M + halfW + 12 + subLabelW * 2 + nameValW / 2,
+    y,
+    halfW - 12 - subLabelW * 2 - nameValW / 2,
+    rh,
+    data.buyer.ceo,
+    { fontSize: 7 }
+  )
   y += rh
 
   // 주소
@@ -497,12 +534,30 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   cell(M + 12, y, subLabelW, rh, '업 태', { align: 'center', fill: true, fontSize: 6.5 })
   cell(M + 12 + subLabelW, y, nameValW / 2, rh, data.supplier.bizType ?? '', { fontSize: 7 })
   cell(M + 12 + subLabelW + nameValW / 2, y, subLabelW, rh, '종 목', { align: 'center', fill: true, fontSize: 6.5 })
-  cell(M + 12 + subLabelW * 2 + nameValW / 2, y, halfW - 12 - subLabelW * 2 - nameValW / 2, rh, data.supplier.bizItem ?? '', { fontSize: 7 })
+  cell(
+    M + 12 + subLabelW * 2 + nameValW / 2,
+    y,
+    halfW - 12 - subLabelW * 2 - nameValW / 2,
+    rh,
+    data.supplier.bizItem ?? '',
+    { fontSize: 7 }
+  )
 
   cell(M + halfW + 12, y, subLabelW, rh, '업 태', { align: 'center', fill: true, fontSize: 6.5 })
   cell(M + halfW + 12 + subLabelW, y, nameValW / 2, rh, data.buyer.bizType ?? '', { fontSize: 7 })
-  cell(M + halfW + 12 + subLabelW + nameValW / 2, y, subLabelW, rh, '종 목', { align: 'center', fill: true, fontSize: 6.5 })
-  cell(M + halfW + 12 + subLabelW * 2 + nameValW / 2, y, halfW - 12 - subLabelW * 2 - nameValW / 2, rh, data.buyer.bizItem ?? '', { fontSize: 7 })
+  cell(M + halfW + 12 + subLabelW + nameValW / 2, y, subLabelW, rh, '종 목', {
+    align: 'center',
+    fill: true,
+    fontSize: 6.5,
+  })
+  cell(
+    M + halfW + 12 + subLabelW * 2 + nameValW / 2,
+    y,
+    halfW - 12 - subLabelW * 2 - nameValW / 2,
+    rh,
+    data.buyer.bizItem ?? '',
+    { fontSize: 7 }
+  )
   y += rh
 
   // 이메일 (빈칸)
@@ -524,13 +579,25 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   cell(M, y, amtLabelW, rh - 1, '작성일자', { align: 'center', fill: true, fontSize: 6 })
   cell(M + amtLabelW, y, dateW, rh - 1, data.invoiceDate, { align: 'center', fontSize: 7 })
   cell(M + amtLabelW + dateW, y, digitW * 10, rh - 1, '공급가액', { align: 'center', fill: true, fontSize: 6 })
-  cell(M + amtLabelW + dateW + digitW * 10, y, digitW * 10, rh - 1, '세     액', { align: 'center', fill: true, fontSize: 6 })
+  cell(M + amtLabelW + dateW + digitW * 10, y, digitW * 10, rh - 1, '세     액', {
+    align: 'center',
+    fill: true,
+    fontSize: 6,
+  })
   y += rh - 1
 
   // 자릿수 라벨
   for (let i = 0; i < 10; i++) {
-    cell(M + amtLabelW + dateW + digitW * i, y, digitW, rh - 2, digitLabels[i], { align: 'center', fill: true, fontSize: 4.5 })
-    cell(M + amtLabelW + dateW + digitW * 10 + digitW * i, y, digitW, rh - 2, digitLabels[i], { align: 'center', fill: true, fontSize: 4.5 })
+    cell(M + amtLabelW + dateW + digitW * i, y, digitW, rh - 2, digitLabels[i], {
+      align: 'center',
+      fill: true,
+      fontSize: 4.5,
+    })
+    cell(M + amtLabelW + dateW + digitW * 10 + digitW * i, y, digitW, rh - 2, digitLabels[i], {
+      align: 'center',
+      fill: true,
+      fontSize: 4.5,
+    })
   }
   y += rh - 2
 
@@ -539,7 +606,10 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
   cell(M + amtLabelW, y, dateW, rh, `₩${fmtNumber(data.totalAmount)}`, { align: 'center', fontSize: 8 })
   for (let i = 0; i < 10; i++) {
     cell(M + amtLabelW + dateW + digitW * i, y, digitW, rh, amtDigits[i], { align: 'center', fontSize: 7 })
-    cell(M + amtLabelW + dateW + digitW * 10 + digitW * i, y, digitW, rh, taxDigits[i], { align: 'center', fontSize: 7 })
+    cell(M + amtLabelW + dateW + digitW * 10 + digitW * i, y, digitW, rh, taxDigits[i], {
+      align: 'center',
+      fontSize: 7,
+    })
   }
   y += rh + 2
 
@@ -563,7 +633,16 @@ export async function generateTaxInvoicePDF(data: TaxInvoicePDFData) {
     const item = data.items[r]
     cx = M
     if (item) {
-      const vals = [item.month, item.day, item.itemName, item.spec ?? '', fmtNumber(item.qty), fmtNumber(item.unitPrice), fmtNumber(item.supplyAmount), fmtNumber(item.taxAmount)]
+      const vals = [
+        item.month,
+        item.day,
+        item.itemName,
+        item.spec ?? '',
+        fmtNumber(item.qty),
+        fmtNumber(item.unitPrice),
+        fmtNumber(item.supplyAmount),
+        fmtNumber(item.taxAmount),
+      ]
       const aligns: CellOpts['align'][] = ['center', 'center', 'left', 'left', 'right', 'right', 'right', 'right']
       for (let i = 0; i < scaledCols.length; i++) {
         cell(cx, y, scaledCols[i], rh, vals[i], { align: aligns[i], fontSize: 7 })
@@ -690,7 +769,17 @@ function drawStatementCopy(
   const colW = [17, 26, 13, 9, 11, 15, 17, 15, 16]
   colW[colW.length - 1] += cw - colW.reduce((a, b) => a + b, 0)
   const colH = ['바코드', '품목명', '규격', '단위', '수량', '단가', '공급가액', '부가세', '적요']
-  const colA: ('left' | 'center' | 'right')[] = ['left', 'left', 'left', 'center', 'right', 'right', 'right', 'right', 'left']
+  const colA: ('left' | 'center' | 'right')[] = [
+    'left',
+    'left',
+    'left',
+    'center',
+    'right',
+    'right',
+    'right',
+    'right',
+    'left',
+  ]
 
   let cx = ox
   for (let i = 0; i < colW.length; i++) {
@@ -703,7 +792,17 @@ function drawStatementCopy(
     const item = data.items[r]
     cx = ox
     if (item) {
-      const vals = [item.barcode || '', item.itemName, item.spec || '', item.unit || '', fmtNumber(item.qty), fmtNumber(item.unitPrice), fmtNumber(item.supplyAmount), fmtNumber(item.taxAmount), item.remark || '']
+      const vals = [
+        item.barcode || '',
+        item.itemName,
+        item.spec || '',
+        item.unit || '',
+        fmtNumber(item.qty),
+        fmtNumber(item.unitPrice),
+        fmtNumber(item.supplyAmount),
+        fmtNumber(item.taxAmount),
+        item.remark || '',
+      ]
       for (let i = 0; i < colW.length; i++) {
         cell(cx, y, colW[i], rh, vals[i], { align: colA[i], fontSize: 6 })
         cx += colW[i]
@@ -719,7 +818,12 @@ function drawStatementCopy(
 
   // ═══ Summary row ═══
   const sumLabels = ['수량', '공급가액', 'VAT', '합계']
-  const sumValues = [fmtNumber(data.totalQty), fmtNumber(data.totalSupply), fmtNumber(data.totalTax), fmtNumber(data.totalAmount)]
+  const sumValues = [
+    fmtNumber(data.totalQty),
+    fmtNumber(data.totalSupply),
+    fmtNumber(data.totalTax),
+    fmtNumber(data.totalAmount),
+  ]
   const sumH = rh + 1
   const sumLW = 16
   const segW = cw / 4
@@ -739,7 +843,8 @@ function drawStatementCopy(
   if (data.supplier.bankName) {
     doc.text(
       `입금계좌:  ${data.supplier.bankName}  ${data.supplier.bankAccount || ''}  ${data.supplier.bankHolder || ''}`,
-      ox + 1.5, y + 2
+      ox + 1.5,
+      y + 2
     )
   }
 
@@ -748,9 +853,13 @@ function drawStatementCopy(
   const balLW = 12
   const balVW = 30
   cell(ox, y, balLW, rh, '전잔', { align: 'center', fill: true, fontSize: 6 })
-  cell(ox + balLW, y, balVW, rh, data.previousBalance != null ? fmtNumber(data.previousBalance) : '', { align: 'right' })
+  cell(ox + balLW, y, balVW, rh, data.previousBalance != null ? fmtNumber(data.previousBalance) : '', {
+    align: 'right',
+  })
   cell(ox + balLW + balVW, y, balLW, rh, '후잔', { align: 'center', fill: true, fontSize: 6 })
-  cell(ox + balLW * 2 + balVW, y, balVW, rh, data.nextBalance != null ? fmtNumber(data.nextBalance) : '', { align: 'right' })
+  cell(ox + balLW * 2 + balVW, y, balVW, rh, data.nextBalance != null ? fmtNumber(data.nextBalance) : '', {
+    align: 'right',
+  })
   cell(ox + cw - 22, y, 22, rh, '인수       (인)', { align: 'center' })
 }
 
@@ -828,8 +937,14 @@ export async function generatePurchaseOrderPDF(data: PurchaseOrderPDFData) {
   const amountKo = numberToKorean(Math.floor(data.totalAmount))
   const rh = 8
   cell(PAGE_MARGIN, y, 28, rh, '합 계 금 액', { align: 'center', fill: true, fontSize: 9 })
-  cell(PAGE_MARGIN + 28, y, pageWidth - 2 * PAGE_MARGIN - 28, rh,
-    `일금  ${amountKo}원정  (₩${fmtNumber(data.totalAmount)})`, { fontSize: 10 })
+  cell(
+    PAGE_MARGIN + 28,
+    y,
+    pageWidth - 2 * PAGE_MARGIN - 28,
+    rh,
+    `일금  ${amountKo}원정  (₩${fmtNumber(data.totalAmount)})`,
+    { fontSize: 10 }
+  )
   y += rh + 2
 
   doc.setFontSize(9)
@@ -841,8 +956,20 @@ export async function generatePurchaseOrderPDF(data: PurchaseOrderPDFData) {
   const labelW = 24
   const irh = 6.5
 
-  cell(PAGE_MARGIN, y, infoW, 7, '발  주  처', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
-  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '공  급  처', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
+  cell(PAGE_MARGIN, y, infoW, 7, '발  주  처', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
+  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '공  급  처', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
   y += 7
 
   const valW = infoW - labelW
@@ -1090,8 +1217,14 @@ export async function generateSalesOrderPDF(data: SalesOrderPDFData) {
   const amountKo = numberToKorean(Math.floor(data.totalAmount))
   const rh = 8
   cell(PAGE_MARGIN, y, 28, rh, '합 계 금 액', { align: 'center', fill: true, fontSize: 9 })
-  cell(PAGE_MARGIN + 28, y, pageWidth - 2 * PAGE_MARGIN - 28, rh,
-    `일금  ${amountKo}원정  (₩${fmtNumber(data.totalAmount)})`, { fontSize: 10 })
+  cell(
+    PAGE_MARGIN + 28,
+    y,
+    pageWidth - 2 * PAGE_MARGIN - 28,
+    rh,
+    `일금  ${amountKo}원정  (₩${fmtNumber(data.totalAmount)})`,
+    { fontSize: 10 }
+  )
   y += rh + 2
 
   doc.setFontSize(9)
@@ -1103,8 +1236,20 @@ export async function generateSalesOrderPDF(data: SalesOrderPDFData) {
   const labelW = 24
   const irh = 6.5
 
-  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
-  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '주  문  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
+  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
+  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '주  문  자', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
   y += 7
 
   const valW = infoW - labelW
@@ -1250,8 +1395,7 @@ export async function generateDeliveryStatementPDF(data: DeliveryStatementPDFDat
   // --- 금액 ---
   const rh = 8
   cell(PAGE_MARGIN, y, 28, rh, '합 계 금 액', { align: 'center', fill: true, fontSize: 9 })
-  cell(PAGE_MARGIN + 28, y, pageWidth - 2 * PAGE_MARGIN - 28, rh,
-    `₩${fmtNumber(data.totalAmount)}`, { fontSize: 10 })
+  cell(PAGE_MARGIN + 28, y, pageWidth - 2 * PAGE_MARGIN - 28, rh, `₩${fmtNumber(data.totalAmount)}`, { fontSize: 10 })
   y += rh + 2
 
   doc.setFontSize(9)
@@ -1263,8 +1407,20 @@ export async function generateDeliveryStatementPDF(data: DeliveryStatementPDFDat
   const labelW = 24
   const irh = 6.5
 
-  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
-  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '수  령  자', { align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 8 })
+  cell(PAGE_MARGIN, y, infoW, 7, '공  급  자', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
+  cell(PAGE_MARGIN + infoW + 4, y, infoW, 7, '수  령  자', {
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 8,
+  })
   y += 7
 
   const valW = infoW - labelW
@@ -1307,12 +1463,7 @@ export async function generateDeliveryStatementPDF(data: DeliveryStatementPDFDat
       5: { cellWidth: 25, halign: 'right' },
       6: { cellWidth: 30, halign: 'right' },
     },
-    foot: [[
-      '', '합 계', '', '',
-      fmtNumber(data.totalQty),
-      '',
-      fmtNumber(data.totalAmount),
-    ]],
+    foot: [['', '합 계', '', '', fmtNumber(data.totalQty), '', fmtNumber(data.totalAmount)]],
     footStyles: { fillColor: PDF_COLORS.LIGHT_GRAY, fontStyle: 'bold' },
   })
   y = getLastTableY(doc) + 6
@@ -1340,7 +1491,8 @@ export async function generateDeliveryStatementPDF(data: DeliveryStatementPDFDat
     doc.setFontSize(8)
     doc.text(
       `입금계좌:  ${data.supplier.bankName}  ${data.supplier.bankAccount || ''}  ${data.supplier.bankHolder || ''}`,
-      PAGE_MARGIN, y
+      PAGE_MARGIN,
+      y
     )
     y += 6
   }
@@ -1429,11 +1581,19 @@ export async function generatePayrollSlipPDF(data: PayrollSlipPDFData) {
 
   // 지급 헤더
   cell(PAGE_MARGIN, y, halfW, 7, '지  급  내  역', {
-    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 9,
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 9,
   })
   // 공제 헤더
   cell(PAGE_MARGIN + halfW + 4, y, halfW, 7, '공  제  내  역', {
-    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 9,
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 9,
   })
   y += 7
 
@@ -1467,7 +1627,10 @@ export async function generatePayrollSlipPDF(data: PayrollSlipPDFData) {
     // Right: deductions
     if (i < deductionsRows.length) {
       cell(PAGE_MARGIN + halfW + 4, y, labelW, rh, deductionsRows[i][0], { align: 'center', fill: true, fontSize: 7.5 })
-      cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, fmtNumber(deductionsRows[i][1]), { align: 'right', fontSize: 8 })
+      cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, fmtNumber(deductionsRows[i][1]), {
+        align: 'right',
+        fontSize: 8,
+      })
     } else {
       cell(PAGE_MARGIN + halfW + 4, y, labelW, rh, '', {})
       cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, '', {})
@@ -1477,26 +1640,39 @@ export async function generatePayrollSlipPDF(data: PayrollSlipPDFData) {
 
   // 소계
   cell(PAGE_MARGIN, y, labelW, rh, '지급 합계', {
-    align: 'center', fill: true, fillColor: [220, 230, 250], fontSize: 8,
+    align: 'center',
+    fill: true,
+    fillColor: [220, 230, 250],
+    fontSize: 8,
   })
   cell(PAGE_MARGIN + labelW, y, valW, rh, fmtNumber(data.earnings.totalEarnings), {
-    align: 'right', fontSize: 9,
+    align: 'right',
+    fontSize: 9,
   })
   cell(PAGE_MARGIN + halfW + 4, y, labelW, rh, '공제 합계', {
-    align: 'center', fill: true, fillColor: [250, 220, 220], fontSize: 8,
+    align: 'center',
+    fill: true,
+    fillColor: [250, 220, 220],
+    fontSize: 8,
   })
   cell(PAGE_MARGIN + halfW + 4 + labelW, y, valW, rh, fmtNumber(data.deductions.totalDeductions), {
-    align: 'right', fontSize: 9,
+    align: 'right',
+    fontSize: 9,
   })
   y += rh + 6
 
   // --- 실수령액 ---
   const netW = pageWidth - 2 * PAGE_MARGIN
   cell(PAGE_MARGIN, y, netW * 0.3, 10, '실 수 령 액', {
-    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 11,
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 11,
   })
   cell(PAGE_MARGIN + netW * 0.3, y, netW * 0.7, 10, `₩ ${fmtNumber(data.netPay)}`, {
-    align: 'right', fontSize: 14,
+    align: 'right',
+    fontSize: 14,
   })
   y += 16
 
@@ -1572,10 +1748,18 @@ export async function generateDeliveryNotePDF(data: DeliveryNotePDFData) {
 
   // 공급자 헤더
   cell(PAGE_MARGIN, y, halfW, rh, '공  급  자', {
-    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 9,
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 9,
   })
   cell(PAGE_MARGIN + halfW + 4, y, halfW, rh, '공 급 받 는 자', {
-    align: 'center', fill: true, fillColor: PDF_COLORS.HEADER_FILL, textColor: [255, 255, 255], fontSize: 9,
+    align: 'center',
+    fill: true,
+    fillColor: PDF_COLORS.HEADER_FILL,
+    textColor: [255, 255, 255],
+    fontSize: 9,
   })
   y += rh
 
@@ -1607,7 +1791,9 @@ export async function generateDeliveryNotePDF(data: DeliveryNotePDFData) {
   // --- 금액 한글 표기 ---
   const koreanAmt = numberToKorean(Math.round(data.totalAmount))
   doc.setFontSize(10)
-  doc.text(`합계금액:  금  ${koreanAmt}원정 (₩${fmtNumber(Math.round(data.totalAmount))})`, pageWidth / 2, y, { align: 'center' })
+  doc.text(`합계금액:  금  ${koreanAmt}원정 (₩${fmtNumber(Math.round(data.totalAmount))})`, pageWidth / 2, y, {
+    align: 'center',
+  })
   y += 8
 
   // --- 품목 테이블 ---

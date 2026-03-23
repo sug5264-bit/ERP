@@ -108,7 +108,10 @@ export default function ApprovalCompletedPage() {
       urgency: 'NORMAL',
       status: selectedDoc.status,
       content: selectedDoc.content
-        ? { ...selectedDoc.content, amount: selectedDoc.content.amount != null ? String(selectedDoc.content.amount) : undefined }
+        ? {
+            ...selectedDoc.content,
+            amount: selectedDoc.content.amount != null ? String(selectedDoc.content.amount) : undefined,
+          }
         : null,
       drafter: {
         nameKo: selectedDoc.drafter?.nameKo || '',
