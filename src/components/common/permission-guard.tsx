@@ -29,8 +29,9 @@ export function PermissionGuard({ module, action, children, fallback = null }: P
   const user = session.user as Record<string, unknown>
   const permissions = Array.isArray(user.permissions) ? user.permissions : []
   const roles = Array.isArray(user.roles) ? user.roles : []
+  const accountType = typeof user.accountType === 'string' ? user.accountType : undefined
 
-  if (!checkClientPermission(permissions, roles, module, action)) {
+  if (!checkClientPermission(permissions, roles, module, action, accountType)) {
     return fallback
   }
 
@@ -49,6 +50,7 @@ export function usePermission(module: string, action: Action): boolean {
     Array.isArray(user.permissions) ? user.permissions : [],
     Array.isArray(user.roles) ? user.roles : [],
     module,
-    action
+    action,
+    typeof user.accountType === 'string' ? user.accountType : undefined
   )
 }

@@ -20,6 +20,23 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/zip',
 ])
 
+// MIME 타입 → 허용 확장자 매핑
+const MIME_TO_EXTENSIONS: Record<string, string[]> = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/gif': ['.gif'],
+  'image/webp': ['.webp'],
+  'image/avif': ['.avif'],
+  'application/pdf': ['.pdf'],
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+  'application/vnd.ms-excel': ['.xls'],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+  'application/msword': ['.doc'],
+  'text/csv': ['.csv'],
+  'text/plain': ['.txt'],
+  'application/zip': ['.zip'],
+}
+
 // 최대 파일 크기: 50MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024
 
@@ -68,6 +85,15 @@ export async function uploadFile(
   // MIME 타입 검증
   if (!ALLOWED_MIME_TYPES.has(contentType)) {
     throw new Error(`허용되지 않는 파일 형식입니다: ${contentType}`)
+  }
+
+  // 파일 확장자 ↔ MIME 타입 일치 검증
+  const allowedExts = MIME_TO_EXTENSIONS[contentType]
+  if (allowedExts) {
+    const ext = path.substring(path.lastIndexOf('.')).toLowerCase()
+    if (!allowedExts.includes(ext)) {
+      throw new Error(`파일 확장자(${ext})가 MIME 타입(${contentType})과 일치하지 않습니다.`)
+    }
   }
 
   // 파일 경로에서 디렉토리 트래버설 방지

@@ -15,9 +15,13 @@ export type TransactionClient = Parameters<Parameters<typeof prisma.$transaction
 /** Prisma unique constraint violation code */
 const PRISMA_UNIQUE_VIOLATION = 'P2002'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isPrismaUniqueError(error: any): boolean {
-  return error?.code === PRISMA_UNIQUE_VIOLATION
+function isPrismaUniqueError(error: unknown): boolean {
+  return (
+    error != null &&
+    typeof error === 'object' &&
+    'code' in error &&
+    (error as { code: unknown }).code === PRISMA_UNIQUE_VIOLATION
+  )
 }
 
 // ─── 품목 자동 생성 ──────────────────────────────

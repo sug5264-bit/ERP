@@ -8,25 +8,17 @@ import { prisma } from '@/lib/prisma'
  * - 프로덕션 환경에서는 관리자 인증 필요
  */
 export async function GET() {
-  // 프로덕션 환경에서는 인증 필요
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      const { auth } = await import('@/lib/auth')
-      const session = await auth()
-      const user = session?.user as Record<string, unknown> | undefined
-      const roles = (user?.roles as string[]) || []
-      if (!session || !roles.includes('SYSTEM_ADMIN')) {
-        return NextResponse.json(
-          { error: '관리자 권한이 필요합니다.' },
-          { status: 403 }
-        )
-      }
-    } catch {
-      return NextResponse.json(
-        { error: '인증 확인 중 오류가 발생했습니다.' },
-        { status: 500 }
-      )
+  // 모든 환경에서 관리자 인증 필요
+  try {
+    const { auth } = await import('@/lib/auth')
+    const session = await auth()
+    const user = session?.user as Record<string, unknown> | undefined
+    const roles = (user?.roles as string[]) || []
+    if (!session || (!roles.includes('SYSTEM_ADMIN') && !roles.includes('관리자'))) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
     }
+  } catch {
+    return NextResponse.json({ error: '인증 확인 중 오류가 발생했습니다.' }, { status: 500 })
   }
 
   const results: Record<string, unknown> = {

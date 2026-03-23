@@ -175,7 +175,7 @@ export default auth((request) => {
 
     // 로그인 API: 15분에 10회
     if (pathname.startsWith('/api/auth') && method === 'POST') {
-      const { ok, resetAt } = rateLimitCheck(`login:${ip}`, 15 * 60 * 1000, 10)
+      const { ok, resetAt } = rateLimitCheck(`login:${ip}`, 15 * 60 * 1000, 5)
       if (!ok) {
         // 로그인 시도 과다 → IP 블록
         blockedIps.set(ip, Date.now() + BLOCK_DURATION_MS)

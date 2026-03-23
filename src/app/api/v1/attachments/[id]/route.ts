@@ -19,6 +19,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return errorResponse('파일을 찾을 수 없습니다.', 'NOT_FOUND', 404)
     }
 
+    // SHIPPER 계정은 자신의 화주사 첨부파일만 다운로드 가능
+    const accountType = authResult.session.user.accountType
+    if (accountType === 'SHIPPER' && attachment.relatedTable !== 'ShipperOrderAttachment') {
+      return errorResponse('접근 권한이 없습니다.', 'FORBIDDEN', 403)
+    }
+
     const bucket = getBucket(attachment.relatedTable)
     let fileBuffer: Buffer
     try {
