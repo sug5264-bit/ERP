@@ -7,6 +7,7 @@ import { BreadcrumbNav } from '@/components/layout/breadcrumb-nav'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useSidebarStore } from '@/stores/sidebar-store'
 import { ThemeInitializer } from '@/components/common/theme-initializer'
+import { ErrorBoundary } from '@/components/common/error-boundary'
 import { SessionMonitor } from '@/components/common/session-monitor'
 import { KeyboardShortcutsHelp } from '@/components/common/keyboard-shortcuts-help'
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts'
@@ -76,7 +77,7 @@ export function MainLayoutShell({ children }: { children: React.ReactNode }) {
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           <BreadcrumbNav />
-          {children}
+          <ErrorBoundary>{children}</ErrorBoundary>
         </main>
       </div>
     </div>

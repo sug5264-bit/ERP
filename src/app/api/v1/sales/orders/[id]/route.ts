@@ -8,6 +8,7 @@ import {
   isErrorResponse,
 } from '@/lib/api-helpers'
 import { writeAuditLog, getClientIp } from '@/lib/audit-log'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -279,7 +280,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     })
 
     writeAuditLog({ action: 'DELETE', tableName: 'SalesOrder', recordId: id, ipAddress: getClientIp(request) }).catch(
-      () => {}
+      (err) => { logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) }) }
     )
 
     return successResponse({ message: '발주가 삭제되었습니다.' })

@@ -138,19 +138,22 @@ export async function POST(request: NextRequest) {
               // 재고이동 관련 데이터 삭제 (재고 잔량 복원 후 삭제)
               const stockMovements = await tx.stockMovement.findMany({
                 where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
-                select: { id: true, movementType: true },
+                select: { id: true, movementType: true, sourceWarehouseId: true, targetWarehouseId: true },
               })
               if (stockMovements.length > 0) {
                 const smIds = stockMovements.map((sm) => sm.id)
-                // 출고된 재고를 복원
+                const smById = new Map(stockMovements.map((sm) => [sm.id, sm]))
+                // 출고된 재고를 복원 (OUTBOUND인 경우 sourceWarehouse로 복원)
                 const smDetails = await tx.stockMovementDetail.findMany({
                   where: { stockMovementId: { in: smIds } },
-                  select: { itemId: true, quantity: true },
+                  select: { stockMovementId: true, itemId: true, quantity: true },
                 })
                 for (const detail of smDetails) {
+                  const movement = smById.get(detail.stockMovementId)
+                  const warehouseId = movement?.sourceWarehouseId ?? movement?.targetWarehouseId
+                  if (!warehouseId) continue
                   const balance = await tx.stockBalance.findFirst({
-                    where: { itemId: detail.itemId },
-                    orderBy: { lastMovementDate: 'desc' },
+                    where: { itemId: detail.itemId, warehouseId },
                   })
                   if (balance) {
                     await tx.stockBalance.update({

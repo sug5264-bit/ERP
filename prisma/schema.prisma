@@ -38,6 +38,8 @@ model User {
   shipperId        String?
   shipper          ShipperCompany? @relation(fields: [shipperId], references: [id])
 
+  @@index([isActive])
+  @@index([accountType])
   @@map("users")
 }
 
@@ -313,6 +315,7 @@ model Employee {
   @@index([positionId])
   @@index([nameKo])
   @@index([email])
+  @@index([joinDate])
   @@map("employees")
 }
 
@@ -328,7 +331,7 @@ model EmployeeHistory {
   reason        String?
   createdAt     DateTime @default(now())
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId])
   @@index([employeeId, effectiveDate])
@@ -367,8 +370,8 @@ model PayrollDetail {
   totalDeductions     Decimal @default(0) @db.Decimal(15, 2)
   netPay              Decimal @default(0) @db.Decimal(15, 2)
 
-  payrollHeader PayrollHeader @relation(fields: [payrollHeaderId], references: [id])
-  employee      Employee      @relation(fields: [employeeId], references: [id])
+  payrollHeader PayrollHeader @relation(fields: [payrollHeaderId], references: [id], onDelete: Cascade)
+  employee      Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([payrollHeaderId, employeeId])
   @@map("payroll_details")
@@ -394,7 +397,7 @@ model Attendance {
   attendanceType AttendanceType @default(NORMAL)
   note           String?
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, workDate])
   @@map("attendances")
@@ -428,7 +431,7 @@ model Leave {
   approvalId String?
   createdAt  DateTime    @default(now())
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([employeeId, startDate])
   @@index([status])
@@ -443,7 +446,7 @@ model LeaveBalance {
   usedDays      Decimal @default(0) @db.Decimal(4, 1)
   remainingDays Decimal @db.Decimal(4, 1)
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, year])
   @@map("leave_balances")
@@ -480,7 +483,7 @@ model Applicant {
   note          String?
   createdAt     DateTime @default(now())
 
-  recruitment Recruitment @relation(fields: [recruitmentId], references: [id])
+  recruitment Recruitment @relation(fields: [recruitmentId], references: [id], onDelete: Cascade)
 
   @@index([recruitmentId])
   @@index([status])
@@ -801,7 +804,7 @@ model WarehouseZone {
   zoneCode    String
   zoneName    String
 
-  warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
+  warehouse     Warehouse      @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   stockBalances StockBalance[]
 
   @@unique([warehouseId, zoneCode])
@@ -875,6 +878,7 @@ model StockBalance {
   @@index([warehouseId])
   @@index([expiryDate])
   @@index([lotNo])
+  @@index([itemId, warehouseId])
   @@map("stock_balances")
 }
 
@@ -1691,8 +1695,8 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  board    Board         @relation(fields: [boardId], references: [id])
-  author   User          @relation(fields: [authorId], references: [id])
+  board    Board         @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments PostComment[]
 
   @@index([boardId, createdAt])
@@ -1709,7 +1713,7 @@ model PostComment {
   createdAt       DateTime @default(now())
 
   post          Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author        User          @relation(fields: [authorId], references: [id])
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   parentComment PostComment?  @relation("CommentHierarchy", fields: [parentCommentId], references: [id])
   replies       PostComment[] @relation("CommentHierarchy")
 
@@ -1727,8 +1731,8 @@ model Message {
   readAt     DateTime?
   sentAt     DateTime  @default(now())
 
-  sender   User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
 
   @@index([receiverId, isRead])
   @@index([senderId, sentAt])
@@ -1852,7 +1856,7 @@ model ProductionResult {
   remarks          String?
   createdAt        DateTime @default(now())
 
-  productionPlan ProductionPlan @relation(fields: [productionPlanId], references: [id])
+  productionPlan ProductionPlan @relation(fields: [productionPlanId], references: [id], onDelete: Cascade)
 
   @@index([productionPlanId])
   @@index([productionDate])
@@ -1960,7 +1964,7 @@ model ShipperOrder {
   appliedRate     Decimal?  @db.Decimal(15, 2) // 적용 요율 금액
   surcharge       Decimal?  @db.Decimal(15, 2) // 부가요금 (도서산간 등)
 
-  shipper ShipperCompany @relation(fields: [shipperId], references: [id])
+  shipper ShipperCompany @relation(fields: [shipperId], references: [id], onDelete: Cascade)
 
   @@index([shipperId])
   @@index([orderDate])
@@ -1991,7 +1995,7 @@ model ShipperRate {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  shipper ShipperCompany @relation(fields: [shipperId], references: [id])
+  shipper ShipperCompany @relation(fields: [shipperId], references: [id], onDelete: Cascade)
 
   @@index([shipperId])
   @@index([regionCode])
@@ -2022,7 +2026,7 @@ model ShipperItem {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  shipper          ShipperCompany     @relation(fields: [shipperId], references: [id])
+  shipper          ShipperCompany     @relation(fields: [shipperId], references: [id], onDelete: Cascade)
   shipperInventory ShipperInventory[]
   shipperOrders    ShipperOrder[]
 
@@ -2051,7 +2055,7 @@ model ShipperInventory {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  shipperItem ShipperItem @relation(fields: [shipperItemId], references: [id])
+  shipperItem ShipperItem @relation(fields: [shipperItemId], references: [id], onDelete: Cascade)
 
   @@index([shipperId])
   @@index([shipperItemId])
@@ -2077,7 +2081,7 @@ model ShipperSales {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  shipper ShipperCompany @relation(fields: [shipperId], references: [id])
+  shipper ShipperCompany @relation(fields: [shipperId], references: [id], onDelete: Cascade)
 
   @@index([shipperId])
   @@index([salesDate])
