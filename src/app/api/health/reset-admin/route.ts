@@ -18,7 +18,13 @@ export async function GET() {
   }
 
   const logs: string[] = []
-  const PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || 'admin1234'
+  const PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD
+  if (!PASSWORD) {
+    return NextResponse.json(
+      { success: false, error: 'ADMIN_DEFAULT_PASSWORD 환경변수가 설정되지 않았습니다.' },
+      { status: 500 }
+    )
+  }
 
   try {
     await prisma.$queryRawUnsafe('SELECT 1')

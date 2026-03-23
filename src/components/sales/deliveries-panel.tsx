@@ -215,25 +215,20 @@ export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
   })
 
   const handleReplyFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('[DEBUG 답글파일] handleReplyFileSelect 호출됨, files:', e.target.files?.length)
     const files = e.target.files
     if (files) {
       const fileList = Array.from(files)
-      console.log('[DEBUG 답글파일] 선택된 파일:', fileList.map(f => `${f.name} (${f.size}bytes)`))
       setReplyFiles((prev) => [...prev, ...fileList])
     }
     if (replyFileInputRef.current) replyFileInputRef.current.value = ''
   }
 
   const uploadFile = async (file: File, relatedTable: string, relatedId: string) => {
-    console.log('[DEBUG 답글파일] uploadFile 호출:', { fileName: file.name, relatedTable, relatedId })
     const formData = new FormData()
     formData.append('file', file)
     formData.append('relatedTable', relatedTable)
     formData.append('relatedId', relatedId)
-    const result = await api.upload('/attachments', formData)
-    console.log('[DEBUG 답글파일] uploadFile 결과:', result)
-    return result
+    return await api.upload('/attachments', formData)
   }
 
   const updatePostStatus = async (noteId: string, status: string) => {
@@ -250,7 +245,6 @@ export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
   }
 
   const handleSubmitReply = async (parentNoteId: string) => {
-    console.log('[DEBUG 답글파일] handleSubmitReply 호출, parentNoteId:', parentNoteId, 'replyFiles:', replyFiles.length, 'replyContent:', replyContent.trim().slice(0, 30))
     if (!replyContent.trim()) {
       toast.error('답글 내용을 입력해주세요.')
       return
@@ -262,30 +256,21 @@ export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
         relatedTable: 'DeliveryReply',
         relatedId: parentNoteId,
       })
-      console.log('[DEBUG 답글파일] 답글 생성 결과:', JSON.stringify(replyResult))
       const replyId = replyResult?.data?.id
-      console.log('[DEBUG 답글파일] replyId:', replyId)
 
       // Upload files
-      console.log('[DEBUG 답글파일] 파일 업로드 시작, replyFiles.length:', replyFiles.length, 'replyId:', replyId)
       if (replyFiles.length > 0) {
         if (!replyId) {
-          console.error('[DEBUG 답글파일] replyId가 없음! 파일 업로드 스킵')
           toast.error('답글은 등록되었으나 파일 첨부에 필요한 ID를 받지 못했습니다.')
         } else {
           for (const file of replyFiles) {
             try {
-              console.log('[DEBUG 답글파일] 파일 업로드 시도:', file.name)
               await uploadFile(file, 'DeliveryReplyPost', replyId)
-              console.log('[DEBUG 답글파일] 파일 업로드 성공:', file.name)
             } catch (err) {
-              console.error('[DEBUG 답글파일] 파일 업로드 실패:', file.name, err)
               toast.error(err instanceof Error ? err.message : `"${file.name}" 업로드 실패`)
             }
           }
         }
-      } else {
-        console.log('[DEBUG 답글파일] 첨부된 파일 없음')
       }
 
       // Auto-transition: reply → SHIPPED (출하대기)
@@ -705,7 +690,6 @@ export function DeliveriesPanel({ statusFilter }: DeliveriesPanelProps) {
                                 size="sm"
                                 className="h-7 text-xs"
                                 onClick={() => {
-                                  console.log('[DEBUG 답글파일] 파일첨부 버튼 클릭, ref:', !!replyFileInputRef.current)
                                   replyFileInputRef.current?.click()
                                 }}
                               >

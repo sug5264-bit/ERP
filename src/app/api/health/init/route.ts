@@ -4,7 +4,10 @@ import { hash } from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
-const DEFAULT_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || 'admin1234'
+const DEFAULT_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD
+if (!DEFAULT_PASSWORD) {
+  throw new Error('ADMIN_DEFAULT_PASSWORD 환경변수가 설정되지 않았습니다.')
+}
 
 export async function GET(req: Request) {
   return initAdmin(req)
