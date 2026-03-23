@@ -18,7 +18,7 @@ export async function GET() {
   }
 
   const logs: string[] = []
-  const PASSWORD = 'admin1234'
+  const PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || 'admin1234'
 
   try {
     await prisma.$queryRawUnsafe('SELECT 1')

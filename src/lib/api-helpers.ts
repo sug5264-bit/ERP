@@ -279,7 +279,9 @@ export async function requirePermissionCheck(module: string, action: Action): Pr
   if (result instanceof NextResponse) return result
 
   const { session } = result
-  if (!hasPermission(session.user.permissions, session.user.roles, module, action)) {
+  if (
+    !hasPermission(session.user.permissions, session.user.roles, module, action, session.user.accountType ?? undefined)
+  ) {
     logger.warn('Permission denied', {
       userId: session.user.id,
       module,

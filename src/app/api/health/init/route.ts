@@ -4,17 +4,17 @@ import { hash } from 'bcryptjs'
 import { auth } from '@/lib/auth'
 import { logger } from '@/lib/logger'
 
-const DEFAULT_PASSWORD = 'admin1234'
+const DEFAULT_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || 'admin1234'
 
-export async function GET() {
-  return initAdmin()
+export async function GET(req: Request) {
+  return initAdmin(req)
 }
 
-export async function POST() {
-  return initAdmin()
+export async function POST(req: Request) {
+  return initAdmin(req)
 }
 
-async function initAdmin() {
+async function initAdmin(req: Request) {
   const logs: string[] = []
 
   try {
@@ -46,7 +46,26 @@ async function initAdmin() {
           return NextResponse.json({ success: false, error: '관리자 권한이 필요합니다.' }, { status: 403 })
         }
       } else {
+        // 비상 복구 모드: 부트스트랩 토큰이 설정되어 있으면 검증 필요
+        const bootstrapToken = process.env.INIT_BOOTSTRAP_TOKEN
+        if (bootstrapToken) {
+          const url = new URL(req.url)
+          const providedToken = url.searchParams.get('token')
+          if (providedToken !== bootstrapToken) {
+            return NextResponse.json({ success: false, error: '유효한 부트스트랩 토큰이 필요합니다.' }, { status: 403 })
+          }
+        }
         logs.push('경고: 관리자 역할이 할당된 사용자가 없습니다. 비상 복구 모드로 진행합니다.')
+      }
+    } else {
+      // 최초 초기화: 부트스트랩 토큰이 설정되어 있으면 검증 필요
+      const bootstrapToken = process.env.INIT_BOOTSTRAP_TOKEN
+      if (bootstrapToken) {
+        const url = new URL(req.url)
+        const providedToken = url.searchParams.get('token')
+        if (providedToken !== bootstrapToken) {
+          return NextResponse.json({ success: false, error: '유효한 부트스트랩 토큰이 필요합니다.' }, { status: 403 })
+        }
       }
     }
 
@@ -279,7 +298,7 @@ async function initAdmin() {
 
     return NextResponse.json({
       success: true,
-      message: '관리자 계정 및 권한이 초기화되었습니다. admin / admin1234 로 로그인해주세요.',
+      message: '관리자 계정 및 권한이 초기화되었습니다. 기본 관리자 계정으로 로그인 후 비밀번호를 변경해주세요.',
       logs,
     })
   } catch (error) {

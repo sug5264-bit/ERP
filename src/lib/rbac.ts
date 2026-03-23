@@ -121,7 +121,8 @@ export function checkClientPermission(
   userPermissions: Permission[],
   userRoles: string[],
   module: string,
-  action: Action
+  action: Action,
+  accountType?: string
 ): boolean {
-  return hasPermission(userPermissions, userRoles, module, action)
+  return hasPermission(userPermissions, userRoles, module, action, accountType)
 }

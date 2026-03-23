@@ -1,6 +1,28 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { successResponse, errorResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
+import { z } from 'zod'
+import { successResponse, handleApiError, requireAdmin, isErrorResponse } from '@/lib/api-helpers'
+
+const createCompanySchema = z.object({
+  companyName: z.string().min(1, '회사명은 필수입니다.').max(200),
+  bizNo: z
+    .string()
+    .max(20)
+    .regex(/^[0-9-]*$/, '사업자번호 형식이 올바르지 않습니다.')
+    .nullable()
+    .optional(),
+  ceoName: z.string().max(100).nullable().optional(),
+  bizType: z.string().max(100).nullable().optional(),
+  bizCategory: z.string().max(100).nullable().optional(),
+  address: z.string().max(500).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+  fax: z.string().max(30).nullable().optional(),
+  email: z.string().email('유효한 이메일을 입력하세요.').max(200).nullable().optional(),
+  bankName: z.string().max(100).nullable().optional(),
+  bankAccount: z.string().max(50).nullable().optional(),
+  bankHolder: z.string().max(100).nullable().optional(),
+  isDefault: z.boolean().optional(),
+})
 
 export async function GET(_req: NextRequest) {
   try {
@@ -22,11 +44,9 @@ export async function POST(req: NextRequest) {
     if (isErrorResponse(authResult)) return authResult
 
     const body = await req.json()
-    if (!body.companyName || typeof body.companyName !== 'string' || body.companyName.trim().length === 0) {
-      return errorResponse('회사명은 필수입니다.', 'VALIDATION_ERROR', 400)
-    }
+    const validated = createCompanySchema.parse(body)
     const company = await prisma.$transaction(async (tx) => {
-      if (body.isDefault) {
+      if (validated.isDefault) {
         await tx.company.updateMany({
           where: { isDefault: true },
           data: { isDefault: false },
@@ -34,19 +54,19 @@ export async function POST(req: NextRequest) {
       }
       const created = await tx.company.create({
         data: {
-          companyName: body.companyName,
-          bizNo: body.bizNo || null,
-          ceoName: body.ceoName || null,
-          bizType: body.bizType || null,
-          bizCategory: body.bizCategory || null,
-          address: body.address || null,
-          phone: body.phone || null,
-          fax: body.fax || null,
-          email: body.email || null,
-          bankName: body.bankName || null,
-          bankAccount: body.bankAccount || null,
-          bankHolder: body.bankHolder || null,
-          isDefault: body.isDefault || false,
+          companyName: validated.companyName,
+          bizNo: validated.bizNo || null,
+          ceoName: validated.ceoName || null,
+          bizType: validated.bizType || null,
+          bizCategory: validated.bizCategory || null,
+          address: validated.address || null,
+          phone: validated.phone || null,
+          fax: validated.fax || null,
+          email: validated.email || null,
+          bankName: validated.bankName || null,
+          bankAccount: validated.bankAccount || null,
+          bankHolder: validated.bankHolder || null,
+          isDefault: validated.isDefault || false,
         },
       })
       return created
