@@ -5,8 +5,30 @@ import { prisma } from '@/lib/prisma'
  * GET /api/auth/debug
  * 인증 시스템 기본 진단 (DB 연결, 사용자 존재 여부)
  * - 비밀번호, 해시, 자격증명 등 민감 정보는 절대 노출하지 않음
+ * - 프로덕션 환경에서는 관리자 인증 필요
  */
 export async function GET() {
+  // 프로덕션 환경에서는 인증 필요
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const { auth } = await import('@/lib/auth')
+      const session = await auth()
+      const user = session?.user as Record<string, unknown> | undefined
+      const roles = (user?.roles as string[]) || []
+      if (!session || !roles.includes('SYSTEM_ADMIN')) {
+        return NextResponse.json(
+          { error: '관리자 권한이 필요합니다.' },
+          { status: 403 }
+        )
+      }
+    } catch {
+      return NextResponse.json(
+        { error: '인증 확인 중 오류가 발생했습니다.' },
+        { status: 500 }
+      )
+    }
+  }
+
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
   }
@@ -35,9 +57,7 @@ export async function GET() {
     const admin = await prisma.user.findUnique({
       where: { username: 'admin' },
       select: {
-        id: true,
         isActive: true,
-        employeeId: true,
         userRoles: {
           include: {
             role: { select: { name: true } },
@@ -52,7 +72,6 @@ export async function GET() {
       results.adminUser = {
         exists: true,
         isActive: admin.isActive,
-        hasEmployeeId: !!admin.employeeId,
         roles: admin.userRoles.map((ur) => ur.role.name),
         rolesCount: admin.userRoles.length,
       }

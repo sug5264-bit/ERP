@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       return successResponse({ cancelled: true })
     }
 
-    return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION')
+    return errorResponse('지원하지 않는 작업입니다.', 'INVALID_ACTION', 400)
   } catch (error) {
     // 트랜잭션 내 비즈니스 로직 에러 처리
     if (error instanceof Error) {

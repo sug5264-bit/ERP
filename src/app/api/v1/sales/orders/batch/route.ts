@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
     const { ids, action } = body
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return errorResponse('대상 발주를 선택해주세요.', 'INVALID_INPUT')
+      return errorResponse('대상 발주를 선택해주세요.', 'INVALID_INPUT', 400)
     }
     if (ids.length > 100) {
-      return errorResponse('한 번에 최대 100건까지 처리 가능합니다.', 'TOO_MANY')
+      return errorResponse('한 번에 최대 100건까지 처리 가능합니다.', 'TOO_MANY', 400)
     }
 
     const orders = await prisma.salesOrder.findMany({
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       const dispatchInfo = body.dispatchInfo
       const receivedBy = body.receivedBy
       if (!dispatchInfo || !receivedBy) {
-        return errorResponse('일괄 완료 처리를 위해 배차정보와 담당자를 입력해주세요.', 'MISSING_FIELDS')
+        return errorResponse('일괄 완료 처리를 위해 배차정보와 담당자를 입력해주세요.', 'MISSING_FIELDS', 400)
       }
       const completable = orders.filter((o) => {
         if (o.status === 'COMPLETED') {
@@ -138,19 +138,22 @@ export async function POST(request: NextRequest) {
               // 재고이동 관련 데이터 삭제 (재고 잔량 복원 후 삭제)
               const stockMovements = await tx.stockMovement.findMany({
                 where: { relatedDocType: 'DELIVERY', relatedDocId: { in: deliveryIds } },
-                select: { id: true, movementType: true },
+                select: { id: true, movementType: true, sourceWarehouseId: true, targetWarehouseId: true },
               })
               if (stockMovements.length > 0) {
                 const smIds = stockMovements.map((sm) => sm.id)
-                // 출고된 재고를 복원
+                const smById = new Map(stockMovements.map((sm) => [sm.id, sm]))
+                // 출고된 재고를 복원 (OUTBOUND인 경우 sourceWarehouse로 복원)
                 const smDetails = await tx.stockMovementDetail.findMany({
                   where: { stockMovementId: { in: smIds } },
-                  select: { itemId: true, quantity: true },
+                  select: { stockMovementId: true, itemId: true, quantity: true },
                 })
                 for (const detail of smDetails) {
+                  const movement = smById.get(detail.stockMovementId)
+                  const warehouseId = movement?.sourceWarehouseId ?? movement?.targetWarehouseId
+                  if (!warehouseId) continue
                   const balance = await tx.stockBalance.findFirst({
-                    where: { itemId: detail.itemId },
-                    orderBy: { lastMovementDate: 'desc' },
+                    where: { itemId: detail.itemId, warehouseId },
                   })
                   if (balance) {
                     await tx.stockBalance.update({
@@ -180,7 +183,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
-      return errorResponse('지원하지 않는 작업입니다. (cancel, complete, delete)', 'INVALID_ACTION')
+      return errorResponse('지원하지 않는 작업입니다. (cancel, complete, delete)', 'INVALID_ACTION', 400)
     }
 
     return successResponse({

@@ -48,8 +48,9 @@ export function NotificationBell() {
   const { data } = useQuery({
     queryKey: notifQueryKey,
     queryFn: () => api.get(`/notifications?pageSize=${isMobile ? 15 : 30}`) as Promise<NotificationsResponse>,
-    refetchInterval: isMobile ? 60000 : 30000,
+    refetchInterval: (query) => (query.state.data ? 60000 : 30000),
     refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   })
 
   const actionMutation = useMutation({

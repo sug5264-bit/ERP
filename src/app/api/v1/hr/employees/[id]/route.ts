@@ -10,6 +10,7 @@ import {
   isErrorResponse,
 } from '@/lib/api-helpers'
 import { writeAuditLog, getClientIp } from '@/lib/audit-log'
+import { logger } from '@/lib/logger'
 
 /** 민감한 개인정보 필드 제거 (HR 세부 권한이 없는 사용자 대상) */
 const SENSITIVE_FIELDS = ['phone', 'birthDate', 'bankName', 'bankAccount', 'address', 'gender'] as const
@@ -80,7 +81,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     })
 
     writeAuditLog({ action: 'UPDATE', tableName: 'Employee', recordId: id, ipAddress: getClientIp(req) }).catch(
-      () => {}
+      (err) => { logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) }) }
     )
 
     return successResponse(employee)
@@ -119,7 +120,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     })
 
     writeAuditLog({ action: 'DELETE', tableName: 'Employee', recordId: id, ipAddress: getClientIp(req) }).catch(
-      () => {}
+      (err) => { logger.warn('Audit log failed', { error: err instanceof Error ? err.message : String(err) }) }
     )
 
     return successResponse({ message: '사원이 비활성화되었습니다.' })
