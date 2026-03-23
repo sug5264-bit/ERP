@@ -50,8 +50,28 @@ interface SalesOrder {
   totalTax: number
   vatIncluded: boolean
   description?: string
-  partner?: { id: string; partnerName: string; partnerCode: string; bizNo?: string; ceoName?: string; address?: string; phone?: string }
-  details?: { id: string; itemId: string; quantity: number; unitPrice: number; supplyAmount: number; taxAmount: number; totalAmount: number; deliveredQty: number; remainingQty: number; item?: { id: string; itemCode: string; itemName: string; specification?: string; unit?: string }; remark?: string }[]
+  partner?: {
+    id: string
+    partnerName: string
+    partnerCode: string
+    bizNo?: string
+    ceoName?: string
+    address?: string
+    phone?: string
+  }
+  details?: {
+    id: string
+    itemId: string
+    quantity: number
+    unitPrice: number
+    supplyAmount: number
+    taxAmount: number
+    totalAmount: number
+    deliveredQty: number
+    remainingQty: number
+    item?: { id: string; itemCode: string; itemName: string; specification?: string; unit?: string }
+    remark?: string
+  }[]
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -70,10 +90,10 @@ interface NoteItem {
 
 // Pipeline step index → tab & delivery status filter mapping
 const STEP_CONFIG = [
-  { tab: 'orders', deliveryStatus: null },        // 수주 접수
-  { tab: 'deliveries', deliveryStatus: 'PREPARING' },  // 진행중 (준비중)
-  { tab: 'deliveries', deliveryStatus: 'SHIPPED' },    // 출하 준비 (출하대기)
-  { tab: 'deliveries', deliveryStatus: 'DELIVERED' },  // 납품 완료
+  { tab: 'orders', deliveryStatus: null }, // 수주 접수
+  { tab: 'deliveries', deliveryStatus: 'PREPARING' }, // 진행중 (준비중)
+  { tab: 'deliveries', deliveryStatus: 'SHIPPED' }, // 출하 준비 (출하대기)
+  { tab: 'deliveries', deliveryStatus: 'DELIVERED' }, // 납품 완료
 ] as const
 
 export default function OrderShipmentPage() {
@@ -86,12 +106,16 @@ export default function OrderShipmentPage() {
   const [activeStep, setActiveStep] = useState<number | null>(null)
 
   const prevMonth = useCallback(() => {
-    if (kpiMonth === 1) { setKpiYear(kpiYear - 1); setKpiMonth(12) }
-    else setKpiMonth(kpiMonth - 1)
+    if (kpiMonth === 1) {
+      setKpiYear(kpiYear - 1)
+      setKpiMonth(12)
+    } else setKpiMonth(kpiMonth - 1)
   }, [kpiYear, kpiMonth])
   const nextMonth = useCallback(() => {
-    if (kpiMonth === 12) { setKpiYear(kpiYear + 1); setKpiMonth(1) }
-    else setKpiMonth(kpiMonth + 1)
+    if (kpiMonth === 12) {
+      setKpiYear(kpiYear + 1)
+      setKpiMonth(1)
+    } else setKpiMonth(kpiMonth + 1)
   }, [kpiYear, kpiMonth])
 
   // Build query params for date filtering
@@ -110,13 +134,11 @@ export default function OrderShipmentPage() {
   // Fetch notes-based status tracking (actual workflow data)
   const { data: deliveryNotesData } = useQuery({
     queryKey: ['notes', 'DeliveryPost'],
-    queryFn: () =>
-      api.get('/notes?relatedTable=DeliveryPost') as Promise<{ data: NoteItem[] }>,
+    queryFn: () => api.get('/notes?relatedTable=DeliveryPost') as Promise<{ data: NoteItem[] }>,
   })
   const { data: statusNotesData } = useQuery({
     queryKey: ['notes', 'DeliveryPostStatus'],
-    queryFn: () =>
-      api.get('/notes?relatedTable=DeliveryPostStatus') as Promise<{ data: NoteItem[] }>,
+    queryFn: () => api.get('/notes?relatedTable=DeliveryPostStatus') as Promise<{ data: NoteItem[] }>,
   })
 
   const stats = useMemo(() => {
@@ -162,8 +184,7 @@ export default function OrderShipmentPage() {
     }
 
     const totalPosts = filteredDeliveryNotes.length
-    const fulfillmentRate =
-      totalPosts > 0 ? Math.round((delivered / totalPosts) * 100) : 0
+    const fulfillmentRate = totalPosts > 0 ? Math.round((delivered / totalPosts) * 100) : 0
 
     return {
       totalOrders,
@@ -181,15 +202,18 @@ export default function OrderShipmentPage() {
   // Derive delivery status filter from active pipeline step
   const deliveryStatusFilter = activeStep !== null ? (STEP_CONFIG[activeStep]?.deliveryStatus ?? null) : null
 
-  const handlePipelineClick = useCallback((idx: number) => {
-    if (activeStep === idx) {
-      // Toggle off
-      setActiveStep(null)
-    } else {
-      setActiveStep(idx)
-      setMainTab(STEP_CONFIG[idx].tab)
-    }
-  }, [activeStep])
+  const handlePipelineClick = useCallback(
+    (idx: number) => {
+      if (activeStep === idx) {
+        // Toggle off
+        setActiveStep(null)
+      } else {
+        setActiveStep(idx)
+        setMainTab(STEP_CONFIG[idx].tab)
+      }
+    },
+    [activeStep]
+  )
 
   const clearActiveStep = useCallback(() => {
     setActiveStep(null)
@@ -218,9 +242,11 @@ export default function OrderShipmentPage() {
     let fullOrder = order
     if (!order.details || order.details.length === 0) {
       try {
-        const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+        const res = (await api.get(`/sales/orders/${order.id}`)) as { data: SalesOrder }
         fullOrder = res.data
-      } catch { /* use what we have */ }
+      } catch {
+        /* use what we have */
+      }
     }
     const { generateTransactionStatement } = await import('@/lib/export/transaction-statement-pdf')
     await generateTransactionStatement({
@@ -262,9 +288,11 @@ export default function OrderShipmentPage() {
       let fullOrder = order
       if (!order.details || order.details.length === 0) {
         try {
-          const res = await api.get(`/sales/orders/${order.id}`) as { data: SalesOrder }
+          const res = (await api.get(`/sales/orders/${order.id}`)) as { data: SalesOrder }
           fullOrder = res.data
-        } catch { /* use what we have */ }
+        } catch {
+          /* use what we have */
+        }
       }
       const blob = await generateTransactionStatementBlob({
         orderNo: fullOrder.orderNo,
@@ -304,15 +332,14 @@ export default function OrderShipmentPage() {
     URL.revokeObjectURL(url)
   }, [selectedOrders, allOrders])
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const excelColumns = [
     { header: '발주번호', accessor: 'orderNo' },
-    { header: '상태', accessor: (r: any) => STATUS_MAP[r.status]?.label || r.status },
-    { header: '거래처', accessor: (r: any) => r.partner?.partnerName || '-' },
-    { header: '발주일', accessor: (r: any) => formatDate(r.orderDate) },
-    { header: '공급가', accessor: (r: any) => Number(r.totalSupply).toLocaleString() },
-    { header: '세액', accessor: (r: any) => Number(r.totalTax).toLocaleString() },
-    { header: '합계금액', accessor: (r: any) => Number(r.totalAmount).toLocaleString() },
+    { header: '상태', accessor: (r: SalesOrder) => STATUS_MAP[r.status]?.label || r.status },
+    { header: '거래처', accessor: (r: SalesOrder) => r.partner?.partnerName || '-' },
+    { header: '발주일', accessor: (r: SalesOrder) => formatDate(r.orderDate) },
+    { header: '공급가', accessor: (r: SalesOrder) => Number(r.totalSupply).toLocaleString() },
+    { header: '세액', accessor: (r: SalesOrder) => Number(r.totalTax).toLocaleString() },
+    { header: '합계금액', accessor: (r: SalesOrder) => Number(r.totalAmount).toLocaleString() },
   ]
 
   const handleBulkExcelDownload = useCallback(() => {
@@ -376,10 +403,7 @@ export default function OrderShipmentPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="발주/출고관리(온라인)"
-        description="온라인 발주 등록부터 출고/납품까지 통합 관리합니다"
-      />
+      <PageHeader title="발주/출고관리(온라인)" description="온라인 발주 등록부터 출고/납품까지 통합 관리합니다" />
 
       {/* Month selector */}
       <div className="flex flex-wrap items-center gap-2">
@@ -416,8 +440,10 @@ export default function OrderShipmentPage() {
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-xs">이행률</span>
               <Badge
-                variant={stats.fulfillmentRate >= 80 ? 'default' : stats.fulfillmentRate >= 50 ? 'secondary' : 'outline'}
-                className="tabular-nums text-xs"
+                variant={
+                  stats.fulfillmentRate >= 80 ? 'default' : stats.fulfillmentRate >= 50 ? 'secondary' : 'outline'
+                }
+                className="text-xs tabular-nums"
               >
                 {isLoading ? '...' : `${stats.fulfillmentRate}%`}
               </Badge>
@@ -435,9 +461,7 @@ export default function OrderShipmentPage() {
                     type="button"
                     onClick={() => handlePipelineClick(idx)}
                     className={`flex min-w-[72px] flex-1 flex-col items-center gap-1.5 rounded-lg py-2 transition-all sm:min-w-[96px] ${
-                      isActive
-                        ? 'bg-muted/60 scale-105 shadow-sm'
-                        : 'hover:bg-muted/30'
+                      isActive ? 'bg-muted/60 scale-105 shadow-sm' : 'hover:bg-muted/30'
                     }`}
                   >
                     <div
@@ -454,14 +478,18 @@ export default function OrderShipmentPage() {
                       )}
                     </div>
                     <div className="text-center">
-                      <p className={`text-[10px] font-medium leading-tight sm:text-xs ${
-                        isActive ? 'text-foreground' : 'text-muted-foreground'
-                      }`}>
+                      <p
+                        className={`text-[10px] leading-tight font-medium sm:text-xs ${
+                          isActive ? 'text-foreground' : 'text-muted-foreground'
+                        }`}
+                      >
                         {step.label}
                       </p>
-                      <p className={`mt-0.5 text-sm font-bold tabular-nums sm:text-base ${
-                        isActive ? 'text-foreground' : ''
-                      }`}>
+                      <p
+                        className={`mt-0.5 text-sm font-bold tabular-nums sm:text-base ${
+                          isActive ? 'text-foreground' : ''
+                        }`}
+                      >
                         {isLoading ? '-' : step.count}
                         <span className="text-muted-foreground text-[10px] font-normal">건</span>
                       </p>
@@ -506,9 +534,7 @@ export default function OrderShipmentPage() {
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                게시글 {stats.totalPosts}건
-              </p>
+              <p className="text-muted-foreground mt-0.5 text-[10px]">게시글 {stats.totalPosts}건</p>
             </div>
           </CardContent>
         </Card>
@@ -531,9 +557,7 @@ export default function OrderShipmentPage() {
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                완료 {stats.delivered}건
-              </p>
+              <p className="text-muted-foreground mt-0.5 text-[10px]">완료 {stats.delivered}건</p>
             </div>
           </CardContent>
         </Card>
@@ -552,15 +576,11 @@ export default function OrderShipmentPage() {
                 <Loader2 className="text-muted-foreground mt-1 h-4 w-4 animate-spin" />
               ) : (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-lg font-bold tabular-nums">
-                    {stats.shipped}
-                  </span>
+                  <span className="text-lg font-bold tabular-nums">{stats.shipped}</span>
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                반품 {stats.returned}건
-              </p>
+              <p className="text-muted-foreground mt-0.5 text-[10px]">반품 {stats.returned}건</p>
             </div>
           </CardContent>
         </Card>
@@ -579,15 +599,11 @@ export default function OrderShipmentPage() {
                 <Loader2 className="text-muted-foreground mt-1 h-4 w-4 animate-spin" />
               ) : (
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-lg font-bold tabular-nums">
-                    {stats.delivered}
-                  </span>
+                  <span className="text-lg font-bold tabular-nums">{stats.delivered}</span>
                   <span className="text-muted-foreground text-xs">건</span>
                 </div>
               )}
-              <p className="text-muted-foreground mt-0.5 text-[10px]">
-                전체 {stats.totalPosts}건 중
-              </p>
+              <p className="text-muted-foreground mt-0.5 text-[10px]">전체 {stats.totalPosts}건 중</p>
             </div>
           </CardContent>
         </Card>
@@ -643,11 +659,14 @@ export default function OrderShipmentPage() {
               </div>
               {/* Order rows */}
               {allOrders.map((order) => {
-                const statusInfo = STATUS_MAP[order.status] || { label: order.status, color: 'bg-gray-100 text-gray-800' }
+                const statusInfo = STATUS_MAP[order.status] || {
+                  label: order.status,
+                  color: 'bg-gray-100 text-gray-800',
+                }
                 return (
                   <div
                     key={order.id}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/20 sm:px-6"
+                    className="hover:bg-muted/20 flex items-center gap-3 px-4 py-3 transition-colors sm:px-6"
                   >
                     <Checkbox
                       checked={selectedOrders.has(order.id)}
@@ -685,7 +704,13 @@ export default function OrderShipmentPage() {
 
       {/* Main Tab Section */}
       <Card className="overflow-hidden border shadow-sm">
-        <Tabs value={mainTab} onValueChange={(v) => { setMainTab(v); setActiveStep(null) }}>
+        <Tabs
+          value={mainTab}
+          onValueChange={(v) => {
+            setMainTab(v)
+            setActiveStep(null)
+          }}
+        >
           <div className="border-b px-4 pt-3 sm:px-6">
             <TabsList className="h-10 bg-transparent p-0">
               <TabsTrigger
