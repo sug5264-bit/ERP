@@ -29,6 +29,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react'
 import { exportToExcel } from '@/lib/export/excel-export'
+import type { ExportColumn } from '@/lib/export'
 import { formatDate } from '@/lib/format'
 import type { TransactionStatementData } from '@/lib/export/transaction-statement-pdf'
 
@@ -332,14 +333,14 @@ export default function OrderShipmentPage() {
     URL.revokeObjectURL(url)
   }, [selectedOrders, allOrders])
 
-  const excelColumns = [
+  const excelColumns: ExportColumn[] = [
     { header: '발주번호', accessor: 'orderNo' },
-    { header: '상태', accessor: (r: SalesOrder) => STATUS_MAP[r.status]?.label || r.status },
-    { header: '거래처', accessor: (r: SalesOrder) => r.partner?.partnerName || '-' },
-    { header: '발주일', accessor: (r: SalesOrder) => formatDate(r.orderDate) },
-    { header: '공급가', accessor: (r: SalesOrder) => Number(r.totalSupply).toLocaleString() },
-    { header: '세액', accessor: (r: SalesOrder) => Number(r.totalTax).toLocaleString() },
-    { header: '합계금액', accessor: (r: SalesOrder) => Number(r.totalAmount).toLocaleString() },
+    { header: '상태', accessor: (r) => STATUS_MAP[r.status as string]?.label || r.status },
+    { header: '거래처', accessor: (r) => (r.partner as SalesOrder['partner'])?.partnerName || '-' },
+    { header: '발주일', accessor: (r) => formatDate(r.orderDate as string) },
+    { header: '공급가', accessor: (r) => Number(r.totalSupply).toLocaleString() },
+    { header: '세액', accessor: (r) => Number(r.totalTax).toLocaleString() },
+    { header: '합계금액', accessor: (r) => Number(r.totalAmount).toLocaleString() },
   ]
 
   const handleBulkExcelDownload = useCallback(() => {
